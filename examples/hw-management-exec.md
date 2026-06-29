@@ -45,7 +45,7 @@ This document describes the **host CPU** package only (`hw-management`, not BMC)
 |------|----------------|------|
 | [hw-management-exec](../usr/usr/bin/hw-management-exec) | `/usr/bin/hw-management-exec` | Dispatcher (symlink target; must not live under `/var/run` if that mount is `noexec`) |
 | [hw-management-exec-parser.sh](../usr/usr/bin/hw-management-exec-parser.sh) | `/usr/bin/hw-management-exec-parser.sh` | Reads JSON, creates symlinks + `.env` fragments |
-| [hw-management-json-parser.sh](../usr/usr/bin/hw-management-json-parser.sh) | `/usr/bin/hw-management-json-parser.sh` | BusyBox-safe JSON helpers (AWK, no `jq`) |
+| [hw-management-json-parser.sh](../usr/usr/bin/hw-management-json-parser.sh) | `/usr/bin/hw-management-json-parser.sh` | JSON helpers using **`jq`** (host CPU) |
 | Shared config | `/etc/hw-management-exec/*.json` | One file can list many HIDs in a `"hids"` array |
 | Per-HID override | `/etc/<HID>/hw-management-exec.json` | Optional; wins over shared configs |
 | Example JSON | [hw-management-exec-example.json](hw-management-exec-example.json) | Full schema example (I2C + sysfs) |
@@ -174,7 +174,7 @@ Rebuild/install the **`hw-management`** package; **`debian/rules`** installs **`
 - **`bus`** and **`size`** must be numeric.
 - **`AttributeName`** is restricted to alphanumeric characters, `_`, and `-`.
 - **`description`** is stripped to safe comment characters.
-- Parser and library use **`#!/bin/sh`** and BusyBox AWK; load the JSON library with **`. /usr/bin/hw-management-json-parser.sh`**.
+- Parser and library use **`#!/bin/sh`** and **`jq`**; load the JSON library with **`. /usr/bin/hw-management-json-parser.sh`**.
 - Simple string fields use **`json_get_string`**; **`action`** and **`description`** use **`json_get_escaped_string`** (supports `\"` and common escapes).
 
 ## See also

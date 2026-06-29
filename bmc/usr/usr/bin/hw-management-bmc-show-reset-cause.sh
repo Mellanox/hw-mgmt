@@ -39,7 +39,7 @@
 #
 # Usage:
 #   hw-management-bmc-show-reset-cause.sh              # all sections
-#   hw-management-bmc-show-reset-cause.sh bmc          # BMC root reset_* only
+#   hw-management-bmc-show-reset-cause.sh bmc          # primary reset_* (pwr_cycle / soft_reboot)
 #   hw-management-bmc-show-reset-cause.sh host         # host system reset_*
 #   hw-management-bmc-show-reset-cause.sh bmc-domain   # .../bmc/domains/reset_*
 #   hw-management-bmc-show-reset-cause.sh bmc-raw      # raw_scu* words under bmc/

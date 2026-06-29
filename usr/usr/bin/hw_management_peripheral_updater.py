@@ -55,6 +55,17 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+# Optional SONiC detector: keep daemon operational if this helper is
+# temporarily missing during partial upgrades/rollback scenarios.
+try:
+    from hw_management_sonic_check import is_sonic_os
+    SONIC_CHECK_AVAILABLE = True
+except ImportError:
+    SONIC_CHECK_AVAILABLE = False
+
+    def is_sonic_os():
+        return False
+
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
     from hw_management_platform_config import get_module_count, get_platform_config
@@ -632,6 +643,9 @@ def main():
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
     LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
 
+    if not SONIC_CHECK_AVAILABLE:
+        LOGGER.warning("hw-management-peripheral-updater: hw_management_sonic_check unavailable, assuming non-SONiC host")
+
     if args["system_type"] is None:
         try:
             with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
@@ -648,6 +662,13 @@ def main():
         if re.match(key, product_sku):
             sys_attr.extend(val)
             break
+
+    # On SONiC hosts, SONiC owns CPU<->BMC communication. Drop the BMC Redfish
+    # entries so this daemon never logs in to the BMC or polls BMC sensors over
+    # Redfish. On any other host OS the configuration is left unchanged.
+    if is_sonic_os():
+        sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
+        LOGGER.notice("hw-management-peripheral-updater: SONiC host detected, BMC Redfish sync disabled")
 
     # Write module_counter for other services (must be done before they start)
     # This is done here in peripheral_updater to ensure it's written even if

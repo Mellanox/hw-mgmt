@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.1
+Rev. 3.2.5
 
 ## Table of Contents
 
@@ -11,8 +11,9 @@ Rev. 3.2.1
 | 1 | Release Notes Update History | 12 |
 | 2 | Introduction | 14 |
 | 2.1 | Software Components | 14 |
-| 2.2 | Hierarchy and Structure | 15 |
-| 2.3 | Sysfs Initialization and Driver Registration | 16 |
+| 2.2 | Host and BMC software stacks | 14 |
+| 2.3 | Hierarchy and Structure | 15 |
+| 2.4 | Sysfs Initialization and Driver Registration | 16 |
 | 3 | Virtual SysFS Hierarchy | 17 |
 | 3.1 | Config Control | 17 |
 | 3.1.1 | Get ASIC Bus | 17 |
@@ -84,6 +85,8 @@ Rev. 3.2.1
 | 3.3.4 | Read System Chassis EEPROM Data | 40 |
 | 3.3.5 | Read System Chassis EEPROM Parsed Data | 40 |
 | 3.3.6 | Read Cable Cartridge EEPROM Data | 40 |
+| 3.3.7 | Read system EEPROM (BMC stack) | 40 |
+| 3.3.8 | Read BMC board EEPROM (BMC stack) | 41 |
 | 3.4 | Environment Control | 41 |
 | 3.4.1 | Get A2D Voltage | 41 |
 | 3.4.2 | Get Comex Voltage Current | 41 |
@@ -290,16 +293,15 @@ Rev. 3.2.1
 | 3.20.7 | Read Switch Comex Temperature | 109 |
 | 3.20.8 | MNG Temperature | 109 |
 | 3.20.9 | Read BMC Temperature | 110 |
-| 3.20.10 | Read BMC Critical Temperature | 110 |
-| 3.20.11 | Read BMC Max Temperature | 110 |
+| 3.20.10 | Read BMC Max Temperature | 110 |
+| 3.20.11 | Read BMC Critical Temperature | 110 |
 | 3.20.12 | Read BMC Minimal Temperature | 111 |
-| 3.20.13 | Read PDB Hotswap Temperature | 111 |
-| 3.20.14 | PDB Hotswap Critical Temperature Threshold | 111 |
-| 3.20.15 | PDB Hotswap Max Temperature Threshold | 112 |
-| 3.20.16 | Read Power Converter Temperature | 112 |
-| 3.20.17 | Power Converter Critical Temperature Threshold | 112 |
-| 3.20.18 | Read Cooling State | 113 |
-| 3.20.19 | Cooling Name | 113 |
+| 3.20.13 | Read PDB Hotswap Controller Temperature | 111 |
+| 3.20.14 | Read PDB Hotswap Controller Temperature Thresholds | 111 |
+| 3.20.15 | Read PDB Power Converter Temperature | 112 |
+| 3.20.16 | Read PDB Power Converter Temperature Thresholds | 112 |
+| 3.20.17 | Read Cooling State | 113 |
+| 3.20.18 | Cooling Name | 113 |
 | 3.20.20 | Read CPU Core Temperature | 113 |
 | 3.20.21 | CPU Core Critical Temperature | 113 |
 | 3.20.22 | CPU Core Critical Temperature Alarm | 114 |
@@ -340,15 +342,12 @@ Rev. 3.2.1
 | 3.20.57 | Read Switch Fan Temperature | 123 |
 | 3.20.58 | Read Switch Port Temperature | 124 |
 | 3.20.59 | Read Switch Power Supply Temperature | 124 |
-| 3.20.60 | SODIMM Max temperature | 124 |
-| 3.20.61 | SODIMM Max temperature alarm | 125 |
-| 3.20.62 | SODIMM Min temperature | 125 |
-| 3.20.63 | SODIMM critical alarm | 125 |
-| 3.20.64 | SODIMM Max hyst | 126 |
-| 3.20.65 | SODIMM Temperature input | 126 |
-| 3.20.66 | SODIMM Min temperature alarm | 126 |
-| 3.20.67 | SODIMM Critical hyst | 126 |
-| 3.20.68 | SODIMM Critical temperature | 127 |
+| 3.20.60 | SODIMM Temperature Input | 124 |
+| 3.20.61 | SODIMM Critical Temperature | 125 |
+| 3.20.62 | SODIMM Max Temperature | 125 |
+| 3.20.63 | SODIMM Min Temperature | 125 |
+| 3.20.64 | SODIMM Temperature Alarms | 126 |
+| 3.20.65 | SODIMM Temperature Hysteresis | 126 |
 | 3.20.69 | SWB ASIC Temperature | 127 |
 | 3.20.70 | Drive Temperature | 127 |
 | 3.20.71 | Drive Critical Temperature | 128 |
@@ -400,6 +399,10 @@ Rev. 3.2.1
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.5 | June 2026 | §2.2 HI189 BMC peripheral table; §3.3.7–§3.3.8 BMC EEPROM bodies; §3.20 BMC stack tags and CPU-on-BMC thermal cross-refs; §3.23 BMC status bodies (present, bmc_to_cpu_ctrl, MCTP) |
+| 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
+| 3.2.3 | June 2026 | §3.20 thermal: filled missing section bodies; TOC aligned; per-HID BMC examples under `bmc/examples/<HID>/examples/` |
+| 3.2.2 | June 2026 | BMC thermal sysfs (HI189 / `lm75`): documented `bmc_temp_input` and `bmc_temp`; removed obsolete TOC entries for `bmc_crit` / `bmc_min` (not created on BMC stack) |
 | 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
@@ -442,6 +445,74 @@ Figure 1 presents the software architecture layout and Figure 2 presents layer s
 
 ![Sysfs Layout](images/sysfs-layout.png)
 
+## Host and BMC software stacks
+
+The **hw-mgmt** repository ships two Debian packages that both expose the same virtual
+hierarchy under **`/var/run/hw-management/`** (`$bsp_path` in this manual), but they are built
+from **different source trees** and run on **different processors**:
+
+| | **Host stack** | **BMC stack** |
+|---|----------------|---------------|
+| **Role** | Switch CPU / NOS (SONiC, ONL, Cumulus, …) | Dedicated BMC SoC (for example AST2700 on Microsoft Sonic BMC OS) |
+| **Debian package** | `hw-management` | `hw-management-bmc` |
+| **Repository source** | `usr/` (scripts under `usr/usr/bin/`, platform data under `usr/etc/`) | `bmc/usr/` (mirrors host layout; platform data under `bmc/usr/etc/<HID>/`) |
+| **Installed on target** | `/usr/bin/hw-management*.sh`, `/usr/bin/hw_management_thermal_control*.py`, `/lib/udev/rules.d/50-hw-management-events.rules`, … | `/usr/bin/hw-management-bmc*.sh`, `/lib/udev/rules.d/5-hw-management-bmc-events.rules`, `/etc/<HID>/`, … |
+| **Primary event handlers** | `hw-management-chassis-events.sh`, `hw-management-thermal-events.sh` | `hw-management-bmc-events.sh` (and helpers under the same prefix) |
+| **Init / systemd** | `hw-management.service` | `hw-management-bmc-init.service` and related BMC units (see `bmc/README.md`) |
+| **Examples / reference layouts** | Validated trees under `tests/system_tree/`; platform sensors in `usr/etc/hw-management-sensors/` | Flat files under `bmc/examples/`; per-HID template at `bmc/examples/HIxxx/examples/` |
+| **Developer guide** | Repository root `README.md` | `bmc/README.md`, `bmc/DEVELOPER_GUIDE.md` |
+
+**How to use this manual**
+
+- **§3.x attribute sections** describe **`$bsp_path` nodes** as seen by applications on either
+  CPU or BMC when that node is created on the platform.
+- Sections that name **host-only** handlers (for example `hw-management-thermal-events.sh`,
+  `hw_management_thermal_control.py`) apply to the **host package** unless stated otherwise.
+- Sections that name **`hw-management-bmc-*`** or **HI189 / BMC thermal stack** apply to the
+  **BMC package** on systems that ship it.
+- Some nodes exist on **one stack only** (for example host ASIC/voltmon thermal vs BMC
+  `bmc_temp_input` from `hw-management-bmc-events.sh`). Check the platform or the validated
+  system tree for your SKU.
+
+Both stacks may be present on the same product (CPU + BMC each running their own package);
+they do **not** share the same `/usr/bin` install tree on a single root filesystem.
+
+**Stack column (used in §3.x):**
+
+| Label | Meaning |
+|-------|---------|
+| **Host** | Node created by `hw-management` on the switch CPU (`hw-management-thermal-events.sh`, `hw-management-chassis-events.sh`, `hw-management.sh`) |
+| **BMC** | Node created by `hw-management-bmc` on the BMC SoC (`hw-management-bmc-events.sh` and related BMC scripts) |
+| **Host + BMC** | Same logical name may exist on both images; paths/handlers differ — see section note |
+
+**BMC stack — HI189 reference (`hw-management-bmc-events.sh`, validated against
+`bmc/usr/etc/HI189/5-hw-management-bmc-events.rules` and
+`hw-management-bmc-early-i2c-devices.json`):**
+
+| `$bsp_path` subtree | Symlinks / behaviour | Peripheral (I2C / driver) | Stack |
+|--------------------|----------------------|---------------------------|-------|
+| `thermal/cpu_temp_input`, `cpu_temp`, `cpu_min` | Host **CPU** temperature via BMC-side I2C | bus 15 / `0x4c`, **sbtsi** | BMC |
+| `thermal/bmc_temp_input`, `bmc_temp` | **BMC board** ambient (`bmc_min` not created — **lm75** has no `temp1_min`) | bus 4 / `0x48`, **lm75** | BMC |
+| `eeprom/eeprom_system` | System VPD EEPROM | bus 5 / `0x51`, **24c512** | BMC |
+| `eeprom/eeprom_bmc` | BMC FRU EEPROM | bus 4 / `0x50`, **24c02** | BMC |
+| `system/*` (many attrs) | **mlxreg-io** / **mlxreg-hotplug** register files | CPLD / platform control on BMC | BMC |
+| `leakage/*` | Leakage handler + A2D config | See `hw-management-bmc-leakage-handler.sh` | BMC |
+
+Example layouts: **`bmc/examples/hw-management-bmc-thermal-sysfs.txt`** (delivered path),
+`bmc/examples/hw-management-bmc-eeprom-sysfs.txt`, `bmc/examples/hw-management-bmc-system-sysfs.txt`.
+
+**Host stack — BMC-related nodes (CPU image, not the BMC package):**
+
+| Node | Evidence | Stack |
+|------|----------|-------|
+| `system/bmc_present` | GPIO symlink (`tests/system_tree/hw-management-tree-SN6600_LD.txt`) | Host |
+| `system/bmc_to_cpu_ctrl` | **mlxreg-io** on CPU (`mlxplat`; same tree) | Host |
+| `system/cpu_mctp_ready` | **mlxreg-io** on CPU (same tree) | Host |
+| `config/mctp_addr`, `config/mctp_bus` | Written by `hw-management.sh` when platform defines MCTP (e.g. N5110) | Host |
+
+Do not assume host ASIC/PSU/fan thermal nodes exist on the BMC image, or that BMC `cpu_temp_*`
+nodes exist on the CPU image — check `$bsp_path` on the target root filesystem.
+
 ## Hierarchy and Structure
 
 The package uses the Linux default hierarchy structure of sysfs under the directory /var/run/hw-management.
@@ -465,7 +536,13 @@ Chassis attributes information exported through sysfs can be utilized by a numbe
  sensors – print sensors information
 ## Sysfs Initialization and Driver Registration
 
-As described in the previous sections, sysfs structure provides access to HW drivers. These drivers need to be initialized before using sysfs. In addition, NVIDIA virtual hierarchy also needs to be created in order to use it.
+As described in the previous sections, sysfs structure provides access to HW drivers. These
+drivers need to be initialized before using sysfs. In addition, NVIDIA virtual hierarchy also
+needs to be created in order to use it.
+
+The following applies to the **host** package (`hw-management`). For the **BMC** package,
+see **§2.2** and `bmc/README.md` (systemd units, udev rules, and scripts under
+`hw-management-bmc-*`).
 
 The package provides a simple way to initialize the drivers using the set of shell scripts. These scripts support initialization and de-initialization of driver, virtual hierarchy structure, udev events handling, based on a set of NVIDIA system specific udev rules.
 
@@ -486,7 +563,7 @@ Package contains the following files, used within the workload:
 
  /etc/modprobe.d/hw-management.conf and /etc/modules-load.d/hw-management- modules.conf: configuration for kernel modules loading.
 
-For more details follow package README file.
+For more details follow package README file (`README.md` for host, `bmc/README.md` for BMC).
 
 ##### Figure 3 - Thermal Management Flow
 
@@ -519,6 +596,12 @@ NVIDIA virtual hierarchy supports the following HW control ($bsp_path below is a
 | $bsp_path/fast_sysfs_labels_rdy |  |
 
 Detailed information on each of these nodes can be found in the following sections.
+
+**Stack applicability:** Most §3.x nodes are created by the **host** stack
+(`hw-management-thermal-events.sh` / `hw-management-chassis-events.sh`). Sections tagged
+**Stack: BMC** or naming **`hw-management-bmc-events.sh`** apply to the **BMC package** only
+(see **§2.2**). §3.23 documents host-visible BMC status; BMC `system/` register layout is in
+`bmc/examples/hw-management-bmc-system-sysfs.txt`.
 
 Note: some of the attributes described below are not relevant to all platforms and will exist only on the platforms which support this attribute.
 ## Config Control
@@ -1937,6 +2020,45 @@ cat $bsp_path/eeprom/cable_cartridge2_eeprom_data
 cat $bsp_path/eeprom/cable_cartridge3_eeprom_data
 cat $bsp_path/eeprom/cable_cartridge4_eeprom_data
 ```
+
+### Read system EEPROM (BMC stack)
+
+**Stack:** BMC (`hw-management-bmc-events.sh`, event `eeprom_system`)
+
+**Node name:** `$bsp_path/eeprom/eeprom_system`
+
+**Description:** Raw system VPD EEPROM on the **BMC** image. HI189 udev matches I2C
+`5-0051` (`hw-management-bmc-early-i2c-devices.json`: bus 5 / `0x51`, **24c512**).
+Symlink points at the kernel `eeprom` attribute for that device.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/eeprom/eeprom_system
+```
+
+### Read BMC board EEPROM (BMC stack)
+
+**Stack:** BMC (`hw-management-bmc-events.sh`, event `eeprom_bmc`)
+
+**Node name:** `$bsp_path/eeprom/eeprom_bmc`
+
+**Description:** BMC FRU EEPROM on the **BMC** image. HI189 udev matches I2C `4-0050`
+(bus 4 / `0x50`, **24c02** per early-I2C JSON).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/eeprom/eeprom_bmc
+```
+
+**Reference:** `bmc/examples/hw-management-bmc-eeprom-sysfs.txt`
 
 ## Environment Control
 
@@ -5414,6 +5536,42 @@ cat $bsp_path/system/leakage1
 
 ## Thermal
 
+**Reference — Host:** `usr/usr/bin/hw-management-thermal-events.sh`; validated trees under
+`tests/system_tree/`.
+
+**Reference — BMC (HI189):** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`;
+`bmc/examples/hw-management-bmc-thermal-sysfs.txt`.
+
+### Ambient sensors
+
+**Stack:** Host (`hw-management-thermal-events.sh`)
+
+**Node name:** `$bsp_path/thermal/<ambient_name>` (platform-specific; examples include
+`mng_amb`, `comex_amb`, `port_amb`, `fan_amb`, `swb_amb`, `cpu_amb`)
+
+**Description:** Ambient temperature sensors are created by `hw-management-thermal-events.sh`
+when the corresponding hwmon device appears. The stable symlink name under
+`$bsp_path/thermal/` depends on the platform label and sensor type.
+
+Some platforms also expose management ambient via `$bsp_path/thermal/mng_amb` (see **MNG
+Temperature**). Legacy documentation referenced `$bsp_path/system/amb_sens` for mlxreg
+ambient enablement on certain systems.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read management ambient temperature (when present):
+```bash
+cat $bsp_path/thermal/mng_amb
+```
+
+
 ### Read Switch ASIC Temperature
 
 **Node name:** `$bsp_path/thermal/asic<index>_temp_input`
@@ -5534,6 +5692,170 @@ cat $bsp_path/thermal/asic1_temp_trip_crit
 cat $bsp_path/thermal/comex_temp_input
 ```
 
+### MNG Temperature
+
+**Stack:** Host (`hw-management-thermal-events.sh`)
+
+**Node name:** `$bsp_path/thermal/mng_amb`
+
+**Description:** Read management (MNG) ambient temperature when the platform exposes this
+sensor through the hw-mgmt thermal events handler.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read MNG ambient temperature:
+```bash
+cat $bsp_path/thermal/mng_amb
+```
+
+### Read host CPU temperature (BMC stack)
+
+**Stack:** BMC (`hw-management-bmc-events.sh`, event `cpu_temp`)
+
+**Node name:** `$bsp_path/thermal/cpu_temp_input`
+
+**Description:** Instantaneous **host CPU** temperature as seen on the **BMC** image. The BMC
+early-I2C map binds bus 15 / `0x4c` to the **sbtsi** driver (`hw-management-bmc-early-i2c-devices.json`).
+This is not created by the host thermal events script on the CPU image.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/cpu_temp_input
+```
+
+### Read host CPU temperature max / min (BMC stack)
+
+**Stack:** BMC (`hw-management-bmc-events.sh`, event `cpu_temp`)
+
+**Node name:** `$bsp_path/thermal/cpu_temp` (maps to hwmon `temp1_max`);
+`$bsp_path/thermal/cpu_min` (maps to hwmon `temp1_min`)
+
+**Description:** High/low limit attributes from the same **sbtsi** sensor as
+`cpu_temp_input`. **sbtsi** exposes `temp1_min`; both symlinks are created on HI189.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/cpu_temp
+cat $bsp_path/thermal/cpu_min
+```
+
+### Read BMC Temperature
+
+**Stack:** BMC (`hw-management-bmc-events.sh`, event `bmc_temp`)
+
+**Node name:** `$bsp_path/thermal/bmc_temp_input`
+
+**Description:** Read BMC ambient temperature (instantaneous reading from the BMC
+hwmon sensor). Symlink is created under `/var/run/hw-management/thermal/` by
+`hw-management-bmc-events.sh` when the BMC temperature hwmon device appears
+(for example HI189 / SN6600: I2C `4-0048`, `lm75` driver, `temp1_input`).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Note:** Supported on systems with the hw-mgmt BMC thermal stack only. Values are
+typically millidegrees Celsius (Linux hwmon convention).
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read BMC ambient temperature:
+```bash
+cat $bsp_path/thermal/bmc_temp_input
+```
+
+### Read BMC Max Temperature
+
+**Stack:** BMC (`hw-management-bmc-events.sh`, event `bmc_temp` — **BMC board** lm75 sensor, not host CPU)
+
+**Node name:** `$bsp_path/thermal/bmc_temp`
+
+**Description:** Read BMC ambient high-temperature limit (maps to hwmon `temp1_max`
+on the BMC sensor). Created by the same BMC thermal udev handler as
+`bmc_temp_input`. On HI189 the BMC sensor uses the `lm75` driver, which exposes
+`temp1_input` and `temp1_max` only (no `temp1_min`).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Note:** Supported on systems with the hw-mgmt BMC thermal stack only. Do not
+expect `thermal/bmc_min` on `lm75`-backed BMC sensors; the driver does not
+register a minimum temperature attribute, so `hw-management-bmc-events.sh` does
+not create that symlink.
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | driver-specific limit semantics |
+
+**Example:** Read BMC max temperature threshold:
+```bash
+cat $bsp_path/thermal/bmc_temp
+```
+
+### Read BMC Critical Temperature
+
+**Stack:** BMC — **not created** on HI189 (`lm75` has no `temp1_crit`)
+
+**Node name:** `$bsp_path/thermal/bmc_crit` (legacy); not created on HI189 BMC stack
+
+**Description:** On systems with the hw-mgmt BMC thermal stack (HI189), the BMC ambient sensor
+uses the `lm75` driver, which does not expose `temp1_crit` in sysfs. `hw-management-bmc-events.sh`
+does not create a `bmc_crit` symlink. Rev. 2.8 documented `$bsp_path/thermal/bmc_crit`; use
+`bmc_temp` (max/limit) and `bmc_temp_input` on current BMC platforms.
+
+**Access:** Read only (when node exists on other platforms)
+
+**Release version:** 1.0
+
+**Note:** Virtual test trees (for example HI193) may still ship fixture files named `bmc_crit`
+under `usr/etc/hw-management-virtual/`; that naming does not apply to live HI189 runtime
+symlinks.
+
+**Example:** Not applicable on HI189 — verify with `ls $bsp_path/thermal/` on the device.
+
+
+### Read BMC Minimal Temperature
+
+**Stack:** BMC — **not created** on HI189 (`lm75` has no `temp1_min`; `check_n_link` skips)
+
+**Node name:** `$bsp_path/thermal/bmc_min` (legacy); not created on HI189 BMC stack
+
+**Description:** The BMC events handler attempts `temp1_min` → `bmc_min`, but `check_n_link`
+silently skips missing sources. The HI189 BMC sensor (`lm75` at I2C `4-0048`) has no
+`temp1_min` attribute, so **`bmc_min` never appears** on production SONiC images using this
+stack. See `bmc/examples/hw-management-bmc-thermal-sysfs.txt`.
+
+**Access:** Read only (when node exists on other platforms)
+
+**Release version:** 1.0
+
+**Example:** Not applicable on HI189:
+```bash
+# Expected absent on lm75-backed BMC:
+ls $bsp_path/thermal/bmc_min
+```
+
+
 ### Read Cooling State
 
 **Node name:** `$bsp_path/thermal/cooling_state`
@@ -5553,6 +5875,28 @@ cat $bsp_path/thermal/comex_temp_input
 ```bash
 cat $bsp_path/thermal/cooling_state
 ```
+
+### Cooling Name
+
+**Node name:** `$bsp_path/config/cooling_name`
+
+**Description:** Thermal control cooling device name written by `hw-management-thermal-events.sh`
+during cooling device registration. Used by the thermal control daemon configuration.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| name | String | platform-specific |
+
+**Example:** Read cooling name:
+```bash
+cat $bsp_path/config/cooling_name
+```
+
 
 ### Read CPU Core Temperature
 
@@ -5754,6 +6098,51 @@ cat $bsp_path/thermal/fan1_max_speed
 cat $bsp_path/thermal/fan1_min_speed
 ```
 
+### Set Fan Speed
+
+**Node name:** `$bsp_path/thermal/fan<index>_speed_set`
+
+**Description:** Set fan PWM/speed for fan `<index>`. Symlink is created by
+`hw-management-thermal-events.sh` from the cooling device `pwm1` attribute when supported.
+
+**Access:** Write
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| speed | Integer | platform-specific PWM scale |
+
+**Example:** Set fan1 speed:
+```bash
+echo 50 > $bsp_path/thermal/fan1_speed_set
+```
+
+
+### Fan Speed Tolerance
+
+**Node name:** `$bsp_path/thermal/fan<index>_speed_tolerance`
+
+**Description:** Fan speed tolerance for fan `<index>` when exposed under the thermal hierarchy.
+For system-wide tolerance configuration see also `$bsp_path/config/fan_speed_tolerance`
+(§3.1.24).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| tolerance | Integer |  |
+
+**Example:** Read fan1 speed tolerance (when present):
+```bash
+cat $bsp_path/thermal/fan1_speed_tolerance
+```
+
+
 ### Read Fan Direction
 
 **Node name:** `$bsp_path/thermal/fan<index>_direction`
@@ -5812,6 +6201,67 @@ cat $bsp_path/thermal/fan1_status
 ```bash
 cat $bsp_path/thermal/fan1_fault
 ```
+
+### Comex Voltmon Temperature
+
+**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_input`
+
+**Description:** Read Comex PMBus voltmon temperature input.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read comex voltmon1 temperature:
+```bash
+cat $bsp_path/thermal/comex_voltmon1_temp1_input
+```
+
+### Comex Voltmon Critical Temperature
+
+**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_crit`
+
+**Description:** Read Comex voltmon critical temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/comex_voltmon1_temp1_crit
+```
+
+### Comex Voltmon Max Temperature
+
+**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_max`
+
+**Description:** Read Comex voltmon maximum temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/comex_voltmon1_temp1_max
+```
+
 
 ### Read Port Ambient
 
@@ -6526,6 +6976,94 @@ cat $bsp_path/thermal/sodimm2_temp_crit_hyst
 cat $bsp_path/thermal/sodimm2_temp_max_hyst
 ```
 
+### SWB ASIC Temperature
+
+**Node name:** `$bsp_path/thermal/swb_asic<index>`
+
+**Description:** Read switch-board (SWB) ASIC temperature when present on multi-board systems.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/swb_asic1
+```
+
+
+### Drive Temperature
+
+**Node name:** `$bsp_path/thermal/drivetemp`
+
+**Description:** Read NVMe/drive temperature from the `drivetemp` hwmon driver when linked by
+`hw-management-thermal-events.sh`.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp
+```
+
+### Drive Critical Temperature
+
+**Node name:** `$bsp_path/thermal/drivetemp_crit`
+
+**Description:** Read drive critical temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp_crit
+```
+
+### Drive Maximum Temperature Threshold
+
+**Node name:** `$bsp_path/thermal/drivetemp_max`
+
+**Description:** Read drive maximum temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp_max
+```
+
+### Drive Minimum Temperature Threshold
+
+**Node name:** `$bsp_path/thermal/drivetemp_min`
+
+**Description:** Read drive minimum temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp_min
+```
+
+
 ## Watchdog
 
 Note: On SN6600_LD the validated hierarchy places attributes under
@@ -6670,6 +7208,106 @@ cat $bsp_path/watchdog/timeout
 **Example:** Read watchdog time left:
 ```bash
 cat $bsp_path/watchdog/timeleft
+```
+
+## BMC status
+
+Sections §3.23.1–§3.23.2 describe **host-CPU** views of BMC presence and I2C ownership
+(validated: `tests/system_tree/hw-management-tree-SN6600_LD.txt`). §3.23.3–§3.23.5 are
+**host** config/status for MCTP setup where the platform defines it (`hw-management.sh`).
+
+On the **BMC** image, `bmc_to_cpu_ctrl` also appears under `$bsp_path/system/` via the
+**mlxreg-io** `regio` handler (see `bmc/examples/hw-management-bmc-system-sysfs.txt`).
+
+### BMC present
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/system/bmc_present`
+
+**Description:** GPIO indicating whether a BMC is present. Created by host
+`hw-management.sh` (platform-specific GPIO mapping).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/system/bmc_present
+```
+
+### BMC to CPU control
+
+**Stack:** Host (mlxreg-io on CPU); also **BMC** (`system/` symlink from `regio` on BMC image)
+
+**Node name:** `$bsp_path/system/bmc_to_cpu_ctrl`
+
+**Description:** I2C bus ownership between BMC and CPU (0 = CPU, 1 = BMC on supported
+platforms). On the host image the symlink targets **mlxplat** mlxreg-io; thermal control
+may read this node (`hw_management_thermal_control.py`: `system/bmc_to_cpu_ctrl`).
+
+**Access:** Read/Write (platform-dependent)
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/system/bmc_to_cpu_ctrl
+```
+
+### MCTP address
+
+**Stack:** Host (`hw-management.sh` writes when platform defines MCTP, e.g. N5110)
+
+**Node name:** `$bsp_path/config/mctp_addr`
+
+**Description:** MCTP I2C client address used during host init to instantiate the MCTP
+device on `mctp_bus`.
+
+**Access:** Read only (after init)
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/config/mctp_addr
+```
+
+### MCTP bus
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/config/mctp_bus`
+
+**Description:** I2C bus number for MCTP client binding during host init.
+
+**Access:** Read only (after init)
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/config/mctp_bus
+```
+
+### MCTP ready
+
+**Stack:** Host (mlxreg-io); **BMC** register `cpu_mctp_ready` under `$bsp_path/system/` on BMC image
+
+**Node name:** `$bsp_path/system/cpu_mctp_ready`
+
+**Description:** Indicates CPU MCTP readiness from platform mlxreg-io. Present in validated
+host trees (SN6600_LD, SN5810_LD, N6100_LD). On the BMC image the same logical register is
+listed in `nvsw_bmc_hid189_regio_data` / `hw-management-bmc-system-sysfs.txt`.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/system/cpu_mctp_ready
 ```
 
 ## JTAG interface

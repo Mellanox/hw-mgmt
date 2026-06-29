@@ -29,7 +29,7 @@ Create **`bmc/usr/etc/HINNN/`** and ship the same *kinds* of artifacts as **HI18
 | **`hw-management-bmc-boot-complete.conf`** | Optional | Minimum sysfs entry counts for **`hw-management-bmc-boot-complete.sh`**. |
 | **`hw-management-bmc-bom.json`** | Optional | SMBIOS BOM alternate maps for **`hw-management-bmc-devtree.sh`** when copied to **`/etc/hw-management-bmc-bom.json`**. |
 | **`hw-management-bmc-a2d-leakage-config.json`** | Optional | Only if the board uses the A2D leakage stack; otherwise omit or ship an empty / no-op policy per tooling expectations. |
-| **`hw-management-bmc-network.conf`** | Optional | **`USB0_ADDRESS=…`** for BMC↔host **`usb0`**; defaults exist in plat-specific-preps when this file is absent. |
+| **`hw-management-bmc-network.conf`** | Optional | **`USB0_ADDRESS=…`** for hw-management static **`usb0`**, or **`USB0_MANAGED_BY_NOS=1`** for SONiC/NOS-owned **`usb0`** (see **`hw-management-bmc-network-sonic.conf.example`**). Defaults exist in plat-specific-preps when this file is absent. |
 | **`99-hw-management-bmc-mctp.rules`** | Optional | IRoT MCTP (**`mctpirot*`**). Omit if the SKU has no such net devices. |
 
 All **`*.json`** files in the directory are **copied** to **`/etc/`** at boot (plat-specific-preps). All **`*.rules`** are **symlinked** into **`/lib/udev/rules.d/`**.

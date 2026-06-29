@@ -1,0 +1,115 @@
+{
+    "_comment": "Example platform config for /etc/hw-management-cfg/<HID>/platform.json. Remove _comment before deploy.",
+    "system": {
+        "_comment_bmc": "yes | no",
+        "bmc": "yes",
+        "_comment_cooling": "liquid | air | hybrid",
+        "cooling": "air",
+        "_comment_power_supply": "AC | DC",
+        "power_supply": "AC",
+        "_comment_power_source": "busbar | replaceable_unit",
+        "power_source": "replaceable_unit",
+        "_comment_power_supply_replaceable": "yes | no | na",
+        "power_supply_replaceable": "yes",
+        "_comment_fan_replaceable": "yes | no | na",
+        "fan_replaceable": "yes",
+        "_comment_ssd": "sata | nvme",
+        "ssd": "nvme",
+        "_comment_tpm": "yes | no",
+        "tpm": "yes",
+        "_comment_security": "PQC",
+        "security": "PQC",
+        "_comment_type": "Ethernet | IB | NvLink",
+        "type": "Ethernet"
+    },
+    "variables": {
+        "hotplug_fans": 4,
+        "max_tachos": 8,
+        "hotplug_pwrs": 0,
+        "hotplug_psus": 0,
+        "hotplug_pdbs": 0,
+        "hotplug_linecards": 0,
+        "erot_count": 0,
+        "vrot_count": 0,
+        "mcu_count": 0,
+        "cartridge_count": 0,
+        "cpld_num": 4,
+        "asic_control": 1,
+        "asic_num": 2,
+        "health_events_count": 0,
+        "pwr_events_count": 0,
+        "dpu_count": 0,
+        "psu_count": 2,
+        "minimal_unsupported": 0,
+        "dummy_psus_supported": 0,
+        "leakage_count": 0,
+        "leakage_rope_count": 0,
+        "i2c_comex_mon_bus_default": 23,
+        "i2c_bus_def_off_eeprom_cpu": 24,
+        "lm_sensors_config": "/etc/hw-management-sensors/example_sensors.conf",
+        "lm_sensors_labels": "/etc/hw-management-sensors/example_sensors_labels.json",
+        "thermal_control_config": "/etc/hw-management-thermal/tc_config_not_supported.json",
+        "mctp_bus": "",
+        "mctp_addr": ""
+    },
+    "pci": {
+        "_comment_asic_pci_id": "lspci grep -E pattern: 4-digit hex; use | for multiple IDs",
+        "asic_pci_id": "22a3",
+        "_comment_dpu": "optional; omit dpu_pci_id and dpu_pci_addr when no DPUs",
+        "dpu_pci_id": "a2dc",
+        "dpu_pci_addr": [
+            "06:00.0",
+            "05:00.0",
+            "01:00.0",
+            "02:00.0"
+        ]
+    },
+    "board": {
+        "_comment_board": "Devtree board topology; replaces pre_devtr_init() for JSON platforms",
+        "cpu_brd_bus_offset": 55,
+        "swb_brd_num": 4,
+        "pwr_brd_num": 4,
+        "swb_brd_bus_offset": 16,
+        "pwr_brd_bus_offset": 16,
+        "swb_brd_vr_num": 11,
+        "pwr_brd_pwr_conv_num": 1,
+        "pwr_brd_hotswap_num": 1,
+        "pwr_brd_temp_sens_num": 1
+    },
+    "config": {
+        "fan_max_speed": "21000",
+        "fan_min_speed": "5400",
+        "psu_fan_max": "18000",
+        "psu_fan_min": "2000",
+        "fan_inversed": "7 8 5 6 3 4 1 2",
+        "psu_eeprom_type": "24c02",
+        "reset_attr_num": "8",
+        "global_wp_wait_step": "1",
+        "global_wp_timeout": "20",
+        "system_flow_capability": "C2P"
+    },
+    "psu_i2c": {
+        "psu1_i2c_bus": 4,
+        "psu1_i2c_addr": "0x59",
+        "psu2_i2c_bus": 4,
+        "psu2_i2c_addr": "0x58"
+    },
+    "asic_i2c_buses": [
+        2,
+        18
+    ],
+    "connection": {
+        "_comment_connection": "I2C topology comes from devtree; list named busses here",
+        "named_busses": [
+            { "name": "ts", "bus": 7 },
+            { "name": "vpd", "bus": 8 },
+            { "name": "erot1", "bus": 15 },
+            { "name": "vr1", "bus": 26 },
+            { "name": "vr2", "bus": 29 }
+        ],
+        "add_come_named_busses_offset": 18
+    },
+    "actions": [
+        "get_i2c_bus_frequency_default"
+    ]
+}
