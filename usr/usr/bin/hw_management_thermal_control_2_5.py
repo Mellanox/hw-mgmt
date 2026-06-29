@@ -488,6 +488,24 @@ def natural_key(obj):
 # ----------------------------------------------------------------------
 
 
+def g_safe_round(value, digits=1):
+    """
+    @summary: Round values for log/report output while preserving non-numeric sentinel strings.
+    """
+    if value is None:
+        return "N/A"
+
+    try:
+        return round(value, digits)
+    except TypeError:
+        try:
+            return round(float(value), digits)
+        except (TypeError, ValueError):
+            return value
+
+# ----------------------------------------------------------------------
+
+
 def str2bool(val):
     """
     @summary:
@@ -1180,7 +1198,7 @@ class pwm_regulator_dynamic(pwm_regulator_simple):
         """
         @summary: return string representation of the class
         """
-        return "I:{: <3}, pwm_dmax:{}".format(round(self.Iterm, 1), round(self.pwm_max_dynamic))
+        return "I:{: <3}, pwm_dmax:{}".format(g_safe_round(self.Iterm, 1), round(self.pwm_max_dynamic))
 
 
 class system_device(hw_management_file_op):
@@ -1735,13 +1753,13 @@ class system_device(hw_management_file_op):
         if CONST.SENSOR_READ_ERR in fault_list or self.value == CONST.TEMP_NA_VAL:
             value = "N/A"
         else:
-            value = round(self.value, 1)
+            value = g_safe_round(self.value, 1)
         info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], tz_pwm: {}, {}".format(self.name,
                                                                                              value,
-                                                                                             round(self.val_min, 1),
-                                                                                             round(self.val_max, 1),
+                                                                                             g_safe_round(self.val_min, 1),
+                                                                                             g_safe_round(self.val_max, 1),
                                                                                              self.get_fault_list_str(),
-                                                                                             round(self.pwm, 1),
+                                                                                             g_safe_round(self.pwm, 1),
                                                                                              self.state)
         return info_str
 
@@ -2093,7 +2111,7 @@ class thermal_module_sensor(system_device):
         @summary: returning info about current device state. Can be overridden in child class
         """
         fault_list = self.get_fault_list_filtered()
-        value = round(self.value, 1) if self.get_temp_support_status() else CONST.TEMP_NA_VAL
+        value = g_safe_round(self.value, 1) if self.get_temp_support_status() else CONST.TEMP_NA_VAL
         if CONST.SENSOR_READ_ERR in fault_list or value == CONST.TEMP_NA_VAL:
             value = "N/A"
 
@@ -2106,11 +2124,11 @@ class thermal_module_sensor(system_device):
         self.pwm_prev = self.pwm
         info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, [{}], faults:[{}], tz_pwm: {}{}, {}".format(self.name,
                                                                                                                   value,
-                                                                                                                  round(self.val_min, 1),
-                                                                                                                  round(self.val_max, 1),
+                                                                                                                  g_safe_round(self.val_min, 1),
+                                                                                                                  g_safe_round(self.val_max, 1),
                                                                                                                   str(self.pwm_regulator),
                                                                                                                   self.get_fault_list_str(),
-                                                                                                                  round(float(self.pwm), 1), sign,
+                                                                                                                  g_safe_round(self.pwm, 1), sign,
                                                                                                                   self.state)
         return info_str
 
@@ -2234,14 +2252,14 @@ class thermal_module_tec_sensor(system_device):
         else:
             sign = ''  # no change
         self.pwm_prev = self.pwm
-        value_str = "temp:{: <4}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(round(temperature, 1),
-                                                                                     round(cooling_level, 1),
-                                                                                     round(cooling_level_max, 1))
+        value_str = "temp:{: <4}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(g_safe_round(temperature, 1),
+                                                                                     g_safe_round(cooling_level, 1),
+                                                                                     g_safe_round(cooling_level_max, 1))
 
         info_str = "\"{: <8}\" {: <54}, faults:[{}], pwm: {}{}, {}".format(self.name,
                                                                            value_str,
                                                                            self.get_fault_list_str(),
-                                                                           round(self.pwm, 1), sign,
+                                                                           g_safe_round(self.pwm, 1), sign,
                                                                            self.state)
         return info_str
 
@@ -2613,7 +2631,7 @@ class psu_fan_sensor(system_device):
                                                                          value,
                                                                          self.fan_dir,
                                                                          self.get_fault_list_str(),
-                                                                         round(self.pwm, 1),
+                                                                         g_safe_round(self.pwm, 1),
                                                                          self.state)
 
 
@@ -3138,7 +3156,7 @@ class fan_sensor(system_device):
                                                                                   fan_speed_stable_sign,
                                                                                   self.fan_dir,
                                                                                   self.get_fault_list_str(),
-                                                                                  round(self.pwm, 1),
+                                                                                  g_safe_round(self.pwm, 1),
                                                                                   self.state)
         return info_str
 
@@ -3264,13 +3282,16 @@ class ambient_thermal_sensor(system_device):
         for key, val in self.value_dict.items():
             if val == CONST.TEMP_NA_VAL:
                 val = "N/A"
-            sens_val += "{}:{} ".format(key, round(val, 1))
+            sens_val += "{}:{} ".format(key, g_safe_round(val, 1))
+        sensor_min_val = self.value_dict[sensor_name_min]
+        if sensor_min_val == CONST.TEMP_NA_VAL:
+            sensor_min_val = "N/A"
         info_str = "\"{}\" {}({}), dir:{}, faults:[{}] tz_pwm:{}, {}".format(self.name,
                                                                              sens_val,
-                                                                             round(self.value_dict[sensor_name_min], 1),
+                                                                             g_safe_round(sensor_min_val, 1),
                                                                              self.flow_dir,
                                                                              self.get_fault_list_str(),
-                                                                             round(self.pwm, 1),
+                                                                             g_safe_round(self.pwm, 1),
                                                                              self.state)
         return info_str
 
