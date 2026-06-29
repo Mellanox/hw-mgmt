@@ -14,8 +14,8 @@ dedicated OF match entries are needed.
 Signed-off-by: Dawei Liu <dawei.liu.jy@renesas.com>
 ---
  Documentation/hwmon/isl68137.rst | 20 ++++++++++++++++++++
- drivers/hwmon/pmbus/isl68137.c   | 22 ++++++++++++++++++++++---
- 2 files changed, 40 insertions(+), 2 deletions(-)
+ drivers/hwmon/pmbus/isl68137.c   | 21 +++++++++++++++++++++---
+ 2 files changed, 39 insertions(+), 2 deletions(-)
 
 diff --git a/Documentation/hwmon/isl68137.rst b/Documentation/hwmon/isl68137.rst
 index 0e71b22047f8..1a1424dd640f 100644
@@ -72,12 +72,11 @@ index 1a8caff1ac5f..2e78d716de59 100644
  static struct pmbus_driver_info raa_dmpvr_info = {
  	.pages = 3,
  	.format[PSC_VOLTAGE_IN] = direct,
-@@ -244,9 +261,13 @@
+@@ -244,9 +261,12 @@
  		info->read_word_data = raa_dmpvr2_read_word_data;
  		break;
  	case raa_dmpvr2_2rail_nontc:
 +		info->func[0] &= ~PMBUS_HAVE_VMON;
-+		info->func[0] &= ~PMBUS_HAVE_TEMP2;
  		info->func[0] &= ~PMBUS_HAVE_TEMP3;
  		info->func[1] &= ~PMBUS_HAVE_TEMP3;
 -		fallthrough;
