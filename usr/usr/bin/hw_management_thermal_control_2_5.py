@@ -4815,6 +4815,8 @@ class ThermalManagement(hw_management_file_op):
             curr_timestamp = current_milli_time()
 
             for dev_obj in self.dev_obj_list:
+                if self.exit.is_set():
+                    return
                 if dev_obj.enable:
                     if curr_timestamp >= dev_obj.get_timestamp():
                         # process sensors
@@ -4828,6 +4830,8 @@ class ThermalManagement(hw_management_file_op):
                 conf["skip_err"] = False
 
             for dev_obj in self.dev_obj_list:
+                if self.exit.is_set():
+                    return
                 if dev_obj.enable:
                     if dev_obj.state != CONST.RUNNING:
                         continue
@@ -4867,6 +4871,8 @@ class ThermalManagement(hw_management_file_op):
                 continue
 
             for dev_obj in self.dev_obj_list:
+                if self.exit.is_set():
+                    return
                 if dev_obj.enable:
                     if curr_timestamp >= dev_obj.get_timestamp():
                         if dev_obj.state == CONST.RUNNING:
