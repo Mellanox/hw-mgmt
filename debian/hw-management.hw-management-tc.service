@@ -11,7 +11,7 @@ StartLimitBurst=15
 [Service]
 ExecStart=/bin/sh -c "/usr/bin/hw_management_thermal_control.py"
 ExecStop=/bin/kill $MAINPID
-TimeoutStopSec=5
+TimeoutStopSec=10
 
 Restart=on-failure
 RestartSec=60s
