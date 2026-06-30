@@ -102,7 +102,7 @@ def atomic_file_write(file_name, value):
 # ----------------------------------------------------------------------
 
 
-def exit_wait(exit_event, timeout, chunk_sec=1.0):
+def exit_wait(exit_event, timeout, chunk_sec=0.2):
     """
     @summary:
         Wait up to timeout seconds in short chunks for graceful shutdown visibility.

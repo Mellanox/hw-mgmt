@@ -10,7 +10,7 @@ StartLimitBurst=5
 [Service]
 ExecStart=/bin/sh -c "/usr/bin/hw_management_thermal_updater.py"
 ExecStop=/bin/kill $MAINPID
-TimeoutStopSec=1
+TimeoutStopSec=5
 
 Restart=on-failure
 RestartSec=10s
