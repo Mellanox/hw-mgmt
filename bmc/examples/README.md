@@ -6,7 +6,7 @@ Reference material for SONiC BMC **hw-management-bmc** tooling: sample JSON and 
 
 **User manual:** Host vs BMC stacks are documented in **§2.2** of
 `Documentation/Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md`. Examples
-here apply to the **BMC package** only; host validated layouts are under `tests/system_tree/`.
+here apply to the **BMC package** only; host reference layouts use `usr/etc/hw-management-sensors/` and scripts under `usr/usr/bin/`.
 
 | File | Purpose |
 |------|---------|
