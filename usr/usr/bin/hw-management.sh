@@ -4291,8 +4291,8 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
-		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI186/HI193/HI194 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI186" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
+		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193/HI194 in simx
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			process_simx_links
 			log_info "Created mock hw management tree, exiting."
@@ -4392,7 +4392,7 @@ case $ACTION in
 		do_stop
 		sleep 3
 		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI186" -o "$sku" == "HI193" ]; then
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
