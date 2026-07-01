@@ -39,6 +39,7 @@ To print the populated <section>_alternatives contents, run:
 
 import json
 import subprocess
+import sys
 import pytest
 from pathlib import Path
 
@@ -89,11 +90,11 @@ def run_parser(json_file):
     Returns (stdout, stderr, returncode).
     """
     result = subprocess.run(
-        [str(PARSER), str(json_file)],
-        capture_output=True,
-        text=True,
+        [sys.executable, str(PARSER), str(json_file)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
-    return result.stdout, result.stderr, result.returncode
+    return result.stdout.decode(), result.stderr.decode(), result.returncode
 
 
 def parse_into_alternatives(output):
@@ -236,9 +237,9 @@ class TestParserErrorHandling:
     def test_no_arguments(self):
         """Parser must exit non-zero when called with no arguments."""
         result = subprocess.run(
-            [str(PARSER)],
-            capture_output=True,
-            text=True,
+            [sys.executable, str(PARSER)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         assert result.returncode != 0
 

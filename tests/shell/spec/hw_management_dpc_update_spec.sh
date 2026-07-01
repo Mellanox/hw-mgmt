@@ -6,13 +6,18 @@
 #
 
 Describe 'VR DPC update entrypoint + read-vr JSON'
-  # Resolve repo root from this spec file location:
-  #   tests/shell/spec/ -> repo root is ../../..
-  spec_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
-  repo_root="$(cd "${spec_dir}/../../.." >/dev/null 2>&1 && pwd -P)"
+  # $SHELLSPEC_SPECDIR is set by shellspec to the absolute path of the spec/
+  # directory, which is tests/shell/spec/ — three levels up is the repo root.
+  repo_root="$(cd "${SHELLSPEC_SPECDIR}/../../.." >/dev/null 2>&1 && pwd -P)"
 
   dpc_update="${repo_root}/usr/usr/bin/hw-management-dpc-update.sh"
   read_vr="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
+
+  # Returns 0 (→ skip) when the repo read-vr script is absent.
+  _read_vr_missing() { ! [[ -x "$read_vr" ]]; }
+  # dpc-update.sh internally hard-codes /usr/bin/hw-management-read-vr-model-version.sh;
+  # skip the verify tests unless that installed copy is present.
+  _dpc_verify_prereq_missing() { ! [[ -x "/usr/bin/hw-management-read-vr-model-version.sh" ]]; }
 
   setup_test_env() {
     TEST_TMPDIR="$(mktemp -d)"
@@ -20,15 +25,10 @@ Describe 'VR DPC update entrypoint + read-vr JSON'
     mkdir -p "$TEST_BINDIR"
 
     # Stub i2c tools so tests don't require real hardware.
-    cat > "${TEST_BINDIR}/i2cget" <<'EOF'
-#!/bin/sh
-exit 0
-EOF
-    cat > "${TEST_BINDIR}/i2cset" <<'EOF'
-#!/bin/sh
-exit 0
-EOF
-    chmod +x "${TEST_BINDIR}/i2cget" "${TEST_BINDIR}/i2cset"
+    for _tool in i2cget i2cset i2ctransfer; do
+      printf '#!/bin/sh\nexit 0\n' > "${TEST_BINDIR}/${_tool}"
+      chmod +x "${TEST_BINDIR}/${_tool}"
+    done
 
     # Single-line devtree content (space-separated). Use an unsupported device type to avoid I2C reads.
     TEST_DEVTREE="${TEST_TMPDIR}/devtree"
@@ -99,16 +99,16 @@ EOF
     }
 
     It 'accepts --verify before tar path'
+      Skip if "requires /usr/bin/hw-management-read-vr-model-version.sh installed" _dpc_verify_prereq_missing
       build_test_pkg
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
       When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' --verify '${TAR_PATH}'"
       The status should be success
       The output should include "VERIFY PASSED."
     End
 
     It 'accepts --verify after tar path'
+      Skip if "requires /usr/bin/hw-management-read-vr-model-version.sh installed" _dpc_verify_prereq_missing
       build_test_pkg
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
       When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' '${TAR_PATH}' --verify"
       The status should be success
       The output should include "VERIFY PASSED."
@@ -117,7 +117,7 @@ EOF
 
   Describe 'debug output separation'
     It 'writes debug logs to stderr without contaminating JSON stdout'
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
+      Skip if "requires /usr/bin/hw-management-read-vr-model-version.sh installed" _dpc_verify_prereq_missing
       When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEBUG=1 bash '${dpc_update}' --show --json"
       The status should be success
       The output should start with "["

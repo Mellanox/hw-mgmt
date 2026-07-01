@@ -143,5 +143,208 @@ class TestHeaderParsing:
         assert psu_delta.FW_HEADER["write_time"] == 20
 
 
+class TestReadMfrFwRevision:
+    """Test read_mfr_fw_revision() for all mfr_model branches."""
+
+    def test_delta_500ab_branch(self):
+        """MFR_MODEL_500AB prefix → pmbus_read with MFR_FW_REVISION, len=8; ASCII decode."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='DPS-550AB-XYZ'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x41 0x42 0x43') as mock_read:
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            mock_read.assert_called_once_with(0, 0x58, psu_delta.MFR_FW_REVISION, 8)
+            assert result == 'ABC'
+
+    def test_delta_500ab_empty_return(self):
+        """MFR_MODEL_500AB branch with empty pmbus_read returns None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='DPS-550AB'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            assert result is None
+
+    def test_acbel_1100_branch(self):
+        """Acbel 1100 (FSP007-9G0G) → pmbus_read ACBEL,4; reverses bytes, dot-joins."""
+        # Returned hex list: '0x02 0x01 0x00 0x00' → int_list[1:3] = ['0x01','0x00']
+        # reversed → ['0x00','0x01'] → '0.1'
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='FSP007-9G0G'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x02 0x01 0x00 0x00'):
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            assert result == '0.1'
+
+    def test_acbel_1100_empty_return(self):
+        """Acbel 1100 branch with empty pmbus_read returns None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='FSP007-9G0G'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            assert result is None
+
+    def test_acbel_460_branch(self):
+        """Acbel 460 (FSF008-9G0G) → pmbus_read ACBEL,5; rearranges bytes, dot-joins."""
+        # '0x02 0x03 0x04 0x05 0x06' → int_list[1:5] = ['0x03','0x04','0x05','0x06']
+        # ver_list = [int_list[1], int_list[0], int_list[3], int_list[2]] = ['0x04','0x03','0x06','0x05']
+        # → '4.3.6.5'
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='FSF008-9G0G-123'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x02 0x03 0x04 0x05 0x06'):
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            assert result == '4.3.6.5'
+
+    def test_acbel_460_empty_return(self):
+        """Acbel 460 branch with empty pmbus_read returns None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='FSF008-9G0G'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            assert result is None
+
+    def test_acbel_2000_branch(self):
+        """Acbel 2000 (FSP016-9G0G) → pmbus_read ACBEL,6; ASCII decode."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='FSP016-9G0G'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x41 0x42 0x43') as mock_read:
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            mock_read.assert_called_once_with(0, 0x58, psu_delta.MFR_FW_REVISION_ACBEL, 6)
+            assert result == 'ABC'
+
+    def test_default_branch(self):
+        """Unknown model → pmbus_read MFR_FW_REVISION,6; ASCII decode."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='UNKNOWN-MODEL'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x58 0x59 0x5a') as mock_read:
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            mock_read.assert_called_once_with(0, 0x58, psu_delta.MFR_FW_REVISION, 6)
+            assert result == 'XYZ'
+
+    def test_default_branch_empty_return(self):
+        """Default branch with empty pmbus_read returns None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='UNKNOWN-MODEL'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_revision(0, 0x58)
+            assert result is None
+
+
+class TestReadMfrFwUploadStatus:
+    """Test read_mfr_fw_upload_status() branches."""
+
+    def test_acbel_model_uses_acbel_cmd(self):
+        """Acbel model routes to MFR_FWUPLOAD_STATUS_ACBEL command."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='FSP007-9G0G'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x00') as mock_read:
+            psu_delta.read_mfr_fw_upload_status(0, 0x58)
+            mock_read.assert_called_once_with(0, 0x58, psu_delta.MFR_FWUPLOAD_STATUS_ACBEL, 1)
+
+    def test_non_acbel_model_uses_delta_cmd(self):
+        """Non-acbel model routes to MFR_FWUPLOAD_STATUS command."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='DPS-550AB'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x01') as mock_read:
+            result = psu_delta.read_mfr_fw_upload_status(0, 0x58)
+            mock_read.assert_called_once_with(0, 0x58, psu_delta.MFR_FWUPLOAD_STATUS, 1)
+            assert result is not None
+
+    def test_status_0x00_reset(self):
+        """Status 0x00 returns the 'Reset' status string."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='DPS-550AB'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x00'):
+            result = psu_delta.read_mfr_fw_upload_status(0, 0x58)
+            assert result == psu_delta.UPLOAD_STATUS_DICT[0]
+
+    def test_status_0x01_full_image(self):
+        """Status 0x01 returns 'Full image received.'"""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='DPS-550AB'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x01'):
+            result = psu_delta.read_mfr_fw_upload_status(0, 0x58)
+            assert result == psu_delta.UPLOAD_STATUS_DICT[1]
+
+    def test_empty_pmbus_return_gives_none(self):
+        """Empty pmbus_read return → function returns None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read_mfr_model', return_value='DPS-550AB'), \
+             patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_upload_status(0, 0x58)
+            assert result is None
+
+
+class TestReadMfrFwUploadStatusAcbel460:
+    """Test read_mfr_fw_upload_status_acbel_460()."""
+
+    def test_known_status_0x51(self):
+        """0x51 → 'ISP Mode Disabled'."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x51'):
+            result = psu_delta.read_mfr_fw_upload_status_acbel_460(0, 0x58)
+            assert result == psu_delta.UPLOAD_STATUS_DICT_ACBEL_460[0x51]
+
+    def test_known_status_0x30(self):
+        """0x30 → 'ISP No Error'."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x30'):
+            result = psu_delta.read_mfr_fw_upload_status_acbel_460(0, 0x58)
+            assert result == psu_delta.UPLOAD_STATUS_DICT_ACBEL_460[0x30]
+
+    def test_empty_pmbus_return_gives_none(self):
+        """Empty pmbus_read → None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_upload_status_acbel_460(0, 0x58)
+            assert result is None
+
+
+class TestReadMfrFwUploadMode:
+    """Test read_mfr_fw_upload_mode() and its acbel_460 variant."""
+
+    def test_mode_0x00_exit(self):
+        """0x00 → 'Exit firmware upload mode.'"""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x00'):
+            result = psu_delta.read_mfr_fw_upload_mode(0, 0x58)
+            assert result == psu_delta.UPLOAD_MODE_DICT[0]
+
+    def test_mode_0x01_enter(self):
+        """0x01 → 'Enter Firmware upload mode.'"""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x01'):
+            result = psu_delta.read_mfr_fw_upload_mode(0, 0x58)
+            assert result == psu_delta.UPLOAD_MODE_DICT[1]
+
+    def test_empty_return_gives_none(self):
+        """Empty pmbus_read → None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_upload_mode(0, 0x58)
+            assert result is None
+
+    def test_acbel_460_variant_known_code(self):
+        """acbel_460 variant: 0x00 → 'Exit firmware upload mode.'"""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value='0x00'):
+            result = psu_delta.read_mfr_fw_upload_mode_acbel_460(0, 0x58)
+            assert result == psu_delta.UPLOAD_MODE_DICT[0]
+
+    def test_acbel_460_variant_empty_return(self):
+        """acbel_460 variant: empty pmbus_read → None."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_read', return_value=''):
+            result = psu_delta.read_mfr_fw_upload_mode_acbel_460(0, 0x58)
+            assert result is None
+
+
+class TestWriteMfrFwUploadMode:
+    """Test write_mfr_fw_upload_mode() and its variants."""
+
+    def test_write_mode_calls_pmbus_write(self):
+        """write_mfr_fw_upload_mode sends [MFR_FWUPLOAD_MODE, mode] to pmbus_write."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_write') as mock_write:
+            psu_delta.write_mfr_fw_upload_mode(0, 0x58, 1)
+            mock_write.assert_called_once_with(0, 0x58, [psu_delta.MFR_FWUPLOAD_MODE, 1])
+
+    def test_write_mode_acbel_460_calls_pmbus_write(self):
+        """write_mfr_fw_upload_mode_acbel_460 sends correct command."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_write') as mock_write:
+            psu_delta.write_mfr_fw_upload_mode_acbel_460(0, 0x58, 0)
+            mock_write.assert_called_once_with(0, 0x58, [psu_delta.MFR_FWUPLOAD_MODE_ACBEL_460, 0])
+
+
+class TestWriteMfrFwUpload:
+    """Test write_mfr_fw_upload() and acbel_460 variant."""
+
+    def test_write_upload_prepends_cmd(self):
+        """write_mfr_fw_upload prepends MFR_FWUPLOAD before data bytes."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_write') as mock_write:
+            psu_delta.write_mfr_fw_upload(0, 0x58, [0xAA, 0xBB])
+            mock_write.assert_called_once_with(0, 0x58, [psu_delta.MFR_FWUPLOAD, 0xAA, 0xBB])
+
+    def test_write_upload_acbel_460_prepends_cmd(self):
+        """write_mfr_fw_upload_acbel_460 prepends MFR_FWUPLOAD_ACBEL_460 before data bytes."""
+        with patch.object(psu_delta.psu_upd_cmn, 'pmbus_write') as mock_write:
+            psu_delta.write_mfr_fw_upload_acbel_460(0, 0x58, [0xCC])
+            mock_write.assert_called_once_with(0, 0x58, [psu_delta.MFR_FWUPLOAD_ACBEL_460, 0xCC])
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v', '--tb=short'])

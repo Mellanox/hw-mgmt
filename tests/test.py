@@ -59,6 +59,8 @@ class TestRunner:
         self.hardware_dir = self.tests_dir / "hardware"
         self.shell_dir = self.tests_dir / "shell"
         self.logs_dir = self.tests_dir / "logs"
+        self.python_coverage_dir = self.tests_dir / "htmlcov" / "python"
+        self.shell_coverage_dir = self.tests_dir / "htmlcov" / "shell"
         self.failed_tests = []
         self.passed_tests = []
         self.total_test_count = 0  # Track total individual tests
@@ -545,6 +547,16 @@ class TestRunner:
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
+            {
+                'name': 'Pytest: EEPROM CRC32',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_eeprom_crc32.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Devtree JSON Parser',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_devtree_json_parser.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
         ]
 
         # Add coverage options to all pytest tests if coverage is enabled
@@ -582,6 +594,11 @@ class TestRunner:
 
         for test in tests:
             self.run_command(test['cmd'], test['cwd'], test['name'])
+
+        # Run shell coverage driver when generating HTML coverage report
+        if self.coverage_html:
+            self.print_header("SHELL SCRIPT COVERAGE")
+            self.run_shell_coverage()
 
         # Print coverage summary if coverage was enabled
         if self.coverage:
@@ -965,6 +982,99 @@ class TestRunner:
         except Exception as e:
             print(f"{Colors.RED}[ERROR]{Colors.RESET} Failed to run installation script: {e}")
             return False
+
+    def run_shell_coverage(self):
+        """Run kcov coverage driver to measure shell script coverage"""
+        repo_root = self.tests_dir.parent
+        driver_script = self.shell_dir / "coverage_driver.sh"
+        kcov_bin = self._find_kcov()
+
+        if not kcov_bin:
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} kcov not found — shell coverage not collected")
+            print(f"{Colors.CYAN}Install kcov to enable shell coverage measurement{Colors.RESET}")
+            return False
+
+        if not driver_script.exists():
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell coverage driver not found: {driver_script}")
+            return False
+
+        print(f"{Colors.BLUE}Running: {Colors.BOLD}Shell Coverage (kcov){Colors.RESET}")
+        print(f"{Colors.CYAN}Coverage driver:{Colors.RESET} {driver_script}")
+        print(f"{Colors.CYAN}Output:{Colors.RESET} {self.shell_coverage_dir}")
+
+        import shutil
+        if self.shell_coverage_dir.exists():
+            shutil.rmtree(self.shell_coverage_dir)
+        self.shell_coverage_dir.mkdir(parents=True)
+
+        script_dir = repo_root / "usr" / "usr" / "bin"
+        cmd = [
+            kcov_bin,
+            f"--include-path={script_dir}",
+            f"--bash-parse-files-in-dir={script_dir}",
+            str(self.shell_coverage_dir),
+            str(driver_script),
+            str(repo_root),
+        ]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=str(repo_root),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                timeout=120,
+                check=False,
+            )
+            output = result.stdout + result.stderr
+
+            if self.enable_logs:
+                log_path = self.logs_dir / "shell_coverage.log"
+                with open(log_path, "w", encoding="utf-8") as f:
+                    f.write(f"Command: {' '.join(cmd)}\n")
+                    f.write(f"Exit Code: {result.returncode}\n")
+                    f.write("=" * 80 + "\n\n")
+                    f.write(output)
+
+            # coverage_driver.sh prints a summary line
+            for line in result.stdout.splitlines():
+                if "coverage_driver:" in line:
+                    print(f"  {Colors.CYAN}{line}{Colors.RESET}")
+
+            if result.returncode == 0:
+                print(f"{Colors.GREEN}[PASSED]{Colors.RESET} Shell coverage collected")
+                self.passed_tests.append("Shell Coverage")
+                return True
+            else:
+                print(f"{Colors.RED}[FAILED]{Colors.RESET} Shell coverage driver exited with code {result.returncode}")
+                if self.verbose and output:
+                    print(output)
+                self.failed_tests.append("Shell Coverage")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print(f"{Colors.RED}[FAILED]{Colors.RESET} Shell coverage timed out")
+            self.failed_tests.append("Shell Coverage")
+            return False
+        except Exception as e:
+            print(f"{Colors.RED}[ERROR]{Colors.RESET} Shell coverage failed: {e}")
+            self.failed_tests.append("Shell Coverage")
+            return False
+
+    def _find_kcov(self):
+        """Return path to kcov binary, or None if not found"""
+        import shutil as _shutil
+
+        candidates = [
+            str(Path.home() / ".local" / "bin" / "kcov"),
+            "/usr/bin/kcov",
+            "/usr/local/bin/kcov",
+        ]
+        for c in candidates:
+            if Path(c).is_file():
+                return c
+        return _shutil.which("kcov")
 
     def run_shell_tests(self):
         """Run shell script tests using ShellSpec"""
@@ -1428,22 +1538,85 @@ class TestRunner:
         else:
             print(f"\n{Colors.RED}{Colors.BOLD}SOME TESTS FAILED{Colors.RESET}")
 
+    def _read_shell_coverage_json(self):
+        """Parse kcov coverage.json and return (covered, total, percent, per_file_list)"""
+        import glob as _glob
+        import json as _json
+
+        pattern = str(self.shell_coverage_dir / "*" / "coverage.json")
+        matches = _glob.glob(pattern)
+        if not matches:
+            return None
+
+        with open(matches[0], encoding="utf-8") as f:
+            data = _json.load(f)
+
+        covered = int(data.get("covered_lines", 0))
+        total = int(data.get("total_lines", 0))
+        pct = float(data.get("percent_covered", 0.0))
+
+        repo_root = str(self.tests_dir.parent)
+        per_file = []
+        for fi in data.get("files", []):
+            path = fi.get("file", "")
+            if "/usr/usr/bin/" not in path:
+                continue
+            per_file.append((
+                path.split("/")[-1],
+                float(fi.get("percent_covered", 0.0)),
+                int(fi.get("covered_lines", 0)),
+                int(fi.get("total_lines", 0)),
+            ))
+        per_file.sort(key=lambda x: -x[1])
+        return covered, total, pct, per_file
+
     def print_coverage_summary(self):
         """Print coverage summary after tests"""
         coverage_file = self.tests_dir.parent / '.coverage'
-        htmlcov_dir = self.tests_dir.parent / 'htmlcov'
 
+        print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 80}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.CYAN}  COVERAGE SUMMARY{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 80}{Colors.RESET}\n")
+
+        # --- Python coverage ---
         if coverage_file.exists():
-            print(f"\n{Colors.CYAN}Code Coverage:{Colors.RESET}")
-            print(f"  Coverage data saved to: {Colors.BOLD}{coverage_file}{Colors.RESET}")
+            print(f"{Colors.CYAN}Python Coverage:{Colors.RESET}")
+            print(f"  Data file: {Colors.BOLD}{coverage_file}{Colors.RESET}")
 
-            if htmlcov_dir.exists() and self.coverage_html:
-                index_file = htmlcov_dir / 'index.html'
+            if self.coverage_html and self.python_coverage_dir.exists():
+                index_file = self.python_coverage_dir / "index.html"
+                print(f"  {Colors.GREEN}HTML Report:{Colors.RESET} {Colors.BOLD}{index_file}{Colors.RESET}")
+                print(f"  Open in browser: file://{index_file.absolute()}")
+        else:
+            print(f"{Colors.YELLOW}Python Coverage:{Colors.RESET} no data (run with --coverage)")
+
+        # --- Shell coverage ---
+        print()
+        shell_data = self._read_shell_coverage_json()
+        if shell_data:
+            covered, total, pct, per_file = shell_data
+            color = Colors.GREEN if pct >= 50 else (Colors.YELLOW if pct >= 20 else Colors.RED)
+            print(f"{Colors.CYAN}Shell Coverage:{Colors.RESET} {color}{pct:.1f}%{Colors.RESET} "
+                  f"({covered}/{total} lines across {len(per_file)} scripts)")
+
+            if self.shell_coverage_dir.exists():
+                index_file = self.shell_coverage_dir / "index.html"
                 print(f"  {Colors.GREEN}HTML Report:{Colors.RESET} {Colors.BOLD}{index_file}{Colors.RESET}")
                 print(f"  Open in browser: file://{index_file.absolute()}")
 
+            print(f"\n  {'Script':<50} {'Cover%':>7}  {'Lines':>10}")
+            print(f"  {'-'*50} {'-'*7}  {'-'*10}")
+            for name, p, cov, tot in per_file:
+                line_info = f"{cov:>4}/{tot:>4}"
+                pct_color = Colors.GREEN if p >= 50 else (Colors.YELLOW if p >= 10 else Colors.RED)
+                if p == 0.0:
+                    pct_color = Colors.RED
+                print(f"  {name:<50} {pct_color}{p:>6.1f}%{Colors.RESET}  {line_info:>10}")
+        else:
+            print(f"{Colors.YELLOW}Shell Coverage:{Colors.RESET} not collected (run with --coverage-html)")
+
         if self.coverage_min:
-            print(f"\n{Colors.CYAN}Minimum Coverage Required:{Colors.RESET} {self.coverage_min}%")
+            print(f"\n{Colors.CYAN}Minimum Python Coverage Required:{Colors.RESET} {self.coverage_min}%")
 
 
 def main():

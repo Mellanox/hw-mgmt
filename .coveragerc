@@ -1,0 +1,11 @@
+[run]
+source = usr/usr/bin
+branch = True
+
+[report]
+show_missing = True
+include = usr/usr/bin/*.py
+
+[html]
+directory = tests/htmlcov/python
+title = hw-mgmt Python Coverage

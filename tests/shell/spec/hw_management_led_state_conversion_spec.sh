@@ -40,18 +40,18 @@ Describe 'hw-management-led-state-conversion.sh'
         # Create temporary directory structure for LED files
         TEST_LED_DIR=$(mktemp -d)
         LED_NAME="led_status"
-        
+
         # Export for test access
         export TEST_LED_DIR LED_NAME
     }
-    
+
     cleanup_led_test() {
         # Clean up temporary LED files
         if [ -n "$TEST_LED_DIR" ] && [ -d "$TEST_LED_DIR" ]; then
             rm -rf "$TEST_LED_DIR"
         fi
     }
-    
+
     #---------------------------------------------------------------------------
     # Helper function to create LED file
     #---------------------------------------------------------------------------
@@ -60,89 +60,28 @@ Describe 'hw-management-led-state-conversion.sh'
         local value="$2"
         echo "$value" > "$TEST_LED_DIR/$filename"
     }
-    
+
+    #---------------------------------------------------------------------------
+    # Path to the real script under test (resolved once at Describe scope)
+    #---------------------------------------------------------------------------
+    REAL_LED_SCRIPT="$(readlink -f "${SHELLSPEC_SPECDIR}/../../../usr/usr/bin/hw-management-led-state-conversion.sh")"
+
     #---------------------------------------------------------------------------
     # Helper function to run the script in test environment
+    #
+    # hw-management-led-state-conversion.sh derives both DNAME and LED_NAME
+    # from $0, so $0 must look like: <led-dir>/led_status_state
+    #   DNAME   = $TEST_LED_DIR   (where LED sysfs files live)
+    #   LED_NAME = led_status     (basename split by '_', first 2 fields)
+    #
+    # We create a symlink at $TEST_LED_DIR/led_status_state → real script,
+    # then exec that symlink directly.  kcov tracks coverage via ptrace on
+    # the exec'd process (following the symlink to the real file), so the
+    # real script path appears in the coverage report.
     #---------------------------------------------------------------------------
     run_led_conversion() {
-        cd "$TEST_LED_DIR"
-        # Create a wrapper script that directly uses the test directory
-        # This avoids the issue of the script name affecting LED_NAME extraction
-        cat > "$TEST_LED_DIR/run_conversion.sh" << 'WRAPPER_EOF'
-#!/bin/bash
-PATH=/usr/bin:/bin:/usr/sbin:/sbin
-export PATH
-
-DNAME="$1"
-LED_NAME="$2"
-LED_STATE=none
-FNAMES=($(ls "$DNAME"/"$LED_NAME"* 2>/dev/null | grep -v "run_conversion.sh"))
-
-check_led_blink()
-{
-    COLOR=$1
-    if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on ]; then
-        val1=$(< "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on)
-    else
-        val1=0
-    fi
-    if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off ]; then
-        val2=$(< "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off)
-    else
-        val2=0
-    fi
-    if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then
-        val3=$(< "$DNAME"/"$LED_NAME"_"$COLOR")
-    else
-        val3=0
-    fi
-    if [ "${val1}" != "0" ] && [ "${val2}" != "0" ] && [ "${val3}" != "0" ] ; then
-        LED_STATE="$COLOR"_blink
-        return 1
-    fi
-    return 0
-}
-
-for CURR_FILE in "${FNAMES[@]}"
-do
-    if echo "$CURR_FILE" | (grep -q '_state\|_capability') ; then
-        continue
-    fi
-    COLOR=$(echo "$CURR_FILE" | cut -d_ -f3)
-    if [ -z "${COLOR}" ] ; then
-        continue
-    fi
-    if echo "$CURR_FILE" | grep -q "_delay" ; then
-        check_led_blink "$COLOR"
-        if [ $? -eq 1 ]; then
-            break;
-        fi
-    fi
-    if [ "${CURR_FILE}" == "$DNAME"/"${LED_NAME}_${COLOR}" ] ; then
-        if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then 
-            val1=$(< "$DNAME"/"$LED_NAME"_"$COLOR")
-        else
-            val1=0
-        fi
-        if [ "${val1}" != "0" ]; then
-            check_led_blink "$COLOR"
-            if [ $? -eq 1 ]; then
-                break;
-            else
-                LED_STATE="$COLOR"
-                break;
-            fi
-        fi
-    fi
-done
-
-echo "${LED_STATE}" > "$DNAME"/"$LED_NAME"
-exit 0
-WRAPPER_EOF
-        chmod +x "$TEST_LED_DIR/run_conversion.sh"
-        
-        # Run the script with explicit parameters
-        "$TEST_LED_DIR/run_conversion.sh" "$TEST_LED_DIR" "$LED_NAME"
+        ln -sf "$REAL_LED_SCRIPT" "$TEST_LED_DIR/led_status_state"
+        "$TEST_LED_DIR/led_status_state"
     }
     
     #---------------------------------------------------------------------------
