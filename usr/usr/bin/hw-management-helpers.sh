@@ -569,6 +569,16 @@ unlock_service_state_change_update_and_match()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+# Check if module is loaded
+# $1 - module name
+# return 0 if module is loaded, 1 otherwise
+is_module()
+{
+    /sbin/lsmod 2>/dev/null | grep -w "$1" > /dev/null
+    RC=$?
+    return $RC
+}
+
 # Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
 # Poll every 100 ms for device driver connection.
 # Input: 
