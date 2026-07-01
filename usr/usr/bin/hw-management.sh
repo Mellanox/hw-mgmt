@@ -676,13 +676,6 @@ if [ "$board_type" == "VMOD0014" ]; then
 	psu2_i2c_addr=0x58
 fi
 
-is_module()
-{
-    /sbin/lsmod | grep -w "$1" > /dev/null
-    RC=$?
-    return $RC
-}
-
 function get_i2c_bus_frequency_default()
 {
 	# Get I2C base frequency default value.
@@ -3176,7 +3169,7 @@ load_modules()
 	# Some modules are not present in all the kernel
 	# versions. Use this function to load those modules
 	# which need to be loaded based on their availability
-	if ! lsmod | grep -q "drivetemp"; then
+	if ! is_module "drivetemp"; then
 		if [ -f /lib/modules/`uname -r`/kernel/drivers/hwmon/drivetemp.ko ]; then
 			modprobe drivetemp
 		fi
@@ -3673,7 +3666,7 @@ set_sodimms()
 		return 0
 	fi
 
-	if ! lsmod | grep -q i2c_designware_platform; then
+	if ! is_module "i2c_designware_platform"; then
 		modprobe i2c_designware_platform
 		sleep 0.5
 	fi
