@@ -37,6 +37,7 @@ To print the populated <section>_alternatives contents, run:
     python3 -m pytest tests/offline/test_hw_management_devtree_json_parser.py::TestParserWithDevtreeJson::test_print_alternatives -v -s
 """
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -47,6 +48,12 @@ from pathlib import Path
 TESTS_DIR = Path(__file__).parent
 PROJECT_ROOT = (TESTS_DIR / ".." / "..").resolve()
 PARSER = PROJECT_ROOT / "usr" / "usr" / "bin" / "hw-management-devtree-json-parser.py"
+
+# Import module directly for unit tests (gives coverage without subprocess overhead)
+_spec = importlib.util.spec_from_file_location("devtree_json_parser", str(PARSER))
+_parser_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_parser_mod)
+validate_bom = _parser_mod.validate_bom
 
 # Simplified devtree BOM used as the test input.
 # Mirrors the structure of usr/etc/hw-management-cfg/HI195/devtree.json
@@ -284,6 +291,66 @@ class TestParserErrorHandling:
         bad.write_text(payload)
         _, _, rc = run_parser(bad)
         assert rc != 0
+
+
+class TestValidateBomDirect:
+    """Direct unit tests for validate_bom() — no subprocess, so coverage is tracked."""
+
+    def test_valid_bom_does_not_raise(self):
+        validate_bom({"swb": [{"key": "dev0", "spec": "mp29816 0x61 15 voltmon1"}]})
+
+    def test_non_dict_raises(self):
+        with pytest.raises(ValueError, match="must be a JSON object"):
+            validate_bom(["not", "a", "dict"])
+
+    def test_section_not_list_raises(self):
+        with pytest.raises(ValueError, match="expected an array"):
+            validate_bom({"swb": "should be list"})
+
+    def test_entry_not_dict_raises(self):
+        with pytest.raises(ValueError, match="expected an object"):
+            validate_bom({"swb": ["not a dict"]})
+
+    def test_missing_key_field_raises(self):
+        with pytest.raises(ValueError, match="missing required field 'key'"):
+            validate_bom({"swb": [{"spec": "mp29816 0x61 15 voltmon1"}]})
+
+    def test_missing_spec_field_raises(self):
+        with pytest.raises(ValueError, match="missing required field 'spec'"):
+            validate_bom({"swb": [{"key": "dev0"}]})
+
+    def test_key_with_whitespace_raises(self):
+        with pytest.raises(ValueError, match="must not contain whitespace"):
+            validate_bom({"swb": [{"key": "dev 0", "spec": "mp29816 0x61 15 voltmon1"}]})
+
+    def test_section_name_with_whitespace_raises(self):
+        with pytest.raises(ValueError, match="must not contain whitespace"):
+            validate_bom({"my section": [{"key": "dev0", "spec": "mp29816 0x61 15 voltmon1"}]})
+
+    def test_spec_with_newline_raises(self):
+        with pytest.raises(ValueError, match="must not contain newlines"):
+            validate_bom({"swb": [{"key": "dev0", "spec": "mp29816\n0x61 15 voltmon1"}]})
+
+    def test_spec_with_carriage_return_raises(self):
+        with pytest.raises(ValueError, match="must not contain newlines"):
+            validate_bom({"swb": [{"key": "dev0", "spec": "mp29816\r0x61"}]})
+
+    def test_empty_key_raises(self):
+        with pytest.raises(ValueError):
+            validate_bom({"swb": [{"key": "", "spec": "mp29816 0x61 15 voltmon1"}]})
+
+    def test_empty_spec_raises(self):
+        with pytest.raises(ValueError):
+            validate_bom({"swb": [{"key": "dev0", "spec": ""}]})
+
+    def test_multiple_sections_valid(self):
+        validate_bom({
+            "swb": [{"key": "dev0", "spec": "mp29816 0x61 15 voltmon1"}],
+            "port": [{"key": "dev1", "spec": "mp2975 0x68 15 voltmon19"}],
+        })
+
+    def test_empty_section_list_is_valid(self):
+        validate_bom({"swb": []})
 
 
 if __name__ == "__main__":

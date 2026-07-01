@@ -557,6 +557,26 @@ class TestRunner:
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_devtree_json_parser.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
+            {
+                'name': 'Pytest: Sonic Check',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_sonic_check.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: PMBus Device Dump',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_pmbus_device_dump.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: PMBus Devices Dump',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_pmbus_devices_dump.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: VPD Parser',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_vpd_parser.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
         ]
 
         # Add coverage options to all pytest tests if coverage is enabled
