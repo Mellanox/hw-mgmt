@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.5
+Rev. 3.2.6
 
 ## Table of Contents
 
@@ -74,6 +74,7 @@ Rev. 3.2.5
 | 3.1.56 | JTAG Bridge Offset | 36 |
 | 3.1.57 | Core 0 Temperature ID | 37 |
 | 3.1.58 | Core 1 Temperature ID | 37 |
+| 3.1.59 | Read PDB Hotswap Scale Factor | 37 |
 | 3.2 | BIOS Control | 38 |
 | 3.2.1 | BIOS Status | 38 |
 | 3.2.2 | BIOS Start Retry | 38 |
@@ -376,6 +377,13 @@ Rev. 3.2.5
 | 3.23.3 | MCTP address | 137 |
 | 3.23.4 | MCTP bus | 137 |
 | 3.23.5 | MCTP ready | 137 |
+| 3.24 | BMC reset cause | 138 |
+| 3.24.1 | Primary BMC reset cause | 138 |
+| 3.24.2 | BMC reset domain detail | 138 |
+| 3.24.3 | Raw SCU reset event logs | 139 |
+| 3.25 | BMC leakage A2D tree | 139 |
+| 3.25.1 | Leak detector attributes | 139 |
+| 3.25.2 | Leak channel attributes | 140 |
 | 4 | Thermal Control | 139 |
 | 4.1 | Thermal Control Versions | 139 |
 | 5 | Drivers | 141 |
@@ -399,12 +407,13 @@ Rev. 3.2.5
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; §3.25 BMC A2D leakage runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
 | 3.2.5 | June 2026 | §2.2 HI189 BMC peripheral table; §3.3.7–§3.3.8 BMC EEPROM bodies; §3.20 BMC stack tags and CPU-on-BMC thermal cross-refs; §3.23 BMC status bodies (present, bmc_to_cpu_ctrl, MCTP) |
 | 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
 | 3.2.3 | June 2026 | §3.20 thermal: filled missing section bodies; TOC aligned; per-HID BMC examples under `bmc/examples/<HID>/examples/` |
 | 3.2.2 | June 2026 | BMC thermal sysfs (HI189 / `lm75`): documented `bmc_temp_input` and `bmc_temp`; removed obsolete TOC entries for `bmc_crit` / `bmc_min` (not created on BMC stack) |
 | 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
-| 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
+| 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Validation: `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`, `hw-management.sh` / event scripts<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
 | 3.0 | September 2025 | Complete document alignment with Word document source<br>• Updated title and branding to NVIDIA<br>• Complete sysfs hierarchy coverage with 300+ attributes<br>• Professional markdown formatting throughout<br>• Added comprehensive examples for all attributes<br>• Updated all 22 major sections (3.1-3.22)<br>• Added Watchdog, JTAG, and BMC sections<br>• Complete thermal monitoring documentation<br>• Enterprise-grade documentation ready for production |
 | 2.8 | April 1st 2024 | Added temperature, BMC and power related attributes |
@@ -459,7 +468,7 @@ from **different source trees** and run on **different processors**:
 | **Installed on target** | `/usr/bin/hw-management*.sh`, `/usr/bin/hw_management_thermal_control*.py`, `/lib/udev/rules.d/50-hw-management-events.rules`, … | `/usr/bin/hw-management-bmc*.sh`, `/lib/udev/rules.d/5-hw-management-bmc-events.rules`, `/etc/<HID>/`, … |
 | **Primary event handlers** | `hw-management-chassis-events.sh`, `hw-management-thermal-events.sh` | `hw-management-bmc-events.sh` (and helpers under the same prefix) |
 | **Init / systemd** | `hw-management.service` | `hw-management-bmc-init.service` and related BMC units (see `bmc/README.md`) |
-| **Examples / reference layouts** | Validated trees under `tests/system_tree/`; platform sensors in `usr/etc/hw-management-sensors/` | Flat files under `bmc/examples/`; per-HID template at `bmc/examples/HIxxx/examples/` |
+| **Examples / reference layouts** | Platform sensors in `usr/etc/hw-management-sensors/`; scripts under `usr/usr/bin/` | Flat files under `bmc/examples/`; per-HID template at `bmc/examples/HIxxx/examples/` |
 | **Developer guide** | Repository root `README.md` | `bmc/README.md`, `bmc/DEVELOPER_GUIDE.md` |
 
 **How to use this manual**
@@ -496,22 +505,28 @@ they do **not** share the same `/usr/bin` install tree on a single root filesyst
 | `eeprom/eeprom_system` | System VPD EEPROM | bus 5 / `0x51`, **24c512** | BMC |
 | `eeprom/eeprom_bmc` | BMC FRU EEPROM | bus 4 / `0x50`, **24c02** | BMC |
 | `system/*` (many attrs) | **mlxreg-io** / **mlxreg-hotplug** register files | CPLD / platform control on BMC | BMC |
-| `leakage/*` | Leakage handler + A2D config | See `hw-management-bmc-leakage-handler.sh` | BMC |
+| `leakage/<N>/<j>/…` | A2D leak-detector tree (input, thresholds, type) | ADS1015 / ADS7924 / MAX1363 per JSON config | BMC |
+| `bmc/reset_*`, `bmc/domains/reset_*`, `bmc/raw_scu*` | AST2700 BMC reset-cause exporter | `hw-management-bmc-get-reset-cause.sh` | BMC |
 
 Example layouts: **`bmc/examples/hw-management-bmc-thermal-sysfs.txt`** (delivered path),
-`bmc/examples/hw-management-bmc-eeprom-sysfs.txt`, `bmc/examples/hw-management-bmc-system-sysfs.txt`.
+`bmc/examples/hw-management-bmc-eeprom-sysfs.txt`, `bmc/examples/hw-management-bmc-system-sysfs.txt`,
+`bmc/examples/hw-management-bmc-leakage-sysfs.txt`.
 
 **Host stack — BMC-related nodes (CPU image, not the BMC package):**
 
 | Node | Evidence | Stack |
 |------|----------|-------|
-| `system/bmc_present` | GPIO symlink (`tests/system_tree/hw-management-tree-SN6600_LD.txt`) | Host |
+| `system/bmc_present` | GPIO symlink (host `hw-management.sh` platform GPIO mapping) | Host |
 | `system/bmc_to_cpu_ctrl` | **mlxreg-io** on CPU (`mlxplat`; same tree) | Host |
 | `system/cpu_mctp_ready` | **mlxreg-io** on CPU (same tree) | Host |
 | `config/mctp_addr`, `config/mctp_bus` | Written by `hw-management.sh` when platform defines MCTP (e.g. N5110) | Host |
 
 Do not assume host ASIC/PSU/fan thermal nodes exist on the BMC image, or that BMC `cpu_temp_*`
 nodes exist on the CPU image — check `$bsp_path` on the target root filesystem.
+
+**Virtual / SimX platforms (no production sysfs tree in repo):** HI194 (SN7170_LD) and other SimX
+SKUs may exit early from `hw-management-ready.sh` with mock values only (`check_simx` paths in
+`hw-management.sh`). Do not use these for production attribute validation.
 
 ## Hierarchy and Structure
 
@@ -821,10 +836,11 @@ cat $bsp_path/config/hotplug_psus
 
 **Description:** Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.
 
-Note: This attribute is primarily for liquid-cooled systems (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD).
+Note: This attribute is primarily for liquid-cooled systems (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD, N6300_LD; SN66XX_LD family: SN6600_LD).
 PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present.
 It can be zero on air-cooled systems or systems without hot-pluggable PDBs.
 Note: N6100_LD has hotplug_pdbs=0 (PDB is not hot-pluggable).
+Note: N6300_LD (SKU HI185) has hotplug_pdbs=2.
 Note: SN6600_LD (SKU HI193) has hotplug_pdbs=2 with `events/pdb1` and `events/pdb2`.
 
 **Access:** Read only
@@ -1168,8 +1184,8 @@ otherwise.
 
 **Description:** Get the number of cable cartridges in the system. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.
 
-Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX_LD family: N6100_LD).
-N6100_LD has 4 cable cartridges.
+Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX_LD family: N6100_LD, N6300_LD).
+N6100_LD and N6300_LD (SKU HI185) have 4 cable cartridges (`config/cartridge_counter` = 4).
 
 **Access:** Read only
 
@@ -1867,6 +1883,32 @@ cat $bsp_path/config/core1_temp_id
 3
 ```
 
+### Read PDB Hotswap Scale Factor
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/config/pdb_hotswap_scale`
+
+**Description:** LM5066I PDB hot-swap input power and current scaling factor. Written by
+`sn66xxld_specific()` in `hw-management.sh` for SN6600_LD (SKU HI193). The same value is
+symlinked under each lm5066i PDB hotswap environment node as `*_power1_scale` and
+`*_curr1_scale` (see §3.4). lm-sensors applies the same factor via `compute` rules in
+`usr/etc/hw-management-sensors/sn66xxld_sensors.conf`.
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Scale | Float | **5.333** on SN6600_LD (validated in `hw-management.sh`) |
+
+**Example:**
+```bash
+cat $bsp_path/config/pdb_hotswap_scale
+```
+
 ## BIOS Control
 
 ### BIOS Active Image
@@ -2000,8 +2042,9 @@ cat $bsp_path/eeprom/vpd_data
 
 **Description:** Read cable cartridge EEPROM raw data or parsed data. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.
 
-Note: This attribute is for systems with cable cartridges (N61XX_LD family: N6100_LD).
+Note: This attribute is for systems with cable cartridges (N61XX_LD family: N6100_LD, N6300_LD).
 N6100_LD has 4 cable cartridges (index 1-4) on I2C buses 68, 69, 70, 71.
+N6300_LD (SKU HI185) uses the same cartridge EEPROM connect table as N6100_LD (`n61xxld_cartridge_eeprom_connect_table` in `hw-management.sh`).
 
 **Access:** Read only
 
@@ -2270,6 +2313,51 @@ Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_
 **Example:** Get PDB hotswap 1 power input:
 ```bash
 cat $bsp_path/environment/pdb_hotswap1_power1_input
+```
+
+Note: On SN6600_LD, when the underlying hwmon device is **lm5066i**, `hw-management-chassis-events.sh`
+creates scale-factor symlinks for input power and current (see following sections). lm-sensors also
+applies factor **5.333** to the lm5066i PDB hotswap `power1` and `curr1` labels in
+`sn66xxld_sensors.conf`.
+
+### Get PDB Hotswap Power Scale
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/environment/pdb_hotswap<index>_power1_scale`
+
+**Description:** Scaling factor symlink for PDB hot-swap controller input power. Created when the
+hotswap hwmon driver name is **lm5066i**; the symlink targets `$bsp_path/config/pdb_hotswap_scale`.
+
+Note: SN6600_LD (SKU HI193) only. Not created for other hotswap driver types (for example mp5926).
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/environment/pdb_hotswap1_power1_scale
+```
+
+### Get PDB Hotswap Current Scale
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/environment/pdb_hotswap<index>_curr1_scale`
+
+**Description:** Scaling factor symlink for PDB hot-swap controller input current. Created when the
+hotswap hwmon driver name is **lm5066i**; the symlink targets `$bsp_path/config/pdb_hotswap_scale`.
+
+Note: SN6600_LD (SKU HI193) only.
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/environment/pdb_hotswap1_curr1_scale
 ```
 
 ### Get PDB Hotswap Controller Thresholds
@@ -4902,6 +4990,11 @@ echo 1 > $bsp_path/system/power_down
 
 **Description:** CPU initiated shutdown request signal. This attribute is used by the CPU to request a system shutdown sequence.
 
+On liquid-cooled platforms where `hw_management_platform_config.py` defines a monitor entry,
+hw-mgmt polls this node (not `events/graceful_pwr_off`) and invokes `run_power_button_event` when
+the value changes. Platforms with this entry in the current tree include HI162, HI166–HI170, HI176,
+HI177, HI180, HI185 (N6300_LD), and others listed in `PLATFORM_CONFIG`.
+
 **Access:** Read/Write
 
 **Release version:** 1.0
@@ -5462,10 +5555,10 @@ Validation source: `recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downs
 
 **Node name:** `$bsp_path/system/cartridge<index>`
 
-**Description:** Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX_LD family: N6100_LD) for connecting external cables.
+**Description:** Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX_LD family: N6100_LD, N6300_LD) for connecting external cables.
 
-Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX_LD family: N6100_LD).
-N6100_LD has 4 cable cartridges.
+Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX_LD family: N6100_LD, N6300_LD).
+N6100_LD and N6300_LD (SKU HI185) have 4 cable cartridges.
 
 **Access:** Read only
 
@@ -5474,7 +5567,7 @@ N6100_LD has 4 cable cartridges.
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-4 (N6100_LD) |
+| index | Integer | 1-4 (N6100_LD, N6300_LD) |
 | Status | Integer | 0/1 |
 
 **Example:** Get cartridge 1 status:
@@ -5515,6 +5608,7 @@ cat $bsp_path/system/asic_pg_fail
 
 Note: This attribute is for liquid-cooled systems (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 N6100_LD has 2 leakage sensors, SN5810_LD has 2, SN5800_LD has 5.
+N6300_LD (SKU HI185): `config/leakage_counter` is **2** (`n61xxld_specific()` / HI185 branch in `hw-management.sh`).
 SN6600_LD: `config/leakage_counter` is **2**; the validated sysfs tree may
 still list `system/leakage1` through `system/leakage5` when the hardware exposes
 those mlxreg-io channels (see the `leakage_counter` section note above).
@@ -5536,8 +5630,8 @@ cat $bsp_path/system/leakage1
 
 ## Thermal
 
-**Reference — Host:** `usr/usr/bin/hw-management-thermal-events.sh`; validated trees under
-`tests/system_tree/`.
+**Reference — Host:** `usr/usr/bin/hw-management-thermal-events.sh`; platform sensors in
+`usr/etc/hw-management-sensors/`.
 
 **Reference — BMC (HI189):** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`;
 `bmc/examples/hw-management-bmc-thermal-sysfs.txt`.
@@ -7213,7 +7307,7 @@ cat $bsp_path/watchdog/timeleft
 ## BMC status
 
 Sections §3.23.1–§3.23.2 describe **host-CPU** views of BMC presence and I2C ownership
-(validated: `tests/system_tree/hw-management-tree-SN6600_LD.txt`). §3.23.3–§3.23.5 are
+(`hw-management.sh` / platform GPIO and mlxreg-io). §3.23.3–§3.23.5 are
 **host** config/status for MCTP setup where the platform defines it (`hw-management.sh`).
 
 On the **BMC** image, `bmc_to_cpu_ctrl` also appears under `$bsp_path/system/` via the
@@ -7309,6 +7403,173 @@ listed in `nvsw_bmc_hid189_regio_data` / `hw-management-bmc-system-sysfs.txt`.
 ```bash
 cat $bsp_path/system/cpu_mctp_ready
 ```
+
+## BMC reset cause
+
+**Stack:** BMC (`hw-management-bmc` package on AST2700 SONiC BMC OS)
+
+The BMC reset-cause exporter (`hw-management-bmc-get-reset-cause.sh`) writes a separate subtree under
+**`$bsp_path/bmc/`**. This is distinct from host CPLD reset causes documented in §3.18.39
+(`$bsp_path/system/reset_*` on the switch CPU).
+
+Source priority for SCU register words: U-Boot environment (`fw_printenv`), then `/proc/cmdline`, then
+`devmem`. Operator summary: `hw-management-bmc-show-reset-cause.sh` (see `bmc/README.md`).
+
+Validation source: `bmc/usr/usr/bin/hw-management-bmc-get-reset-cause.sh`,
+`bmc/examples/hw-management-bmc-system-sysfs.txt` (host-side reset attrs only).
+
+### Primary BMC reset cause
+
+**Stack:** BMC
+
+Exactly **one** of the following files reads **1**; the others read **0** (v2 primary heuristic for
+HI189 / AST2700).
+
+| Node name | Description |
+|-----------|-------------|
+| `$bsp_path/bmc/reset_pwr_cycle` | Power-cycle-like BMC boot (no WDT log; SCU0 EXTRST# set) |
+| `$bsp_path/bmc/reset_soft_reboot` | Warm reboot (WDT logged, or no WDT and EXTRST# clear) |
+| `$bsp_path/bmc/reset_unknown` | WDT log and EXTRST# both set (conflicting / sticky path) |
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/bmc/reset_pwr_cycle
+cat $bsp_path/bmc/reset_soft_reboot
+cat $bsp_path/bmc/reset_unknown
+```
+
+### BMC reset domain detail
+
+**Stack:** BMC
+
+Hardware domain flags decoded from AST2700 SCU reset-event logs. Each file reads **0** or **1**.
+
+| Node name | Description |
+|-----------|-------------|
+| `$bsp_path/bmc/domains/reset_power_on` | PWRST indication (SCU0/SCU1) |
+| `$bsp_path/bmc/domains/reset_external` | EXTRST# / SRST evidence |
+| `$bsp_path/bmc/domains/reset_watchdog` | Non-software WDT bits or SCU0 watchdog evidence |
+| `$bsp_path/bmc/domains/reset_software` | Software WDT bits in SCU1 0x080 |
+| `$bsp_path/bmc/domains/reset_cpu` | CPU domain reset |
+| `$bsp_path/bmc/domains/reset_soc` | SoC domain reset |
+| `$bsp_path/bmc/domains/reset_ahb` | AHB domain reset |
+| `$bsp_path/bmc/domains/reset_caliptra` | Caliptra domain reset |
+| `$bsp_path/bmc/domains/reset_usb` | USB subsystem reset |
+| `$bsp_path/bmc/domains/reset_spi` | SPI domain reset |
+| `$bsp_path/bmc/domains/reset_espi` | eSPI domain reset |
+| `$bsp_path/bmc/domains/reset_emmc` | eMMC reset (SCU0) |
+| `$bsp_path/bmc/domains/reset_msi` | MSI reset (SCU0) |
+| `$bsp_path/bmc/domains/reset_security_watchdog2` | WDT2 nibble in SCU1 0x080 |
+| `$bsp_path/bmc/domains/reset_others` | No PWRST/WDT/CPU/WDT2 bits set |
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/bmc/domains/reset_watchdog
+```
+
+### Raw SCU reset event logs
+
+**Stack:** BMC
+
+Raw 32-bit SCU reset-event register values (hex text), written at export time.
+
+| Node name | SCU source (AST2700) |
+|-----------|----------------------|
+| `$bsp_path/bmc/raw_scu0_reset_event_log0` | SCU0 0x050 |
+| `$bsp_path/bmc/raw_scu0_reset_event_log2` | SCU0 0x070 |
+| `$bsp_path/bmc/raw_scu1_reset_event_log0` | SCU1 0x050 |
+| `$bsp_path/bmc/raw_scu1_reset_event_log3` | SCU1 0x080 |
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/bmc/raw_scu0_reset_event_log0
+```
+
+## BMC leakage A2D tree
+
+**Stack:** BMC
+
+Runtime leak-detector hierarchy under **`$bsp_path/leakage/`**, populated by
+`hw-management-bmc-a2d-leakage-config.sh` from `/etc/hw-management-bmc-a2d-leakage-config.json`
+(see `bmc/examples/hw-management-bmc-a2d-leakage-config-example.json`). Supported device types in
+the example config include **MAX1363**, **ADS1015**, and **ADS7924**. Udev events are handled by
+`hw-management-bmc-leakage-handler.sh`.
+
+Layout reference: **`bmc/examples/hw-management-bmc-leakage-sysfs.txt`**.
+
+**N** = leak-detector index (1-based order in the JSON array). **j** = channel index; channel
+directory names follow hardware `Channels[].Id` and may be non-contiguous (for example `…/1/` and
+`…/4/` only).
+
+This tree is separate from host `$bsp_path/system/leakage<N>` mlxreg-io status (§3.19.1) and from
+`$bsp_path/events/leakage<N>` on the CPU image.
+
+### Leak detector attributes
+
+**Stack:** BMC
+
+| Node name | Description |
+|-----------|-------------|
+| `$bsp_path/leakage/<N>/device_type` | Device type from JSON (for example ADS7924) |
+| `$bsp_path/leakage/<N>/device_name` | Detector name from JSON `Name` field |
+
+**Access:** Read only
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/leakage/1/device_type
+cat $bsp_path/leakage/1/device_name
+```
+
+### Leak channel attributes
+
+**Stack:** BMC
+
+Per-channel directory: `$bsp_path/leakage/<N>/<j>/`
+
+| Node name | Description |
+|-----------|-------------|
+| `input` | Raw IIO sample (symlink or file when `Probe` is true in JSON) |
+| `min` | Low threshold (register-derived × scale, config units) |
+| `max` | High threshold (register-derived × scale) |
+| `warn` | WarningMax for this channel's `Type` |
+| `crit` | CriticalMax for this channel's `Type` |
+| `lwarn` | Optional WarningMin for this channel's `Type` |
+| `lcrit` | Optional CriticalMin for this channel's `Type` |
+| `type` | Channel type from JSON: `rop`, `flex`, or `embedded` |
+| `scale` | Scale factor from JSON |
+| `channel_name` | Optional human-readable name from JSON `ChnlNames` |
+| `last_sample` | Optional 12-bit-aligned code (written on OOB event by leakage handler) |
+| `last_event` | Optional event timestamp in milliseconds (written by leakage handler) |
+
+**Access:** Read only (handler may write `last_sample` / `last_event` on out-of-band events)
+
+**Release version:** V.7.0070.1000
+
+**Example:**
+```bash
+cat $bsp_path/leakage/1/1/input
+cat $bsp_path/leakage/1/1/warn
+cat $bsp_path/leakage/1/1/type
+```
+
+Note: On BMC images for HI189, mlxreg-hotplug also exposes aggregate status registers such as
+`$bsp_path/system/leakage1`, `$bsp_path/system/leakage2`, and `$bsp_path/system/leakage_aggr`
+(see `bmc/examples/hw-management-bmc-system-sysfs.txt`).
 
 ## JTAG interface
 
