@@ -61,6 +61,7 @@
 source hw-management-helpers.sh
 [ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 [ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
+[ -f "$pn_file" ] && product=$(< $pn_file) || product="Unknown"
 source hw-management-devtree.sh
 # shellcheck source=/dev/null
 [ -f /usr/bin/hw-management-platform-json.sh ] && . /usr/bin/hw-management-platform-json.sh
@@ -1221,7 +1222,6 @@ msn24xx_specific()
 msn27xx_msb_msx_specific()
 {
 	start_mst_for_spc1_port_cpld
-	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSN27*|MSN241*)
 			# Panther Spider
@@ -1285,7 +1285,6 @@ msn27xx_msb_msx_specific()
 			;;
 	esac
 
-	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSB78*)
 			echo 2 > $config_path/cpld_num
@@ -2985,7 +2984,6 @@ check_system_internal()
 			sn66xxld_specific
 			;;
 		*)
-			product=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $product in
 				MSN27002|MSB78002)
 					msn27002_msb78002_specific
@@ -4219,8 +4217,16 @@ case $ACTION in
 			exit 1
 		fi
 		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193/HI194 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
-			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+		if check_simx && [[ "$sku" == "HI180" || "$sku" == "HI181" || "$sku" == "HI185" || "$sku" == "HI193" || "$sku" == "HI194" ||
+                            "$product" == "N7170_LD" || "$product" == "N7100_LD" ]]; then
+			if [ -f /etc/hw-management-virtual/hwmgmt_$sku.tgz ]; then
+				tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			elif [ -f /etc/hw-management-virtual/hwmgmt_$product.tgz ]; then
+				tar -xzf /etc/hw-management-virtual/hwmgmt_$product.tgz -C /var/run/
+			else
+			    log_err "Could not create mock hw management tree"
+			    exit 1
+			fi
 			process_simx_links
 			log_info "Created mock hw management tree, exiting."
 			exit 0
