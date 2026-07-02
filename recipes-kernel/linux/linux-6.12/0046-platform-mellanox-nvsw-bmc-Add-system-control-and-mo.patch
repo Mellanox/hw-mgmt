@@ -120,7 +120,7 @@ new file mode 100644
 index 000000000000..89343d7660a4
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-@@ -0,0 +1,7289 @@
+@@ -0,0 +1,7292 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -2428,6 +2428,7 @@ index 000000000000..89343d7660a4
 +			NVSW_CPU_RESET_MASK | NVSW_APML_SMB_ALERT_MASK |
 +			NVSW_CPU_UNEXP_POWER_OFF_MASK,
 +		.count = ARRAY_SIZE(nvsw_bmc_hid181_events_items_data),
++		.ind = 8,
 +		.inversed = 1,
 +		.health = false,
 +		.non_sticky = true,
@@ -3221,6 +3222,7 @@ index 000000000000..89343d7660a4
 +			NVSW_CPU_RESET_MASK | NVSW_APML_SMB_ALERT_MASK |
 +			NVSW_CPU_UNEXP_POWER_OFF_MASK,
 +		.count = ARRAY_SIZE(nvsw_bmc_hid191_events_items_data),
++		.ind = 8,
 +		.inversed = 1,
 +		.health = false,
 +		.non_sticky = true,
@@ -3565,6 +3567,7 @@ index 000000000000..89343d7660a4
 +			NVSW_CPU_RESET_MASK | NVSW_APML_SMB_ALERT_MASK |
 +			NVSW_CPU_UNEXP_POWER_OFF_MASK,
 +		.count = ARRAY_SIZE(nvsw_bmc_hid191_events_items_data),
++		.ind = 8,
 +		.inversed = 1,
 +		.health = false,
 +		.non_sticky = true,
