@@ -1,4 +1,213 @@
 ================================================================================
+- V.7.0070.1000
+- Thu, 02 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - Added support for SN6600_LD GA Level.
+    - Added support for AST2700 BMC.
+    - Added support for kernel 6.1.174.
+    - Added support for Infineon XDPE1x2xx flashing tool.
+    - Added support for XDPE1A2G7 and RAA228943.
+    - Added support for ADS7924 and ADS1015 leakage ADC.
+    - Added support for MP29502 power-controller new I2C address for NVL systems.
+    - Added initial support for N6300_LD.
+    - Added initial support for N7170_LD.
+
+- Bug fixes
+    - #4915247: Fixes an issue where chassis state changes were not recorded in syslog, making it hard
+      to trace power and hotplug transitions in standard logs.
+    - #4917546: Fixes an issue where SODIMM memory temperature limits in Thermal Control were set too
+      high, so memory overheating might not trigger cooling in time.
+    - #4917181: Fixes an issue where SODIMM temperature alarm thresholds were missing after hw-mgmt
+      start, so memory thermal alarms could be inactive until a full restart.
+    - #4906456: Fixes missing tpm2-tools on install, which caused TPM-related management commands to fail
+      on platforms that depend on them.
+    - #4921597: Fixes an issue where the hw-mgmt package could not be built for arm64 systems.
+    - #4921510: Fixes an issue where N6100_LD reported an incorrect CPLD firmware version in sysfs and
+      inventory tools.
+    - #4929286: Fixes an issue where Thermal Control did not start on first boot after a new install,
+      leaving fans on default behavior until manual service restart.
+    - #4879247, #4953142: Fixes an issue where stopping Thermal Control could time out or leave the
+      service running in the background, blocking restart or upgrade.
+    - #4840120: Fixes an issue where sysfs monitor showed wrong event timestamps after its service was
+      restarted without stopping all of hw-mgmt.
+    - #4931215: Fixes an issue where a failed ASIC temperature read caused fans to jump to 100% speed.
+    - #4931015: Fixes an issue where fan tachometer problems were not logged, so operators saw high fan
+      speed with no clear "FAN tacho issue" message in syslog.
+    - #4932754: Fixes an issue where fan PWM repeatedly swung between about 20% and 30% when fan speed
+      checks failed, causing audible fan hunting.
+    - #4859849: Fixes an issue where fan airflow direction was wrong or missing at boot and after fan
+      tray hotplug, affecting fan policy and alarms.
+    - #4949012: Fixes an issue where systems with more than 100 ports flooded the log with "too many
+      messages" errors and dropped thermal events (limit is now configurable).
+    - #4946747: Fixes an issue where stopping thermal-updater reported a timeout even though the process
+      had already exited.
+    - #4946745: Fixes an issue where hw-mgmt sync service sometimes failed to start or stop cleanly under
+      systemd, affecting coordinated service restarts.
+    - #4949553: Fixes an issue where systemctl status always warned that hw-management-tc.service had
+      "changed on disk" although nothing was edited.
+    - #4953527: Fixes an issue where voltage regulator model and version could not be read on platforms
+      that use a non-zero I2C bus offset.
+    - #4939724: Fixes an issue where tc_log showed a bogus temperature for copper modules that have no
+      temperature sensor; the report now shows N/A.
+    - #4952807: Fixes an issue where Thermal Control misbehaved or logged errors after the SDK driver was
+      reloaded, including incorrect fan response.
+    - #4954687: Fixes an issue where the peripheral updater increased the module reset counter on
+      platforms that do not support that feature.
+    - #4966264: Fixes an issue where thermal and chassis updaters fired at the wrong time after an NTP
+      or manual clock change, because they used wall-clock time.
+    - #4968939: Fixes an issue where incorrect hwmon symlinks appeared for non-switch PCI devices due to
+      overly broad mlxsw udev rules.
+    - #4967076: Fixes an issue where the same fan direction change was logged twice by Thermal Control.
+    - #4970442: Fixes an issue where ambient temperature log entries showed the wrong duration in
+      Thermal Control periodic reports.
+    - #4929992: Fixes an issue where Thermal Control raised ASIC temperature alarms while the SDK was
+      still loading, before sensors were valid.
+    - #4975719: Fixes an issue where fan minimum and maximum speed sysfs values were wrong on SN4700 and
+      SN5600, confusing monitoring and diagnostics.
+    - #5032054: Fixes an issue where the wrong fans were treated as "attention" fans on Q3200 and
+      Q3400, affecting thermal policy on those systems.
+    - Fixes an issue where fan direction was not re-evaluated when a fan tray was removed and inserted
+      again during the same boot.
+    - #5001186: Fixes an issue where small fan PWM changes caused unnecessary fan-speed validation
+      delays; relax timing is now preserved for small PWM steps.
+    - #4992267: Fixes an issue where BMC hw-mgmt failed on the first boot after firmware flash during
+      platform-specific preparation.
+    - #5029712: Fixes an issue where generating a support dump could fail completely when some /sys paths
+      were unreadable, even though the rest of the dump was useful.
+    - Fixes an issue where the serial console on SONiC AST2700 BMC hung on first boot after installing
+      hw-management-bmc.
+    - #5035319: Fixes an issue where N6100_LD power and current sensor readings in lm-sensors were
+      scaled incorrectly.
+    - #5046588: Fixes an issue where SN6600_LD power and current sensor readings in lm-sensors were
+      scaled incorrectly.
+    - #5014001: Documentation: Fixes an issue where the user manual listed an incomplete set of reset causes for 
+      N51XX_LD platforms.
+    - #5027944: Fixes an issue where hw-mgmt trace logs could grow beyond the intended size limit despite
+      logrotate being configured.
+    - #5040812: Fixes an issue where the udev event debug log could grow without bound on busy systems
+      and fill disk space.
+    - #5085644: Fixes an issue where the i2c-mux-regmap module was loaded at startup although it is no
+      longer required.
+    - #4889170: Fixes an issue where I2C devices on AMD V3000 host CPU were unreachable after kexec boot
+      because controllers stayed powered off.
+    - #4984971: Fixes an issue where a requested graceful shutdown was not detected because hw-mgmt
+      polled the wrong power-off indicator.
+    - #5079211: Fixes an issue introduced by a kernel change that caused I2C mux timing failures and platform bring-up issues
+      on some network operating systems.
+    - #5100761: Fixes an issue where cpu_type was wrong or empty when read too early during hw-mgmt
+      startup, before the device tree was ready.
+    - Fixes an issue where chassis event handling was slow on systems with multiple CPLDs.
+    - Fixes an issue where N6300_LD sensor configuration was invalid and could prevent correct sensor
+      setup.
+
+- Kernel patches (for new features / fixes)
+    - NVMe SSD init failure: try function-level reset before giving up (kernels 5.10, 6.1).
+      f67835a7 hw-mgmt: patches: backport NVME SSD fallback recovery patch
+        recipes-kernel/linux/linux-5.10/0311-nvme-pci-try-function-level-reset-on-init-failure.patch
+        recipes-kernel/linux/linux-6.1/0110-nvme-pci-try-function-level-reset-on-init-failure.patch
+    - NVMe controller hang: additional FLR attempt when disable path fails (kernels 5.10, 6.1).
+      b9832b1a Support additional FLR flow in NVME controller hang
+        recipes-kernel/linux/linux-5.10/0312-nvme-pci-try-flr-on-controller-disable-failure.patch
+        recipes-kernel/linux/linux-6.1/0117-nvme-pci-try-flr-on-controller-disable-failure.patch
+    - Power LED state wrong on some platforms: mlxreg LED color conversion patch (kernels 6.1, 6.12).
+      36425137 hw-mgmt: patches: Add missing 6.1 and 6.12 LED driver patch
+        recipes-kernel/linux/linux-6.1/0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
+        recipes-kernel/linux/linux-6.12/0060-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
+    - SPC6 BMC host I2C not ready before mux: defer platform post-init until buses are up (6.1, 6.12).
+      8fd43266 hw-mgmt: patches: Update platform driver for SPC6 platforms
+        recipes-kernel/linux/linux-6.1/0106-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+        recipes-kernel/linux/linux-6.12/0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+    - SN6600 BMC (HID189): AST2700 SPC6 DTS, JTAG, MCTP, protection logic, RTC, and PHY reset support.
+      f78cf623 hw-mgmt-bmc: Add BMC stack for SN6600 (HID189)
+        recipes-kernel/linux/Patch_BMC_Status_Table.txt
+        recipes-kernel/linux/linux-6.12/0001-jtag-Add-JTAG-core-headers-GPIO-mux-and-locking-support.patch
+        recipes-kernel/linux/linux-6.12/0002-aspeed-nvidia-spc6-a1-bmc.dts.patch
+        recipes-kernel/linux/linux-6.12/0003-aspeed-nvidia-spc6-bmc.dts.patch
+        recipes-kernel/linux/linux-6.12/0004-mctp-Update-MCTP-core-and-transport-drivers-with-error-injection.patch
+        recipes-kernel/linux/linux-6.12/0005-mctp-Fix-module-license-and-tracepoint-exports-for-MCTP-I2C.patch
+        recipes-kernel/linux/linux-6.12/0060-platform-mellanox-nvsw-bmc-Downstream-Add-protection.patch
+        recipes-kernel/linux/linux-6.12/0061-platform-mellanox-mlxreg-io-Increase-max-supported-a.patch
+        recipes-kernel/linux/linux-6.12/0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch
+        recipes-kernel/linux/linux-6.12/0063-reset-phy-using-polling-function-not-register-write.patch
+      39d59055 hw-mgmt: kernel: bmc: patches: Update patches
+        recipes-kernel/linux/Patch_BMC_Status_Table.txt
+        recipes-kernel/linux/linux-6.12/0001-mctp-driver-net-Extend-MCTP-support.patch
+        recipes-kernel/linux/linux-6.12/0006-jtag-Add-JTAG-core-headers-GPIO-mux-and-locking-support.patch
+        recipes-kernel/linux/linux-6.12/0007-JTAG-Aspeed-Fix-kernel-configuration.patch
+    - Renesas RAA228942/RAA228943 VRs not exposed in hwmon: added pmbus driver support (6.1, 6.12).
+      a4c0b922 hw-mgmt: kernel patch: Add 6.1/6.12 patches for Renesas RAA228942 and RAA228943
+        recipes-kernel/linux/linux-6.1/0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch
+        recipes-kernel/linux/linux-6.12/0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch
+    - Kernel 6.1.169 build break: refreshed downstream patch set to match upstream changes.
+      98e58bf0 hw-mgmt: kernel 6.1: Upgrade patches to support version up to 6.1.169
+        recipes-kernel/linux/Patch_Status_Table.txt
+    - usb0 network interface rename broken on 6.1: restored usbnet local-device naming exception.
+      f818eae7 hw-mgmt: scripts: Update usb0 hotplug handling
+        recipes-kernel/linux/linux-6.1/0113-net-usb-usbnet-restore-usb-d-name-exception-for-loca.patch
+    - I2C mux completion notify added for faster bring-up, then reverted (#5079211) due to NOS timing
+      regressions.
+      ce06d6d8 hw-mgmt: patches: Add mux completion notification
+        recipes-kernel/linux/linux-6.1/0114-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch
+        recipes-kernel/linux/linux-6.1/0115-i2c-mux-regmap-Amend-completion-notify-flow.patch
+        recipes-kernel/linux/linux-6.1/0116-platform-mellanox-Downstream-Defer-post-init-until-I.patch
+        recipes-kernel/linux/linux-6.12/0065-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch
+        recipes-kernel/linux/linux-6.12/0066-i2c-mux-regmap-Amend-completion-notify-flow.patch
+        recipes-kernel/linux/linux-6.12/0067-platform-mellanox-Downstream-Defer-post-init-until-I.patch
+      dca3e10f hw-mgmt: kernel: Revert mux completion notify (#5079211)
+        recipes-kernel/linux/linux-6.1/0114-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch
+        recipes-kernel/linux/linux-6.1/0115-i2c-mux-regmap-Amend-completion-notify-flow.patch
+        recipes-kernel/linux/linux-6.1/0116-platform-mellanox-Downstream-Defer-post-init-until-I.patch
+        recipes-kernel/linux/linux-6.12/0065-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch
+        recipes-kernel/linux/linux-6.12/0066-i2c-mux-regmap-Amend-completion-notify-flow.patch
+        recipes-kernel/linux/linux-6.12/0067-platform-mellanox-Downstream-Defer-post-init-until-I.patch
+    - mlxsw I2C semaphore timeout on slow buses: increased timeout 5 s to 10 s (#4954530).
+      #4954530 50dd4783 hw-mgmt: kernel: Increase mlxsw I2C timeout 5000->10000ms
+        recipes-kernel/linux/linux-5.10/0313-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch
+        recipes-kernel/linux/linux-6.1/8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch
+        recipes-kernel/linux/linux-6.12/8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch
+    - SN6600 host SKU186 platform driver added for early bring-up, then reverted (#2553).
+      7e327783 hw-mgmt: kernel: patch 6.12: Add new system platform driver SN6600 (SKU186)
+        recipes-kernel/linux/linux-6.12/0068-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch
+      19e1681e Revert SN6600 (SKU186) kernel 6.12 platform driver (#2553)
+        recipes-kernel/linux/linux-6.12/0068-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch
+    - AMD V3000 I2C dead after kexec: ACPI power-on fix for Designware controllers (kernel 6.1).
+      529a89f9 hw-mgmt: patches: 6.1: Fix AMD I2C controller init after kexec
+        recipes-kernel/linux/linux-6.1/0118-i2c-designware-Fix-ACPI-power-on-of-AMD-I2C-after-ke.patch
+    - Kernel 6.12 arm64 BMC build failure: mlxbf-bootctl const-correctness fix.
+      1d1b8636 hw-mgmt: kernel 6.12: patches: Fix arm64 build
+        recipes-kernel/linux/linux-6.12/0001-mlxbf-bootctl-Constify-struct-bin_attribute.patch
+    - AST2700 BMC device tree and JTAG Kconfig fixes for SPC6 images.
+      b51b133b hw-mgmt: pactches: Update DTS file for Nvidia AST2700
+        recipes-kernel/linux/linux-6.12/0003-aspeed-nvidia-spc6-bmc.dts.patch
+      a5474f7d hw-mgmt: patches: Fix JTAG configuration
+        recipes-kernel/linux/linux-6.12/0006-JTAG-Aspeed-Fix-kernel-configuration.patch
+      bd1eeac4 hw-mgmt: bmc: Update kernel config
+        recipes-kernel/linux/kconfig_6_12.txt
+    - Leakage ADC drivers: built-in A2D modules for BMC leakage monitoring on SN6600.
+      9204d5ac hw-mgmt: kernel: config: Set A2D modules to yes
+        recipes-kernel/linux/kconfig_6_12.txt
+    - SPC6 AST2700 SONiC/OpenBMC DTS: TPM, phram, I3C pulls, split DTS, SGMII MAC reset, PHY names.
+      SPC6 AST2700 A2 DTS extension (from V.7.0070.1100_BR merge)
+        recipes-kernel/linux/linux-6.12/0008-arm64-dts-aspeed-spc6-bmc-ext-phram-env-tpm-i3c-pull.patch
+        recipes-kernel/linux/linux-6.12/0009-arm64-dts-aspeed-split-SPC6-BMC-DTS-for-SONiC-and-Op.patch
+        recipes-kernel/linux/linux-6.12/0010-net-ftgmac100-hard-reset-mac-for-sgmii.patch
+        recipes-kernel/linux/linux-6.12/0011-arm64-dts-aspeed-spc6-bmc-fix-sgmii-phy-names.patch
+
+    - For detailed patch list: Please view:
+      https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+ 
+
+
+================================================================================
 - V.7.0070.0936
 - Mon, 29 Jun 2026
 --------------------------------------------------------------------------------
