@@ -659,9 +659,7 @@ function handle_hotplug_fan_event()
 		;;
 	esac
 
-	if [ "$event" -eq 1 ]; then
-		set_fan_direction "$attribute" "$event"
-	fi
+	set_fan_direction "$attribute" "$event"
 }
 
 function handle_hotplug_dpu_event()
