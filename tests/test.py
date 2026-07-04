@@ -592,6 +592,11 @@ class TestRunner:
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_control_2_5.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
+            {
+                'name': 'Pytest: Thermal Updater Helpers',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_updater_helpers.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
         ]
 
         # Add coverage options to all pytest tests if coverage is enabled
@@ -1608,7 +1613,7 @@ class TestRunner:
     def _get_python_coverage_total(self):
         """Return (pct, stmts, miss) from the accumulated .coverage file, or None."""
         import re as _re
-        coverage_file = self.tests_dir.parent / '.coverage'
+        coverage_file = self.tests_dir / '.coverage'
         if not coverage_file.exists():
             return None
         try:
@@ -1747,7 +1752,7 @@ class TestRunner:
                 print(f"  Open in browser: file://{index_file.absolute()}")
 
             print(f"\n  {'Script':<50} {'Cover%':>7}  {'Lines':>10}")
-            print(f"  {'-'*50} {'-'*7}  {'-'*10}")
+            print(f"  {'-' * 50} {'-' * 7}  {'-' * 10}")
             for name, p, cov, tot in per_file:
                 line_info = f"{cov:>4}/{tot:>4}"
                 pct_color = Colors.GREEN if p >= 50 else (Colors.YELLOW if p >= 10 else Colors.RED)
