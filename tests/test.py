@@ -508,6 +508,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: NVL Temperature Get',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_nvl_temperature_get.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: DPU Thermal Update',
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_dpu_thermal_update.py', '--tb=short'],
                 'cwd': self.tests_dir

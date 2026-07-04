@@ -224,5 +224,138 @@ class TestConstants:
         assert 1 in vpd.SUPPORTED_FRU_VER
 
 
+class TestPrintv:
+    """Tests for printv()."""
+
+    def test_verbose_true_prints(self, capsys):
+        vpd.printv("hello", True)
+        assert "hello" in capsys.readouterr().out
+
+    def test_verbose_false_no_print(self, capsys):
+        vpd.printv("hello", False)
+        assert capsys.readouterr().out == ""
+
+    def test_non_string_converted(self, capsys):
+        vpd.printv(42, True)
+        assert "42" in capsys.readouterr().out
+
+
+class TestFormatUnpack:
+    """Tests for format_unpack()."""
+
+    def test_string_format_decoded(self):
+        item = {'format': '{}s'}
+        blk_header = {'type': vpd.LC_ID.SN, 'size': 5}
+        data = b'Hello'
+        result = vpd.format_unpack(data, item, blk_header)
+        assert result == 'Hello'
+
+    def test_string_strips_null_padding(self):
+        item = {'format': '{}s'}
+        blk_header = {'type': vpd.LC_ID.SN, 'size': 8}
+        data = b'SN\x00\x00\x00\x00\x00\x00'
+        result = vpd.format_unpack(data, item, blk_header)
+        assert result == 'SN'
+
+    def test_unsigned_int_returns_hex_string(self):
+        item = {'format': '>I'}
+        blk_header = {'type': vpd.LC_ID.CHSUM, 'size': 4}
+        data = struct.pack('>I', 0x12345678)
+        result = vpd.format_unpack(data, item, blk_header)
+        assert '12345678' in result.upper()
+
+    def test_byte_format(self):
+        item = {'format': 'b'}
+        blk_header = {'type': vpd.LC_ID.SW_REV, 'size': 1}
+        data = struct.pack('b', 5)
+        result = vpd.format_unpack(data, item, blk_header)
+        assert result == 5
+
+    def test_verbose_does_not_crash(self):
+        item = {'format': '{}s'}
+        blk_header = {'type': vpd.LC_ID.SN, 'size': 3}
+        data = b'abc'
+        # verbose=True should print but not fail
+        vpd.format_unpack(data, item, blk_header, verbose=True)
+
+
+class TestDumpFru:
+    """Tests for dump_fru()."""
+
+    def test_named_item_formatted(self, capsys):
+        fru = {'items': [['Product Name', 'Widget 2000']]}
+        vpd.dump_fru(fru)
+        out = capsys.readouterr().out
+        assert 'Product Name' in out
+        assert 'Widget 2000' in out
+
+    def test_unnamed_item_printed_raw(self, capsys):
+        fru = {'items': [['', 'raw block data']]}
+        vpd.dump_fru(fru)
+        out = capsys.readouterr().out
+        assert 'raw block data' in out
+        assert ':' not in out.strip()
+
+    def test_multiple_items(self, capsys):
+        fru = {'items': [['SN', 'SN123456'], ['PN', 'PN789']]}
+        vpd.dump_fru(fru)
+        out = capsys.readouterr().out
+        assert 'SN' in out
+        assert 'PN' in out
+
+    def test_empty_items_no_output(self, capsys):
+        vpd.dump_fru({'items': []})
+        assert capsys.readouterr().out == ''
+
+    def test_trailing_whitespace_stripped(self, capsys):
+        fru = {'items': [['Key', 'value   ']]}
+        vpd.dump_fru(fru)
+        out = capsys.readouterr().out
+        # rstrip() applied on the value side
+        assert 'value' in out
+
+
+class TestSaveFru:
+    """Tests for save_fru()."""
+
+    def test_creates_output_file(self, tmp_path):
+        out = tmp_path / "output.txt"
+        vpd.save_fru({'items': [['SN', 'SN123']]}, str(out))
+        assert out.exists()
+
+    def test_named_item_written(self, tmp_path):
+        out = tmp_path / "output.txt"
+        vpd.save_fru({'items': [['Product', 'Widget']]}, str(out))
+        assert 'Product' in out.read_text()
+        assert 'Widget' in out.read_text()
+
+    def test_unnamed_item_written(self, tmp_path):
+        out = tmp_path / "output.txt"
+        vpd.save_fru({'items': [['', 'raw block']]}, str(out))
+        assert 'raw block' in out.read_text()
+
+    def test_file_is_readable_by_all(self, tmp_path):
+        import stat as stat_mod
+        out = tmp_path / "output.txt"
+        vpd.save_fru({'items': [['SN', 'SN123']]}, str(out))
+        mode = out.stat().st_mode
+        assert mode & stat_mod.S_IRUSR  # owner read
+        assert mode & stat_mod.S_IRGRP  # group read
+        assert mode & stat_mod.S_IROTH  # other read
+
+    def test_multiple_items_all_written(self, tmp_path):
+        out = tmp_path / "output.txt"
+        items = [['SN', 'SN1'], ['PN', 'PN2'], ['REV', 'A1']]
+        vpd.save_fru({'items': items}, str(out))
+        content = out.read_text()
+        assert 'SN' in content
+        assert 'PN' in content
+        assert 'REV' in content
+
+    def test_ioerror_handled_gracefully(self, tmp_path):
+        # /nonexistent/dir/output.txt should raise IOError and be handled
+        vpd.save_fru({'items': [['SN', 'SN1']]}, '/nonexistent_dir_xyz/output.txt')
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
