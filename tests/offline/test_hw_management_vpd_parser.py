@@ -16,6 +16,7 @@
 
 """Tests for hw-management-vpd-parser.py pure-function layer."""
 
+import importlib.util
 import sys
 import struct
 import zlib
@@ -26,7 +27,6 @@ TESTS_DIR = Path(__file__).parent
 PROJECT_ROOT = (TESTS_DIR / ".." / "..").resolve()
 sys.path.insert(0, str(PROJECT_ROOT / "usr" / "usr" / "bin"))
 
-import importlib.util
 _spec = importlib.util.spec_from_file_location(
     "vpd_parser",
     str(PROJECT_ROOT / "usr" / "usr" / "bin" / "hw-management-vpd-parser.py")

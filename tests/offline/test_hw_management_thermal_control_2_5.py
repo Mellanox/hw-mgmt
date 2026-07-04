@@ -431,7 +431,7 @@ class TestHwMgmtFileOp25:
 
     def test_check_file_missing(self, tmp_path):
         op = self._make_op(str(tmp_path))
-        assert op.check_file("nosuchfile") is False
+        assert op.check_file("absent.txt") is False
 
     def test_check_file_empty_name(self, tmp_path):
         op = self._make_op(str(tmp_path))
@@ -445,7 +445,7 @@ class TestHwMgmtFileOp25:
 
     def test_read_file_missing_returns_none(self, tmp_path):
         op = self._make_op(str(tmp_path))
-        assert op.read_file("nosuchfile") is None
+        assert op.read_file("absent.txt") is None
 
     def test_write_file_creates_file(self, tmp_path):
         op = self._make_op(str(tmp_path))
@@ -466,7 +466,7 @@ class TestHwMgmtFileOp25:
 
     def test_get_file_val_missing_returns_default(self, tmp_path):
         op = self._make_op(str(tmp_path))
-        assert op.get_file_val("nosuchfile", def_val=99) == 99
+        assert op.get_file_val("absent.txt", def_val=99) == 99
 
     def test_get_file_val_with_scale(self, tmp_path):
         (tmp_path / "t").write_text("75000\n")
@@ -474,15 +474,15 @@ class TestHwMgmtFileOp25:
         assert op.get_file_val("t", scale=1000) == 75
 
     def test_get_file_val_bad_content_returns_default(self, tmp_path):
-        (tmp_path / "bad").write_text("notanumber\n")
+        (tmp_path / "bad").write_text("invalid\n")
         op = self._make_op(str(tmp_path))
         assert op.get_file_val("bad", def_val=7) == 7
 
     def test_rm_file_removes_existing(self, tmp_path):
-        f = tmp_path / "todelete"
+        f = tmp_path / "remove.txt"
         f.write_text("x")
         op = self._make_op(str(tmp_path))
-        op.rm_file("todelete")
+        op.rm_file("remove.txt")
         assert not f.exists()
 
     def test_get_file_mtime_existing(self, tmp_path):
@@ -494,7 +494,7 @@ class TestHwMgmtFileOp25:
 
     def test_get_file_mtime_missing_returns_zero(self, tmp_path):
         op = self._make_op(str(tmp_path))
-        assert op.get_file_mtime("nosuchfile") == 0
+        assert op.get_file_mtime("absent.txt") == 0
 
     def test_read_pwm_reads_and_converts(self, tmp_path):
         thermal = tmp_path / "thermal"
@@ -633,11 +633,11 @@ class TestPwmRegulatorDynamic:
     def _make_reg(self, val_min=35000, val_max=70000, pwm_min=20, pwm_max=100, extra=None):
         mock_log = MagicMock()
         ep = extra or {}
-        return tc25.pwm_regulator_dynamic(mock_log, "dynreg", val_min, val_max, pwm_min, pwm_max, ep), mock_log
+        return tc25.pwm_regulator_dynamic(mock_log, "regulator", val_min, val_max, pwm_min, pwm_max, ep), mock_log
 
     def test_init_sets_name(self):
         reg, _ = self._make_reg()
-        assert reg.name == "dynreg"
+        assert reg.name == "regulator"
 
     def test_init_iterm_is_zero(self):
         reg, _ = self._make_reg()
@@ -772,7 +772,7 @@ class TestSystemDevice25:
         dev, _ = _make_system_device25(str(tmp_path))
         dev.val_hcrit = None
         dev.val_lcrit = None
-        result = dev.is_crit_range_violation(50000, "testfile")
+        result = dev.is_crit_range_violation(50000, "sensor.txt")
         assert result is False
 
     def test_append_fault_adds_to_list(self, tmp_path):

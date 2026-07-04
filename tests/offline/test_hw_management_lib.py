@@ -1523,7 +1523,7 @@ class TestAtomicFileWrite:
         assert target.read_text() == "42"
 
     def test_write_to_nonexistent_dir_raises(self, tmp_path):
-        target = tmp_path / "nosuchdir" / "file.txt"
+        target = tmp_path / "missing" / "file.txt"
         with pytest.raises(Exception):
             self.atomic_file_write(str(target), "data")
 
@@ -1827,6 +1827,7 @@ class TestObjectSnapshotEdgeCases:
     def test_slots_object_traversed(self):
         class Bar:
             __slots__ = ['y']
+
             def __init__(self):
                 self.y = 99
         snap = self.ObjectSnapshot(max_depth=2)
