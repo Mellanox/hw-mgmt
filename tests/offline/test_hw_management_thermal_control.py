@@ -14,21 +14,21 @@
 # more details.
 #
 
-"""Tests for hw_management_thermal_control.py pure helper functions and classes.
+"""Tests for hw_management_thermal_control.py helper functions and classes.
 
 Covers: str2bool, get_dict_val_by_path, g_get_range_val, g_get_dmin,
-        add_missing_to_dict, iterate_err_counter, and CONST constants.
+        add_missing_to_dict, iterate_err_counter, CONST constants,
+        hw_management_file_op, and system_device methods.
 These are all isolated from hardware — no sysfs access required.
 """
 
+import hw_management_thermal_control as tc
 import sys
 import os
 import pytest
 from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'usr', 'usr', 'bin'))
-
-import hw_management_thermal_control as tc
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +368,427 @@ class TestCONSTClass:
 
     def test_temp_na_val(self):
         assert tc.CONST.TEMP_NA_VAL == 255
+
+
+# ---------------------------------------------------------------------------
+# TestHwMgmtFileOp
+# ---------------------------------------------------------------------------
+class TestHwMgmtFileOp:
+    """Tests for hw_management_file_op — the base file-operation class."""
+
+    def _make_op(self, root):
+        config = {tc.CONST.HW_MGMT_ROOT: root}
+        return tc.hw_management_file_op(config)
+
+    def test_init_with_explicit_root(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.root_folder == str(tmp_path)
+
+    def test_init_falsy_root_uses_default(self):
+        config = {tc.CONST.HW_MGMT_ROOT: ""}
+        op = tc.hw_management_file_op(config)
+        assert op.root_folder == tc.CONST.HW_MGMT_FOLDER_DEF
+
+    def test_get_hw_path(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        result = op.get_hw_path("thermal/temp1")
+        assert result == str(tmp_path / "thermal" / "temp1")
+
+    def test_check_file_existing(self, tmp_path):
+        f = tmp_path / "sensor"
+        f.write_text("42")
+        op = self._make_op(str(tmp_path))
+        assert op.check_file("sensor") is True
+
+    def test_check_file_missing(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.check_file("nosuchfile") is False
+
+    def test_check_file_empty_name(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.check_file("") is False
+
+    def test_read_file_existing(self, tmp_path):
+        f = tmp_path / "sensor"
+        f.write_text("42\n")
+        op = self._make_op(str(tmp_path))
+        assert op.read_file("sensor") == "42"
+
+    def test_read_file_missing_returns_none(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.read_file("nosuchfile") is None
+
+    def test_write_file_creates_file(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        op.write_file("out", "hello")
+        assert (tmp_path / "out").read_text() == "hello"
+
+    def test_write_file_overwrites(self, tmp_path):
+        f = tmp_path / "out"
+        f.write_text("old")
+        op = self._make_op(str(tmp_path))
+        op.write_file("out", "new")
+        assert f.read_text() == "new"
+
+    def test_thermal_read_file(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        (thermal / "temp").write_text("55\n")
+        op = self._make_op(str(tmp_path))
+        assert op.thermal_read_file("temp") == "55"
+
+    def test_read_file_int_no_scale(self, tmp_path):
+        (tmp_path / "pwm").write_text("200\n")
+        op = self._make_op(str(tmp_path))
+        assert op.read_file_int("pwm") == 200
+
+    def test_read_file_int_with_scale(self, tmp_path):
+        (tmp_path / "temp").write_text("75000\n")
+        op = self._make_op(str(tmp_path))
+        assert op.read_file_int("temp", scale=1000) == 75
+
+    def test_thermal_read_file_int(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        (thermal / "temp").write_text("50000\n")
+        op = self._make_op(str(tmp_path))
+        assert op.thermal_read_file_int("temp", scale=1000) == 50
+
+    def test_thermal_write_file(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        op = self._make_op(str(tmp_path))
+        op.thermal_write_file("pwm1", "128")
+        assert (thermal / "pwm1").read_text() == "128"
+
+    def test_get_file_val_existing_file(self, tmp_path):
+        (tmp_path / "sensor").write_text("300\n")
+        op = self._make_op(str(tmp_path))
+        assert op.get_file_val("sensor") == 300
+
+    def test_get_file_val_missing_returns_default(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.get_file_val("nosuchfile", def_val=99) == 99
+
+    def test_get_file_val_with_scale(self, tmp_path):
+        (tmp_path / "t").write_text("75000\n")
+        op = self._make_op(str(tmp_path))
+        assert op.get_file_val("t", scale=1000) == 75
+
+    def test_get_file_val_bad_content_returns_default(self, tmp_path):
+        (tmp_path / "bad").write_text("notanumber\n")
+        op = self._make_op(str(tmp_path))
+        assert op.get_file_val("bad", def_val=7) == 7
+
+    def test_rm_file_removes_existing(self, tmp_path):
+        f = tmp_path / "todelete"
+        f.write_text("x")
+        op = self._make_op(str(tmp_path))
+        op.rm_file("todelete")
+        assert not f.exists()
+
+    def test_get_file_mtime_existing(self, tmp_path):
+        f = tmp_path / "f"
+        f.write_text("x")
+        op = self._make_op(str(tmp_path))
+        mtime = op.get_file_mtime("f")
+        assert mtime > 0
+
+    def test_get_file_mtime_missing_returns_zero(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.get_file_mtime("nosuchfile") == 0
+
+    def test_read_pwm_reads_and_converts(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        (thermal / "pwm1").write_text("128\n")
+        op = self._make_op(str(tmp_path))
+        pwm = op.read_pwm()
+        assert pwm == 50  # 128/2.55 + 0.5 ≈ 50
+
+    def test_read_pwm_missing_returns_default(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        assert op.read_pwm(default_val=42) == 42
+
+    def test_write_pwm_writes_to_pwm1(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        pwm_file = thermal / "pwm1"
+        pwm_file.write_text("0\n")
+        op = self._make_op(str(tmp_path))
+        result = op.write_pwm(100)
+        assert result is True
+        assert pwm_file.read_text() == "255"
+
+    def test_write_pwm_missing_file_returns_false(self, tmp_path):
+        op = self._make_op(str(tmp_path))
+        result = op.write_pwm(50)
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# TestSystemDevice
+# ---------------------------------------------------------------------------
+def _make_sensor_config(base_file_name="sensor", extra=None):
+    cfg = {
+        "type": "test_type",
+        "base_file_name": base_file_name,
+        "input_suffix": "_input",
+        "enable": 1,
+        "input_smooth_level": 1,
+        "poll_time": 30,
+        "pwm_hyst": 0,
+        "dynamic_err_mask": [],
+    }
+    if extra:
+        cfg.update(extra)
+    return cfg
+
+
+def _make_system_device(root, name="sensor1", extra=None):
+    """Helper to create a system_device with a mock logger and minimal config."""
+    cmd_arg = {tc.CONST.HW_MGMT_ROOT: root}
+    sys_config = {
+        tc.CONST.SYS_CONF_SENSORS_CONF: {
+            name: _make_sensor_config(extra=extra)
+        }
+    }
+    mock_log = MagicMock()
+    return tc.system_device(cmd_arg, sys_config, name, mock_log), mock_log
+
+
+class TestSystemDevice:
+    """Tests for system_device — base sensor class."""
+
+    def test_init_sets_name(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path), "my_sensor")
+        assert dev.name == "my_sensor"
+
+    def test_init_sets_type(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path), extra={"type": "thermal"})
+        assert dev.type == "thermal"
+
+    def test_init_state_is_stopped(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.state == tc.CONST.STOPPED
+
+    def test_init_pwm_is_pwm_min(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.pwm == tc.CONST.PWM_MIN
+
+    def test_get_value_returns_initial(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.get_value() == tc.CONST.TEMP_INIT_VAL_DEF
+
+    def test_get_pwm_returns_last_pwm(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.get_pwm() == tc.CONST.PWM_MIN
+
+    def test_get_timestamp_returns_int(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert isinstance(dev.get_timestamp(), int)
+
+    def test_stop_when_already_stopped_no_op(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.stop()
+        assert dev.state == tc.CONST.STOPPED
+
+    def test_set_system_flow_dir(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.set_system_flow_dir(tc.CONST.C2P)
+        assert dev.system_flow_dir == tc.CONST.C2P
+
+    def test_update_value_smoothing(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        result = dev.update_value(50)
+        assert isinstance(result, int)
+
+    def test_update_value_no_hyst_triggers_pwm_update(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.update_value(50)
+        assert dev.update_pwm_flag == 1
+
+    def test_calculate_pwm_formula_min_val(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.value = dev.val_min
+        pwm = dev.calculate_pwm_formula()
+        assert pwm == dev.pwm_min
+
+    def test_calculate_pwm_formula_max_val(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.value = dev.val_max
+        pwm = dev.calculate_pwm_formula()
+        assert pwm == dev.pwm_max
+
+    def test_calculate_pwm_formula_equal_min_max(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.val_min = 50
+        dev.val_max = 50
+        pwm = dev.calculate_pwm_formula()
+        assert pwm == dev.pwm_min
+
+    def test_check_sensor_blocked_no_file(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.check_sensor_blocked() is False
+
+    def test_validate_value_in_range_over_max(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        result = dev.validate_value_in_min_max_range(99999)
+        assert result is True
+
+    def test_validate_value_in_range_normal(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        mid = (dev.val_min + dev.val_max) // 2
+        result = dev.validate_value_in_min_max_range(mid)
+        assert result is False
+
+    def test_is_crit_range_violation_no_limits(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.val_hcrit = None
+        dev.val_lcrit = None
+        result = dev.is_crit_range_violation(50000, "testfile")
+        assert result is False
+
+    def test_is_crit_range_violation_over_hcrit(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.val_hcrit = 80000
+        dev.val_lcrit = None
+        result = dev.is_crit_range_violation(90000, "testfile")
+        assert result is True
+
+    def test_append_fault_adds_to_list(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.append_fault("err1")
+        assert "err1" in dev.fault_list
+
+    def test_append_fault_no_duplicate(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.append_fault("err1")
+        dev.append_fault("err1")
+        assert dev.fault_list.count("err1") == 1
+
+    def test_clear_fault_list_empties_all(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.append_fault("err1")
+        dev.clear_fault_list()
+        assert dev.fault_list == []
+        assert dev.fault_list_static_filtered == []
+
+    def test_get_fault_list_filtered(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.append_fault("err_a")
+        result = dev.get_fault_list_filtered()
+        assert "err_a" in result
+
+    def test_get_fault_list_str_empty(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.get_fault_list_str() == ""
+
+    def test_get_fault_list_str_with_fault(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.append_fault("READ_ERR")
+        s = dev.get_fault_list_str()
+        assert "READ_ERR" in s
+
+    def test_get_fault_cnt_zero_when_no_faults(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.get_fault_cnt() == 0
+
+    def test_get_fault_cnt_one_when_faults_exist(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.fault_list_static_filtered.append("ERR")
+        assert dev.get_fault_cnt() == 1
+
+    def test_info_returns_string(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        result = dev.info()
+        assert isinstance(result, str)
+        assert dev.name in result
+
+    def test_get_child_list_empty(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        assert dev.get_child_list() == []
+
+    def test_set_dynamic_filter_ena_changes_mask(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path), extra={"dynamic_err_mask": ["DYN_ERR"]})
+        dev.set_dynamic_filter_ena(True)
+        assert dev.dynamic_filter_ena is True
+
+    def test_set_dynamic_filter_ena_no_change_if_same(self, tmp_path):
+        dev, _ = _make_system_device(str(tmp_path))
+        dev.dynamic_filter_ena = False
+        dev.set_dynamic_filter_ena(False)
+        assert dev.dynamic_filter_ena is False
+
+
+# ---------------------------------------------------------------------------
+# TestThermalSensor
+# ---------------------------------------------------------------------------
+def _make_thermal_sensor(root, name="temp1"):
+    cmd_arg = {tc.CONST.HW_MGMT_ROOT: root}
+    sys_config = {
+        tc.CONST.SYS_CONF_SENSORS_CONF: {
+            name: {
+                "type": "thermal",
+                "base_file_name": "thermal/{}".format(name),
+                "input_suffix": "_input",
+                "enable": 1,
+                "input_smooth_level": 1,
+                "poll_time": 30,
+                "pwm_hyst": 0,
+                "dynamic_err_mask": [],
+            }
+        }
+    }
+    mock_log = MagicMock()
+    return tc.thermal_sensor(cmd_arg, sys_config, name, mock_log), mock_log
+
+
+class TestThermalSensor:
+    """Tests for thermal_sensor class."""
+
+    def test_init_creates_sensor(self, tmp_path):
+        sensor, _ = _make_thermal_sensor(str(tmp_path))
+        assert sensor.name == "temp1"
+
+    def test_init_state_is_stopped(self, tmp_path):
+        sensor, _ = _make_thermal_sensor(str(tmp_path))
+        assert sensor.state == tc.CONST.STOPPED
+
+    def test_handle_input_missing_file_updates_err(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        sensor, _ = _make_thermal_sensor(str(tmp_path))
+        sensor.handle_input({}, tc.CONST.C2P, 25000)
+        assert sensor.fread_err.get_err("{}{}".format(
+            sensor.get_hw_path("thermal/temp1"), "_input")) >= 0
+
+    def test_handle_input_with_valid_file(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        input_file = thermal / "temp1_input"
+        input_file.write_text("50000\n")
+        sensor, _ = _make_thermal_sensor(str(tmp_path))
+        sensor.handle_input({}, tc.CONST.C2P, 25000)
+        assert sensor.value == 50
+
+    def test_collect_err_empty_when_no_errors(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        (thermal / "temp1_input").write_text("50000\n")
+        sensor, _ = _make_thermal_sensor(str(tmp_path))
+        sensor.handle_input({}, tc.CONST.C2P, 25000)
+        sensor.collect_err()
+        assert sensor.fault_list == []
+
+    def test_handle_input_bad_value_triggers_err(self, tmp_path):
+        thermal = tmp_path / "thermal"
+        thermal.mkdir()
+        (thermal / "temp1_input").write_text("not_a_number\n")
+        sensor, _ = _make_thermal_sensor(str(tmp_path))
+        sensor.handle_input({}, tc.CONST.C2P, 25000)
+        err_path = sensor.get_hw_path("thermal/temp1_input")
+        assert sensor.fread_err.get_err(err_path) >= 0
 
 
 if __name__ == "__main__":

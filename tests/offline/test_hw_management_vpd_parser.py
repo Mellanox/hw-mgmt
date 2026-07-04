@@ -357,5 +357,131 @@ class TestSaveFru:
         vpd.save_fru({'items': [['SN', 'SN1']]}, '/nonexistent_dir_xyz/output.txt')
 
 
+class TestParseFruFixedFieldsBin:
+    """Tests for parse_fru_fixed_fields_bin()."""
+
+    def _hdr(self, fmt):
+        return {"blk_type": "TEST_BLK", "format": fmt}
+
+    def test_no_format_key_returns_dash(self):
+        result = vpd.parse_fru_fixed_fields_bin(b"\x00" * 16, {"blk_type": "T"})
+        assert result == "-"
+
+    def test_ft_ascii_field(self):
+        blk_hdr = self._hdr([("Product Name", 0, 5, "FT_ASCII")])
+        data = b"Hello" + b"\x00" * 10
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        assert result == {"items": [["Product Name", "Hello"]]}
+
+    def test_ft_ascii_strips_null_padding(self):
+        blk_hdr = self._hdr([("SN", 0, 8, "FT_ASCII")])
+        data = b"SN\x00\x00\x00\x00\x00\x00"
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        items = result["items"]
+        assert items[0][0] == "SN"
+        assert items[0][1] == "SN"
+
+    def test_ft_num_field_big_endian(self):
+        blk_hdr = self._hdr([("Revision", 0, 2, "FT_NUM")])
+        data = b"\x00\x01" + b"\x00" * 10
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        assert result["items"][0] == ["Revision", 1]
+
+    def test_ft_num_inv_field_little_endian(self):
+        blk_hdr = self._hdr([("RevLE", 0, 2, "FT_NUM_INV")])
+        data = b"\x01\x00" + b"\x00" * 10
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        assert result["items"][0] == ["RevLE", 1]
+
+    def test_ft_hex_field(self):
+        blk_hdr = self._hdr([("DevID", 0, 2, "FT_HEX")])
+        data = b"\xde\xad" + b"\x00" * 10
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        val = result["items"][0][1]
+        assert "dead" in val.lower()
+
+    def test_ft_hex_inv_field(self):
+        blk_hdr = self._hdr([("DevLE", 0, 2, "FT_HEX_INV")])
+        data = b"\xad\xde" + b"\x00" * 10
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        val = result["items"][0][1]
+        assert "dead" in val.lower()
+
+    def test_ft_mac_field(self):
+        blk_hdr = self._hdr([("MAC", 0, 6, "FT_MAC")])
+        data = bytes([0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33]) + b"\x00" * 4
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        assert result["items"][0] == ["MAC", "AA:BB:CC:11:22:33"]
+
+    def test_ft_reserved_skipped(self):
+        blk_hdr = self._hdr([
+            ("Pad", 0, 2, "FT_RESERVED"),
+            ("SN", 2, 4, "FT_ASCII"),
+        ])
+        data = b"\x00\x00SN12" + b"\x00" * 4
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        names = [item[0] for item in result["items"]]
+        assert "Pad" not in names
+        assert "SN" in names
+
+    def test_unknown_type_skipped(self):
+        blk_hdr = self._hdr([("X", 0, 2, "FT_UNKNOWN_TYPE")])
+        data = b"\x01\x02" + b"\x00" * 4
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        assert result["items"] == []
+
+    def test_multiple_fields_all_present(self):
+        blk_hdr = self._hdr([
+            ("Name", 0, 3, "FT_ASCII"),
+            ("Rev", 3, 1, "FT_NUM"),
+        ])
+        data = b"HW\x00\x02" + b"\x00" * 4
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        names = [item[0] for item in result["items"]]
+        assert "Name" in names
+        assert "Rev" in names
+
+    def test_offset_slicing(self):
+        blk_hdr = self._hdr([("Field", 4, 2, "FT_NUM")])
+        data = b"\x00\x00\x00\x00\x01\x02" + b"\x00" * 4
+        result = vpd.parse_fru_fixed_fields_bin(data, blk_hdr)
+        assert result["items"][0][1] == 0x0102
+
+
+class TestMlnxBlkUnpack:
+    """Tests for mlnx_blk_unpack()."""
+
+    def _hdr(self, fmt):
+        return {"blk_type": "TEST", "format": fmt}
+
+    def test_no_format_key_returns_dash(self):
+        result = vpd.mlnx_blk_unpack(b"\x00" * 32, {"blk_type": "T"}, 32)
+        assert result == "-"
+
+    def test_offset_beyond_size_breaks_early(self):
+        # offset=10, length=5 → rec_offset = 10-8 = 2, 2+5=7 >= size=6 → break
+        blk_hdr = self._hdr([
+            ("Field", 0, 10, 5, "FIT_SINGLE", "FT_ASCII"),
+        ])
+        result = vpd.mlnx_blk_unpack(b"\x00" * 4, blk_hdr, 6)
+        assert result == []
+
+    def test_ft_ascii_single_field(self):
+        blk_hdr = self._hdr([
+            ("Name", 0, 8, 5, "FIT_SINGLE", "FT_ASCII"),
+        ])
+        data = b"\x00" * 8 + b"Hello"
+        result = vpd.mlnx_blk_unpack(data, blk_hdr, 20)
+        assert any("Name" in str(item) for item in result)
+
+    def test_ft_reserved_skipped(self):
+        blk_hdr = self._hdr([
+            ("Pad", 0, 8, 2, "FIT_SINGLE", "FT_RESERVED"),
+        ])
+        data = b"\x00" * 20
+        result = vpd.mlnx_blk_unpack(data, blk_hdr, 20)
+        assert result == []
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

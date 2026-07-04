@@ -1457,6 +1457,389 @@ class TestRepeatedTimerCoverage:
 
 
 # =============================================================================
+# TEST HELPER FUNCTIONS
+# =============================================================================
+
+class TestToInt:
+    """Tests for to_int()."""
+
+    def setup_method(self):
+        from hw_management_lib import to_int
+        self.to_int = to_int
+
+    def test_integer_returned_as_is(self):
+        assert self.to_int(42) == 42
+
+    def test_string_integer_converted(self):
+        assert self.to_int("123") == 123
+
+    def test_float_string_fails_returns_default(self):
+        # str(3.9) is "3.9" which int() can't parse, so returns default
+        assert self.to_int(3.9) == 0
+
+    def test_none_returns_default(self):
+        assert self.to_int(None) == 0
+
+    def test_none_custom_default(self):
+        assert self.to_int(None, default=99) == 99
+
+    def test_non_numeric_string_returns_default(self):
+        assert self.to_int("abc") == 0
+
+    def test_non_numeric_string_custom_default(self):
+        assert self.to_int("abc", default=-1) == -1
+
+    def test_whitespace_stripped(self):
+        assert self.to_int("  7  ") == 7
+
+    def test_negative_number(self):
+        assert self.to_int(-5) == -5
+
+    def test_zero(self):
+        assert self.to_int(0) == 0
+
+
+class TestAtomicFileWrite:
+    """Tests for atomic_file_write()."""
+
+    def setup_method(self):
+        from hw_management_lib import atomic_file_write
+        self.atomic_file_write = atomic_file_write
+
+    def test_creates_file_with_value(self, tmp_path):
+        target = tmp_path / "out.txt"
+        self.atomic_file_write(str(target), "hello")
+        assert target.read_text() == "hello"
+
+    def test_overwrites_existing_file(self, tmp_path):
+        target = tmp_path / "out.txt"
+        target.write_text("old")
+        self.atomic_file_write(str(target), "new")
+        assert target.read_text() == "new"
+
+    def test_integer_value_written_as_string(self, tmp_path):
+        target = tmp_path / "num.txt"
+        self.atomic_file_write(str(target), 42)
+        assert target.read_text() == "42"
+
+    def test_write_to_nonexistent_dir_raises(self, tmp_path):
+        target = tmp_path / "nosuchdir" / "file.txt"
+        with pytest.raises(Exception):
+            self.atomic_file_write(str(target), "data")
+
+    def test_temp_file_cleaned_up_on_failure(self, tmp_path):
+        target = tmp_path / "out.txt"
+        with patch('os.replace', side_effect=OSError("fail")):
+            with pytest.raises(Exception):
+                self.atomic_file_write(str(target), "hello")
+        tmp_files = list(tmp_path.glob(".tmp_*"))
+        assert tmp_files == []
+
+
+class TestReadDmiData:
+    """Tests for read_dmi_data()."""
+
+    def setup_method(self):
+        from hw_management_lib import read_dmi_data
+        self.read_dmi_data = read_dmi_data
+
+    def test_disallowed_field_returns_empty(self):
+        assert self.read_dmi_data("secret_field") == ""
+
+    def test_allowed_field_missing_file_returns_empty(self):
+        with patch('os.path.isfile', return_value=False):
+            assert self.read_dmi_data("board_name") == ""
+
+    def test_allowed_field_reads_file(self, tmp_path):
+        dmi_file = tmp_path / "board_name"
+        dmi_file.write_text("SomeBoard\n")
+        with patch('os.path.isfile', return_value=True), \
+                patch('builtins.open', mock_open(read_data='SomeBoard\n')):
+            result = self.read_dmi_data("board_name")
+        assert result == "SomeBoard"
+
+    def test_all_allowed_fields_accepted(self):
+        allowed = ["system_type", "board_name", "product_version", "product_sku"]
+        for field in allowed:
+            with patch('os.path.isfile', return_value=False):
+                result = self.read_dmi_data(field)
+            assert result == ""
+
+
+class TestRunShellCmd:
+    """Tests for run_shell_cmd()."""
+
+    def setup_method(self):
+        from hw_management_lib import run_shell_cmd
+        self.run_shell_cmd = run_shell_cmd
+
+    def test_disallowed_cmd_returns_minus_one(self):
+        rc, _ = self.run_shell_cmd("rm")
+        assert rc == -1
+
+    def test_disallowed_cmd_error_message(self):
+        _, msg = self.run_shell_cmd("ls")
+        assert "Not allowed" in msg
+
+    def test_allowed_cmd_subprocess_called(self):
+        import subprocess as sp
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "output"
+        mock_result.stderr = ""
+        with patch('subprocess.run', return_value=mock_result) as mock_run:
+            rc, out = self.run_shell_cmd("iorw", ["arg1"])
+        assert rc == 0
+        assert "output" in out
+        mock_run.assert_called_once()
+
+    def test_allowed_cmd_passes_args(self):
+        import subprocess as sp
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+        with patch('subprocess.run', return_value=mock_result) as mock_run:
+            self.run_shell_cmd("iorw", ["a", "b"])
+        call_args = mock_run.call_args[0][0]
+        assert call_args == ["iorw", "a", "b"]
+
+    def test_exception_returns_minus_one(self):
+        with patch('subprocess.run', side_effect=Exception("fail")):
+            rc, msg = self.run_shell_cmd("iorw")
+        assert rc == -1
+        assert "fail" in msg
+
+
+class TestExitWait:
+    """Tests for exit_wait()."""
+
+    def setup_method(self):
+        from hw_management_lib import exit_wait
+        self.exit_wait = exit_wait
+
+    def test_zero_timeout_returns_immediately(self):
+        event = threading.Event()
+        self.exit_wait(event, 0)
+
+    def test_negative_timeout_returns_immediately(self):
+        event = threading.Event()
+        self.exit_wait(event, -1)
+
+    def test_set_event_stops_wait_early(self):
+        event = threading.Event()
+        event.set()
+        self.exit_wait(event, 60)
+
+    def test_short_wait_completes(self):
+        event = threading.Event()
+        self.exit_wait(event, 0.05, chunk_sec=0.05)
+
+
+class TestObjectSnapshot:
+    """Tests for ObjectSnapshot."""
+
+    def setup_method(self):
+        from hw_management_lib import ObjectSnapshot
+        self.ObjectSnapshot = ObjectSnapshot
+
+    def test_collect_snapshot_returns_dict(self):
+        snap = self.ObjectSnapshot()
+        result = snap.collect_snapshot([1, 2, 3])
+        assert isinstance(result, dict)
+        assert len(result) > 0
+
+    def test_snapshot_contains_root(self):
+        snap = self.ObjectSnapshot()
+        result = snap.collect_snapshot("hello", name="root")
+        entries = list(result.values())
+        names = [e['name'] for e in entries]
+        assert "root" in names
+
+    def test_snapshot_records_type(self):
+        snap = self.ObjectSnapshot()
+        result = snap.collect_snapshot([1, 2])
+        entries = list(result.values())
+        types = [e['type'] for e in entries]
+        assert "list" in types
+
+    def test_dict_object_scanned(self):
+        snap = self.ObjectSnapshot(max_depth=2)
+        d = {"key": "value"}
+        result = snap.collect_snapshot(d)
+        assert len(result) > 0
+
+    def test_max_depth_zero_scans_root_only(self):
+        snap = self.ObjectSnapshot(max_depth=0)
+        d = {"a": [1, 2, 3]}
+        result = snap.collect_snapshot(d)
+        assert len(result) == 1
+
+
+class TestCompareSnapshots:
+    """Tests for compare_snapshots()."""
+
+    def setup_method(self):
+        from hw_management_lib import compare_snapshots, ObjectSnapshot
+        self.compare_snapshots = compare_snapshots
+        self.ObjectSnapshot = ObjectSnapshot
+
+    def _make_snapshot(self, size):
+        return {1: {'size': size, 'type': 'list', 'name': 'root', 'depth': 0}}
+
+    def test_empty_snapshots(self):
+        result = self.compare_snapshots({}, {})
+        assert result['growing'] == []
+        assert result['new'] == []
+
+    def test_growing_object_detected(self):
+        snap1 = self._make_snapshot(100)
+        snap2 = self._make_snapshot(200)
+        result = self.compare_snapshots(snap1, snap2)
+        assert len(result['growing']) == 1
+        assert result['total_growth'] == 100
+
+    def test_shrinking_object_detected(self):
+        snap1 = self._make_snapshot(200)
+        snap2 = self._make_snapshot(100)
+        result = self.compare_snapshots(snap1, snap2)
+        assert len(result['shrinking']) == 1
+        assert result['total_shrink'] == 100
+
+    def test_new_object_detected(self):
+        snap1 = {}
+        snap2 = {999: {'size': 50, 'type': 'str', 'name': 'new', 'depth': 0}}
+        result = self.compare_snapshots(snap1, snap2, show_new=True)
+        assert len(result['new']) == 1
+
+    def test_deleted_object_detected(self):
+        snap1 = {1: {'size': 50, 'type': 'str', 'name': 'old', 'depth': 0}}
+        snap2 = {}
+        result = self.compare_snapshots(snap1, snap2, show_deleted=True)
+        assert len(result['deleted']) == 1
+
+    def test_min_growth_filters_small_changes(self):
+        snap1 = self._make_snapshot(100)
+        snap2 = self._make_snapshot(110)
+        result = self.compare_snapshots(snap1, snap2, min_growth_bytes=50)
+        assert result['growing'] == []
+
+    def test_result_has_all_keys(self):
+        result = self.compare_snapshots({}, {})
+        assert 'growing' in result
+        assert 'shrinking' in result
+        assert 'new' in result
+        assert 'deleted' in result
+        assert 'total_growth' in result
+        assert 'total_shrink' in result
+
+
+class TestPrintComparison:
+    """Tests for print_comparison(), _format_comparison_json(), _format_comparison_text()."""
+
+    def setup_method(self):
+        from hw_management_lib import print_comparison, compare_snapshots
+        self.print_comparison = print_comparison
+        self.compare = compare_snapshots
+
+    def _empty_comparison(self):
+        return self.compare({}, {})
+
+    def test_json_format_returns_string(self):
+        cmp = self._empty_comparison()
+        result = self.print_comparison(cmp, output_format="json")
+        assert isinstance(result, str)
+
+    def test_json_format_valid_json(self):
+        import json
+        cmp = self._empty_comparison()
+        result = self.print_comparison(cmp, output_format="json")
+        parsed = json.loads(result)
+        assert "summary" in parsed
+
+    def test_json_format_with_growing_objects(self):
+        import json
+        snap1 = {1: {'size': 100, 'type': 'list', 'name': 'root', 'depth': 0}}
+        snap2 = {1: {'size': 200, 'type': 'list', 'name': 'root', 'depth': 0}}
+        cmp = self.compare(snap1, snap2)
+        result = self.print_comparison(cmp, output_format="json")
+        parsed = json.loads(result)
+        assert parsed["summary"]["growing_objects_count"] == 1
+
+    def test_json_format_verbose_adds_shrinking(self):
+        import json
+        snap1 = {1: {'size': 200, 'type': 'list', 'name': 'root', 'depth': 0}}
+        snap2 = {1: {'size': 100, 'type': 'list', 'name': 'root', 'depth': 0}}
+        cmp = self.compare(snap1, snap2)
+        result = self.print_comparison(cmp, output_format="json", verbose=True)
+        parsed = json.loads(result)
+        assert "shrinking_objects" in parsed
+
+    def test_text_format_returns_none(self):
+        cmp = self._empty_comparison()
+        result = self.print_comparison(cmp, output_format="text")
+        assert result is None
+
+    def test_text_format_prints_summary(self, capsys):
+        cmp = self._empty_comparison()
+        self.print_comparison(cmp, output_format="text")
+        out = capsys.readouterr().out
+        assert "SUMMARY" in out
+
+    def test_text_format_growing_objects_shown(self, capsys):
+        snap1 = {1: {'size': 100, 'type': 'list', 'name': 'root', 'depth': 0}}
+        snap2 = {1: {'size': 1000, 'type': 'list', 'name': 'root', 'depth': 0}}
+        cmp = self.compare(snap1, snap2)
+        self.print_comparison(cmp, output_format="text")
+        out = capsys.readouterr().out
+        assert "GROWING" in out
+
+
+class TestObjectSnapshotEdgeCases:
+    """Tests for ObjectSnapshot edge cases."""
+
+    def setup_method(self):
+        from hw_management_lib import ObjectSnapshot
+        self.ObjectSnapshot = ObjectSnapshot
+
+    def test_list_items_traversed(self):
+        snap = self.ObjectSnapshot(max_depth=2)
+        result = snap.collect_snapshot([1, 2, 3])
+        assert any(e['type'] == 'int' for e in result.values())
+
+    def test_custom_object_attrs_traversed(self):
+        class Foo:
+            def __init__(self):
+                self.x = 42
+        snap = self.ObjectSnapshot(max_depth=2)
+        result = snap.collect_snapshot(Foo())
+        names = [e['name'] for e in result.values()]
+        assert any("x" in n for n in names)
+
+    def test_cycle_not_infinite(self):
+        a = []
+        b = [a]
+        a.append(b)
+        snap = self.ObjectSnapshot(max_depth=5)
+        result = snap.collect_snapshot(a)
+        assert len(result) > 0
+
+    def test_slots_object_traversed(self):
+        class Bar:
+            __slots__ = ['y']
+            def __init__(self):
+                self.y = 99
+        snap = self.ObjectSnapshot(max_depth=2)
+        result = snap.collect_snapshot(Bar())
+        assert len(result) > 0
+
+    def test_tuple_items_traversed(self):
+        snap = self.ObjectSnapshot(max_depth=2)
+        result = snap.collect_snapshot((1, 2, 3))
+        assert len(result) > 1
+
+
+# =============================================================================
 # TEST MAIN
 # =============================================================================
 
