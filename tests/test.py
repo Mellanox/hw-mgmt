@@ -582,6 +582,16 @@ class TestRunner:
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_vpd_parser.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
+            {
+                'name': 'Pytest: Thermal Control 2.0 Helpers',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_control.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Thermal Control 2.5 Helpers',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_control_2_5.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
         ]
 
         # Add coverage options to all pytest tests if coverage is enabled
@@ -1595,6 +1605,113 @@ class TestRunner:
         per_file.sort(key=lambda x: -x[1])
         return covered, total, pct, per_file
 
+    def _get_python_coverage_total(self):
+        """Return (pct, stmts, miss) from the accumulated .coverage file, or None."""
+        import re as _re
+        coverage_file = self.tests_dir.parent / '.coverage'
+        if not coverage_file.exists():
+            return None
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'coverage', 'report',
+                 '--data-file=' + str(coverage_file), '-q',
+                 '--include=*/usr/usr/bin/*.py'],
+                cwd=str(self.tests_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                timeout=30
+            )
+            for line in result.stdout.splitlines():
+                if line.startswith('TOTAL'):
+                    parts = line.split()
+                    # TOTAL  stmts  miss  branch  partial  cover%
+                    if len(parts) >= 4:
+                        stmts = int(parts[1])
+                        miss = int(parts[2])
+                        pct_str = parts[-1].rstrip('%')
+                        return float(pct_str), stmts, miss
+        except Exception:
+            pass
+        return None
+
+    def generate_report(self):
+        """Write a Markdown test report to tests/reports/ after each run."""
+        import datetime as _datetime
+        import re as _re
+
+        reports_dir = self.tests_dir / "reports"
+        reports_dir.mkdir(exist_ok=True)
+
+        now = _datetime.datetime.now()
+        ts = now.strftime("%Y-%m-%d_%H-%M-%S")
+        human_ts = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        total_suites = len(self.passed_tests) + len(self.failed_tests)
+        all_pass = len(self.failed_tests) == 0
+
+        lines = []
+        lines.append(f"# hw-mgmt Test Run Report")
+        lines.append(f"")
+        lines.append(f"**Generated:** {human_ts}")
+        lines.append(f"**Result:** {'PASS' if all_pass else 'FAIL'}")
+        lines.append(f"")
+        lines.append(f"## Summary")
+        lines.append(f"")
+        lines.append(f"| Metric | Value |")
+        lines.append(f"|--------|-------|")
+        lines.append(f"| Passed Suites | {len(self.passed_tests)}/{total_suites} |")
+        lines.append(f"| Failed Suites | {len(self.failed_tests)}/{total_suites} |")
+        lines.append(f"| Individual Tests | {self.total_test_count} |")
+        lines.append(f"")
+
+        # Python coverage
+        py_cov = self._get_python_coverage_total()
+        lines.append(f"## Coverage")
+        lines.append(f"")
+        if py_cov:
+            pct, stmts, miss = py_cov
+            covered = stmts - miss
+            lines.append(f"| Type | Coverage | Covered | Total |")
+            lines.append(f"|------|----------|---------|-------|")
+            lines.append(f"| Python | {pct:.1f}% | {covered} | {stmts} |")
+            shell_data = self._read_shell_coverage_json()
+            if shell_data:
+                sh_covered, sh_total, sh_pct, _ = shell_data
+                lines.append(f"| Shell | {sh_pct:.1f}% | {sh_covered} | {sh_total} |")
+        else:
+            lines.append(f"*Coverage not collected — run with `--coverage` to enable.*")
+        lines.append(f"")
+
+        # Suite results table
+        lines.append(f"## Suite Results")
+        lines.append(f"")
+        lines.append(f"| Suite | Status |")
+        lines.append(f"|-------|--------|")
+        for name in self.passed_tests:
+            lines.append(f"| {name} | PASS |")
+        for name in self.failed_tests:
+            lines.append(f"| {name} | **FAIL** |")
+        lines.append(f"")
+
+        if self.failed_tests:
+            lines.append(f"## Failed Suites")
+            lines.append(f"")
+            for name in self.failed_tests:
+                lines.append(f"- {name}")
+            lines.append(f"")
+
+        content = "\n".join(lines) + "\n"
+
+        report_path = reports_dir / f"{ts}.md"
+        latest_path = reports_dir / "latest.md"
+
+        report_path.write_text(content, encoding="utf-8")
+        latest_path.write_text(content, encoding="utf-8")
+
+        print(f"\n{Colors.CYAN}Report written:{Colors.RESET} {Colors.BOLD}{report_path}{Colors.RESET}")
+        print(f"{Colors.CYAN}Latest report: {Colors.RESET}{Colors.BOLD}{latest_path}{Colors.RESET}")
+
     def print_coverage_summary(self):
         """Print coverage summary after tests"""
         coverage_file = self.tests_dir.parent / '.coverage'
@@ -1874,6 +1991,7 @@ Note: Python dependencies are automatically installed if missing
             success = False
 
     runner.print_summary()
+    runner.generate_report()
 
     return 0 if success else 1
 
