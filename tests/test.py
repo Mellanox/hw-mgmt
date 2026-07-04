@@ -1619,7 +1619,7 @@ class TestRunner:
         try:
             result = subprocess.run(
                 [sys.executable, '-m', 'coverage', 'report',
-                 '--data-file=' + str(coverage_file), '-q',
+                 '--data-file=' + str(coverage_file),
                  '--include=*/usr/usr/bin/*.py'],
                 cwd=str(self.tests_dir),
                 stdout=subprocess.PIPE,

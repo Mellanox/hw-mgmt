@@ -14,7 +14,7 @@
 # more details.
 #
 
-"""Tests for hw_management_thermal_updater.py pure/mockable helper functions.
+"""Tests for hw_management_thermal_updater.py pure helper functions.
 
 Covers: sdk_temp2degree, is_module_host_management_mode, is_asic_ready,
         asic_temp_reset, CONST constants.
@@ -160,25 +160,25 @@ class TestIsAsicReady:
 
     def test_path_exists_ready_file_reads_one(self):
         with patch('os.path.exists', return_value=True), \
-             patch('builtins.open', mock_open(read_data='1\n')):
+                patch('builtins.open', mock_open(read_data='1\n')):
             result = _tu_mod.is_asic_ready('asic1', {'fin': '/sys/module/sx_core/asic0/'})
         assert result is True
 
     def test_path_exists_ready_file_reads_zero(self):
         with patch('os.path.exists', return_value=True), \
-             patch('builtins.open', mock_open(read_data='0\n')):
+                patch('builtins.open', mock_open(read_data='0\n')):
             result = _tu_mod.is_asic_ready('asic1', {'fin': '/sys/module/sx_core/asic0/'})
         assert result is False
 
     def test_path_exists_ready_file_oserror_assumes_ready(self):
         with patch('os.path.exists', return_value=True), \
-             patch('builtins.open', side_effect=OSError("fail")):
+                patch('builtins.open', side_effect=OSError("fail")):
             result = _tu_mod.is_asic_ready('asic1', {'fin': '/sys/module/sx_core/asic0/'})
         assert result is True
 
     def test_path_exists_ready_file_valueerror_assumes_ready(self):
         with patch('os.path.exists', return_value=True), \
-             patch('builtins.open', mock_open(read_data='not_int')):
+                patch('builtins.open', mock_open(read_data='not_int')):
             result = _tu_mod.is_asic_ready('asic1', {'fin': '/sys/'})
         assert result is True
 
@@ -186,7 +186,7 @@ class TestIsAsicReady:
         mock_logger = MagicMock()
         _tu_mod.LOGGER = mock_logger
         with patch('os.path.exists', return_value=True), \
-             patch('builtins.open', side_effect=OSError("fail")):
+                patch('builtins.open', side_effect=OSError("fail")):
             _tu_mod.is_asic_ready('asic1', {'fin': '/sys/'})
         mock_logger.warning.assert_called()
 
