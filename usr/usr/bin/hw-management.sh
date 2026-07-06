@@ -4324,9 +4324,18 @@ case $ACTION in
 	restart|force-reload)
 		do_stop
 		sleep 3
-		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
-			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193/HI194 in simx
+		if check_simx && [[ "$sku" == "HI180" || "$sku" == "HI181" || "$sku" == "HI185" || "$sku" == "HI193" || "$sku" == "HI194" ||
+                            "$product" == "N7170_LD" || "$product" == "N7100_LD" ]]; then
+			if [ -f /etc/hw-management-virtual/hwmgmt_$sku.tgz ]; then
+				tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			elif [ -f /etc/hw-management-virtual/hwmgmt_$product.tgz ]; then
+				tar -xzf /etc/hw-management-virtual/hwmgmt_$product.tgz -C /var/run/
+			else
+			    log_err "Could not create mock hw management tree"
+			    exit 1
+			fi
+			process_simx_links
 			log_info "Created mock hw management tree, exiting."
 			exit 0
 		fi
