@@ -732,6 +732,7 @@ Kernel-6.1
 |0117-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |0119-i2c-designware-Fix-ACPI-power-on-of-AMD-I2C-after-ke.patch  |                    | Downstream accepted                      |            | Fix AMD V3000 I2C controller init after kexec  |
 |0120-hwmon-Add-support-for-SPD5118-compliant-temperature-.patch  | 09262e9814ca       | Feature upstream                         |            |                                                |
+|0121-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch  |                    | Downstream accepted                      |            | SN6600                                         |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
@@ -837,6 +838,7 @@ Kernel-6.12
 |0064-5-amd-xgbe-fix-sleep-while-atomic-on-suspend-resume.patch   | d6bdc685e19fa      | Feature upstream                         | 6.12.77    | backport upstream patch                        |
 |0064-6-amd-xgbe-fix-link-status-handling-in-xgbe_rx_adaptat.patch| 9285fe46130ca      | Feature upstream                         | 6.12.78    | backport upstream patch                        |
 |0064-7-amd-xgbe-prevent-CRC-errors-during-RX-adaptation-wit.patch| 4f9c20113f87d      | Feature upstream                         | 6.12.78    | backport upstream patch                        |
+|0065-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch  |                    | Feature pending                          |            | SN6600                                         |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
