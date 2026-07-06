@@ -3,8 +3,8 @@
         "Name": "Mngm_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Mngm_ADC0_Ch1_Embedded_0",
-            "Mngm_ADC0_Ch2_Flex_1"
+            "Mngm_ADC0_Ch1_Flex_0",
+            "Mngm_ADC0_Ch2_Embedded_1"
         ],
         "Device": [
             {
@@ -111,8 +111,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
-                    { "Id": 2, "Type": "embedded", "CfgReg": "0x0c", "CfgRegVal": "0x43 0x3c" }
+                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x43 0x3c" },
+                    { "Id": 2, "Type": "embedded", "CfgReg": "0x0c", "CfgRegVal": "0x60 0x54" }
                 ],
                 "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
             }
@@ -122,8 +122,8 @@
         "Name": "Swb_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Swb_ADC0_Ch1_Embedded_0",
-            "Swb_ADC0_Ch4_Flex_1"
+            "Swb_ADC0_Ch1_Flex_0",
+            "Swb_ADC0_Ch4_Embedded_1"
         ],
         "Device": [
             {
@@ -230,8 +230,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
-                    { "Id": 4, "Type": "embedded", "CfgReg": "0x10", "CfgRegVal": "0x43 0x3c" }
+                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x43 0x3c" },
+                    { "Id": 4, "Type": "embedded", "CfgReg": "0x10", "CfgRegVal": "0x60 0x54" }
                 ],
                 "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
             }
