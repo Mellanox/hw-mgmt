@@ -13,7 +13,7 @@ copies them.
 | [hw-management-exec-example.json](hw-management-exec-example.json) | Per-platform exec attributes (I2C/sysfs actions) for **`hw-management-exec-parser.sh`**: shared **`hids`** list or per-HID override → **`/etc/<HID>/hw-management-exec.json`** or **`/etc/hw-management-exec/*.json`**. |
 | [hw-management-exec.md](hw-management-exec.md) | Host exec-attribute schema, config lookup order, dispatcher layout, and bring-up notes for **`hw-management-exec`**. |
 | [hw-management-led-sysfs.txt](hw-management-led-sysfs.txt) | **`/var/run/hw-management/led/`** symlinks (fan/PSU/status/UID); CPLD ownership notes. See also **`Documentation/LED_Control_API.md`**. |
-| [vr_dpc_update_example.json](vr_dpc_update_example.json) | VR DPC bulk-update config for **`hw-management-vr-dpc-update-all.sh`**: **`System HID`**, **`Devices`** array (type, bus, addr, config files). |
+| [vr_dpc_update_example.json](vr_dpc_update_example.json) | VR DPC bulk-update config for **`hw-management-vr-dpc-update-all.sh`**: **`System HID`**, **`Devices`** array (type, bus, addr, config files). MPS devices use **`CrcFile`** and **`DeviceConfigFile`**; Infineon **`xdpe*`** devices use **`Addr`** and **`ConfigFile`**. |
 | [vr_dpc_update_nn5500ld.json](vr_dpc_update_nn5500ld.json) | Platform-specific VR DPC update example (N5110 LD). |
 | [pmbus_devices_example.json](pmbus_devices_example.json) | PMBus device list schema (**`devices`**: name, bus, slave address, pages). |
 | [src/iorw/](src/iorw/) | Sample **iorw** userspace tool sources (LPC/I2C access). |
