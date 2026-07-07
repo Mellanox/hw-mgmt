@@ -19,6 +19,21 @@ copies them.
 | [src/iorw/](src/iorw/) | Sample **iorw** userspace tool sources (LPC/I2C access). |
 | [src/ev_hndl/](src/ev_hndl/) | Sample line-card / event-handler sources (C and Python). |
 
+## VR DPC updater notes
+
+**`hw-management-vr-dpc-renesas-update.sh`** is the direct Renesas VR DPC
+updater. Use it for Renesas Gen3.5 `.hex` files with an explicit I2C bus and
+device address:
+
+```sh
+hw-management-vr-dpc-renesas-update.sh verify -b <bus> -a <addr> -f <file.hex>
+hw-management-vr-dpc-renesas-update.sh flash -y -b <bus> -a <addr> -f <file.hex>
+```
+
+`verify` is read-only and checks the target device ID plus the live
+`CONFIG_CRC`; `flash` programs the configuration and skips an already
+programmed device unless forced by the updater options.
+
 ## Platform JSON quick reference
 
 For a **new HID**, ship **`usr/etc/hw-management-cfg/<HID>/platform.json`**. At
