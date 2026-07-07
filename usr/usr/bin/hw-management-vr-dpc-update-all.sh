@@ -37,6 +37,7 @@
 LOG_TAG="vr_dpc_update_all"
 DPC_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-update.sh"
 DPC_INFINEON_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-infineon-update.sh"
+DPC_RENESAS_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-renesas-update.sh"
 
 # Function to log messages
 log_message()
@@ -77,11 +78,19 @@ usage()
     echo "        \"Bus\": 2,"
     echo "        \"Addr\": \"0x40\","
     echo "        \"ConfigFile\": \"path/to/config.bin\""
+    echo "      },"
+    echo "      {"
+    echo "        \"DeviceType\": \"raa228943\","
+    echo "        \"Bus\": 15,"
+    echo "        \"Addr\": \"0x61\","
+    echo "        \"ConfigFile\": \"path/to/config.hex\""
     echo "      }"
+
     echo "    ]"
     echo "  }"
     echo ""
-    echo "  Infineon (DeviceType xdpe*): CrcFile and DeviceConfigFile are not used; Addr is required."
+    echo "  Infineon/Renesas (DeviceType xdpe*/raa*/rrv*): Addr is required;"
+    echo "  CrcFile and DeviceConfigFile are not used."
     echo ""
 }
 
@@ -100,6 +109,10 @@ check_dependencies()
     if [[ "$skip_dpc_check" != "skip" ]]; then
         if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
             log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+            return 1
+        fi
+        if [[ ! -x "$DPC_RENESAS_UPDATE_SCRIPT" ]]; then
+            log_message "err" "Renesas DPC update script not found or not executable: $DPC_RENESAS_UPDATE_SCRIPT"
             return 1
         fi
         if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
@@ -213,13 +226,18 @@ validate_json_config()
 
         # Determine device vendor based on prefix (case-insensitive)
         local is_infineon=0
+        local is_renesas=0
+
         if [[ "${device_type,,}" =~ ^xdpe ]]; then
             is_infineon=1
             echo "  Vendor: Infineon"
+        elif [[ "${device_type,,}" =~ ^(raa|rrv) ]]; then
+            is_renesas=1
+            echo "  Vendor: Renesas"
         elif [[ "${device_type,,}" =~ ^mp ]]; then
             echo "  Vendor: MPS"
         else
-            echo "  [WARNING] Unknown device type prefix (expected 'mp' or 'xdpe')"
+            echo "  [WARNING] Unknown device type prefix (expected 'mp' or 'xdpe', 'raa', or 'rrv)"
         fi
 
         # Validate Bus
@@ -233,10 +251,10 @@ validate_json_config()
             echo "  Bus: $bus"
         fi
 
-        # Validate Addr (required for Infineon, optional for MPS)
-        if [[ $is_infineon -eq 1 ]]; then
+        # Validate Addr (required for Infineon/Renesas, optional for MPS)
+        if [[ $is_infineon -eq 1 || $is_renesas -eq 1 ]]; then
             if [[ -z "$addr" ]]; then
-                echo "  [ERROR] Missing 'Addr' (required for Infineon devices)"
+                echo "  [ERROR] Missing 'Addr' (required for Infineon/Renesas devices)"
                 validation_errors=$((validation_errors + 1))
             else
                 echo "  Addr: $addr"
@@ -258,8 +276,8 @@ validate_json_config()
             fi
         fi
 
-        # Validate CrcFile (required for MPS, not used for Infineon)
-        if [[ $is_infineon -eq 0 ]]; then
+        # Validate CrcFile (required for MPS, not used for Infineon/Renesas)
+        if [[ $is_infineon -eq 0 && $is_renesas -eq 0 ]]; then
             if [[ -z "$crc_file" ]]; then
                 echo "  [ERROR] Missing 'CrcFile' (required for MPS devices)"
                 validation_errors=$((validation_errors + 1))
@@ -271,8 +289,8 @@ validate_json_config()
             fi
         fi
 
-        # Validate DeviceConfigFile (required for MPS, not used for Infineon)
-        if [[ $is_infineon -eq 0 ]]; then
+        # Validate DeviceConfigFile (required for MPS, not used for Infineon/Renesas)
+        if [[ $is_infineon -eq 0 && $is_renesas -eq 0 ]]; then
             if [[ -z "$device_config_file" ]]; then
                 echo "  [ERROR] Missing 'DeviceConfigFile' (required for MPS devices)"
                 validation_errors=$((validation_errors + 1))
@@ -390,9 +408,14 @@ process_json_config()
 
         # Determine device vendor and build appropriate command (case-insensitive)
         local is_infineon=0
+        local is_renesas=0
+
         if [[ "${device_type,,}" =~ ^xdpe ]]; then
             is_infineon=1
+        elif [[ "${device_type,,}" =~ ^(raa|rrv) ]]; then
+            is_renesas=1
         fi
+
 
         local cmd=()
 
@@ -411,6 +434,16 @@ process_json_config()
             # Build Infineon flash command
             cmd=("$DPC_INFINEON_UPDATE_SCRIPT" "flash" "-y" "-b" "$bus" "-a" "$addr" "-f" "$config_file")
             log_message "info" "Infineon device at address $addr"
+
+        elif [[ $is_renesas -eq 1 ]]; then
+            # Renesas device - use hw-management-vr-dpc-renesas-update.sh (Infineon-like CLI)
+            if [[ -z "$addr" ]]; then
+                log_message "err" "Missing Addr field for Renesas device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+            cmd=("$DPC_RENESAS_UPDATE_SCRIPT" "flash" "-y" "-b" "$bus" "-a" "$addr" "-f" "$config_file")
 
         else
             # MPS device - use hw-management-vr-dpc-update.sh

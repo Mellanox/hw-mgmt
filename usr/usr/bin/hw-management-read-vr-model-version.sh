@@ -80,6 +80,10 @@ get_device_registers()
             # Block read exposes a leading byte before the 16-bit MFR value.
             echo "0x9a 0x9b 0 0 1"
             ;;
+        raa228942|raa228943|rrv*)
+            # USER_DATA_02/03 (MFR_DATA0/1): DPC number and revision (page 0).
+            echo "0xB2 0xB3 0 0"
+            ;;
         tps53679|xdpe12284)
             echo "unsupported"
             ;;
