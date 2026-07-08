@@ -687,6 +687,7 @@ function handle_hotplug_dpu_event()
 # 2 - event
 # 3 - sysfs path
 # 4 - device path
+# example: handle_hotplug_psu_event "psu1" 1 "/sys" "/bus/i2c/devices/"
 function handle_hotplug_psu_event()
 {
 	local psu_name=$1
@@ -710,7 +711,7 @@ function handle_hotplug_psu_event()
 	# 3.1 don't connect if psu already connected
 	if [ -f "${config_path}/${psu_name}_i2c_addr" ]; then
 		psu_addr_raw=$(< "${config_path}/${psu_name}_i2c_addr") || true
-		psu_bus_raw=$(< "${config_path}/${psu_name}_i2c_bus") || true
+		psu_bus_raw=$(< "${config_path}/.${psu_name}_i2c_bus") || true
 	fi
 	
 	if [ ! -z "$psu_bus_raw" ] && [ ! -z "$psu_addr_raw" ]; then

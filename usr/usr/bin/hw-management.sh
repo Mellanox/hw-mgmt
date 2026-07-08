@@ -3273,7 +3273,7 @@ set_config_data()
 		# if psuX_i2c_bus variable is set - add file psuX_i2c_bus to config_path
 		local psu_i2c_bus=psu"$idx"_i2c_bus
 		if [ ${!psu_i2c_bus} ]; then
-			echo ${!psu_i2c_bus} > $config_path/psu"$idx"_i2c_bus
+			echo ${!psu_i2c_bus} > $config_path/.psu"$idx"_i2c_bus
 		fi
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr

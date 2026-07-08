@@ -828,11 +828,17 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
 	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
-	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ] ||
+	   [ "$2" == "psuX" ]; then
+
 		if [[ $dmi_sku == "HI138" ]] || [[ $dmi_sku == "HI139" ]]; then
 			exit 0
 		fi
-		psu_name="$2"
+		psu_name=$(get_i2c_busdev_name "$2" "$3")
+		if [[ $psu_name == "undefined" ]] || [[ $psu_name == "psuX" ]];
+		then
+			exit
+		fi
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
 		if [[ ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
@@ -848,7 +854,7 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Allow PS controller to stabilize
-		retry_helper "ls" 0.2 20 "$2 takes too long to init" "$5""$3"/in1_input
+		retry_helper "ls" 0.2 20 "$psu_name takes too long to init" "$5""$3"/in1_input
 		sleep 1
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
@@ -1387,8 +1393,15 @@ else
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
 	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
-	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
-		psu_name="$2"
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ] ||
+	   [ "$2" == "psuX" ]; then
+
+		psu_name=$(get_i2c_busdev_name "$2" "$3")
+		if [[ $psu_name == "undefined" ]] || [[ $psu_name == "psuX" ]];
+		then
+			exit
+		fi
+
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
 		if [[ ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
@@ -1416,6 +1429,10 @@ else
 		check_n_unlink $thermal_path/"$psu_name"_temp_max
 		check_n_unlink $thermal_path/"$psu_name"_temp_alarm
 		check_n_unlink $thermal_path/"$psu_name"_temp_max_alarm
+		check_n_unlink $thermal_path/"$psu_name"_temp1
+		check_n_unlink $thermal_path/"$psu_name"_temp1_max
+		check_n_unlink $thermal_path/"$psu_name"_temp1_alarm
+		check_n_unlink $thermal_path/"$psu_name"_temp1_max_alarm
 		check_n_unlink $thermal_path/"$psu_name"_temp2
 		check_n_unlink $thermal_path/"$psu_name"_temp2_max
 		check_n_unlink $thermal_path/"$psu_name"_temp2_max_alarm
@@ -1425,11 +1442,14 @@ else
 
 		# Remove power attributes
 		psu_disconnect_power_sensor "$psu_name"_volt_in
+		psu_disconnect_power_sensor "$psu_name"_volt_out
 		psu_disconnect_power_sensor "$psu_name"_volt
 		psu_disconnect_power_sensor "$psu_name"_volt_out2
 		psu_disconnect_power_sensor "$psu_name"_power_in
+		psu_disconnect_power_sensor "$psu_name"_power_out
 		psu_disconnect_power_sensor "$psu_name"_power
 		psu_disconnect_power_sensor "$psu_name"_curr_in
+		psu_disconnect_power_sensor "$psu_name"_curr_out
 		psu_disconnect_power_sensor "$psu_name"_curr
 
 		rm -f $eeprom_path/"$psu_name"_vpd

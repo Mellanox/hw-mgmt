@@ -641,6 +641,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-004[c-f]/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add tempX %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-004[c-f]/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm tempX %S %p"
 
+# any PSU on AMD CPU systems without i2c_mlxcpld driver
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-005[8-c]/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psuX %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-005[8-c]/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psuX %p %k %S %n"
+
 # any voltmon on AMD CPU systems without i2c_mlxcpld driver
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
