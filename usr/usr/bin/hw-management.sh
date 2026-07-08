@@ -2345,13 +2345,13 @@ qm3xxx_specific()
 		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
 		psu1_i2c_bus=4
-		psu1_i2c_addr=59
+		psu1_i2c_addr=0x59
 		psu2_i2c_bus=4
-		psu2_i2c_addr=58
+		psu2_i2c_addr=0x58
 		psu3_i2c_bus=4
-		psu3_i2c_addr=5b
+		psu3_i2c_addr=0x5b
 		psu4_i2c_bus=4
-		psu4_i2c_addr=5a
+		psu4_i2c_addr=0x5a
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI158" ]; then
 		# Set according to front fan max.
@@ -2377,21 +2377,21 @@ qm3xxx_specific()
 
 		# Map I2C bus and address to psu number
 		psu1_i2c_bus=4
-		psu1_i2c_addr=59
+		psu1_i2c_addr=0x59
 		psu2_i2c_bus=4
-		psu2_i2c_addr=58
+		psu2_i2c_addr=0x58
 		psu3_i2c_bus=3
-		psu3_i2c_addr=5b
+		psu3_i2c_addr=0x5b
 		psu4_i2c_bus=3
-		psu4_i2c_addr=5a
+		psu4_i2c_addr=0x5a
 		psu5_i2c_bus=4
-		psu5_i2c_addr=5d
+		psu5_i2c_addr=0x5d
 		psu6_i2c_bus=4
-		psu6_i2c_addr=5c
+		psu6_i2c_addr=0x5c
 		psu7_i2c_bus=3
-		psu7_i2c_addr=5e
+		psu7_i2c_addr=0x5e
 		psu8_i2c_bus=3
-		psu8_i2c_addr=5f
+		psu8_i2c_addr=0x5f
 
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
@@ -3882,6 +3882,8 @@ map_dummy_psus()
 		if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
 			continue
 		fi
+		# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming
+		psu_addr=$(printf "%02x" "$psu_addr")
 
 		psu_present=$(< $thermal_path/psu${psu_idx}_status)
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"

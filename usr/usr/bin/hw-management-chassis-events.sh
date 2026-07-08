@@ -694,6 +694,9 @@ function handle_hotplug_psu_event()
 			if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
 				return
 			fi
+			# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming
+			psu_addr=$(printf "%02x" "$psu_addr")
+
 			psu_is_dummy=1
 			for ((i=0; i<5; i++)); do
 				if [ -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
