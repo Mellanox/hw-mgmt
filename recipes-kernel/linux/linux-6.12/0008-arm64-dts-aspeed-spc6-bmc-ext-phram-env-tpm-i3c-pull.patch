@@ -69,8 +69,8 @@ kconfig changes live in their own layers and are out of scope.
 
 Signed-off-by: Dvir Zaguri <dzaguri@nvidia.com>
 ---
- .../boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts     | 69 +++++++++++++++++++---
- 1 file changed, 69 insertions(+), 2 deletions(-)
+ .../boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts     | 70 +++++++++++++++++++---
+ 1 file changed, 70 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
 --- a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
@@ -167,7 +167,7 @@ diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/
  	};
  };
  
-@@ -363,8 +427,10 @@
+@@ -363,8 +427,11 @@
  &emmc {
  	status = "okay";
  	non-removable;
@@ -175,6 +175,7 @@ diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/
 -	max-frequency = <52000000>;
 +	bus-width = <8>;
 +	max-frequency = <200000000>;
++	pinctrl-names = "default";
 +	pinctrl-0 = <&pinctrl_emmcg8_default>;
 +	mmc-pwrseq = <&mmc_pwrseq>;
  };
