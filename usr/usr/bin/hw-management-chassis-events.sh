@@ -716,7 +716,8 @@ function handle_hotplug_psu_event()
 	
 	if [ ! -z "$psu_bus_raw" ] && [ ! -z "$psu_addr_raw" ]; then
 		psu_addr_hex=$(i2c_config_addr_to_hex "$psu_addr_raw")
-		psu_addr="${psu_addr_hex:2}"
+		# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming		
+		psu_addr=$(printf "%02x" "$psu_addr_hex")
 		find_i2c_bus
 		psu_bus=$((psu_bus_raw + i2c_bus_offset))
 
