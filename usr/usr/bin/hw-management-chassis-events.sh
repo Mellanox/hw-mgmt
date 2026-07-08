@@ -690,6 +690,8 @@ function handle_hotplug_psu_event()
 		if [ $event -eq 1 ]; then
 			# Bus/addr from set_config_data() in hw-management.sh
 			psu_addr=$(< "${config_path}/${psu_name}_i2c_addr")
+			# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming
+			psu_addr=$(printf "%02x" "$psu_addr")
 			psu_bus=$(< "${config_path}/${psu_name}_i2c_bus")
 			if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
 				return
