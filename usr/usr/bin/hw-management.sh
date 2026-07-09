@@ -1616,7 +1616,11 @@ msn47xx_specific()
 msn4700d_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
-		system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*AaEeFdGeRcRcTb-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+		if [ "$sku" == "HI184" ]; then
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*AaEeFdGeRcRcTb-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+		else
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*EeTlRkRa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+		fi
 		devtr_check_smbios_device_description "$system_ver_str" "0" ""
 	fi
 	lm_sensors_config="$lm_sensors_configs_path/msn4700d_sensors.conf"
@@ -3443,7 +3447,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160|HI184)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)

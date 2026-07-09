@@ -178,6 +178,14 @@ declare -A sn58xxld_comex_amd_snw_alternatives=( \
 	["24c512_0"]="24c512 0x50 70 cpu_info" \
 )
 
+declare -A comex_amd_v3000_alternatives=( \
+	["jc42_0"]="jc42 0x52 0 somdimm_temp1" \
+	["mp2845_0"]="mp2845 0x69 15 comex_voltmon1" \
+	["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
+	["24c32_0"]="24c32 0x50 16 cpu_info" \
+	["24c512_0"]="24c512 0x50 16 cpu_info" \
+)
+
 declare -A mqm8700_alternatives=( \
 	["max11603_0"]="max11603 0x64 5 swb_a2d" \
 	["tps53679_0"]="tps53679 0x70 5 voltmon1" \
@@ -1052,6 +1060,16 @@ devtr_check_supported_system_init_alternatives()
 			esac
 			;;
 		$AMD_V3000_CPU)
+			sku=$(< $sku_file)
+			case "$sku" in
+			HI198)
+				for key in "${!comex_amd_v3000_alternatives[@]}"; do
+						comex_alternatives["$key"]="${comex_amd_v3000_alternatives["$key"]}"
+				done
+			;;
+			*)
+				;;
+			esac
 			;;
 		$DNV_CPU)
 			# Silent exit
@@ -1132,7 +1150,7 @@ devtr_check_supported_system_init_alternatives()
 					pwr_alternatives["$key"]="${pwr_type4_alternatives["$key"]}"
 				done
 				;;
-			HI184)	# MSN4700 DGX
+			HI184|HI198)	# MSN4700 DGX - MSN4700-D & MSN4700-D1
 				for key in "${!msn4700_msn4600_alternatives[@]}"; do
 					swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
 				done
