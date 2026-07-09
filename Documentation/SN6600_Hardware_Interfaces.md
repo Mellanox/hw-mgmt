@@ -38,7 +38,7 @@
 
 The SN6600 air-cooled switch system has the following characteristics
 (from `hw-management.sh` `sn66xx_specific()` for SKU HI186, kernel platform
-data in `0068-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch`, and
+data in `0069-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch`, and
 `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`):
 
 | Component | Value | Description |
@@ -519,7 +519,7 @@ error detection and PWM tuning.
   `usr/usr/bin/hw-management-devtree.sh` (HI186 / `sn66xxld_*` +
   `fan_type0_alternatives`)
 - Kernel platform:
-  `recipes-kernel/linux/linux-6.12/0068-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch`
+  `recipes-kernel/linux/linux-6.12/0069-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch`
 - Liquid-cooled sibling reference:
   `Documentation/SN6600_LD_Hardware_Interfaces.md`
 

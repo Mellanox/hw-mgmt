@@ -2845,6 +2845,7 @@ sn66xx_specific()
 		psu_count=0
 		max_fans=0
 		max_tachos=0
+		echo 5.333 > $config_path/pdb_hotswap_scale
 		echo 0 > $config_path/fan_drwr_num
 		named_busses+=(${sn66xxld_named_busses[@]})
 		echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
@@ -2917,7 +2918,6 @@ sn66xx_specific()
 
 	cpld_num=4
 	asic_control=0
-	echo 5.333 > $config_path/pdb_hotswap_scale
     echo 0 > $config_path/i2c_bus_offset
 	echo $cpld_num > $config_path/cpld_num
 	health_events_count=0
