@@ -47,7 +47,7 @@ SONiC BMC first-boot installs **`hw-management-bmc`** from **`rc.local`** while 
 | Script | Role |
 |--------|------|
 | **`debian/hw-management-bmc.postinst`** | After **`#DEBHELPER#`**: **`systemctl daemon-reload`** on configure (fresh + upgrade); on **fresh install** only, **`systemctl start --no-block`** for **`boot-complete`**, **`health-monitor`**, **`i2c-slave-setup`**, **`recovery-handler`**, **`reset-cause-logger`**. **Upgrade** does not start/restart (operator **`systemctl restart hw-management-bmc-init.service`** or reboot). **`DPKG_ROOT`** guard skips systemd when configuring a staging rootfs. **`abort-*`** cases are explicit no-ops. |
-| **`debian/hw-management-bmc.prerm`** | On **`remove`**: one **`systemctl stop`** for all nine BMC units (parallel). On **upgrade** / **deconfigure** / **failed-upgrade**: no-op. Needed because **`--no-start --no-restart-after-upgrade`** suppresses debhelper’s **`prerm`** stop snippets. |
+| **`debian/hw-management-bmc.prerm`** | On **`remove`**: one **`systemctl stop`** for all BMC units (parallel). On **upgrade** / **deconfigure** / **failed-upgrade**: no-op. Needed because **`--no-start --no-restart-after-upgrade`** suppresses debhelper’s **`prerm`** stop snippets. |
 
 **Operator note:** **`apt install hw-management-bmc=NEW`** on a running BMC installs files and re-enables units but does **not** auto-restart the init chain.
 
@@ -161,7 +161,8 @@ bmc/
     │       ├── hw-management-bmc-i2c-slave-setup.service
     │       ├── hw-management-bmc-plat-specific-preps.service
     │       ├── hw-management-bmc-recovery-handler.service
-    │       └── hw-management-bmc-reset-cause-logger.service
+    │       ├── hw-management-bmc-reset-cause-logger.service
+    │       └── hw-management-bmc-sync-ethaddr.service
     └── usr/bin/
         ├── hw-management-bmc-a2d-leakage-config.sh
         ├── hw-management-bmc-a2d-leakage-read.sh
@@ -192,6 +193,7 @@ bmc/
         ├── hw-management-bmc-powerctrl.sh
         ├── hw-management-bmc-ready.sh
         ├── hw-management-bmc-ready-common.sh
+        ├── hw-management-bmc-sync-ethaddr.sh
         ├── hw-management-bmc-recovery-handler.sh
         ├── hw-management-bmc-get-reset-cause.sh
         ├── hw-management-bmc-show-reset-cause.sh
@@ -326,6 +328,7 @@ SONiC BMC images often ship **BusyBox** (`/bin/sh` → **ash**) and may also inc
 | **`hw-management-bmc-early-config.sh`**, **`hw-management-bmc-plat-specific-preps.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-recovery-handler.sh`**, and most other **`usr/usr/bin/*.sh`** helpers | Parse OK under ash | Shebang may still say **`#!/bin/bash`**; runtime is fine on ash-heavy systems if invoked via **`sh`** or **`ash`**. |
 | **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-devtree-check.sh`**, **`hw-management-bmc.sh`** | **bash** | Associative arrays / bash-only syntax; require **`bash`**. |
 | **`hw-management-bmc-powerctrl.sh`** | **bash** | **`#!/bin/bash`**, **`set -euo pipefail`**, **`logger`** for journal messages; requires **`bash`**. |
+| **`hw-management-bmc-sync-ethaddr.sh`** | **bash** | **`#!/bin/bash`**: validates U-Boot **`ethaddr`**, uses a validated BMC FRU MAC as fallback, and updates env with **`fw_setenv`**. Uses **`[[ ]]`** regex matching. |
 | **`hw-management-bmc-boot-complete.sh`** | Yes | **`#!/bin/sh`**: waits on **`/var/run/hw-management/`** entry counts vs **`/etc/hw-management-bmc-boot-complete.conf`**. |
 | **`hw-management-bmc-cpld-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`BASH_SOURCE`**, **`take_cpld_dump_internal`** (256× **`r1`**, array + grid print), sourced **`return`** guard; **`take_cpld_dump`** uses **`timeout bash -c '. …; take_cpld_dump_internal'`**. |
 | **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: parallel **`run_collect_bg`** collectors, **`MAX_PARALLEL`**, **`-v`** for **`systemd-analyze`**, **`source`** **`hw-management-bmc-cpld-dump.sh`**, single-pass **`find`** + stride workers for **`/var/run/hw-management`**. **`tar cf - \| gzip -9`**; BusyBox-friendly **`find`** / **`readlink_canonical`**. Needs **`gzip`**, **`bash`**. |
@@ -343,7 +346,7 @@ Units are installed to **`/lib/systemd/system/`**. Below: **`ExecStart`** / **`E
 
 1. **Before / at sysinit:** reset-cause logger runs very early (`Before=sysinit.target`).
 2. **Sysinit chain (`WantedBy=sysinit.target`):** plat-specific deploy → early-config → early I2C init (strict order via **`After=`** / **`Before=`**).
-3. **Multi-user:** BMC init (ready script) → boot-complete (ready-common + sysfs entry-count gate), plus health monitor; optional I2C recovery stack if **`/etc/hw-management-bmc-recovery.conf`** exists.
+3. **Multi-user:** validate U-Boot **`ethaddr`** and use BMC FRU fallback if needed → BMC init (ready script) → boot-complete (ready-common + sysfs entry-count gate), plus health monitor; optional I2C recovery stack if **`/etc/hw-management-bmc-recovery.conf`** exists.
 
 ```mermaid
 flowchart TB
@@ -354,10 +357,11 @@ flowchart TB
     PS --> EC --> EI
   end
   subgraph multi["multi-user.target"]
+    SE[sync-ethaddr]
     INIT[bmc-init]
     BC[boot-complete]
     HM[health-monitor]
-    EI --> INIT --> BC
+    EI --> SE --> INIT --> BC
   end
   subgraph recovery["optional: hw-management-bmc-recovery.conf"]
     SS[i2c-slave-setup]
@@ -373,9 +377,10 @@ flowchart TB
 | **hw-management-bmc-reset-cause-logger** | oneshot | `/usr/bin/hw-management-bmc-reset-cause-logger.sh` | `WantedBy=sysinit.target` | **`After=local-fs.target`**, **`Before=sysinit.target`**. **`ConditionPathExists=`** the script. |
 | **hw-management-bmc-plat-specific-preps** | oneshot | `/usr/bin/hw-management-bmc-plat-specific-preps.sh` | `WantedBy=sysinit.target` | **`After=local-fs.target systemd-udevd.service`** (avoids sysinit ordering cycles with **`local-fs` / NVMe-FC helpers / udev**). **`Before=`** `hw-management-bmc-early-config`, **`systemd-networkd`**. Script runs **`udevadm control --reload-rules`** and targeted **`udevadm trigger`** after installing udev rules. Deploys **`/etc/<HID>/`** (fallback **`/usr/etc/<HID>/`** on older images): **symlinks** **`*.sh`** → **`/usr/bin/`**, **`*.rules`** → **`/lib/udev/rules.d/`**, **`hw-management-bmc.conf`** → **`/etc/modprobe.d/hw-management-bmc.conf`**; **copies** **`*.json`**, **`hw-management-bmc-platform.conf`**, eeprom/boot-complete conf into **`/etc/`** (see **Platform deploy**). Also copies or generates **`hw-management-bmc-network.conf`** / **`/etc/hw-management-bmc-usb0.conf`** and renders **`/etc/systemd/network/00-hw-management-bmc-usb0.network`** (see **USB0 / systemd-networkd** below). |
 | **hw-management-bmc-early-config** | oneshot | `/usr/bin/hw-management-bmc-early-config.sh` | `WantedBy=sysinit.target` | **`After=`** `local-fs` **and** `hw-management-bmc-plat-specific-preps`. **`Before=`** `systemd-modules-load`, **`hw-management-bmc-early-i2c-init`**. **Copies** A2D leakage JSON; optional files under **`/etc/hw-management-bmc/`**; early I2C JSON to **`/etc/`**; **symlinks** **`/etc/<HID>/*.sh`** → **`/usr/bin/`** (same targets as plat-specific-preps). Platform **`hw-management-bmc-platform.conf`** is deployed to **`/etc/`** by plat-specific-preps only. |
-| **hw-management-bmc-early-i2c-init** | oneshot | `/usr/bin/hw-management-bmc-early-i2c-init.sh` | `WantedBy=sysinit.target` | **`After=`** `hw-management-bmc-early-config`. **`Before=`** `nvidia_update_mac.service`. Creates early I2C devices from **`/etc/hw-management-bmc-early-i2c-devices.json`**. |
-| **hw-management-bmc-init** | oneshot | `/bin/bash /usr/bin/hw-management-bmc-ready.sh` | `WantedBy=multi-user.target` | **`After=`** `local-fs`, **`hw-management-bmc-early-i2c-init`**. **`Requires=`** early-i2c-init. **`Before=`** `hw-management-bmc-boot-complete`. **`ConditionPathExists=`** `/usr/bin/hw-management-bmc-ready.sh`. |
-| **hw-management-bmc-boot-complete** | simple | **`ExecStartPre=`** `/usr/bin/env hw-management-bmc-ready-common.sh`; **`ExecStart=`** `/usr/bin/env hw-management-bmc-boot-complete.sh` | `WantedBy=multi-user.target` | **`After=`** `hw-management-bmc-early-i2c-init`, **`hw-management-bmc-init`**. **`Requires=`** early-i2c-init. **`Wants=`** bmc-init (ordering without hard-failing if init is disabled). When **`hw-management-bmc-boot-complete.service`** exits successfully, SONiC BMC may treat hw-management runtime as ready for dependent services. |
+| **hw-management-bmc-early-i2c-init** | oneshot | `/usr/bin/hw-management-bmc-early-i2c-init.sh` | `WantedBy=sysinit.target` | **`After=`** `hw-management-bmc-early-config`. **`Before=`** `hw-management-bmc-sync-ethaddr`. Creates early I2C devices from **`/etc/hw-management-bmc-early-i2c-devices.json`**. |
+| **hw-management-bmc-sync-ethaddr** | oneshot | `/bin/bash /usr/bin/hw-management-bmc-sync-ethaddr.sh` | `WantedBy=multi-user.target` | **`After=`** and **`Requires=`** `hw-management-bmc-early-i2c-init`. **`Before=`** `hw-management-bmc-init`, **`hw-management-bmc-boot-complete`**. Validates U-Boot **`ethaddr`** as the primary BMC MAC; if empty/invalid/random-like, reads and validates BMC FRU MAC from **`eeprom_bmc`** (fallback **`4-0050/eeprom`**) and writes **`ethaddr`** with **`fw_setenv`**. Best-effort, no-wait warning if valid **`ethaddr`** differs from FRU. If **`fw_printenv`** or **`fw_setenv`** is missing, logs a warning and exits successfully. |
+| **hw-management-bmc-init** | oneshot | `/bin/bash /usr/bin/hw-management-bmc-ready.sh` | `WantedBy=multi-user.target` | **`After=`** `local-fs`, **`hw-management-bmc-early-i2c-init`**, **`hw-management-bmc-sync-ethaddr`**. **`Requires=`** early-i2c-init and sync-ethaddr. **`Before=`** `hw-management-bmc-boot-complete`. **`ConditionPathExists=`** `/usr/bin/hw-management-bmc-ready.sh`. |
+| **hw-management-bmc-boot-complete** | simple | **`ExecStartPre=`** `/usr/bin/env hw-management-bmc-ready-common.sh`; **`ExecStart=`** `/usr/bin/env hw-management-bmc-boot-complete.sh` | `WantedBy=multi-user.target` | **`After=`** `hw-management-bmc-early-i2c-init`, **`hw-management-bmc-init`**. **`Requires=`** early-i2c-init and bmc-init. When **`hw-management-bmc-boot-complete.service`** exits successfully, SONiC BMC may treat hw-management runtime as ready for dependent services. |
 | **hw-management-bmc-health-monitor** | simple | `/usr/bin/hw-management-bmc-health-monitor.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**, **`Wants=syslog.target`**. **`Restart=always`**. |
 | **hw-management-bmc-i2c-slave-setup** | oneshot | `/usr/bin/hw-management-bmc-i2c-slave-setup.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**. **`Before=`** `hw-management-bmc-recovery-handler`. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. |
 | **hw-management-bmc-recovery-handler** | simple | `/usr/bin/hw-management-bmc-recovery-handler.sh` | `WantedBy=multi-user.target` | **`After=`** `multi-user.target`, **`hw-management-bmc-i2c-slave-setup`**. **`Requires=`** i2c-slave-setup. **`EnvironmentFile=/etc/hw-management-bmc-recovery.conf`**. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. **`Restart=always`**. |

@@ -69,7 +69,7 @@ For **`HINNN`**, add parallel **`dh_installdirs`** and **`cp -a bmc/usr/etc/HINN
 - [ ] **`debian/rules`** installs **`/etc/HINNN/`** on the image.
 - [ ] Device-tree exposes **`nvsw*hidNNN*`** so plat-specific-preps resolves **`sku`**.
 - [ ] Kernel patches / DTS applied; **`mlxreg-io`** / **`mlxreg-hotplug`** nodes match rules and **`hw-management-bmc-gpio-pins.json`**.
-- [ ] Boot: **`journalctl -b -u hw-management-bmc-plat-specific-preps`**, **`-u hw-management-bmc-init`**, **`udevadm verify`** / rules under **`/lib/udev/rules.d/`**.
+- [ ] Boot: **`journalctl -b -u hw-management-bmc-plat-specific-preps`**, **`-u hw-management-bmc-sync-ethaddr`**, **`-u hw-management-bmc-init`**, **`udevadm verify`** / rules under **`/lib/udev/rules.d/`**.
 
 ## 5. Further reading
 
