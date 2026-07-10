@@ -49,10 +49,10 @@ index 0e71b22047f8..1a1424dd640f 100644
  
      Prefix: 'raa229001'
 diff --git a/drivers/hwmon/pmbus/isl68137.c b/drivers/hwmon/pmbus/isl68137.c
-index 2af921039309..39e38e01e630 100644
+index 1a8caff1ac5f..2e78d716de59 100644
 --- a/drivers/hwmon/pmbus/isl68137.c
 +++ b/drivers/hwmon/pmbus/isl68137.c
-@@ -244,6 +244,19 @@
+@@ -178,6 +178,19 @@
  	return ret;
  }
  
@@ -72,8 +72,8 @@ index 2af921039309..39e38e01e630 100644
  static struct pmbus_driver_info raa_dmpvr_info = {
  	.pages = 3,
  	.format[PSC_VOLTAGE_IN] = direct,
-@@ -389,9 +406,12 @@
- 		info->write_word_data = raa_dmpvr2_write_word_data;
+@@ -244,9 +261,12 @@
+ 		info->read_word_data = raa_dmpvr2_read_word_data;
  		break;
  	case raa_dmpvr2_2rail_nontc:
 +		info->func[0] &= ~PMBUS_HAVE_VMON;
@@ -86,7 +86,7 @@ index 2af921039309..39e38e01e630 100644
  	case raa_dmpvr2_2rail:
  		info->pages = 2;
  		info->read_word_data = raa_dmpvr2_read_word_data;
-@@ -463,6 +484,8 @@
+@@ -311,6 +332,8 @@
  	{"raa228004", raa_dmpvr2_hv},
  	{"raa228006", raa_dmpvr2_hv},
  	{"raa228228", raa_dmpvr2_2rail_nontc},
