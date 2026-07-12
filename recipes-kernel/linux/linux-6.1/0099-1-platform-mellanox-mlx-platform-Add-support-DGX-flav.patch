@@ -18,7 +18,7 @@ Key changes:
   opening)
 
 System class: VMOD0010
-System SKU: HI184
+System SKU: HI184, HI198
 
 Reviewed-by: Vadim Pasternak vadimp@mellanox.com
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
@@ -45,7 +45,7 @@ index 098ae7a91a16..e1452d2bd889 100644
 -	mlxplat_hotplug = &mlxplat_mlxcpld_ext_data;
 +
 +	sku = dmi_get_system_info(DMI_PRODUCT_SKU);
-+	if (sku && !strcmp(sku, "HI184")) {
++	if (sku && (!strcmp(sku, "HI184") || !strcmp(sku, "HI198"))) {
 +		mlxplat_hotplug = &mlxplat_mlxcpld_dgx_ext_data;
 +		mlxplat_regs_io = &mlxplat_dgx_ng_regs_io_data;
 +	} else {
