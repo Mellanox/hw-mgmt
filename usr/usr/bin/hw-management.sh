@@ -981,7 +981,7 @@ add_cpu_board_to_connection_table()
 			board=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $board in
 				MSN241*|MSN27*)
-					# Spider Panther removed A2D from SFF
+					# SN2410/SN2700 removed A2D from SFF
 					cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 					;;
 				*)
@@ -1224,7 +1224,7 @@ msn27xx_msb_msx_specific()
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSN27*|MSN241*)
-			# Panther Spider
+			# SN2700/SN2410
 			connect_table+=(${msn2700_base_connect_table[@]})
 			;;
 		*)
@@ -1234,11 +1234,11 @@ msn27xx_msb_msx_specific()
 	# Connect TC data table 
 	case $product in
 		MSN27*)
-			# Panther
+			# SN2700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
 			;;
 		MSN241*)
-			# Spider
+			# SN2410
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
 			;;
 		MSB78*|MSB77*)
@@ -1376,7 +1376,7 @@ mqmxxx_msn37x_msn34x_specific()
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
 		HI110)
-			# Jaguar
+			# MQM8700 (HI110)
 			connect_table+=(${mqm8700_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_mqm8700.json"
@@ -2538,17 +2538,17 @@ n51xxld_specific()
 	else
 		# Adding Cable Cartridge support which is not included to BOM string.
 		case $sku in
-		HI166)	# Juliet SO.
+		HI166)	# N5110_LD (HI166).
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
 			;;
-		HI169)	# Juliet Ariel.
+		HI169)	# N5112_LD (HI169).
 			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
 			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 2 > $config_path/cartridge_counter
 			;;
-		HI167|HI170)	# Juliet NSO
+		HI167|HI170)	# N5100_LD (HI167/HI170)
 			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
 			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
@@ -2562,7 +2562,7 @@ n51xxld_specific()
 		HI177)	# Kyber
 			echo 0 > $config_path/cartridge_counter
 			;;
-		*)	# According Juliet SO.
+		*)	# Default N5110_LD cartridge layout.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
@@ -2591,7 +2591,7 @@ n51xxld_specific()
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
-		HI166|HI169)	# TTM, ARIEL
+		HI166|HI169)	# N5110_LD TTM (HI166), N5112_LD (HI169)
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
 		;;
@@ -2758,10 +2758,10 @@ sn5640_specific()
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
 
 	case $sku in
-		HI172)	# Gaur
+		HI172)	# SN5610 (HI172)
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
 		;;
-		HI171)	# Bison
+		HI171)	# SN5640 (HI171)
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 		;;
 		*)
@@ -3186,7 +3186,7 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# Juliet
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# N51XX_LD
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;

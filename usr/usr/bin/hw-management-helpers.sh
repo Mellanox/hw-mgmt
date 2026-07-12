@@ -1186,7 +1186,7 @@ set_sodimm_temp_limits()
 	# SODIMM temp reading is not supported on Broadwell-DE Comex
 	# and on BF# Comex.
 	# Broadwell-DE Comex can be installed interchangeably with new
-	# Coffee Lake Comex on part of systems e.g. on Anaconda.
+	# Coffee Lake Comex on part of systems e.g. on SN3700.
 	# Thus check by CPU type and not by system type.
 	case $cpu_type in
 		$BDW_CPU|$BF3_CPU)

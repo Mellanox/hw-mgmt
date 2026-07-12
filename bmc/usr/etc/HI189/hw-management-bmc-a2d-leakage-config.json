@@ -13,7 +13,7 @@
                 "Address": "0x34",
                 "Probe": true,
                 "Scale": 0.0008,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the Salamandra Excel MAX1363 column (0.8 mV).",
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the HI189 platform Excel MAX1363 column (0.8 mV).",
                 "Types": [
                     {
                         "Type": "flex",
@@ -85,11 +85,11 @@
                 "DeviceType": "ADS7924",
                 "Bus": 27,
                 "Address": "0x49",
-                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for Salamandra.",
+                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for HI189 platform.",
                 "Probe": true,
                 "Scale": 0.002,
                 "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max and used to derive the ADS7924 window comparator ULR/LLR codes (volts/Scale, 12-bit, >>4 to 8-bit).",
-                "Types_comment": "PLACEHOLDER thresholds copied from the Salamandra ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
+                "Types_comment": "PLACEHOLDER thresholds copied from the HI189 platform ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -132,7 +132,7 @@
                 "Address": "0x35",
                 "Probe": true,
                 "Scale": 0.0008,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the Salamandra Excel MAX1363 column (0.8 mV).",
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the HI189 platform Excel MAX1363 column (0.8 mV).",
                 "Types": [
                     {
                         "Type": "flex",
@@ -204,11 +204,11 @@
                 "DeviceType": "ADS7924",
                 "Bus": 28,
                 "Address": "0x48",
-                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for Salamandra.",
+                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for HI189 platform.",
                 "Probe": true,
                 "Scale": 0.002,
                 "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max and used to derive the ADS7924 window comparator ULR/LLR codes (volts/Scale, 12-bit, >>4 to 8-bit).",
-                "Types_comment": "PLACEHOLDER thresholds copied from the Salamandra ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
+                "Types_comment": "PLACEHOLDER thresholds copied from the HI189 platform ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
                 "Types": [
                     {
                         "Type": "flex",
