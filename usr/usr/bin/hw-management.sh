@@ -2028,7 +2028,7 @@ msn_spc3_common()
 		HI142)
 			p4697_specific
 		;;
-		HI184)
+		HI184|HI198)
 			msn4700d_specific
 		;;
 		*)
