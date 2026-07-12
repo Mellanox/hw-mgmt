@@ -1617,9 +1617,9 @@ msn4700d_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
 		if [ "$sku" == "HI184" ]; then
-			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*AaEeFdGeRcRcTb-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb-C*AaEeFdGeRcRcTb"
 		else
-			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*EeTlRkRa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb-C*TlRkRaEe"
 		fi
 		devtr_check_smbios_device_description "$system_ver_str" "0" ""
 	fi
