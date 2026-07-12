@@ -73,6 +73,7 @@ Signed-off-by: Dvir Zaguri <dzaguri@nvidia.com>
  1 file changed, 70 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
+index 81f4bee..1dd843e 100644
 --- a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
 +++ b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
 @@ -29,6 +29,21 @@
@@ -88,13 +89,13 @@ diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/
 +			reg = <0x00000004 0x237ff000 0x0 0x00001000>;
 +			no-map;
 +		};
- 	};
++	};
 +
 +	/* eMMC hardware reset (RST_n) driven by EMMC_1V8_RST* on GPIOQ7 (ball N15). */
 +	mmc_pwrseq: mmc-pwrseq {
 +		compatible = "mmc-pwrseq-emmc";
 +		reset-gpios = <&gpio1 ASPEED_GPIO(Q, 7) GPIO_ACTIVE_LOW>;
-+	};
+ 	};
  };
  
 @@ -55,6 +70,30 @@
@@ -167,7 +168,7 @@ diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/
  	};
  };
  
-@@ -363,8 +427,11 @@
+@@ -357,8 +421,11 @@
  &emmc {
  	status = "okay";
  	non-removable;
@@ -181,7 +182,7 @@ diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/
  };
  
  /* eSPI Controller - Communication with host CPU */
-@@ -463,5 +529,6 @@
+@@ -463,5 +530,6 @@
  	status = "okay";
  	pinctrl-names = "default";
  	i3c-scl-hz = <12500000>;
