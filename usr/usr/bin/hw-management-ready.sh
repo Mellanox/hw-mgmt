@@ -80,7 +80,7 @@ fi
 	
 #TEMPORARY hw-management mockup values for simx
 if check_simx && [ "$product_sku" == "HI194" ]; then
-	echo "SN7170_LD emulation, exiting"
+	echo "N7200_LD emulation, exiting"
 	exit 0
 fi
 
