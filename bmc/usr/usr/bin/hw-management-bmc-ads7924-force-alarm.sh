@@ -59,8 +59,8 @@ INT_B=0xe0
 SLP_B=0x00
 ACQ_B=0x00
 PWR_B=0x00
-AWAKE_B=0x20
-MODE_B=0x33
+AWAKE_B=0x80
+MODE_B=0xcc
 
 usage() {
     echo "Usage: $0 <bus> <i2c_addr> <channels>"
@@ -153,6 +153,9 @@ if ! i2ctransfer -f -y "$BUS" w2@"$ADDR" 0x01 "$aen" >/dev/null 2>&1; then
     echo "ADS7924 INTCNTRL (alarm enable) write failed"
     exit 1
 fi
+
+# Clear any stale alarm interrupt before starting the scan (read INTCONFIG 0x12).
+i2ctransfer -f -y "$BUS" w1@"$ADDR" 0x12 r1 >/dev/null 2>&1 || true
 
 if ! i2ctransfer -f -y "$BUS" w2@"$ADDR" 0x00 "$AWAKE_B" >/dev/null 2>&1; then
     echo "ADS7924 AWAKE mode write failed"
