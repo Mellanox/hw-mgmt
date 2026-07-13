@@ -119,6 +119,7 @@ declare -A sys_fandir_vs_pn=(["00MP584"]=F ["00MP594"]=R ["00MP593"]=R \
 
 base_cpu_bus_offset=10
 max_tachos=20
+fan_debounce_timeout_ms=2000
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
 i2c_bus_min=1
@@ -1298,4 +1299,129 @@ print_function_call() {
 		"$TS" \
 		"$function_name" \
 		"$argument" >> "$LOG_FILE"
+}
+
+# Set fan direction for a single fan
+#
+# Input parameters:
+# 1 - "$attribute" (fan1, fan2, fan3, fan4)
+# 2 - "$event" (1 - Present, 0 - Removed)
+# Return: None
+#
+# Example:
+# set_fan_direction "fan1" 1 # Set fan1 direction
+# set_fan_direction "fan1" 0 # Remove fan1 direction
+function set_fan_direction()
+{
+	local attribute="$1"
+	local event="$2"
+	local fan_debounce_timer
+	local fan_debounce_counter
+	local fan_dir
+	local fan_dir_old
+	local fan_index
+	local fan_direction
+
+	print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event entering..."
+	case $attribute in
+	fan*)
+		if [ "$event" -eq 0 ]; then
+			echo 2 > "$thermal_path/${attribute}_dir"
+			return
+		fi
+		if [ -f "$config_path/fan_dir_eeprom" ]; then
+			return
+		fi
+		# Check if CPLD fan direction exists
+		if [ ! -f "$system_path/fan_dir" ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "./system/fan_dir not found"
+			return
+		fi
+		if [[ "$ui_tree_sku" == "HI117" ]]; then
+			return
+		fi
+		fan_dir=$(< "$system_path/fan_dir")
+		fan_debounce_counter=0
+		fan_dir_old=-1
+		fan_debounce_timer=$fan_debounce_timeout_ms
+		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
+		do
+			if [ "${fan_dir}_" == "${fan_dir_old}_" ];
+			then
+				fan_debounce_counter=$((fan_debounce_counter + 1))
+			else
+				fan_dir_old=$fan_dir
+				fan_debounce_counter=0
+			fi
+			fan_debounce_timer=$((fan_debounce_timer - 200))
+			sleep 0.2
+			fan_dir=$(< "$system_path/fan_dir")
+		done
+
+		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
+		fan_index=${attribute#fan}
+		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
+			return
+		fi
+		fan_index=$((fan_index - 1))
+
+		#  Debounce is not success. Set fan dir as not recognized value "2".
+		if [ ! -z "$fan_debounce_timer" ] && [ "$fan_debounce_timer" -le 0 ]; then
+			fan_direction=2
+		else
+			# fan_dir is an integer bitfield; one bit per fan direction.
+			fan_direction=$(( (fan_dir >> fan_index) & 1 ))
+		fi
+		print_function_call "$0" "${FUNCNAME[0]}" "$attribute $event. Debounce timer left: $fan_debounce_timer ms, fan_dir: $fan_dir, fan_index: $fan_index, fan_direction: $fan_direction"
+		echo "$fan_direction" > "$thermal_path/${attribute}_dir"
+		print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event exiting..."
+	;;
+	*)
+		;;
+	esac
+}
+
+# $1 - force (optional, default 1):
+#      1 = re-init fanX_dir for all present fans
+#      0 = only initialize fans whose fanX_dir file is missing
+function set_fan_direction_for_all_fans()
+{
+	local max_tachos
+	local i
+	local status
+
+	print_function_call "$0" "${FUNCNAME[0]}" "Starting..."
+	local force="$1"
+	if [ -z "$force" ]; then
+		force=1
+	fi
+
+	if [ ! -f "$config_path/max_tachos" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "max_tachos file not found - skipping"
+		return
+	fi
+
+	max_tachos=$(<"$config_path/max_tachos")
+	if ! [[ "$max_tachos" =~ ^[0-9]+$ ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "invalid max_tachos: '$max_tachos' - skipping"
+		return
+	fi
+	print_function_call "$0" "${FUNCNAME[0]}" "max_tachos: $max_tachos"
+
+	for ((i=1; i<="$max_tachos"; i+=1)); do
+		if [ -L "${thermal_path}"/fan"${i}"_status ]; then
+			# check if forse is not set and fan_dir present - skip
+			if [ "$force" -ne 1 ] && [ -f "$thermal_path/fan${i}_dir" ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" "fan${i}_dir present and force is not set - skipping"
+				continue
+			fi
+			# check if fan status is set
+			status=$(< "${thermal_path}"/fan"${i}"_status)
+			print_function_call "$0" "${FUNCNAME[0]}" "fan${i}_status: $status"
+			if [ "$status" -eq 1 ]; then
+				set_fan_direction "fan${i}" "$status"
+			fi
+		fi
+	done
+	print_function_call "$0" "${FUNCNAME[0]}" "Finished"
 }
