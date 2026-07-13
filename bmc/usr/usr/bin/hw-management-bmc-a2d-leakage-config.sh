@@ -103,9 +103,9 @@ check_config_file()
 	return 0
 }
 
-# Optional JSON field "Probe": true — bind kernel driver (new_device) before register programming,
-# briefly unbind for raw i2ctransfer, then rebind for IIO sysfs so driver probe does not run after
-# our final register values are written.
+# Optional JSON field "Probe": true — bind kernel driver (new_device) for IIO sysfs links.
+# MAX1363/ADS1015/ADS7924: bind driver (probe runs), then program registers via i2ctransfer -f
+# while the driver stays bound so our values are the last writer after probe.
 # JSON booleans are unquoted (true/false); json_get_string only sees quoted values — use json_get_bool.
 json_probe_true()
 {
@@ -168,7 +168,7 @@ bind_kernel_driver()
 		log_message "warning" "Bind $driver to $dev_id failed (client present, driver not attached)"
 		return 1
 	fi
-	log_message "info" "Binding $driver at $address on bus $bus (new_device before register config, then unbind/program/rebind)"
+	log_message "info" "Binding $driver at $address on bus $bus (new_device)"
 	if ! echo "$driver $address" > "${adapter}/new_device" 2>/dev/null; then
 		log_message "warning" "new_device failed for $driver $address on i2c-$bus (driver missing or device conflict) — continuing with raw I2C config"
 		return 1
@@ -692,6 +692,7 @@ max1363_cfg_reg_val_for_channel()
 }
 
 # Program MAX1363 register burst from JSON CfgReg/CfgRegVal (channel-aware when ChannelId set).
+# Optional 6th arg post_driver=post_driver: driver may stay bound (i2ctransfer -f).
 configure_max1363_raw_i2c()
 {
 	local device_json="$1"
@@ -699,8 +700,13 @@ configure_max1363_raw_i2c()
 	local bus="$3"
 	local address="$4"
 	local hw_channel_id="${5:-0}"
+	local post_driver="${6:-}"
 
 	local cfg_reg cfg_reg_val patched hw_ch scan_ch k cid
+
+	if [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "MAX1363 $device_name: post-driver I2C programming"
+	fi
 
 	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
 	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
@@ -809,6 +815,7 @@ ads1015_set_iio_scale_for_raw()
 }
 
 # Program ADS1015 config (and optional window comparator Lo/Hi) per MUX channel (TI SBAS173).
+# Optional 7th arg post_driver=post_driver: driver may stay bound (i2ctransfer -f).
 configure_ads1015_raw_i2c()
 {
 	local device_json="$1"
@@ -817,9 +824,14 @@ configure_ads1015_raw_i2c()
 	local address="$4"
 	local num_channels="$5"
 	local hw_channel_id="${6:-0}"
+	local post_driver="${7:-}"
 
 	local cfg_lo lo_val hi_val lo_reg hi_reg mux mux_handoff ch nch ch_end ch_step failed skip_thresh mode_msg
 	local t ch_label ch_list k cid
+
+	if [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "ADS1015 $device_name: post-driver I2C programming"
+	fi
 
 	cfg_lo="0x94"
 	t=$(echo "$device_json" | json_get_string "CfgRegVal" 2>/dev/null) || true
@@ -945,7 +957,9 @@ configure_ads1015_raw_i2c()
 	return 0
 }
 
-# Program ADS7924 when no kernel driver is bound (TI SBAS482 register map).
+# Program ADS7924 over raw I2C (TI SBAS482 register map).
+# Optional 6th arg post_driver=post_driver: driver may stay bound (i2ctransfer -f); soft reset
+# is skipped so we do not undo kernel probe state.
 configure_ads7924_raw_i2c()
 {
 	local device_json="$1"
@@ -953,6 +967,7 @@ configure_ads7924_raw_i2c()
 	local bus="$3"
 	local address="$4"
 	local num_channels="$5"
+	local post_driver="${6:-}"
 
 	local scale_s v_min v_max ll ul i b c t gtype
 	local int_b slp_b acq_b pwr_b mode_b awake_b aen_b
@@ -1083,8 +1098,8 @@ configure_ads7924_raw_i2c()
 	slp_b="0x00"
 	acq_b="0x00"
 	pwr_b="0x00"
-	mode_b="0x33"
-	awake_b="0x20"
+	mode_b="0xcc"
+	awake_b="0x80"
 	aen_b="0x0f"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924IntConfig") && int_b="$t"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924SlpConfig") && slp_b="$t"
@@ -1094,13 +1109,15 @@ configure_ads7924_raw_i2c()
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AwakeMode") && awake_b="$t"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AlarmEnable") && aen_b="$t"
 
-	if json_ads7924_soft_reset_default_true "$device_json"; then
+	if [ "$post_driver" != "post_driver" ] && json_ads7924_soft_reset_default_true "$device_json"; then
 		log_message "info" "ADS7924 $device_name: software reset (write 0xaa to RESET)"
 		if ! i2c_write_ads7924_burst "$bus" "$address" 0x16 0xaa; then
 			log_message "warning" "ADS7924 $device_name: soft reset write failed"
 			return 1
 		fi
 		sleep 0.05
+	elif [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "ADS7924 $device_name: post-driver programming (soft reset skipped)"
 	fi
 
 	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 0x00; then
@@ -1131,6 +1148,12 @@ configure_ads7924_raw_i2c()
 	fi
 	sleep 0.02
 
+	# Clear any stale alarm interrupt before starting the scan. TI SBAS482: reading
+	# INTCONFIG (0x12) clears a latched alarm-condition interrupt.
+	log_message "info" "ADS7924 $device_name: clearing stale alarm (read INTCONFIG 0x12)"
+	i2ctransfer -f -y "$bus" w1@"$address" 0x12 r1 >/dev/null 2>&1 || true
+	sleep 0.002
+
 	log_message "info" "ADS7924 $device_name: AWAKE then MODE ($awake_b then $mode_b)"
 	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 $awake_b; then
 		log_message "warning" "ADS7924 $device_name: AWAKE write failed"
@@ -1142,7 +1165,11 @@ configure_ads7924_raw_i2c()
 		return 1
 	fi
 
-	log_message "info" "ADS7924 $device_name: raw I2C configuration complete"
+	if [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "ADS7924 $device_name: post-driver I2C configuration complete"
+	else
+		log_message "info" "ADS7924 $device_name: raw I2C configuration complete"
+	fi
 	return 0
 }
 
@@ -1710,7 +1737,8 @@ populate_single_leakage_channel()
 	return 0
 }
 
-# Program device registers over raw I2C (caller must have unbound any kernel driver).
+# Program device registers over raw I2C (i2ctransfer -f). When post_driver is set, the
+# kernel driver may remain bound after probe.
 configure_a2d_registers_raw()
 {
 	local device_json="$1"
@@ -1720,6 +1748,7 @@ configure_a2d_registers_raw()
 	local device_type="$5"
 	local num_channels="$6"
 	local hw_channel_id="${7:-0}"
+	local post_driver="${8:-}"
 
 	local cfg_reg cfg_reg_val lo_thresh_reg lo_thresh_val hi_thresh_reg hi_thresh_val
 	local success failed
@@ -1732,15 +1761,15 @@ configure_a2d_registers_raw()
 	hi_thresh_val=$(echo "$device_json" | json_get_string "HiThreshRegVal")
 
 	if [ "$device_type" = "ADS7924" ]; then
-		configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"
+		configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$post_driver"
 		return $?
 	fi
 	if [ "$device_type" = "ADS1015" ]; then
-		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$hw_channel_id"
+		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$hw_channel_id" "$post_driver"
 		return $?
 	fi
 	if [ "$device_type" = "MAX1363" ]; then
-		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id"
+		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"
 		return $?
 	fi
 
@@ -1803,6 +1832,25 @@ configure_device()
 
 	log_message "info" "Configuring $device_type for $device_name..."
 
+	# Probe: bind driver (probe runs), then program registers as the last writer.
+	if json_probe_true "$device_json"; then
+		case "$device_type" in
+		ADS7924|MAX1363|ADS1015)
+			if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
+				log_message "info" "$device_type $device_name: driver bind failed — try next Device alternative"
+				return 1
+			fi
+			if ! configure_a2d_registers_raw "$device_json" "$device_name" "$bus" "$address" \
+				"$device_type" "$num_channels" "$hw_channel_id" post_driver; then
+				log_message "info" "$device_type $device_name: post-probe register programming failed — try next Device alternative"
+				return 1
+			fi
+			log_message "info" "Device configuration complete for $device_name"
+			return 0
+			;;
+		esac
+	fi
+
 	# 2) Bind kernel driver first when Probe is true (instantiates client; driver probe may run once).
 	if json_probe_true "$device_json"; then
 		if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
@@ -1810,7 +1858,7 @@ configure_device()
 		fi
 	fi
 
-	# 3) Unbind so i2ctransfer can program registers (MAX1363 / ADS1015 / ADS7924).
+	# 3) Unbind so i2ctransfer can program registers (MAX1363 / ADS1015).
 	if i2c_client_has_bound_driver "$bus" "$address"; then
 		if ! unbind_kernel_driver "$bus" "$address"; then
 			log_message "info" "Leak detector $device_name: driver unbind failed — try next Device alternative"
