@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# /var/run/hw-management/led — runtime layout (host CPU stack, example)
+#
+# Created by udev when mlxreg LED class devices appear; handler:
+#   /usr/bin/hw-management-chassis-events.sh add|rm led %S %p %k
+#
+# Platform rules (usr/lib/udev/rules.d/50-hw-management-events.rules):
+#   SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green|red|orange|amber|blue",
+#   ACTION=="add"|"remove"
+#
+# Kernel source of truth:
+#   drivers/leds/leds-mlxreg.c
+#   drivers/platform/x86/mlx-platform.c  (per-SKU LED register map)
+#
+# Full API reference: Documentation/LED_Control_API.md
+# User manual (legacy node names): Documentation/Chassis_Management_… §3.13, §3.16
+
+/var/run/hw-management/led/
+├── led_status                         # aggregate state file (none|green|amber|red|…_blink)
+├── led_status_state                   # symlink → /usr/bin/hw-management-led-state-conversion.sh
+├── led_status_capability              # e.g. "none green green_blink amber amber_blink red red_blink"
+├── led_status_green                   # symlink → …/mlxreg:status:green/brightness
+├── led_status_green_trigger           # symlink → …/trigger
+├── led_status_amber                   # symlink → …/mlxreg:status:amber/brightness (or :orange)
+├── led_status_amber_trigger
+├── led_status_amber_delay_on          # symlink → …/delay_on  (ms, timer blink)
+├── led_status_amber_delay_off         # symlink → …/delay_off
+├── led_fan                            # group FAN status (worst across trays; CPLD HW-owned until first SW write)
+├── led_fan_state
+├── led_fan_capability                 # e.g. "none green green_blink amber amber_blink"
+├── led_fan_green                      # symlink → …/mlxreg:fan:green/brightness
+├── led_fan_green_trigger
+├── led_fan_amber                      # symlink → …/mlxreg:fan:amber/brightness (or :orange)
+├── led_fan_amber_trigger
+├── led_fan1                           # per-tray aggregate state for fan1 (if equipped)
+├── led_fan1_state
+├── led_fan1_capability                # e.g. "none orange orange_blink green green_blink"
+├── led_fan1_green                     # symlink → …/mlxreg:fan1:green/brightness
+├── led_fan1_green_trigger
+├── led_fan1_orange                    # userspace name; kernel may be :orange → renamed amber in newer platforms
+├── led_fan1_orange_trigger
+├── led_fan2/ … / led_fan7             # same pattern per equipped fan (capability-gated in driver)
+├── led_psu                            # PSU status LED group (platform-specific label)
+├── led_psu_state
+├── led_psu_capability
+├── led_psu_green
+├── led_psu_orange
+├── led_uid                            # UID / locator LED (typically blue)
+├── led_uid_state
+├── led_uid_capability
+├── led_uid_blue
+└── led_uid_blue_trigger
+
+# Line card LEDs (modular systems) — same layout under:
+#   /var/run/hw-management/lc<index>/led/
+# Kernel device: leds-mlxreg.<i2c_bus>, names like pcicard48:status:green
+
+# Notes
+#
+# • $bsp_path = /var/run/hw-management on standard distributions.
+#
+# • Runtime names use led_<function>_* ; user manual §3.16 documents
+#   <function>_status_led (e.g. fan1_status_led ↔ led_fan1).
+#   Group FAN status (no index): led_fan ↔ mlxreg:fan:* (not in user manual §3.16).
+#
+# • Orange kernel colour is exposed as amber in symlink names (chassis-events.sh).
+#
+# • Write LED colour via led_<func>_<color> brightness symlinks (0 / max_brightness).
+#   Run led_<func>_state to refresh the aggregate led_<func> file.
+#
+# • CPLD hardware controls PSU/FAN status LEDs until the first software write to
+#   any LED register; see Documentation/LED_Control_API.md §4.
+#
+# • Not all files exist on every platform — fan count, PSU layout, and UID are
+#   gated by CPLD capability register (bitmap or slot counter).
+#
+# • SN2201 (VMOD0014): fan-tray LEDs may use GPIO via fantray-led-event instead of
+#   entries above.
+#
+# • Implementation: usr/usr/bin/hw-management-chassis-events.sh (add/rm led),
+#   usr/usr/bin/hw-management-led-state-conversion.sh (state refresh).
+#
+# • Mockup reference: mockup/hw-management/led/

@@ -596,7 +596,7 @@ NVIDIA virtual hierarchy supports the following HW control ($bsp_path below is a
 | $bsp_path/config | Internal system specific configuration data |
 | $bsp_path/eeprom | Gets raw data from EEPROM in system modules |
 | $bsp_path/environment | Gets information on environmental sensors (A2D, Volt, Curr) |
-| $bsp_path/led | Gets/sets LED color |
+| $bsp_path/led | Gets/sets LED color (see **LED_Control_API.md** for runtime `led_<func>` naming and CPLD behaviour) |
 | $bsp_path/bin |  |
 | $bsp_path/events |  |
 | $bsp_path/firmware |  |
@@ -3932,6 +3932,9 @@ cat $bsp_path/environment/lc1_a2d_volt1_scale
 
 ## LC LED
 
+> **Common LED API reference:** [LED_Control_API.md](LED_Control_API.md) — line card
+> paths under `$bsp_path/lc<N>/led/`.
+
 ### Get LC Status LED
 
 **Node name:** `$bsp_path/led/lc<index>_status_led`
@@ -4318,6 +4321,10 @@ cat $bsp_path/thermal/lc1_module1_temp_input
 ```
 
 ## LED Control
+
+> **Common LED API reference:** [LED_Control_API.md](LED_Control_API.md) — runtime
+> `led_<func>` naming, sysfs tree, CPLD hardware ownership, worst-status aggregation,
+> kernel patches, and examples. Runtime layout: [examples/hw-management-led-sysfs.txt](../examples/hw-management-led-sysfs.txt).
 
 ### Get Fan Status LED
 
