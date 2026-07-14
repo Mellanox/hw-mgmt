@@ -255,7 +255,3 @@ if [ $tc_should_reload -eq 1 ] ||
 	# to run it in the background to avoid blocking the startup process.
 	nohup bash -c "$cmd_line echo thermal control service configured" &>/dev/null &
 fi
-
-
-# double check fan_dir present and initialize it
-set_fan_direction_for_all_fans 0
