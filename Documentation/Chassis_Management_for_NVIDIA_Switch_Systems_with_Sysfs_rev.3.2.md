@@ -524,7 +524,7 @@ Example layouts: **`bmc/examples/hw-management-bmc-thermal-sysfs.txt`** (deliver
 Do not assume host ASIC/PSU/fan thermal nodes exist on the BMC image, or that BMC `cpu_temp_*`
 nodes exist on the CPU image — check `$bsp_path` on the target root filesystem.
 
-**Virtual / SimX platforms (no production sysfs tree in repo):** HI194 (SN7170_LD) and other SimX
+**Virtual / SimX platforms (no production sysfs tree in repo):** HI194 (N7200_LD) and other SimX
 SKUs may exit early from `hw-management-ready.sh` with mock values only (`check_simx` paths in
 `hw-management.sh`). Do not use these for production attribute validation.
 
