@@ -22,3 +22,9 @@
     missingok
     notifempty
 }
+
+# NOTE: /var/log/chipup_i2c_trace_log is intentionally NOT rotated here. It is
+# rotated by the chipup handler in hw-management.sh (per-invocation, size-based,
+# with a bounded number of timestamped archives - see chipup_log_size and
+# chipup_log_archive_max). Using logrotate as well would risk copytruncate
+# splitting a capture mid chipup run.
