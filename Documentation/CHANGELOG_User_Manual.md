@@ -119,19 +119,19 @@ SN6600 BMC ambient sensor on I2C `4-0048`, `lm75` driver).
 
 ### Rev. 3.2.1 - May 31, 2026
 
-#### Fixed: Juliet (N51XX_LD) reset-cause documentation (#5014001)
+#### Fixed: N51XX_LD reset-cause documentation (#5014001)
 
-**Affected platforms:** Juliet platform family (N51XX_LD), including GB200 systems such as N5110_LD and N5500_LD.
+**Affected platforms:** N51XX_LD platform family, including GB200 systems such as N5110_LD and N5500_LD.
 
 **Overview:**  
-Aligned the user manual with Juliet CPLD-supported reset causes. The following are not supported by the Juliet CPLD and must not be documented as available sysfs attributes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios`.
+Aligned the user manual with N51XX_LD CPLD-supported reset causes. The following are not supported by the N51XX_LD CPLD and must not be documented as available sysfs attributes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios`.
 
 **User manual updates:**
 
 | Area | Change |
 |------|--------|
-| Get Reset Cause (3.18.39) | Added Juliet platform family table with 22 supported reset causes |
-| Get Reset Cause (3.18.39) | Documented unsupported legacy causes for Juliet |
+| Get Reset Cause (3.18.39) | Added N51XX_LD platform family table with 22 supported reset causes |
+| Get Reset Cause (3.18.39) | Documented unsupported legacy causes for N51XX_LD |
 | Config | Referenced `reset_attr_num` = 22 for N51XX_LD |
 
 **Validation source:**

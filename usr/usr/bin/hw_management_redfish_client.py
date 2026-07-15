@@ -662,7 +662,7 @@ class BMCAccessor(object):
             pass
 
     def _handle_legacy_password(self):
-        """Handle legacy password generation for juliet platforms (e.g. N5500_LD)"""
+        """Handle legacy password generation for N51XX_LD platforms (e.g. N5500_LD)"""
         pass_len = 13
         attempt = 1
         max_attempts = 100

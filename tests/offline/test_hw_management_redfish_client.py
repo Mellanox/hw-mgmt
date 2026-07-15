@@ -587,7 +587,7 @@ class TestBMCAccessorPasswordGeneration:
             base64.b64decode(password)
 
     def test_complex_legacy_platform_password(self, mock_subprocess, temp_dir):
-        """Complex: Generate password for legacy platform (Juliet)"""
+        """Complex: Generate password for legacy platform (N51XX_LD)"""
         # Mock platform name (legacy pattern)
         mock_file_data = 'N5100_LD'
 

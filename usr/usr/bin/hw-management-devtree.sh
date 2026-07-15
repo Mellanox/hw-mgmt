@@ -980,8 +980,8 @@ devtr_bom_load_from_json()
 
 # Check if system has SMBIOS BOM changes mechanism support.
 # If yes, init appropriate associative arrays.
-# Jaguar, Leopard, Gorilla are added just for debug.
-# This mechanism is enabled on new systems starting from Moose.
+# MQM8700, SN4700, MQM9700 are added just for debug.
+# This mechanism is enabled on new systems starting from SN5600.
 devtr_check_supported_system_init_alternatives()
 {
 	case $cpu_type in
@@ -1093,7 +1093,7 @@ devtr_check_supported_system_init_alternatives()
 #			;;
 #		VMOD0010)
 #			case $sku in
-#				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
+#				HI122|HI123|HI124|HI125)	# SN4700, MSN4600, MSN4600C
 #					for key in "${!msn4700_msn4600_alternatives[@]}"; do
 #						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
 #					done
