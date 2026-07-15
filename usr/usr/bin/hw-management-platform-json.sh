@@ -23,6 +23,7 @@ PLATFORM_JSON_NUMERIC_VARS=(
 	cartridge_count
 	chipup_delay_default
 	chipup_log_size
+	chipup_log_archive_max
 	chipup_retry_count
 	cpld_num
 	device_connect_retry
