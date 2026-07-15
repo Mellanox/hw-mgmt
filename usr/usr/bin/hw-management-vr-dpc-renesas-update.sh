@@ -34,7 +34,6 @@
 # Renesas VR DPC Update Tool (Gen3.5)
 # Implements HEX file execution using PMBus/DMA commands
 # Reference (Gen3.5): HEX header = first 4 lines (0x49...) and is NOT written to the device.
-
 ################################################################################
 
 # Color codes for output
@@ -155,6 +154,7 @@ USAGE: ${_SELF_BN} <mode> [options]
 MODES:
   flash       Program device with configuration file (.hex)
   verify      Verify file/device compatibility (IC_DEVICE_ID/REV)
+  checkfile   Validate a .hex file OFFLINE (structure/header/records/CRC); no device needed
   info        Read device identification (IC_DEVICE_ID/REV)
   status      Show programming status read-only: BANK_STATUS (decoded), CONFIG_CRC,
               NVM saves, MCUFLT. No flash, no NVM save consumed (aliases: bank, bankstatus)
@@ -174,9 +174,11 @@ FLASH OPTIONS:
                   diagnostic READS still run (device detect, IC_DEVICE_ID/REV, CONFIG_CRC,
                   NVM saves, BANK_STATUS). Use it to preview what a real flash would do and to
                   see whether the device is already programmed. It never modifies the device.
-  -F              Force: flash even if the device is already programmed with this config
-                  (by default an already-programmed device is skipped to avoid wasting an
-                  NVM save). Each real flash consumes one NVM save.
+  -F              Force. Overrides these safety stops: (1) already-programmed device (normally
+                  skipped to avoid wasting an NVM save); (2) unreadable NVM saves counter
+                  (normally aborts, since room/verification cannot be confirmed); (3) unsupported
+                  .hex record type (normally aborts; with -F the record is skipped). Each real
+                  flash consumes one NVM save. Use with care.
   -y              Non-interactive: skip the "Continue?" confirmation prompt (for batch use).
   -P0 | -P1       SMBus PEC on/off for i2ctransfer helpers (default: OFF)
   -r <n>          Repeat programming N times (redundancy). Each run consumes NVM saves.
@@ -204,7 +206,8 @@ IDEMPOTENCY (avoid re-flashing every time):
 VERIFY MODE (read-only, no writes):
   ${_SELF_BN} verify -b <bus> -a <addr> -f <file.hex>
   Checks, WITHOUT touching the device, that:
-    - the file matches the device  -> IC_DEVICE_ID (0xAD) must match (REV/version are info only);
+    - the file matches the device  -> IC_DEVICE_ID (0xAD) must match (IC_DEVICE_REV and
+      version string are info only — logged, never block verify/flash);
     - whether the device is ALREADY programmed with this file -> compares the live CONFIG_CRC
       (DMA @0x00F8) against the CRC stored in the file. It reports ALREADY PROGRAMMED / needs
       programming, so you can decide whether a flash is needed. Safe to run while regulating.
@@ -241,6 +244,9 @@ EXAMPLES:
   # Check the bus / find the device
   ${_SELF_BN} scan -b 12
 
+  # Validate a .hex file offline (no device / no I2C), before going on-site
+  ${_SELF_BN} checkfile -f RAA228249-0_0x60_on.hex
+
   # Verify a file matches the device and whether it is already programmed (no writes)
   ${_SELF_BN} verify -b 12 -a 0x60 -f RAA228249-0_0x60_on.hex
 
@@ -259,7 +265,8 @@ EXAMPLES:
 NOTES (Gen3.5):
   - HEX file header is the first 4 lines (0x49...) and must NOT be written to the device.
   - HEX record types supported: 00 write, 10 read+compare, 11 poll, 12 mask, 20 wait, 49 header.
-  - IC_DEVICE_ID (0xAD) is the mandatory file<->device match; IC_DEVICE_REV/version are informational.
+  - IC_DEVICE_ID (0xAD) is the mandatory file<->device match; IC_DEVICE_REV (0xAE) and the
+    version string (0x01) are informational (logged as "info only", never blocks flash).
   - BANK_STATUS (DMA @0x0084): "Unaffected" banks are NORMAL (a config writes only the bank(s) it
     needs). A successful flash shows "Written OK" on the touched bank(s) with no FAIL nibbles.
     If ALL banks are "Unaffected", nothing was rewritten (config already present or RAM-only);
@@ -290,10 +297,10 @@ check_dependencies() {
 # --------------------------------
 
 dma_set_addr() {
-    local addr="$1"     # es: 0x0035, 0x00F8, 0xEC01
-    local a=$((addr))   # normalizza in int
+    local addr="$1"     # e.g. 0x0035, 0x00F8, 0xEC01
+    local a=$((addr))   # normalize to int
 
-    # Gen3.5: DMA Address (0xC7) accetta 2 byte: LSB poi MSB
+    # Gen3.5: DMA Address (0xC7) takes 2 bytes: LSB then MSB
     local b0 b1
     b0=$(printf '0x%02x' $(( a        & 0xff )))   # LSB
     b1=$(printf '0x%02x' $(( (a >> 8) & 0xff )))   # MSB
@@ -307,7 +314,7 @@ dma_set_addr() {
 
     # Route through i2c_write -> i2c_rw_wrapper so the DMA pointer set gets the same
     # retry logic (I2C_MAX_RETRY) and PEC handling ($I2C_XFER_FLAGS) as the config-write path.
-    # ESEMPIO reale (NVM saves): i2ctransfer -y 1 w3@0x60 0xC7 0x35 0x00
+    # Real example (NVM saves): i2ctransfer -y 1 w3@0x60 0xC7 0x35 0x00
     i2c_write "$I2C_BUS" "$DEVICE_ADDR" "$CMD_DMA_ADDR" "$b0" "$b1" >/dev/null
 }
 
@@ -319,7 +326,7 @@ dma_read32() {
     # it inherits retry (I2C_MAX_RETRY) and PEC, AND its short-read guard: a truncated but
     # otherwise-successful transfer is rejected instead of being silently padded to 0x00000000
     # (which would fool the blank-device / CONFIG_CRC / NVM-saves / BANK_STATUS decisions).
-    # ESEMPIO reale: i2ctransfer -y 1 w1@0x60 0xC5 r4
+    # Real example: i2ctransfer -y 1 w1@0x60 0xC5 r4
     local line b0 b1 b2 b3
     line=$(i2c_read_n "$I2C_BUS" "$DEVICE_ADDR" "$CMD_DMA_DATA" 4) || return 1
     read -r b0 b1 b2 b3 <<< "$line"
@@ -339,7 +346,7 @@ read_nvm_saves_available() {
     local v_hex
     v_hex=$(dma_read32 0x0035) || return 1
 
-    # Gen3.5: contatore 0..24 (usa LSB = ZZ)
+    # Gen3.5: counter 0..24 (uses LSB = ZZ)
     local v_dec=$(( 16#${v_hex#0x} & 0xFF ))
     echo "$v_dec"
 }
@@ -395,6 +402,10 @@ unbind_driver_for_device() {
     if echo "$dev_id" > "$unbind_file"; then
         DRIVER_UNBIND_DEVID="$dev_id"
         DRIVER_UNBIND_NAME="$driver_name"
+        # Persist recovery state immediately so an UNTRAPPABLE death (SIGKILL / power loss)
+        # mid-operation still leaves a record on disk for a later 'rebind' to restore the
+        # driver on the live rail. The EXIT/INT/TERM/HUP trap removes it on clean rebind.
+        save_unbind_state
         _sleep_frac 0.2
     fi
     return 0
@@ -408,8 +419,11 @@ rebind_driver_if_unbound() {
     [ "$delay" -gt 0 ] 2>/dev/null && sleep "$delay"
     if echo "$DRIVER_UNBIND_DEVID" > "$bind_file"; then
         log_info "Driver $DRIVER_UNBIND_NAME rebound to $DRIVER_UNBIND_DEVID"
+        # Recovery complete -> drop the persisted state so a later explicit 'rebind' does not
+        # act on an already-bound device.
+        rm -f "$UNBIND_STATE_FILE" 2>/dev/null
     else
-        log_warn "Rebind failed for $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID"
+        log_warn "Rebind failed for $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID (recovery state kept at $UNBIND_STATE_FILE; retry with 'rebind')"
     fi
     DRIVER_UNBIND_DEVID=""
     DRIVER_UNBIND_NAME=""
@@ -428,8 +442,15 @@ rebind_driver_from_state_file() {
     [ -f "$UNBIND_STATE_FILE" ] || return 1
     DRIVER_UNBIND_DEVID=$(sed -n '1p' "$UNBIND_STATE_FILE" 2>/dev/null)
     DRIVER_UNBIND_NAME=$(sed -n '2p' "$UNBIND_STATE_FILE" 2>/dev/null)
-    rm -f "$UNBIND_STATE_FILE" 2>/dev/null
-    [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 1
+    # Do NOT delete the state file here: rebind_driver_if_unbound removes it only on a
+    # SUCCESSFUL rebind and keeps it on failure so a later 'rebind' can retry. Deleting it
+    # up-front would lose the recovery record if the bind fails on a live rail (and make the
+    # "recovery state kept" warning a lie).
+    if [ -z "$DRIVER_UNBIND_DEVID" ] || [ -z "$DRIVER_UNBIND_NAME" ]; then
+        # Corrupt/empty state file -> nothing we can act on; drop it.
+        rm -f "$UNBIND_STATE_FILE" 2>/dev/null
+        return 1
+    fi
     rebind_driver_if_unbound
     return 0
 }
@@ -455,6 +476,29 @@ calc_pec() {
         crc=$((crc & 0xFF))
     done
     printf '0x%02x' "$crc"
+}
+
+# Per-line file CRC8 (Renesas .hex): poly 0x07, init 0x00, no reflection, no final XOR,
+# computed over the record bytes[2..(end-1)] i.e. the I2C payload (addr8, cmd, data) EXCLUDING
+# the two file-framing bytes (rectype, length) at the front and the stored CRC byte at the end.
+# Arg: a hex STRING of just the bytes to checksum (even length). Prints the CRC8 as 2 lowercase
+# hex digits. Used by checkfile to validate each line's trailing CRC byte offline.
+line_crc8_07() {
+    local hexstr="$1" crc=0 i byte j n
+    n=${#hexstr}
+    for ((i = 0; i < n; i += 2)); do
+        byte=$((16#${hexstr:i:2}))
+        crc=$((crc ^ byte))
+        for j in 1 2 3 4 5 6 7 8; do
+            if [ $((crc & 0x80)) -ne 0 ]; then
+                crc=$(((crc << 1) ^ 0x07))
+            else
+                crc=$((crc << 1))
+            fi
+            crc=$((crc & 0xFF))
+        done
+    done
+    printf '%02x' "$crc"
 }
 
 i2c_rw_wrapper() {
@@ -830,7 +874,7 @@ execute_wait_line() {
 }
 
 # --------------------------------
-# Parse header (first 15 x 0x49 lines) and verify device/file versions
+# Parse header (first HEADER_MAX x 0x49 lines; 4 for Gen3.5) and verify device/file versions
 # --------------------------------
 EXPECTED_ID_U32=""
 EXPECTED_REV_U32=""
@@ -841,6 +885,13 @@ parse_header_line_49() {
     local len=$1 addr8=$2 idcode=$3
     shift 3
     local -a data; data=("$@")
+
+    # Normalize idcode to canonical uppercase hex (0xNN). The .hex bytes preserve the file's
+    # original case, so a lowercase file (idcode 'ad'/'ae') would miss the "0xAD"/"0xAE"
+    # string compares below and disable the IC_DEVICE_ID/REV file<->device check.
+    # Missing IC_DEVICE_ID is rejected by verify_device_against_header.
+    # Evaluating through arithmetic canonicalizes any case/prefix to 0xNN uppercase.
+    printf -v idcode '0x%02X' "$((idcode))"
 
     # We care about idcode AD (IC_DEVICE_ID), AE (IC_DEVICE_REV) and 01 (ASCII version string).
     # NOTE: the expected CONFIG_CRC is NOT in the header; it is on a data line of the file
@@ -876,20 +927,30 @@ parse_expected_config_crc() {
     local ln=$(( idx * stride + base ))
     [ "$ln" -ge 1 ] || { log_dbg "CRC line number invalid: $ln"; return 1; }
 
-    local raw h
-    raw=$(sed -n "${ln}p" "$CONFIG_FILE" 2>/dev/null)
-    [ -n "$raw" ] || { log_warn "CRC line $ln not found in $CONFIG_FILE (config index $idx)"; return 1; }
-    h=$(normalize_hex_line "$raw")
-    [ -n "$h" ] || { log_warn "CRC line $ln is not a valid hex record: '$raw'"; return 1; }
+    # Locate the CRC record by COUNTING valid hex records (same rules as checkfile),
+    # not by physical line number: blank/comment lines would shift sed -n ${ln}p.
+    local raw s count=0
+    while IFS= read -r raw || [ -n "$raw" ]; do
+        s="${raw//[$' \t\r']/}"
+        [ -z "$s" ] && continue
+        case "$s" in \#*|//* ) continue ;; esac
+        [[ "$s" =~ ^[0-9a-fA-F]+$ ]] || continue
+        count=$((count + 1))
+        [ "$count" -eq "$ln" ] && break
+    done < "$CONFIG_FILE"
+    if [ "$count" -ne "$ln" ] || [ -z "$s" ]; then
+        log_warn "CRC record #$ln not found in $CONFIG_FILE (found only $count hex record(s); config index $idx)"
+        return 1
+    fi
 
     # NOTE: `mapfile < <(cmd)` exits on mapfile's own status, not cmd's, so hex_to_bytes
     # returning 1 (odd-length line) would be swallowed. Capture first, then check.
     local -a bytes; local _hb
-    _hb=$(hex_to_bytes "$h") || return 1
+    _hb=$(hex_to_bytes "$s") || return 1
     mapfile -t bytes <<< "$_hb"
     # Need rectype + len + addr8 + cmd + 4 data bytes = at least 8 bytes.
     if [ "${#bytes[@]}" -lt 8 ] || [ "${bytes[0]}" != "0x00" ]; then
-        log_warn "CRC line $ln does not look like a 4-byte write record: '$h'"
+        log_warn "CRC line $ln does not look like a 4-byte write record: '$s'"
         return 1
     fi
     EXPECTED_CONFIG_CRC=$(rev4_to_u32 "${bytes[4]#0x}" "${bytes[5]#0x}" "${bytes[6]#0x}" "${bytes[7]#0x}" 2>/dev/null)
@@ -901,18 +962,19 @@ parse_expected_config_crc() {
 # IC_DEVICE_ID (0xAD) is the ONLY hard requirement (mismatch => wrong file => abort).
 # IC_DEVICE_REV (0xAE) and the version string (0x01) are INFORMATIONAL only and never block.
 verify_device_against_header() {
+    if [ -z "$EXPECTED_ID_U32" ]; then
+        log_error "IC_DEVICE_ID (0xAD) missing from header; refusing to use an unverified file"
+        return 1
+    fi
+
     unbind_driver_for_device
 
-    if [ -n "$EXPECTED_ID_U32" ]; then
-        local dev_id; dev_id=$(read_ic_device_id) || { log_error "Failed to read IC_DEVICE_ID"; return 1; }
-        if ! eq_u32_hex "$dev_id" "$EXPECTED_ID_U32"; then
-            log_error "IC_DEVICE_ID mismatch: this file is NOT for this device (device=$dev_id file=$EXPECTED_ID_U32)"
-            return 1
-        fi
-        log_info "IC_DEVICE_ID match: $dev_id (file is for this device)"
-    else
-        log_warn "No IC_DEVICE_ID (0xAD) in header; cannot confirm the file matches the device"
+    local dev_id; dev_id=$(read_ic_device_id) || { log_error "Failed to read IC_DEVICE_ID"; return 1; }
+    if ! eq_u32_hex "$dev_id" "$EXPECTED_ID_U32"; then
+        log_error "IC_DEVICE_ID mismatch: this file is NOT for this device (device=$dev_id file=$EXPECTED_ID_U32)"
+        return 1
     fi
+    log_info "IC_DEVICE_ID match: $dev_id (file is for this device)"
 
     [ -n "$EXPECTED_VER_STR" ] && log_info "File firmware/config version (header 0x01): $EXPECTED_VER_STR"
 
@@ -968,8 +1030,8 @@ program_device() {
     [ -f "$CONFIG_FILE" ] || { log_error "Config file not found: $CONFIG_FILE"; return 1; }
 
     case "${CONFIG_FILE,,}" in
-	*.hex) : ;;
-	*) log_error "Only .hex files are supported in this Gen3.5 tool: $CONFIG_FILE"; return 1 ;;
+        *.hex) : ;;
+        *) log_error "Only .hex files are supported in this Gen3.5 tool: $CONFIG_FILE"; return 1 ;;
     esac
 
     EXPECTED_ID_U32=""
@@ -1014,7 +1076,7 @@ program_device() {
             log_dbg "File record addr8=$addr8 (7-bit $(printf '0x%02x' $((16#${addr8#0x} >> 1)))) differs from -a $DEVICE_ADDR (8-bit $exp_addr8); using -a address"
         fi
 
-        # Header lines (0x49): first 15 are header, do not execute
+        # Header lines (0x49): the first HEADER_MAX (4 for Gen3.5) are header, do not execute
         if [ "$rectype" = "0x49" ] && [ $header_count -lt "$HEADER_MAX" ]; then
             header_seen=1
             header_count=$((header_count + 1))
@@ -1038,6 +1100,12 @@ program_device() {
         fi
 
         case "$rectype" in
+            0x49)
+                # A 0x49 header record beyond the first HEADER_MAX lines: header records are
+                # NEVER written to the device, so skip it rather than treating it as an
+                # unsupported record and aborting. Anomalous but harmless.
+                log_dbg "Extra 0x49 header record beyond header ($header_count/$HEADER_MAX) -> skipping (not written): $h"
+                ;;
             0x00)
                 # 00 write: bytes[3]=cmd, bytes[4..(end-2)] data, last is CRC.
                 # Need >=5 bytes (cmd + CRC, data optional) so the slice length is never negative.
@@ -1069,7 +1137,15 @@ program_device() {
                 execute_wait_line "${bytes[3]}" "${bytes[4]}" || return 1
                 ;;
             *)
-                log_warn "Skipping unsupported record type: $rectype"
+                # An unsupported record type means the file uses a feature this tool does not
+                # implement; silently skipping it would produce an INCOMPLETE / mis-programmed
+                # device. Abort by default; -F (force) downgrades to skip-with-warning.
+                if [ "${FORCE_FLASH:-0}" -eq 1 ]; then
+                    log_warn "Unsupported record type $rectype -> skipping (forced by -F): $h"
+                else
+                    log_error "Unsupported record type $rectype in $CONFIG_FILE: aborting to avoid an incomplete flash. Use -F to skip unsupported records."
+                    return 1
+                fi
                 ;;
         esac
     done < "$CONFIG_FILE"
@@ -1160,9 +1236,9 @@ read_nvm_stable() {
     v2=$(read_nvm_saves_available 2>/dev/null || echo "")
 
     if [ -n "$v2" ]; then
-	echo "$v2"
+        echo "$v2"
     else
-	echo "$v1"
+        echo "$v1"
     fi
 }
 
@@ -1244,6 +1320,127 @@ scan_file_header() {
     return 0
 }
 
+# --------------------------------
+# checkfile: OFFLINE .hex validation (no device, no I2C, no writes)
+# --------------------------------
+# Structurally validates a .hex against the SAME rules the flash path uses, so a file can be
+# checked before going on-site. Reuses scan_file_header (header/ID/REV/version) and
+# parse_expected_config_crc (CRC-record location), and applies the same per-record type/length
+# checks as program_device. Returns 0 if the file is valid (no blocking errors), 1 otherwise.
+check_file() {
+    local errs=0 wrns=0
+
+    [ -f "$CONFIG_FILE" ] || { log_error "Config file not found: $CONFIG_FILE"; return 1; }
+    case "${CONFIG_FILE,,}" in
+        *.hex) log_info "File: $CONFIG_FILE (.hex OK)" ;;
+        *) log_error "Only .hex files are supported in this Gen3.5 tool: $CONFIG_FILE"; return 1 ;;
+    esac
+
+    # --- Header: IC_DEVICE_ID (mandatory), IC_DEVICE_REV / version (informational) ---
+    scan_file_header || { log_error "Failed to read file header: $CONFIG_FILE"; return 1; }
+    if [ "$HEADER_LINES_PARSED" -eq 0 ]; then
+        log_error "No header (0x49...) records found; cannot confirm file<->device match"
+        errs=$((errs + 1))
+    fi
+    if [ -n "$EXPECTED_ID_U32" ]; then
+        log_info "IC_DEVICE_ID (0xAD): $EXPECTED_ID_U32"
+    else
+        log_error "IC_DEVICE_ID (0xAD) missing from header (mandatory)"
+        errs=$((errs + 1))
+    fi
+    if [ -n "$EXPECTED_REV_U32" ]; then log_info "IC_DEVICE_REV (0xAE): $EXPECTED_REV_U32"; else log_warn "IC_DEVICE_REV (0xAE) not in header"; wrns=$((wrns + 1)); fi
+    if [ -n "$EXPECTED_VER_STR" ]; then log_info "File version (0x01): $EXPECTED_VER_STR"; else log_warn "version string (0x01) not in header"; wrns=$((wrns + 1)); fi
+
+    # Where the expected CONFIG_CRC record should be (1-based count of valid hex records).
+    local crc_ln=$(( RENESAS_CRC_CONFIG_INDEX * RENESAS_CRC_LINE_STRIDE + RENESAS_CRC_LINE_BASE ))
+    local crc_rec=""
+
+    # --- Per-record structural validation (same type/length rules as program_device) ---
+    # Single pure-bash pass (no $(...) per line) so it stays fast even on busybox / large files.
+    local rawline s rectype nbytes reccount=0 lineno=0
+    local rec00=0 rec10=0 rec11=0 rec12=0 rec20=0 rec49=0
+    local crc_checked=0 crc_bad=0
+    while IFS= read -r rawline || [ -n "$rawline" ]; do
+        lineno=$((lineno + 1))
+        s="${rawline//[$' \t\r']/}"                 # strip spaces/tabs/CR
+        [ -z "$s" ] && continue
+        case "$s" in \#*|//* ) continue ;; esac      # skip comments
+        [[ "$s" =~ ^[0-9a-fA-F]+$ ]] || continue     # hex-only records
+        reccount=$((reccount + 1))
+        [ "$reccount" -eq "$crc_ln" ] && crc_rec="$s"
+
+        if [ $(( ${#s} % 2 )) -ne 0 ]; then
+            log_error "record $reccount (line $lineno): odd hex length: $s"; errs=$((errs + 1)); continue
+        fi
+        nbytes=$(( ${#s} / 2 ))
+        if [ "$nbytes" -lt 4 ]; then
+            log_error "record $reccount (line $lineno): malformed (need >=4 bytes): $s"; errs=$((errs + 1)); continue
+        fi
+
+        # Per-line CRC8 integrity: the last byte is CRC8 (poly 0x07, init 0) over the payload
+        # bytes[2..(end-1)] = the I2C bytes (addr8, cmd, data) WITHOUT the rectype/length framing.
+        # A single changed byte (accidental corruption or tampering) breaks its line's CRC here.
+        local payload_hex="${s:4:$(( ${#s} - 6 ))}"
+        local stored_crc="${s: -2}"
+        local calc_crc; calc_crc=$(line_crc8_07 "$payload_hex")
+        crc_checked=$((crc_checked + 1))
+        if [ "${calc_crc,,}" != "${stored_crc,,}" ]; then
+            log_error "record $reccount (line $lineno): CRC8 mismatch (stored=0x$stored_crc calc=0x$calc_crc): $s"
+            crc_bad=$((crc_bad + 1)); errs=$((errs + 1))
+        fi
+
+        rectype="0x${s:0:2}"
+
+        local need=0
+        case "$rectype" in
+            0x49) need=5; rec49=$((rec49 + 1)) ;;
+            0x00) need=5; rec00=$((rec00 + 1)) ;;
+            0x10) need=8; rec10=$((rec10 + 1)) ;;
+            0x11) need=8; rec11=$((rec11 + 1)) ;;
+            0x12) need=7; rec12=$((rec12 + 1)) ;;
+            0x20) need=5; rec20=$((rec20 + 1)) ;;
+            *) log_error "record $reccount (line $lineno): UNSUPPORTED record type $rectype"; errs=$((errs + 1)); continue ;;
+        esac
+        [ "$nbytes" -lt "$need" ] && { log_error "record $reccount (line $lineno): $rectype too short ($nbytes bytes, need >= $need): $s"; errs=$((errs + 1)); }
+    done < "$CONFIG_FILE"
+
+    log_info "Records: total=$reccount (0x00=$rec00 0x10=$rec10 0x11=$rec11 0x12=$rec12 0x20=$rec20 0x49=$rec49)"
+
+    # --- Per-line CRC8 integrity summary ---
+    if [ "$crc_bad" -eq 0 ]; then
+        log_info "Per-line CRC8: OK ($crc_checked/$crc_checked records verified; poly 0x07 over payload)"
+    else
+        log_error "Per-line CRC8: FAILED ($crc_bad/$crc_checked records with bad CRC8) -> file corrupted or tampered"
+    fi
+
+    # --- CONFIG_CRC record: presence, shape, and blank check ---
+    if [ -z "$crc_rec" ]; then
+        log_error "Expected CONFIG_CRC record #$crc_ln not found (file has $reccount hex records)"
+        errs=$((errs + 1))
+    elif [ "${crc_rec:0:2}" != "00" ] || [ $(( ${#crc_rec} / 2 )) -lt 8 ]; then
+        log_error "Record #$crc_ln is not a 4-byte 0x00 write record (cannot hold CONFIG_CRC): $crc_rec"
+        errs=$((errs + 1))
+    else
+        # 4 data bytes = bytes[4..7]; host order = LSB-first single reversal (as dma_read32 @0x00F8).
+        local ecrc; ecrc=$(printf '0x%02x%02x%02x%02x' "$((16#${crc_rec:14:2}))" "$((16#${crc_rec:12:2}))" "$((16#${crc_rec:10:2}))" "$((16#${crc_rec:8:2}))")
+        case "$ecrc" in
+            0x00000000|0xffffffff)
+                log_warn "Expected CONFIG_CRC is blank ($ecrc): suspicious file (wrong CRC line, shifted records, or truncated config)"
+                wrns=$((wrns + 1)) ;;
+            *)
+                log_info "Expected CONFIG_CRC (record #$crc_ln): $ecrc" ;;
+        esac
+    fi
+
+    log_info "=================================================="
+    if [ "$errs" -eq 0 ]; then
+        log_info "File validation PASSED ($wrns warning(s))"
+        return 0
+    fi
+    log_error "File validation FAILED ($errs error(s), $wrns warning(s))"
+    return 1
+}
+
 # One-time pre-flight before flashing: detect device, parse header, confirm the file
 # matches this device (IC_DEVICE_ID), report version + live CONFIG_CRC, and decide whether
 # the device is already programmed with this config (sets ALREADY_PROGRAMMED). No writes.
@@ -1257,9 +1454,12 @@ preflight_check() {
     esac
 
     scan_file_header || { log_error "Failed to read file header: $CONFIG_FILE"; return 1; }
-    [ "$HEADER_LINES_PARSED" -eq 0 ] && log_warn "No header (0x49...) at start of file; cannot confirm file/device match"
+    if [ "$HEADER_LINES_PARSED" -eq 0 ]; then
+        log_error "No header (0x49...) at start of file; refusing to flash an unverified file"
+        return 1
+    fi
 
-    # IC_DEVICE_ID match is mandatory (wrong file => abort); REV/version are informational.
+    # IC_DEVICE_ID match is mandatory; IC_DEVICE_REV is info-only (never blocks).
     verify_device_against_header || return 1
 
     # Expected CONFIG_CRC comes from a data line of the file (not the header).
@@ -1315,8 +1515,20 @@ flash_with_redundancy() {
     # Read initial NVM saves
     local saves_before saves_after used
     saves_before=$(read_nvm_saves_available) || {
-        log_warn "Unable to read NVM saves available (DMA @0x0035). Continuing without slot checks."
-        saves_before=""
+        # A failed NVM-saves read (DMA @0x0035) means we cannot confirm there is room to
+        # program, and it usually signals the DMA read path itself is unreliable (which also
+        # compromises CRC / BANK_STATUS verification). Abort by default; -F forces past it.
+        # Dry-run never writes, so it just warns and continues.
+        if [ "$DRY_RUN" -eq 1 ]; then
+            log_warn "Unable to read NVM saves available (DMA @0x0035). Dry-run: continuing (no writes)."
+            saves_before=""
+        elif [ "${FORCE_FLASH:-0}" -eq 1 ]; then
+            log_warn "Unable to read NVM saves available (DMA @0x0035). Overridden by -F (force); continuing without slot checks."
+            saves_before=""
+        else
+            log_error "Unable to read NVM saves available (DMA @0x0035): cannot confirm there is room to program. Aborting. Use -F to override."
+            return 1
+        fi
     }
 
     if [ -n "$saves_before" ]; then
@@ -1351,6 +1563,13 @@ flash_with_redundancy() {
                     log_info "NVM saves exhausted (remaining=$saves_before, need >= $need) -> stopping after $((i - 1)) run(s)."
                     break
                 fi
+                # First run only: the per-run NVM cost is not yet known, so this gate can only
+                # require the minimum (1). A multi-save config started with very few saves left
+                # may fail its final save mid-run (caught afterwards by post_flash_checks rather
+                # than refused up front). Surface it so a partial run is not mistaken for a bug.
+                if [ -z "$used_per_run" ] && [ "$saves_before" -le 1 ]; then
+                    log_warn "Starting run $i with only $saves_before NVM save(s) left and unknown per-run cost; a multi-save config may not complete."
+                fi
             fi
         else
             [ "$i" -le "$rep" ] || break
@@ -1373,8 +1592,8 @@ flash_with_redundancy() {
 
         # After run, re-check NVM saves and compute delta
         if [ -n "$saves_before" ]; then
-	_sleep_frac 0.1
-	saves_after=$(read_nvm_stable)
+            _sleep_frac 0.1
+            saves_after=$(read_nvm_stable)
 
             if [ -n "$saves_after" ]; then
                 used=$((saves_before - saves_after))
@@ -1436,7 +1655,7 @@ verify_mode() {
         return 1
     fi
 
-    # IC_DEVICE_ID match (mandatory); REV/version informational.
+    # IC_DEVICE_ID match is mandatory; IC_DEVICE_REV is info-only (never blocks).
     verify_device_against_header || return 1
 
     # Expected CONFIG_CRC from a data line of the file (not the header).
@@ -1452,9 +1671,62 @@ verify_mode() {
     return 0
 }
 
+# Targeted, driver-aware probe of a single DEVICE_ADDR. The passive bus map shows 'UU'
+# (not the address) when the kernel driver is bound, and Quick-Write scans can miss the
+# device entirely, so give a definitive PRESENT/absent answer for the requested -a address.
+scan_probe_addr() {
+    local addr_hex id out
+    addr_hex=$(printf '%02x' $((DEVICE_ADDR)))
+
+    # 1) A sysfs device node exists whenever a kernel driver is bound (same signal
+    #    detect_device uses). This is reliable regardless of i2cdetect probing method.
+    for id in "${I2C_BUS}-$(printf '%04x' $((DEVICE_ADDR)))" "${I2C_BUS}-${addr_hex}"; do
+        if [ -d "/sys/bus/i2c/devices/$id" ]; then
+            log_info "Target $DEVICE_ADDR: PRESENT (kernel driver bound; appears as 'UU', sysfs: $id)"
+            return 0
+        fi
+    done
+
+    # 2) Not bound: probe ONLY this address with Receive Byte (-r). Limiting the range to
+    #    the target keeps the (potentially intrusive) read off every other chip on the bus.
+    out=$(i2cdetect -y -r "$I2C_BUS" "$DEVICE_ADDR" "$DEVICE_ADDR" 2>/dev/null)
+    if printf '%s\n' "$out" | grep -qiE " (${addr_hex}|UU)( |$)"; then
+        log_info "Target $DEVICE_ADDR: PRESENT (responded on bus $I2C_BUS)"
+        return 0
+    fi
+
+    log_warn "Target $DEVICE_ADDR: NOT found on bus $I2C_BUS"
+    return 1
+}
+
 scan_bus() {
     log_info "I2C Bus $I2C_BUS Device Map:"
-    i2cdetect -y "$I2C_BUS"
+
+    local out rc
+    out=$(i2cdetect -y "$I2C_BUS" 2>&1); rc=$?
+    printf '%s\n' "$out"
+
+    # i2cdetect's default ("auto") mode probes most of the range (including the ~0x60 range
+    # used by the Renesas VRs) with SMBus Quick Write, and only 0x30-0x37 / 0x50-0x5f with
+    # Receive Byte. The BMC I2C adapter implements Quick Write, so the map is complete there.
+    # The host/CPU adapter frequently does NOT implement Quick Write, so i2cdetect fails with
+    # "Can't use SMBus Quick Write command on this bus" and every Quick-Write address is
+    # skipped. Detect that and retry the full map with Receive Byte (-r), which covers the
+    # whole range on such adapters.
+    if [ $rc -ne 0 ] || printf '%s\n' "$out" | grep -qiE "can't use|not available|error"; then
+        log_warn "Quick-Write probe unavailable on bus $I2C_BUS (typical on the host adapter); retrying with Receive Byte (-r)"
+        out=$(i2cdetect -y -r "$I2C_BUS" 2>&1); rc=$?
+        printf '%s\n' "$out"
+        if [ $rc -ne 0 ] || printf '%s\n' "$out" | grep -qiE "can't use|not available|error"; then
+            log_error "i2cdetect could not probe bus $I2C_BUS with either Quick Write or Receive Byte"
+        fi
+    fi
+
+    # If a target address was given, add a definitive, driver-aware verdict for it.
+    if [ -n "$DEVICE_ADDR" ]; then
+        scan_probe_addr
+    fi
+    return 0
 }
 
 monitor_telemetry() {
@@ -1531,54 +1803,54 @@ dump_registers() {
         echo "----------------------------------------"
 
         local reg hex_reg value dec ascii
-	printf "%-8s %-12s\n" "Addr" "DMA32"
-	echo "----------------------------------------"
+        printf "%-8s %-12s\n" "Addr" "DMA32"
+        echo "----------------------------------------"
 
-	for reg in $(seq 0 255); do
-	    hex_reg=$(printf "0x%04x" $reg)
+        for reg in $(seq 0 255); do
+            hex_reg=$(printf "0x%04x" $reg)
 
-	    val=$(dma_read32 "$hex_reg" 2>/dev/null)
+            val=$(dma_read32 "$hex_reg" 2>/dev/null)
 
-	    if [ -n "$val" ]; then
-		printf "%-8s %-12s\n" "$hex_reg" "$val"
-	    else
-		printf "%-8s %-12s\n" "$hex_reg" "N/A"
-	    fi
-	done
+            if [ -n "$val" ]; then
+                printf "%-8s %-12s\n" "$hex_reg" "$val"
+            else
+                printf "%-8s %-12s\n" "$hex_reg" "N/A"
+            fi
+        done
 
         echo ""
-	echo "=== DMA REGISTERS ==="
+        echo "=== DMA REGISTERS ==="
 
-	print_dma_field "FW_STATE"          0x0031
-	print_dma_field "FW_STATUS"         0x0032
-	print_dma_field "PATCH_VERSION"     0x0030
+        print_dma_field "FW_STATE"          0x0031
+        print_dma_field "FW_STATUS"         0x0032
+        print_dma_field "PATCH_VERSION"     0x0030
 
-	print_dma_field "IC_DEVICE_ID"      0xE0AD
-	print_dma_field "IC_DEVICE_REV"     0xE0AE
+        print_dma_field "IC_DEVICE_ID"      0xE0AD
+        print_dma_field "IC_DEVICE_REV"     0xE0AE
 
-	print_dma_field "MCUFLT"            0xEC01
-	print_dma_field "DIAGFLT"           0xEC02
+        print_dma_field "MCUFLT"            0xEC01
+        print_dma_field "DIAGFLT"           0xEC02
 
-	print_dma_field "STATUS_WORD_LO"    0xE079 0 15
-	print_dma_field "STATUS_WORD_HI"    0xE079 16 31
+        print_dma_field "STATUS_WORD_LO"    0xE079 0 15
+        print_dma_field "STATUS_WORD_HI"    0xE079 16 31
 
-	print_dma_field "SERIAL_RAW"        0xE9FF
-	print_dma_field "UNIQUE_SERIAL"     0xE9FF 15 31
+        print_dma_field "SERIAL_RAW"        0xE9FF
+        print_dma_field "UNIQUE_SERIAL"     0xE9FF 15 31
 
-	echo ""
-	echo "=== NVM / PROGRAMMING STATUS ==="
+        echo ""
+        echo "=== NVM / PROGRAMMING STATUS ==="
 
-	nvm_hex=$(dma_read32 0x0035 2>/dev/null || echo "")
-	if [ -n "$nvm_hex" ]; then
-	  nvm=$((16#${nvm_hex#0x} & 0xFF))
-	  echo "  NVM_SAVES_AVAILABLE   : $nvm_hex (count=$nvm)"
-	else
-	  echo "  NVM_SAVES_AVAILABLE   : N/A"
-	fi
+        nvm_hex=$(dma_read32 0x0035 2>/dev/null || echo "")
+        if [ -n "$nvm_hex" ]; then
+          nvm=$((16#${nvm_hex#0x} & 0xFF))
+          echo "  NVM_SAVES_AVAILABLE   : $nvm_hex (count=$nvm)"
+        else
+          echo "  NVM_SAVES_AVAILABLE   : N/A"
+        fi
 
-	print_dma_field "BANK_STATUS"       0x0084
-	print_dma_field "CONFIG_CRC"        0x00F8
-	print_dma_field "MCUFLT_CONFIRM"    0xEC01
+        print_dma_field "BANK_STATUS"       0x0084
+        print_dma_field "CONFIG_CRC"        0x00F8
+        print_dma_field "MCUFLT_CONFIRM"    0xEC01
     } | if [ -n "$output_file" ]; then
         tee "$output_file"
         log_info "Register dump saved to: $output_file"
@@ -1607,7 +1879,7 @@ read_pmbus_block_string() {
     local avail=$#
     [ "$len" -gt "$avail" ] && len="$avail"
 
-    # nessuna stringa
+    # no string
     if [ "$len" -le 0 ]; then
         echo ""
         return 0
@@ -1618,7 +1890,7 @@ read_pmbus_block_string() {
     for b in "$@"; do
         [ "$i" -ge "$len" ] && break
 
-        # ignora byte non ASCII printable
+        # ignore non-printable-ASCII bytes
         val=$(( 16#${b#0x} ))
         if [ "$val" -ge 32 ] && [ "$val" -le 126 ]; then
             # Two-step so \xNN is actually interpreted (single-step printf "\x%02x" emits
@@ -1867,7 +2139,14 @@ main() {
         log_error "Invalid -S '$RESTORE_CFG_ID' (expected a Configuration ID 0..15)"; exit 1
     fi
 
-    check_dependencies || { log_error "Dependency check failed"; exit 1; }
+    # Modes that need no device / no I2C tools: checkfile (offline file validation) and the
+    # help/usage modes. These must work on a plain workstation, so skip the i2c-tools check.
+    case "$MODE" in
+        checkfile|help|-h|--help|"")
+            : ;;
+        *)
+            check_dependencies || { log_error "Dependency check failed"; exit 1; } ;;
+    esac
 
     # Rebind on exit (skip for unbind/rebind modes). Trap SIGINT/TERM/HUP too, not just
     # EXIT: a Ctrl-C during the confirm prompt or a long sleep (poll/wait) could otherwise
@@ -1884,6 +2163,10 @@ main() {
         verify)
             [ -n "$I2C_BUS" ] && [ -n "$DEVICE_ADDR" ] && [ -n "$CONFIG_FILE" ] || { log_error "verify requires -b -a -f"; usage; }
             verify_mode
+            ;;
+        checkfile)
+            [ -n "$CONFIG_FILE" ] || { log_error "checkfile requires -f"; usage; }
+            check_file
             ;;
         info)
             [ -n "$I2C_BUS" ] && [ -n "$DEVICE_ADDR" ] || { log_error "info requires -b -a"; usage; }
@@ -1912,7 +2195,14 @@ main() {
                 log_info "No driver bound (or unbind not needed)"
                 exit 0
             fi
-            save_unbind_state && log_info "Unbound $DRIVER_UNBIND_NAME from $DRIVER_UNBIND_DEVID; run 'rebind' to restore" || exit 1
+            # State was already persisted inside unbind_driver_for_device; just confirm it
+            # landed on disk (so 'rebind' can recover) rather than saving a second time.
+            if [ -f "$UNBIND_STATE_FILE" ]; then
+                log_info "Unbound $DRIVER_UNBIND_NAME from $DRIVER_UNBIND_DEVID; run 'rebind' to restore"
+            else
+                log_error "Unbound $DRIVER_UNBIND_NAME but failed to persist recovery state ($UNBIND_STATE_FILE); 'rebind' will not work"
+                exit 1
+            fi
             ;;
         rebind)
             rebind_driver_from_state_file || { log_error "No saved unbind state (run unbind first)"; exit 1; }
