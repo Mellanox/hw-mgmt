@@ -168,7 +168,8 @@ ifeq ($(with_bmc),1)
 		hw-management-bmc-health-monitor.service \
 		hw-management-bmc-reset-cause-logger.service \
 		hw-management-bmc-i2c-slave-setup.service \
-		hw-management-bmc-recovery-handler.service
+		hw-management-bmc-recovery-handler.service \
+		hw-management-bmc-wd-heartbeat.service
 endif
 
 override_dh_systemd_start:
@@ -219,7 +220,8 @@ ifeq ($(with_bmc),1)
 		hw-management-bmc-health-monitor.service \
 		hw-management-bmc-reset-cause-logger.service \
 		hw-management-bmc-i2c-slave-setup.service \
-		hw-management-bmc-recovery-handler.service
+		hw-management-bmc-recovery-handler.service \
+		hw-management-bmc-wd-heartbeat.service
 endif
 
 override_dh_strip_nondeterminism:

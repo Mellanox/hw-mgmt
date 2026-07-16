@@ -145,6 +145,7 @@ bmc/
     │       ├── hw-management-bmc-a2d-leakage-config.json
     │       ├── hw-management-bmc-bom.json   # SMBIOS BOM alternates → /etc/hw-management-bmc-bom.json (hw-management-bmc-devtree.sh)
     │       ├── hw-management-bmc-boot-complete.conf   # → /etc/hw-management-bmc-boot-complete.conf (boot gate)
+    │       ├── hw-management-bmc-wd-heartbeat.conf   # → /etc/hw-management-bmc-wd-heartbeat.conf (ABR watchdog heartbeat: EID/interval/payload)
     │       ├── hw-management-bmc-gpio-pins.json   # GPIO sysfs init → /etc/hw-management-bmc-gpio-pins.json
     │       ├── hw-management-bmc.conf
     │       ├── hw-management-bmc-early-i2c-devices.json
@@ -162,7 +163,8 @@ bmc/
     │       ├── hw-management-bmc-plat-specific-preps.service
     │       ├── hw-management-bmc-recovery-handler.service
     │       ├── hw-management-bmc-reset-cause-logger.service
-    │       └── hw-management-bmc-sync-ethaddr.service
+    │       ├── hw-management-bmc-sync-ethaddr.service
+    │       └── hw-management-bmc-wd-heartbeat.service   # ABR watchdog heartbeat to Bali/Caliptra over MCTP (starts after boot-complete)
     └── usr/bin/
         ├── hw-management-bmc-a2d-leakage-config.sh
         ├── hw-management-bmc-a2d-leakage-read.sh
@@ -199,6 +201,7 @@ bmc/
         ├── hw-management-bmc-show-reset-cause.sh
         ├── hw-management-bmc-reset-cause-logger.sh
         ├── hw-management-bmc-set-extra-params.sh
+        ├── hw-management-bmc-wd-heartbeat.sh   # Periodic ABR watchdog heartbeat to Bali/Caliptra via mctp-client
         └── hw-management-bmc.sh
 ```
 
@@ -384,6 +387,7 @@ flowchart TB
 | **hw-management-bmc-health-monitor** | simple | `/usr/bin/hw-management-bmc-health-monitor.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**, **`Wants=syslog.target`**. **`Restart=always`**. |
 | **hw-management-bmc-i2c-slave-setup** | oneshot | `/usr/bin/hw-management-bmc-i2c-slave-setup.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**. **`Before=`** `hw-management-bmc-recovery-handler`. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. |
 | **hw-management-bmc-recovery-handler** | simple | `/usr/bin/hw-management-bmc-recovery-handler.sh` | `WantedBy=multi-user.target` | **`After=`** `multi-user.target`, **`hw-management-bmc-i2c-slave-setup`**. **`Requires=`** i2c-slave-setup. **`EnvironmentFile=/etc/hw-management-bmc-recovery.conf`**. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. **`Restart=always`**. |
+| **hw-management-bmc-wd-heartbeat** | simple | `/usr/bin/hw-management-bmc-wd-heartbeat.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**, **`hw-management-bmc-boot-complete.service`** and **`Wants=`** it (heartbeat only after the BMC has booted). **`EnvironmentFile=-/etc/hw-management-bmc-wd-heartbeat.conf`**. **`Restart=on-failure`**. Stop-gap ABR watchdog servicing — see **ABR watchdog heartbeat** below. |
 
 Scripts **`hw-management-bmc-powerctrl.sh`**, **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-gpio-set.sh`**, **`hw-management-bmc-leakage-handler.sh`**, **`hw-management-bmc-get-reset-cause.sh`**, **`hw-management-bmc-show-reset-cause.sh`**, etc., are invoked by other scripts, **udev**, or operators; they are not tied 1:1 to a dedicated systemd unit in this package. The logger unit uses **`hw-management-bmc-reset-cause-logger.sh`** for boot diagnostics, while **`hw-management-bmc-get-reset-cause.sh`** exports reset-cause sysfs-style files: primary **`reset_pwr_cycle`** / **`reset_soft_reboot`** / **`reset_unknown`** at **`/var/run/hw-management/bmc/`** (exactly one **1**), hardware **`reset_*`** under **`/var/run/hw-management/bmc/domains/`** (see reset-cause policy table), raw SCU words at the bmc runtime root.
 
@@ -530,6 +534,39 @@ Installed to **`/usr/bin/hw-management-bmc-leakage-handler.sh`**. HID-agnostic: 
 **Behavior:** For each numeric channel subdirectory **`j`** under **`leakage/n/`**, read **`input`**, **`min`**, and **`max`**. If the raw sample is below **`min`** or above **`max`**, write **`last_sample`** (12-bit aligned code from **`input`**) and **`last_event`** (the passed-in timestamp) into that channel directory. Channels without **`input`** / thresholds are skipped.
 
 Platform differences are limited to which **`LEAKAGE<n>`** lines appear in **`5-hw-management-bmc-events.rules`** (or equivalent) and how many detectors/channels the JSON configures; keep the generic **`LEAKAGE<n>`** branch in each HID’s **`hw-management-bmc-events.sh`** in sync when adding platforms.
+
+### ABR watchdog heartbeat (`hw-management-bmc-wd-heartbeat.sh`)
+
+Stop-gap for the **AST2700 ABR (Alternate Boot Recovery) watchdog** on the SONiC BMC. The ABR watchdog is intended for systems that boot from **redundant SPI flashes**: on expiry the **BootMCU** performs Alternate Boot Recovery and switches the boot source to the backup SPI image. On the SONiC BMC the BMC boots from **eMMC** while the SPI flash holds the **OpenBMC** image, so an ABR expiry would switch to the undesired OpenBMC image. The ABR watchdog is armed **only once the OTP fuse is programmed** — not an issue during development, but relevant on production (fused) systems.
+
+Until SONiC selects a final approach (disable in U-Boot, disable from Linux by writing the WDTA control register, or handle it in Bali/Caliptra firmware), this service **services the ABR watchdog over MCTP** so it never expires. On start it: (1) starts the MCTP daemon (**`systemctl start mctpd`**), (2) brings the IRoT link up (**`mctp link set mctpirot0 up`**), (3) discovers the Bali (Caliptra) endpoint EID from the MCTP **bus owner** (**`busctl … SetupEndpoint ay 0`**, EID taken from the reply; falls back to a configured EID, default **8**), then (4) loops sending the service-watchdog request to that EID via **`mctp-client`**.
+
+**Unit:** **`hw-management-bmc-wd-heartbeat.service`** (`Type=simple`, `Restart=on-failure`). It is ordered **`After=hw-management-bmc-boot-complete.service`** (and **`Wants=`** it), so the heartbeat starts only once the BMC has successfully booted.
+
+**Config:** **`/etc/hw-management-bmc-wd-heartbeat.conf`** (deployed from **`/etc/<HID>/hw-management-bmc-wd-heartbeat.conf`** by plat-specific-preps; override the path with **`HW_MANAGEMENT_BMC_WD_HEARTBEAT_CONF`**):
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| **`WD_HEARTBEAT_ENABLE`** | **`1`** | Master enable. **`0`** = script exits cleanly (no heartbeat, no restart). |
+| **`WD_HEARTBEAT_INTERFACE`** | **`mctpirot0`** | MCTP-over-IRoT link brought up and used for **`SetupEndpoint`**. |
+| **`WD_HEARTBEAT_MCTPD_SERVICE`** | **`mctpd`** | systemd service started (best-effort) before the link is brought up. Empty = skip. |
+| **`WD_HEARTBEAT_SETUP_ENDPOINT`** | **`1`** | **`1`** = discover the EID via the MCTP bus owner **`SetupEndpoint`**; **`0`** = skip and use **`WD_HEARTBEAT_EID`**. |
+| **`WD_HEARTBEAT_EID`** | **`8`** | Fallback EID of the Bali (Caliptra) target, used when discovery is disabled or returns no usable EID. |
+| **`WD_HEARTBEAT_MSG_TYPE`** | **`control`** | MCTP message type keyword passed to **`mctp-client`**. |
+| **`WD_HEARTBEAT_DATA`** | **`80 03`** | Request payload bytes (hex, space separated). |
+| **`WD_HEARTBEAT_INTERVAL`** | **`30`** | Seconds to sleep after each heartbeat attempt. Not the full period alone — see timing bound below. |
+| **`WD_HEARTBEAT_CMD_TIMEOUT`** | **`10`** | Per-call **`timeout(1)`** bound (s) for each **`mctp-client`** / **`busctl`** call; auto-clamped below **`WD_HEARTBEAT_INTERVAL`**. Counts toward the worst-case heartbeat period together with **`WD_HEARTBEAT_INTERVAL`**. Ignored if **`timeout(1)`** is absent (warned). |
+| **`WD_HEARTBEAT_MCTP_CLIENT`** | *(PATH lookup)* | Optional explicit path to the **`mctp-client`** binary. |
+
+**Endpoint discovery:** **`busctl call au.com.codeconstruct.MCTP1 /au/com/codeconstruct/mctp1/interfaces/<IFACE> au.com.codeconstruct.MCTP.BusOwner1 SetupEndpoint ay 0`**; the EID is the second field of the reply (e.g. reply `yisb 8 …` → EID `8`). If **`busctl`** is unavailable, discovery fails, or the parsed EID is non-numeric, the service falls back to **`WD_HEARTBEAT_EID`**.
+
+**Effective command each interval:** **`mctp-client eid <EID> type <WD_HEARTBEAT_MSG_TYPE> data <WD_HEARTBEAT_DATA>`** (e.g. `mctp-client eid 8 type control data 80 03`).
+
+**Timing bound:** each loop iteration runs one bounded **`mctp-client`** call (up to **`WD_HEARTBEAT_CMD_TIMEOUT`** seconds) then sleeps **`WD_HEARTBEAT_INTERVAL`** seconds. The worst-case gap between consecutive heartbeats is **`WD_HEARTBEAT_CMD_TIMEOUT + WD_HEARTBEAT_INTERVAL`** (with defaults **40 s**; after clamping, at most **`2 × WD_HEARTBEAT_INTERVAL − 1`**). That sum must be **shorter than the ABR watchdog timeout** on fused production systems — configuring **`WD_HEARTBEAT_INTERVAL`** alone against the watchdog period is not sufficient.
+
+**No-op / safety behavior:** the script **exits 0** (so systemd does not restart-loop) when disabled via config or when **`mctp-client`** is not present on the image — safe to list in the package on images without MCTP tooling. The **`mctpd`** start and **`mctp link set … up`** steps are best-effort (logged, non-fatal, since they may already be done). It **exits non-zero** only when the resolved EID is invalid. Success/failure of the request is logged only on state change to avoid flooding the journal every interval. Requires **bash**, **`mctp-client`**, and (for discovery) **`busctl`** / **`mctp`**.
+
+**Timeout guard:** every external call (heartbeat **`mctp-client`** and discovery **`busctl`**) is wrapped in **`timeout WD_HEARTBEAT_CMD_TIMEOUT`** so a hung or unresponsive MCTP transport cannot block the loop indefinitely — an unbounded stall would stop heartbeats, let the ABR watchdog expire, and switch the boot source to OpenBMC (the exact failure this service prevents). A timed-out call is treated as a normal failure: the loop logs it and retries on the next interval. If **`timeout(1)`** is not on the image the script logs a warning and runs the calls unguarded.
 
 ### Power control (`hw-management-bmc-powerctrl.sh`)
 

@@ -90,12 +90,23 @@ case "$1" in
                 # producing a successful-looking package configure that
                 # leaves HW-MGMT unstarted.  Suppress systemctl chatter on
                 # success (>/dev/null 2>&1); real failures hit the WARNING below.
+                #
+                #   wd-heartbeat        stop-gap ABR-watchdog heartbeat to Bali
+                #                       (Caliptra) over MCTP.  Independent of the
+                #                       init chain; ordered After=boot-complete so
+                #                       it only heartbeats once the BMC has booted.
+                #                       No-ops (exit 0) when disabled in
+                #                       /etc/hw-management-bmc-wd-heartbeat.conf or
+                #                       when mctp-client is absent, so listing it
+                #                       here is safe on images without MCTP tooling.
+                #
                 if ! systemctl start --no-block \
                         hw-management-bmc-boot-complete.service \
                         hw-management-bmc-health-monitor.service \
                         hw-management-bmc-i2c-slave-setup.service \
                         hw-management-bmc-recovery-handler.service \
                         hw-management-bmc-reset-cause-logger.service \
+                        hw-management-bmc-wd-heartbeat.service \
                         >/dev/null 2>&1; then
                     echo "WARNING: hw-management-bmc.postinst: failed to queue HW-MGMT BMC startup; package configure will continue, but HW-MGMT will only come up on the next reboot" >&2
                 fi
