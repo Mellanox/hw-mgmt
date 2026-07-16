@@ -90,7 +90,7 @@ declare -A regulator_arr=( \
 	["i"]="mp2855" \
 	["j"]="mp29816" \
 	["k"]="mp2845" \
-	["n"]="mp29816-7xx")
+	["n"]="mp29816-7x")
 
 declare -A a2d_arr=( \
 	["0"]="dummy" \
@@ -620,25 +620,12 @@ declare -A sn68xxld_swb_alternatives=( \
 	["mp29816_10"]="mp29816 0x6a 15 voltmon11" \
 	["mp29816_11"]="mp29816 0x6b 15 voltmon12" \
 	["mp29816_12"]="mp29816 0x6c 15 voltmon13" \
+	["mp29816-7x_10"]="mp29816 0x70 15 voltmon14" \
+	["mp29816-7x_11"]="mp29816 0x71 15 voltmon15" \
+	["mp29816-7x_12"]="mp29816 0x72 15 voltmon16" \
 	["mp29816_13"]="mp29816 0x6d 15 voltmon14" \
 	["mp29816_14"]="mp29816 0x6e 15 voltmon15" \
 	["mp29816_15"]="mp29816 0x6f 15 voltmon16" \
-	["mp29816-7x_0"]="mp29816 0x60 15 voltmon1" \
-	["mp29816-7x_1"]="mp29816 0x61 15 voltmon2" \
-	["mp29816-7x_2"]="mp29816 0x62 15 voltmon3" \
-	["mp29816-7x_3"]="mp29816 0x63 15 voltmon4" \
-	["mp29816-7x_4"]="mp29816 0x64 15 voltmon5" \
-	["mp29816-7x_5"]="mp29816 0x65 15 voltmon6" \
-	["mp29816-7x_6"]="mp29816 0x66 15 voltmon7" \
-	["mp29816-7x_7"]="mp29816 0x67 15 voltmon8" \
-	["mp29816-7x_8"]="mp29816 0x68 15 voltmon9" \
-	["mp29816-7x_9"]="mp29816 0x69 15 voltmon10" \
-	["mp29816-7x_10"]="mp29816 0x6a 15 voltmon11" \
-	["mp29816-7x_11"]="mp29816 0x6b 15 voltmon12" \
-	["mp29816-7x_12"]="mp29816 0x6c 15 voltmon13" \
-	["mp29816-7x_13"]="mp29816 0x70 15 voltmon14" \
-	["mp29816-7x_14"]="mp29816 0x71 15 voltmon15" \
-	["mp29816-7x_15"]="mp29816 0x72 15 voltmon16" \
 	["xdpe1a2g7_0"]="xdpe1a2g7 0x60 15 voltmon1" \
 	["xdpe1a2g7_1"]="xdpe1a2g7 0x61 15 voltmon2" \
 	["xdpe1a2g7_2"]="xdpe1a2g7 0x62 15 voltmon3" \
@@ -655,6 +642,12 @@ declare -A sn68xxld_swb_alternatives=( \
 	["xdpe1a2g7_13"]="xdpe1a2g7 0x6d 15 voltmon14" \
 	["xdpe1a2g7_14"]="xdpe1a2g7 0x6e 15 voltmon15" \
 	["xdpe1a2g7_15"]="xdpe1a2g7 0x6f 15 voltmon16")
+
+# SN68XX_LD switch board BOM variant S*...Rj*10Rn*3Rj*3... trailing mp29816 remap
+declare -A sn68xxld_swb_mp29816_rn_remap=( \
+	["mp29816_13"]="mp29816 0x6a 15 voltmon11" \
+	["mp29816_14"]="mp29816 0x6b 15 voltmon12" \
+	["mp29816_15"]="mp29816 0x6c 15 voltmon13")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -1296,6 +1289,24 @@ devtr_check_supported_system_init_alternatives()
 					swb_alternatives["$key"]="${sn68xxld_swb_alternatives["$key"]}"
 				done
 
+				# SN68XX_LD BOM variant S*...Rj*10Rn*3Rj*3... trailing mp29816 remap
+				local bom_str="${system_ver_str:-$(<"$system_ver_file")}"
+				IFS='-'
+				local bom_arr=($bom_str)
+				unset IFS
+				local substr
+				for substr in "${bom_arr[@]}"; do
+					case ${substr:0:1} in
+					S)
+						if [[ "$substr" == *Rn* ]]; then
+							for key in "${!sn68xxld_swb_mp29816_rn_remap[@]}"; do
+								swb_alternatives["$key"]="${sn68xxld_swb_mp29816_rn_remap["$key"]}"
+							done
+						fi
+						;;
+					esac
+				done
+
 				for key in "${!sn66xxld_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
 				done
@@ -1476,7 +1487,7 @@ devtr_check_board_components()
 				component_name=${thermal_arr[$component_key]}
 				alternative_key="${component_name}_${t_cnt}"
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
-					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component=(${board_alternatives["$alternative_key"]})
 					if [ $board_bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 					fi
@@ -1522,7 +1533,7 @@ devtr_check_board_components()
 				# Q3400 and Q3450 systems have 2 switch boards, each with multiple VRs
 				# SN5800 systems have 4 switch boards, each with multiple VRs
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
-					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component=(${board_alternatives["$alternative_key"]})
 					if [ $board_bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 					fi
@@ -1567,7 +1578,7 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${e_cnt}"
 				# SN5600 system has 2 Clock boards. Just EEPROM is accessed on these boards.
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
-					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component=(${board_alternatives["$alternative_key"]})
 # There is no currently address offset. Leave commented just for possible future use
 #					if [ $board_addr_offset -ne 0 ]; then
 #						curr_component[1]=$((curr_component[1]+board_addr_offset*brd))
@@ -1602,7 +1613,7 @@ devtr_check_board_components()
 				fi
 				component_name=${a2d_arr[$component_key]}
 				alternative_key="${component_name}_${a_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
+				alternative_comp=${board_alternatives["$alternative_key"]}
 				if [ -z "${alternative_comp[0]}" ]; then
 					log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${a_cnt}"
 				else
@@ -1621,7 +1632,7 @@ devtr_check_board_components()
 				fi
 				component_name=${pressure_arr[$component_key]}
 				alternative_key="${component_name}_${p_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
+				alternative_comp=${board_alternatives["$alternative_key"]}
 				if [ -z "${alternative_comp[0]}" ]; then
 					log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${p_cnt}"
 				else
@@ -1643,7 +1654,7 @@ devtr_check_board_components()
 				# Q3450 system has 2 switch boards, each with 1 power converter
 				# SN5800 system has 4 power boards, each with 1 power converter
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
-					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component=(${board_alternatives["$alternative_key"]})
 					if [ $board_bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 					fi
@@ -1689,7 +1700,7 @@ devtr_check_board_components()
 				# Q3450 system has 2 switch boards, each with 1 hot-swap controller
 				# SN5800 system has 4 power boards, each with 1 hot-swap controller
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
-					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component=(${board_alternatives["$alternative_key"]})
 					if [ $board_bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 					fi
