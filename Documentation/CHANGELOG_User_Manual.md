@@ -11,7 +11,7 @@
 
 #### Added: V.7.0070.1000 sysfs and platform documentation
 
-**Affected platforms:** SN6600_LD (HI193); N6300_LD (HI185); AST2700 BMC stack (HI189); N7200_LD virtual (HI194, SimX only).
+**Affected platforms:** SN6600_LD (HI193); N6300_LD (HI185); AST2700 BMC stack (HI189); N7200_LD virtual (HI194, SimX only); N7300_LD virtual (HI199, SimX only); N7400_LD virtual (HI200, SimX only).
 
 **User manual updates:**
 
