@@ -153,7 +153,7 @@ ifeq ($(with_bmc),1)
 	# `dh_systemd_enable -phw-management-bmc <files>` invocation.  With
 	# positional arguments dh_systemd_enable processes ONLY those units
 	# (line 211: `@args = @ARGV > 0 ? @ARGV : @installed_units`).  This:
-	#   - emits exactly 9 enable snippets (one per service), ~7 s of
+	#   - emits exactly one enable snippet per service, ~7 s of
 	#     postinst work instead of ~65 s,
 	#   - keeps the allow-list explicit, so a future BMC service file
 	#     added under bmc/usr/lib/systemd/system/ is NOT silently auto-
@@ -162,6 +162,7 @@ ifeq ($(with_bmc),1)
 		hw-management-bmc-plat-specific-preps.service \
 		hw-management-bmc-early-config.service \
 		hw-management-bmc-early-i2c-init.service \
+		hw-management-bmc-sync-ethaddr.service \
 		hw-management-bmc-init.service \
 		hw-management-bmc-boot-complete.service \
 		hw-management-bmc-health-monitor.service \
@@ -212,6 +213,7 @@ ifeq ($(with_bmc),1)
 		hw-management-bmc-plat-specific-preps.service \
 		hw-management-bmc-early-config.service \
 		hw-management-bmc-early-i2c-init.service \
+		hw-management-bmc-sync-ethaddr.service \
 		hw-management-bmc-init.service \
 		hw-management-bmc-boot-complete.service \
 		hw-management-bmc-health-monitor.service \
