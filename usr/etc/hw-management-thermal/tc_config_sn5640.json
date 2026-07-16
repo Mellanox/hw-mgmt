@@ -1,5 +1,6 @@
  {
 	"name": "sn5640",
+	"tc_version": "2.5",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
