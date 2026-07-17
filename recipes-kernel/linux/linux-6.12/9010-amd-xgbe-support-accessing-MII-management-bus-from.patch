@@ -13,7 +13,7 @@ diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c b/drivers/net/ethernet/amd
 index 8bc49259d..ddbf4c3b0 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
-@@ -2052,7 +2052,9 @@ static int xgbe_ioctl(struct net_device *netdev, struct ifreq *ifreq, int cmd)
+@@ -2045,7 +2045,9 @@ static int xgbe_ioctl(struct net_device *netdev, struct ifreq *ifreq, int cmd)
  		break;
  
  	default:
@@ -48,9 +48,9 @@ diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgb
 index 7526a0906..c3d7af771 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe.h
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
-@@ -1325,6 +1325,7 @@ struct xgbe_prv_data {
- 	int rx_adapt_retries;
- 	bool rx_adapt_done;
+@@ -1326,6 +1326,7 @@ struct xgbe_prv_data {
+	 */
+ 	bool data_path_stopped;
  	bool mode_set;
 +	struct phy_device *phydev;
  };
@@ -58,4 +58,3 @@ index 7526a0906..c3d7af771 100644
  /* Function prototypes*/
 -- 
 2.17.1
-
