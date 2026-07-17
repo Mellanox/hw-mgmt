@@ -828,6 +828,13 @@ Kernel-6.12
 |0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
 |0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
 |0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
+|0064-1-amd-xgbe-Avoid-spurious-link-down-messages-during-in.patch| 4f4af833c7ee7      | Feature upstream                         | 6.12.55    | backport upstream patch                        |
+|0064-2-amd-xgbe-reset-retries-and-mode-on-RX-adapt-failures.patch| 9842946cdab6b      | Feature upstream                         | 6.12.64    | backport upstream patch                        |
+|0064-3-amd-xgbe-avoid-misleading-per-packet-error-log.patch      | fbba89e7a1110      | Feature upstream                         | 6.12.68    | backport upstream patch                        |
+|0064-4-amd-xgbe-fix-MAC_TCR_SS-register-width-for-2.5G-and-.patch| c8e57b713c17d      | Feature upstream                         | 6.12.77    | backport upstream patch                        |
+|0064-5-amd-xgbe-fix-sleep-while-atomic-on-suspend-resume.patch   | d6bdc685e19fa      | Feature upstream                         | 6.12.77    | backport upstream patch                        |
+|0064-6-amd-xgbe-fix-link-status-handling-in-xgbe_rx_adaptat.patch| 9285fe46130ca      | Feature upstream                         | 6.12.78    | backport upstream patch                        |
+|0064-7-amd-xgbe-prevent-CRC-errors-during-RX-adaptation-wit.patch| 4f9c20113f87d      | Feature upstream                         | 6.12.78    | backport upstream patch                        |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
