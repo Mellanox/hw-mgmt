@@ -710,7 +710,8 @@ class hw_management_file_op:
         @param data: data to write
         """
         filename = os.path.join(self.root_folder, filename)
-        os.remove(filename)
+        if os.path.isfile(filename):
+            os.remove(filename)
 
     # ----------------------------------------------------------------------
     def get_file_mtime(self, filename):
@@ -1423,9 +1424,11 @@ class system_device(hw_management_file_op):
         @summary: main function to process device/sensor
         """
         if self.check_sensor_blocked():
-            self.stop()
+            if self.state == CONST.RUNNING:
+                self.stop()
         else:
-            self.start()
+            if self.state != CONST.RUNNING:
+                self.start()
 
         if self.state == CONST.RUNNING:
             # refreshing attributes
@@ -1973,6 +1976,8 @@ class thermal_asic_sensor(thermal_module_sensor):
             asic_ready = str2bool(asic_ready)
         except (ValueError, TypeError, OSError, IOError):
             asic_ready = False
+        # If asic*_ready file is not present - assume ASIC is ready.
+        # this is valid for old systems without asic_ready file support
         if asic_ready is None:
             asic_ready = True
         return asic_ready
@@ -2142,8 +2147,9 @@ class psu_fan_sensor(system_device):
             if present == 1:
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
                 psu_pwm, _, _ = g_get_range_val(self.pwm_decode, pwm)
-                if not psu_pwm:
+                if psu_pwm is None:
                     self.log.notice("{} Can't match PWM {} to PSU. PWM value will not be changed".format(self.name, pwm))
+                    return
 
                 if psu_pwm == -1:
                     self.log.debug("{} PWM value {}. It means PWM should not be changed".format(self.name, pwm))
@@ -2597,7 +2603,7 @@ class fan_sensor(system_device):
         # FAN tacho state. True - ok, False - error
         fan_tacho_state = True
         pwm_curr = self.read_pwm()
-        if not pwm_curr:
+        if pwm_curr is None:
             self.fread_err.handle_err(self.get_hw_path("thermal/pwm1"), cause="missing")
             return False
         self.fread_err.handle_err(self.get_hw_path("thermal/pwm1"), reset=True)
@@ -2758,7 +2764,8 @@ class fan_sensor(system_device):
         @return: True if shutdown successfull. False If shutdown not supportingor error
         """
         ret = True
-        fan_shutdown_filename = "system/{}_shutdown"
+
+        fan_shutdown_filename = "system/fan{}_shutdown".format(self.fan_drwr_id)
         if self.check_file(fan_shutdown_filename):
             try:
                 state = CONST.FAN_SHUTDOWN_ENA if shutdown else CONST.FAN_SHUTDOWN_DIS
@@ -3122,7 +3129,7 @@ class ThermalManagement(hw_management_file_op):
                           r'dpu\d*_drivetemp': "add_DPU_drivetemp_sensor",
                           r'dpu\d*_voltmon\d+': "add_DPU_voltmon_sensor",
                           r'dpu\d*_cx_amb': "add_DPU_cx_amb_sensor",
-                          r'dpu\d *_module': "add_DPU_module"
+                          r'dpu\d*_module': "add_DPU_module"
                           }
 
     def __init__(self, cmd_arg, tc_logger):
@@ -3201,7 +3208,7 @@ class ThermalManagement(hw_management_file_op):
                 self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_DELAY_DEF
             self.fan_steady_state_pwm = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_STATE_PWM])
             if not self.fan_steady_state_pwm:
-                self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_PWM_DEF
+                self.fan_steady_state_pwm = CONST.FAN_STEADY_STATE_PWM_DEF
             self.log.info("Fan {} insertion recovery enabled: delay {}s, pwm {}%".format(self.attention_fans_lst,
                                                                                          self.fan_steady_state_delay,
                                                                                          self.fan_steady_state_pwm))
@@ -3334,7 +3341,12 @@ class ThermalManagement(hw_management_file_op):
             self.pdb_count = 0
 
         # Collect voltmon sensors
-        file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
+        try:
+            file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
+        except (OSError, IOError, FileNotFoundError):
+            self.log.error("Missing thermal directory", repeat=1)
+            sys.exit(1)
+
         for fname in file_list:
             res = re.match(r'(voltmon[0-9]+)_temp1_input', fname)
             if res:
@@ -3414,7 +3426,7 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: Get device object by it's name
         """
-        for dev_obj in self.dev_obj_list:
+        for dev_obj in list(self.dev_obj_list):
             if re.match(name_mask, dev_obj.name):
                 return dev_obj
         return None
@@ -3788,7 +3800,7 @@ class ThermalManagement(hw_management_file_op):
                 elif val == pwm_max and "total_err_cnt" in key:
                     name = key
             except (ValueError, TypeError, KeyError):
-                self.log("Inapplicable pwm:{} for:{}".format(val, key))
+                self.log.notice("Inapplicable pwm:{} for:{}".format(val, key))
         return pwm_max, name
 
     # ----------------------------------------------------------------------
@@ -4010,9 +4022,11 @@ class ThermalManagement(hw_management_file_op):
     # ----------------------------------------------------------------------
     def add_fan_drwr_sensor(self, name):
         res = re.match(r'drwr([0-9]+)', name)
-        if res:
-            drwr_idx = (res.group(1))
+        if not res:
+            self.log.error("Invalid fan drawer name: %s", name)
+            return False
 
+        drwr_idx = (res.group(1))
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.FAN_ERR])
         err_mask = None
         if exclusion_conf:
@@ -4406,7 +4420,7 @@ class ThermalManagement(hw_management_file_op):
                                 total_err_count -= fault_cnt
 
             if self.emergency:
-                self.stop("Emergency stop {}".format(name))
+                self.stop("Emergency stop {}".format(dev_obj.name))
                 self.write_file("config/thermal_enforced_full_speed", "1\n")
                 continue
 
