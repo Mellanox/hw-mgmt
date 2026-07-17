@@ -48,9 +48,8 @@ diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgb
 index 7526a0906..c3d7af771 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe.h
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
-@@ -1325,6 +1325,7 @@ struct xgbe_prv_data {
- 	int rx_adapt_retries;
- 	bool rx_adapt_done;
+@@ -1327,3 +1327,4 @@ struct xgbe_prv_data {
+ 	bool data_path_stopped;
  	bool mode_set;
 +	struct phy_device *phydev;
  };
