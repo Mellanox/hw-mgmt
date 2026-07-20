@@ -692,26 +692,6 @@ declare -A sn66xxld_swb_alternatives=( \
 	["mp29816_15"]="mp29816 0x67 16 voltmon16" \
 	["mp29816_16"]="mp29816 0x68 16 voltmon17" \
 	["mp29816_17"]="mp29816 0x69 16 voltmon18" \
-	# Renesas VR is only raa228943 here (BOM R:l). No raa228942_* rows: that
-	# kernel ID is not used on SN66; driver keeps both IDs for upstream.
-	["raa228943_0"]="raa228943 0x61 15 voltmon1" \
-	["raa228943_1"]="raa228943 0x62 15 voltmon2" \
-	["raa228943_2"]="raa228943 0x63 15 voltmon3" \
-	["raa228943_3"]="raa228943 0x64 15 voltmon4" \
-	["raa228943_4"]="raa228943 0x65 15 voltmon5" \
-	["raa228943_5"]="raa228943 0x66 15 voltmon6" \
-	["raa228943_6"]="raa228943 0x67 15 voltmon7" \
-	["raa228943_7"]="raa228943 0x6a 15 voltmon8" \
-	["raa228943_8"]="raa228943 0x60 16 voltmon9" \
-	["raa228943_9"]="raa228943 0x61 16 voltmon10" \
-	["raa228943_10"]="raa228943 0x62 16 voltmon11" \
-	["raa228943_11"]="raa228943 0x63 16 voltmon12" \
-	["raa228943_12"]="raa228943 0x64 16 voltmon13" \
-	["raa228943_13"]="raa228943 0x65 16 voltmon14" \
-	["raa228943_14"]="raa228943 0x66 16 voltmon15" \
-	["raa228943_15"]="raa228943 0x67 16 voltmon16" \
-	["raa228943_16"]="raa228943 0x68 16 voltmon17" \
-	["raa228943_17"]="raa228943 0x69 16 voltmon18" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x61 15 voltmon1" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x62 15 voltmon2" \
 	["xdpe1a2g7_2"]="xdpe1a2g7b 0x63 15 voltmon3" \
@@ -737,8 +717,6 @@ declare -A sn66xxld_swb_alternatives=( \
 declare -A sn66xxld_port_alternatives=( \
 	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
 	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
-	["raa228943_0"]="raa228943 0x68 15 voltmon19" \
-	["raa228943_1"]="raa228943 0x69 15 voltmon20" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
 )
