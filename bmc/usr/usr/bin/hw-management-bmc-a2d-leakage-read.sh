@@ -33,7 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 ################################################################################
-# A2D leakage channel reader: reads ADS1015, ADS7924 (IIO or raw I2C), and placeholder MAX1363
+# A2D leakage channel reader: reads ADS1015, ADS7924 (IIO or raw I2C), and MAX1363 (IIO)
 # and writes per-channel voltage files under /var/run/hw-management/leakage/,
 # alongside the tree created by hw-management-bmc-a2d-leakage-config.sh.
 # Origin: OpenBMC meta-nvidia bmc-post-boot-cfg a2d_leakage_read.sh
@@ -188,7 +188,9 @@ ads7924_parse_be16()
 # True if string is a signed decimal integer (POSIX / BusyBox friendly).
 ads7924_is_decimal_int()
 {
-    awk -v s="$1" 'BEGIN { if (s ~ /^-?[0-9]+$/) exit 0; exit 1 }'
+    # Delegates to the shared is_decimal_int (hw-management-bmc-helpers-common.sh);
+    # kept as a thin alias so existing ADS7924 call sites stay unchanged.
+    is_decimal_int "$1"
 }
 
 # Read ADS7924 channel (1..4): 12-bit code from DATAx_U/L via pointer INC, then volts = raw12 * scale.
@@ -299,19 +301,93 @@ ads7924_read_channels()
     return 0
 }
 
-# Function to read MAX1363 channels (placeholder - not implemented yet)
+# Function to read all MAX1363 channels for a device.
+# MAX1363 is read live through the kernel IIO driver: hw-management-bmc-a2d-leakage-config.sh
+# links <ch>/input to in_voltage<Id-1>_raw (JSON Probe: true), so each read triggers a fresh
+# conversion. Publish value = raw * scale, the same uniform value interface as the ADS1015/ADS7924
+# readers. Origin: OpenBMC meta-nvidia bmc-post-boot-cfg a2d_leakage_read.sh.
 # Usage: max1363_read_channels <bus> <address> <device_dir>
 max1363_read_channels()
 {
     local bus="$1"
     local addr="$2"
     local device_dir="$3"
+    local channels_read=0
+    local channels_skipped=0
+    local ch_dir ch_num scale_f raw_input result skip_channel link link_name
 
-    log_message "info" "MAX1363 reading not implemented yet (bus $bus addr $addr)"
+    log_message "info" "Reading MAX1363 channels on bus $bus addr $addr"
 
-    # TODO: Implement MAX1363 channel reading
-    # For now, just skip
+    # Device-level scale fallback (volts per LSB); a per-channel scale file overrides it below.
+    local dev_scale=""
+    [ -f "$device_dir/scale" ] && dev_scale=$(tr -d ' \t\r\n' <"$device_dir/scale")
 
+    for ch_dir in "$device_dir"/[0-9]*; do
+        if [ ! -d "$ch_dir" ]; then
+            continue
+        fi
+
+        ch_num=$(basename "$ch_dir")
+
+        # Skip Not_Connected channels (same convention as the ADS1015/ADS7924 readers).
+        skip_channel=0
+        for link in "$device_dir"/*; do
+            if [ -L "$link" ] && [ "$(readlink "$link")" = "$ch_num" ]; then
+                link_name=$(basename "$link")
+                case "$link_name" in
+                Not_Connected*)
+                    log_message "debug" "Skipping channel $ch_num ($link_name)"
+                    skip_channel=1
+                    channels_skipped=$((channels_skipped + 1))
+                    break
+                    ;;
+                esac
+            fi
+        done
+        if [ "$skip_channel" -eq 1 ]; then
+            continue
+        fi
+
+        # Per-channel scale (hw-management keeps scale beside each channel's input), else device scale.
+        scale_f="$dev_scale"
+        if [ -f "$ch_dir/scale" ]; then
+            scale_f=$(tr -d ' \t\r\n' <"$ch_dir/scale")
+        fi
+        if [ -z "$scale_f" ]; then
+            log_message "warning" "MAX1363 channel $ch_num: no scale available; skipping"
+            channels_skipped=$((channels_skipped + 1))
+            continue
+        fi
+
+        result=""
+        if [ -r "$ch_dir/input" ]; then
+            IFS= read -r raw_input <"$ch_dir/input" 2>/dev/null || raw_input=""
+            raw_input="${raw_input//$'\r'/}"
+            raw_input="${raw_input// /}"
+            if [ -n "$raw_input" ] && is_decimal_int "$raw_input"; then
+                result=$(echo "scale=10; ($raw_input * $scale_f) / 1" | hw_mgmt_bc)
+            fi
+        fi
+
+        if [ -n "$result" ]; then
+            case "$result" in
+            .*) result="0$result" ;;
+            esac
+            echo "$result" >"$ch_dir/value"
+            log_message "info" "Channel $ch_num: $result V"
+            channels_read=$((channels_read + 1))
+        else
+            # input is a symlink only when config bound the kernel IIO driver (JSON Probe: true);
+            # without a readable raw code there is no live conversion to publish.
+            if [ -L "$ch_dir/input" ]; then
+                log_message "warning" "MAX1363 channel $ch_num: IIO sysfs read failed (input symlink: $(readlink "$ch_dir/input" 2>/dev/null || echo '?'))"
+            else
+                log_message "warning" "MAX1363 channel $ch_num: no IIO input symlink; kernel driver required for live reads"
+            fi
+        fi
+    done
+
+    log_message "info" "MAX1363 read complete: $channels_read read, $channels_skipped skipped"
     return 0
 }
 
