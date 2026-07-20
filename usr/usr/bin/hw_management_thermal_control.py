@@ -438,8 +438,10 @@ def str2bool(val):
     @summary:
         Convert input val value (y/n, true/false, 1/0, y/n) to bool
     @param val: input value.
-    @return: True or False
+    @return: True / False / None
     """
+    if val is None:
+        return None
     if isinstance(val, bool):
         return val
     elif isinstance(val, int):
@@ -2583,6 +2585,21 @@ class fan_sensor(system_device):
         return fan_tacho_state
 
     # ----------------------------------------------------------------------
+    def _get_asic_ready(self):
+        """
+        @summary: read ASIC ready state
+        """
+        asic_ready = False
+        try:
+            asic_ready = self.read_file("config/asic1_ready")
+            asic_ready = str2bool(asic_ready)
+        except (ValueError, TypeError, OSError, IOError):
+            asic_ready = False
+        if asic_ready is None:
+            asic_ready = True
+        return asic_ready
+
+    # ----------------------------------------------------------------------
     def set_pwm(self, pwm_val, force=False):
         """
         @summary: Set PWM level for chassis FAN
@@ -2607,6 +2624,15 @@ class fan_sensor(system_device):
             relax_time = 0
         self.rpm_relax_timestamp = max(current_milli_time() + relax_time, self.rpm_relax_timestamp)
         self.log.debug("{} pwm jump by:{} relax_time:{} timestamp {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestamp))
+
+        pwm_asic_control = self.sensors_config.get("is_pwm_asic_control", False)
+        if pwm_asic_control:
+            asic_ready = self._get_asic_ready()
+            if not asic_ready:
+                self.log.notice("PWM can't be updated. ASIC is not ready", id="{} ASIC_pwm not ready".format(self.name), repeat=1)
+                return
+            else:
+                self.log.notice(None, id="{} ASIC_pwm ready".format(self.name))
 
         self.pwm_set = pwm_val
 
@@ -3710,14 +3736,14 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: checking if PWM control is through ASIC
         """
-        val = self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"]
+        val = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_ASIC_PARAM, "1", "pwm_control"])
         return str2bool(val)
 
     def is_fan_asic_control(self):
         """
         @summary: checking if fan control is through ASIC
         """
-        val = self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"]
+        val = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_ASIC_PARAM, "1", "fan_control"])
         return str2bool(val)
 
     # ----------------------------------------------------------------------
@@ -3924,10 +3950,12 @@ class ThermalManagement(hw_management_file_op):
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.DRWR_ERR_LIST
+        is_pwm_asic_control = self.is_pwm_asic_control()
         self._sensor_add_config("fan_sensor", name, {"base_file_name": name,
                                                      "drwr_id": drwr_idx,
                                                      "tacho_cnt": self.fan_drwr_capacity,
-                                                     "dynamic_err_mask": err_mask})
+                                                     "dynamic_err_mask": err_mask,
+                                                     "is_pwm_asic_control": is_pwm_asic_control})
 
     # ----------------------------------------------------------------------
     def add_cpu_sensor(self, *_):
