@@ -14,8 +14,8 @@ dedicated OF match entries are needed.
 Signed-off-by: Dawei Liu <dawei.liu.jy@renesas.com>
 ---
  Documentation/hwmon/isl68137.rst | 20 ++++++++++++++++++++
- drivers/hwmon/pmbus/isl68137.c   | 20 +++++++++++++++++++-
- 2 files changed, 39 insertions(+), 1 deletion(-)
+ drivers/hwmon/pmbus/isl68137.c   | 49 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 68 insertions(+), 1 deletion(-)
 
 diff --git a/Documentation/hwmon/isl68137.rst b/Documentation/hwmon/isl68137.rst
 index 0e71b22047f8..1a1424dd640f 100644
@@ -52,13 +52,42 @@ diff --git a/drivers/hwmon/pmbus/isl68137.c b/drivers/hwmon/pmbus/isl68137.c
 index 7e53fb1..5e22c38 100644
 --- a/drivers/hwmon/pmbus/isl68137.c
 +++ b/drivers/hwmon/pmbus/isl68137.c
-@@ -178,6 +178,19 @@ static int raa_dmpvr2_read_word_data(struct i2c_client *client, int page,
+@@ -178,6 +178,48 @@ static int raa_dmpvr2_read_word_data(struct i2c_client *client, int page,
  	return ret;
  }
  
 +static int raa_dmpvr2_nontc_read_word_data(struct i2c_client *client, int page,
 +					   int phase, int reg)
 +{
++	const struct i2c_device_id *data = i2c_match_id(raa_dmpvr_id, client);
++	bool ov = (reg == PMBUS_VOUT_OV_FAULT_LIMIT);
++
++	if ((data != NULL) &&
++	    (!strcmp(data->name, "raa228943")) &&
++	    ((reg == PMBUS_VOUT_UV_FAULT_LIMIT) || ov)) {
++		switch (client->addr) {
++		case 0x66: /* VDD, page 0 */
++			if (page != 0)
++				return -EIO;
++			return ov ? 796 : 590;
++		case 0x68: /* AVDD PL0, page 0; DVDD PL0, page 1 */
++		case 0x6c: /* AVDD PL1, page 0; DVDD PL1, page 1 */
++			if (page == 0)
++				return ov ? 1170 : 840;
++			if (page == 1)
++				return ov ? 770 : 550;
++			return -EIO;
++		case 0x6e: /* AVCC, page 0; HVDD, page 1 */
++			if (page == 0)
++				return ov ? 1910 : 1692;
++			if (page == 1)
++				return ov ? 1270 : 1120;
++			return -EIO;
++		default:
++			return -EIO;
++		}
++	}
++
 +	switch (reg) {
 +	case PMBUS_UT_FAULT_LIMIT:
 +	case PMBUS_UT_WARN_LIMIT:
@@ -72,7 +101,7 @@ index 7e53fb1..5e22c38 100644
  static struct pmbus_driver_info raa_dmpvr_info = {
  	.pages = 3,
  	.format[PSC_VOLTAGE_IN] = direct,
-@@ -244,9 +257,12 @@ static int isl68137_probe(struct i2c_client *client)
+@@ -244,9 +286,12 @@ static int isl68137_probe(struct i2c_client *client)
  		info->read_word_data = raa_dmpvr2_read_word_data;
  		break;
  	case raa_dmpvr2_2rail_nontc:
@@ -86,7 +115,7 @@ index 7e53fb1..5e22c38 100644
  	case raa_dmpvr2_2rail:
  		info->pages = 2;
  		info->read_word_data = raa_dmpvr2_read_word_data;
-@@ -311,6 +327,8 @@ static const struct i2c_device_id raa_dmpvr_id[] = {
+@@ -311,6 +356,8 @@ static const struct i2c_device_id raa_dmpvr_id[] = {
  	{"raa228004", raa_dmpvr2_hv},
  	{"raa228006", raa_dmpvr2_hv},
  	{"raa228228", raa_dmpvr2_2rail_nontc},
