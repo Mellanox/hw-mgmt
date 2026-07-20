@@ -939,6 +939,10 @@ set_gpios()
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 10 12 23)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
+			if [ "$sku" == "HI198" ]; then
+				gpio_idx+=(9)
+				gpio_names+=("v3000_lpc_support")
+			fi
 			;;
 		*)
 			return 1
