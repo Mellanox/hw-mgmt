@@ -1,4 +1,4 @@
-From be10bc8ec297096ff4919ad91eef8ca17ff0461c Mon Sep 17 00:00:00 2001
+From 31fee0781e6497a0d15fb628282ecf2369ae4f20 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -120,7 +120,7 @@ index 2b774cdf4..100ed1676 100644
  obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mellanox/nvsw-bmc-hid162.c
 new file mode 100644
-index 000000000..96908494c
+index 000000000..eb1216684
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
 @@ -0,0 +1,2832 @@
@@ -3657,15 +3657,15 @@ index 000000000..0dae7e076
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
 new file mode 100644
-index 000000000..6b9837e1c
+index 000000000..3706787b5
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
 @@ -0,0 +1,736 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
-+ * Nvidia BMC platform driver
++ * Nvidia L1 host platform driver
 + *
-+ * Copyright (C) 2025 Nvidia Technologies Ltd.
++ * Copyright (C) 2025-2026 Nvidia Technologies Ltd.
 + */
 +
 +#include <linux/device.h>
