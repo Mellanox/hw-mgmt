@@ -2174,6 +2174,9 @@ sn5x00_specific()
 	else
 		echo 4 > $config_path/cpld_num
 	fi
+	if [ "$sku" == "HI144" ] || [ "$sku" == "HI147" ] ; then
+		echo 24c02 > $config_path/psu_eeprom_type
+	fi
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
