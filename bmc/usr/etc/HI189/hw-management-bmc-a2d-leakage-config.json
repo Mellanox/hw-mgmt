@@ -14,24 +14,25 @@
                 "Probe": true,
                 "Scale": 0.0008,
                 "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the HI189 platform Excel MAX1363 column (0.8 mV).",
+                "Severity_comment": "Severity bounds are contiguous (WarningMax=NormalMin, CriticalMax=WarningMin) so no reading falls between bands. The leakage handler (hw-management-bmc-leakage-handler.sh) triggers on the Normal band only (min/max = NormalMin/NormalMax); warn/crit/lwarn/lcrit are informational severity bounds.",
                 "Types": [
                     {
                         "Type": "flex",
-                        "NormalMin": 1.99,
-                        "NormalMax": 2.17,
-                        "WarningMin": 1.73,
-                        "CriticalMin": 0.13,
-                        "WarningMax": 1.99,
-                        "CriticalMax": 1.73
+                        "NormalMin": 1.9,
+                        "NormalMax": 3.0,
+                        "WarningMin": 1.3,
+                        "CriticalMin": 0.2,
+                        "WarningMax": 1.9,
+                        "CriticalMax": 1.3
                     },
                     {
                         "Type": "embedded",
-                        "NormalMin": 2.8,
-                        "NormalMax": 3.09,
-                        "WarningMin": 2.27,
-                        "CriticalMin": 0.13,
-                        "WarningMax": 2.8,
-                        "CriticalMax": 2.27
+                        "NormalMin": 2.7,
+                        "NormalMax": 3.3,
+                        "WarningMin": 1.1,
+                        "CriticalMin": 0.2,
+                        "WarningMax": 2.7,
+                        "CriticalMax": 1.1
                     }
                 ],
                 "Channels": [
@@ -39,7 +40,7 @@
                     { "Id": 2, "Type": "embedded" }
                 ],
                 "CfgReg": "0x00",
-                "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15",
+                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
                 "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
             },
             {
@@ -133,24 +134,25 @@
                 "Probe": true,
                 "Scale": 0.0008,
                 "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the HI189 platform Excel MAX1363 column (0.8 mV).",
+                "Severity_comment": "Severity bounds are contiguous (WarningMax=NormalMin, CriticalMax=WarningMin) so no reading falls between bands. The leakage handler (hw-management-bmc-leakage-handler.sh) triggers on the Normal band only (min/max = NormalMin/NormalMax); warn/crit/lwarn/lcrit are informational severity bounds.",
                 "Types": [
                     {
                         "Type": "flex",
-                        "NormalMin": 1.99,
-                        "NormalMax": 2.17,
-                        "WarningMin": 1.73,
-                        "CriticalMin": 0.13,
-                        "WarningMax": 1.99,
-                        "CriticalMax": 1.73
+                        "NormalMin": 1.9,
+                        "NormalMax": 3.0,
+                        "WarningMin": 1.3,
+                        "CriticalMin": 0.2,
+                        "WarningMax": 1.9,
+                        "CriticalMax": 1.3
                     },
                     {
                         "Type": "embedded",
-                        "NormalMin": 2.8,
-                        "NormalMax": 3.09,
-                        "WarningMin": 2.27,
-                        "CriticalMin": 0.13,
-                        "WarningMax": 2.8,
-                        "CriticalMax": 2.27
+                        "NormalMin": 2.7,
+                        "NormalMax": 3.3,
+                        "WarningMin": 1.1,
+                        "CriticalMin": 0.2,
+                        "WarningMax": 2.7,
+                        "CriticalMax": 1.1
                     }
                 ],
                 "Channels": [
@@ -158,7 +160,7 @@
                     { "Id": 4, "Type": "embedded" }
                 ],
                 "CfgReg": "0x00",
-                "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15",
+                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
                 "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
             },
             {
