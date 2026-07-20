@@ -1,4 +1,42 @@
 ================================================================================
+- V.7.0070.1005
+- Mon, 20 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5100214, add VR Renesas support (#2702), ca13a4d
+    o #N/A, Update changelog and release notes for V.7.0070.1004, 1e0f7e7
+    o #N/A, docs: use model numbers instead of aliases (#2678), 6dbaa2f
+    o #5114977, hw-mgmt: scripts: Fix log file names in generate dump tool, a91aad4
+    o #5128938, hw-mgmt: bmc: sync ethaddr from BMC FRU fallback (#2676), fa00bec
+    o #4964651, hw-mgmt: thermal: Add module configuration for Tmax limitation, 3222541
+    o #N/A, Update changelog and release notes for V.7.0070.1003, 5376075
+    o #5107746, hw-mgmt: scripts: Fix hw-management stop timeout handling (#2692), 1f7654f
+    o #5151050, hw-mgmt: scripts: Improve robustness for fanX_dir init (#2685), 2510604
+    o #5102733, hw-mgmt: script: Fix PSU i2c_addr format for QM3200/QM3400, 009d1f8
+    o #N/A, Update changelog and release notes for V.7.0070.1002, 27ee6cf
+    o #5080289, hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012) (#2647), a8737ce
+    o #N/A, Leakage thresholds adjustments + Kconfig update (#2654), b8703ad
+    o #4542714, hw-mgmt: udev rules: set TPM power state to always-on in the sysfs physical device., a34f48e
+    o #N/A, Update changelog and release notes for V.7.0070.1000, 50f5cd6
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1005/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1004
 - Sun, 19 Jul 2026
 --------------------------------------------------------------------------------
