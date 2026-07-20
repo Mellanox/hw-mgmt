@@ -38,9 +38,18 @@ source /usr/bin/hw-management-helpers.sh
 check_cpu_type
 
 case $cpu_type in
-    $AMD_V3000_CPU|$AMD_FRNG_CPU)
-        # Call i2c script to talk to cpld
+    $AMD_FRNG_CPU)
+        # Call i2c script to talk to CPLD.
         exec /usr/bin/iorw_i2c.sh "$@"
+        ;;
+    $AMD_V3000_CPU)
+        # HI198 provides CPLD access through the LPC bus.
+        if [ -r "$sku_file" ] && [ "$(< "$sku_file")" == "HI198" ]; then
+            exec /usr/bin/iorw_lpc "$@"
+        else
+            # Other AMD V3000 systems access CPLD through the I2C bus.
+            exec /usr/bin/iorw_i2c.sh "$@"
+        fi
         ;;
     *)
         # Use iorw for LPC bus access
