@@ -45,7 +45,8 @@ source /usr/bin/hw-management-bmc-helpers-common.sh
 # DNV - Denverton
 # BF3 - BlueField-3
 # AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
-# TODO: Add AMD V3000 and FireRange
+# AMD_V3000 - AMD V3000
+# AMD_FRNG - AMD FireRange
 
 # ARMv7 - Aspeed 2600
 # ARM v8 - Aspeed AST2700/AST2720/AST2750 is based on Arm v8 Cortex-A35
@@ -57,6 +58,8 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+AMD_V3000_CPU=0x1944
+AMD_FRNG_CPU=0x1A44
 ARMv7_CPU=0xC07
 ARMv8_CPU=0xd04
 
