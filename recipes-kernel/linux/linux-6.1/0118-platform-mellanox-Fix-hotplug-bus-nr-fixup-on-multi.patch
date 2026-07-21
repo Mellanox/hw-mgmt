@@ -15,16 +15,18 @@ Keep the fixup on the mux_hotplug_num-th segment only so resolved bus
 numbers are not re-matched on a later segment. Set mux_hotplug_num to
 segment 1 for legacy MSN2700 and COMEX platforms.
 
+Generated against linux-6.1.123 mlx-platform.c after 0116 in series.
+
 Bug: #4151613
 Bug: #5079211
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 56 +++++++++++++++++++++++---
- 1 file changed, 50 insertions(+), 6 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 45 +++++++++++++++++++++---
+ 1 file changed, 37 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 0c3bb01a..b2c3d4e5 100644
+index 00000000..00000000 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -332,6 +332,7 @@
@@ -51,7 +53,7 @@ index 0c3bb01a..b2c3d4e5 100644
  	mlxplat_mux_num = ARRAY_SIZE(mlxplat_extended_mux_data);
  	mlxplat_mux_data = mlxplat_extended_mux_data;
  	for (i = 0; i < mlxplat_mux_num; i++) {
-@@ -9120,16 +9123,42 @@
+@@ -9119,17 +9122,43 @@
  	 * while the post-init gate uses mux_added only after incrementing for this callback.
  	 * That asymmetry is intentional: fixup must observe the adapter map from the probe that
  	 * completes the hotplug_num-th mux segment, and post-init must run only after mux_num
@@ -59,6 +61,7 @@ index 0c3bb01a..b2c3d4e5 100644
 +	 * probes have completed. Map hpdev.nr relative to that segment's base_nr, not a hardcoded
 +	 * offset (PSU/FAN placeholders on segment 1 use bus nrs 10..14 on COMEX/MSN2700).
  	 */
+ 	spin_lock_irqsave(&priv->mux_notify_lock, flags);
  	if (priv->mux_added == mlxplat_mux_hotplug_num && mlxplat_hotplug) {
 -		item = mlxplat_hotplug->items;
 -		for (i = 0; i < mlxplat_hotplug->counter; i++, item++) {
@@ -102,3 +105,6 @@ index 0c3bb01a..b2c3d4e5 100644
  			}
  		}
  	}
+
+-- 
+2.34.1
