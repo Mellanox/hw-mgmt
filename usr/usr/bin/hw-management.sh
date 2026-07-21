@@ -824,6 +824,14 @@ set_jtag_gpio()
 			echo 0x20e5 > $config_path/jtag_rw_reg
 			echo 0x20e6 > $config_path/jtag_ro_reg
 			;;
+		$AMD_FRNG_CPU)
+			jtag_tdi=40
+			jtag_tck=27
+			jtag_tms=7
+			jtag_tdo=6
+			echo 0x20e5 > $config_path/jtag_rw_reg
+			echo 0x20e6 > $config_path/jtag_ro_reg
+			;;
 		*)
 			return 0
 			;;
@@ -934,6 +942,12 @@ set_gpios()
 			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 10 12 23)
+			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
+			;;
+		$AMD_FRNG_CPU)
+			set_jtag_gpio $1
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(89 3 12 10)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
@@ -3054,7 +3068,7 @@ load_modules()
 		fi
 	fi
 	case $cpu_type in
-		$AMD_SNW_CPU|$AMD_V3000_CPU|$BF3_CPU)
+		$AMD_SNW_CPU|$AMD_V3000_CPU|$AMD_FRNG_CPU|$BF3_CPU)
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
