@@ -1,34 +1,15 @@
 #!/bin/bash
-################################################################################
-# Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
 #
 
 ### BEGIN INIT INFO
@@ -111,7 +92,8 @@ leakage_count=0
 leakage_rope_count=0
 asic_chipup_retry=2
 device_connect_retry=2
-chipup_log_size=4096
+chipup_log_size=65536
+chipup_log_archive_max=3
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 chipup_retry_count=3
@@ -3438,40 +3420,53 @@ case $ACTION in
 		if [ -d /var/run/hw-management ]; then
 			asic_retry="$asic_chipup_retry"
 			asic_chipup_rc=1
+			asic_index="$2"
+			chipup_trace_attempt=1
+
+			# Rotate the trace log at invocation start so all retries within one
+			# chipup run stay in the same file (rotation at the end could split
+			# attempts across chipup_i2c_trace_log and chipup_i2c_trace_log.*).
+			if [ -f /var/log/chipup_i2c_trace_log ]; then
+				file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
+				if [ $file_size -gt $chipup_log_size ]; then
+					timestamp=`date +%s`
+					mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
+					touch /var/log/chipup_i2c_trace_log
+					# Cap the number of per-run archives so repeated chipup
+					# failures cannot fill the disk.
+					ls -1t /var/log/chipup_i2c_trace_log.* 2>/dev/null | \
+						tail -n +$((chipup_log_archive_max + 1)) | \
+						xargs -r rm -f
+				fi
+			fi
+
+			# Start the chipup I2C tracer on a dedicated ftrace instance
+			# (isolated from the boot-wide tracer). Enabled before the first
+			# attempt so every retry - including the first - is captured, and
+			# scoped to all CPLD bridge adapters so bus-wide contention is
+			# visible, not just the ASIC bus.
+			start_chipup_i2c_trace "$asic_index"
 
 			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
 				do_chip_up_down 1 "$2" "$3"
 				asic_chipup_rc=$?
-				asic_index="$2"
-				if [ "$asic_chipup_rc" -ne 0 ];then
+				if [ "$asic_chipup_rc" -ne 0 ]; then
 					do_chip_up_down 0 "$2" "$3"
+					# Save this attempt's I2C trace and clear the buffer
+					# before the next retry.
+					save_chipup_i2c_trace "$chipup_trace_attempt"
+					chipup_trace_attempt=$((chipup_trace_attempt + 1))
 				else
 					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
+					stop_chipup_i2c_trace
 					exit 0
 				fi
 
 				asic_retry=$(< $config_path/asic_chipup_counter)
-				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
-					# Start I2C tracer.
-					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
-					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
-				else
-					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_trace_log
-					echo 0>/sys/kernel/debug/tracing/trace
-				fi
-
 				change_file_counter $config_path/asic_chipup_counter -1
 			done
-			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
+			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
-
-			# Check log size in (bytes) and rotate if necessary.
-			file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
-			if [ $file_size -gt $chipup_log_size ]; then
-				timestamp=`date +%s`
-				mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
-				touch /var/log/chipup_i2c_trace_log
-			fi
 		fi
 	;;
 	chipdown)
