@@ -754,6 +754,7 @@ Kernel-6.1
 |9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
 |9010-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream accepted; skip[sonic,cumulus] |            | Q3401-RD                                       |
+|9011-i2c-mlxcpld-eSPI-LPC-bridge-WA-for-long-LPC-transact.patch  |                    | Downstream;skip[ALL];take[opt]           |            | Temp WA for eSPI - LPC bridge problem          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-6.12
@@ -851,6 +852,7 @@ Kernel-6.12
 |9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+|9010-i2c-mlxcpld-eSPI-LPC-bridge-WA-for-long-LPC-transact.patch  |                    | Downstream;skip[ALL];take[opt]           |            | Temp WA for eSPI - LPC bridge problem          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
