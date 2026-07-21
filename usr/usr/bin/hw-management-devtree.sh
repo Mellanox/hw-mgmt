@@ -918,7 +918,7 @@ devtr_check_supported_system_init_alternatives()
 				;;
 			esac
 			;;
-		$AMD_V3000_CPU)
+		$AMD_V3000_CPU|$AMD_FRNG_CPU)
 			;;
 		$DNV_CPU)
 			# Silent exit
@@ -1832,4 +1832,3 @@ devtr_check_smbios_device_description()
 	done
 	return 0
 }
-
