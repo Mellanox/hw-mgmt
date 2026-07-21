@@ -1081,3 +1081,85 @@ print_function_call() {
 		"$function_name" \
 		"$argument" >> "$LOG_FILE"
 }
+
+# I2C trace (ftrace i2c event class under tracefs) shared configuration.
+KERN_TRACE_FS="/sys/kernel/debug/tracing"
+# Bound the per-CPU ftrace ring buffer so a stuck or looping bus cannot grow the
+# captured trace without limit. This is the primary size cap: it bounds every
+# "cat trace" dump regardless of how long the tracer runs.
+I2C_TRACE_BUF_SIZE_KB=1024
+
+# Chipup I2C tracer.
+#
+# The chipup tracer runs on its own ftrace instance so it never disturbs the
+# boot-wide tracer, which uses the top-level tracing instance. This matters
+# because chipup is triggered asynchronously (sx-core udev event) and may run
+# while a boot-wide tracer is active; sharing the single top-level
+# buffer/filter/enable would clobber it.
+#
+# start_chipup_i2c_trace stores the tracing directory in CHIPUP_TRACE_DIR
+# (empty when tracing could not be started). The ftrace instance name includes
+# the ASIC index so concurrent chipup on multi-ASIC platforms do not share one
+# buffer.
+# Default filter: capture all CPLD bridge child adapters (i2c-2 and up), not
+# just the ASIC bus, so bus-wide contention is visible. i2c-0 (CPU SMBus) and
+# i2c-1 (bridge parent) are excluded as noise.
+CHIPUP_I2C_TRACE_FILTER="adapter_nr>=2"
+CHIPUP_TRACE_DIR=""
+CHIPUP_I2C_TRACE_INSTANCE=""
+
+start_chipup_i2c_trace() {
+	local asic_index="${1:-0}"
+
+	CHIPUP_TRACE_DIR=""
+	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}"
+
+	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		return
+	fi
+
+	# Preferred: dedicated, isolated ftrace instance per ASIC.
+	if [ -d "$KERN_TRACE_FS/instances" ] &&
+	   mkdir -p "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null &&
+	   [ -d "$CHIPUP_I2C_TRACE_INSTANCE/events/i2c" ]; then
+		CHIPUP_TRACE_DIR="$CHIPUP_I2C_TRACE_INSTANCE"
+	# Fallback: top-level instance, but only when the boot-wide tracer is not
+	# already running, otherwise skip entirely to avoid clobbering it.
+	elif [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "0" ]; then
+		CHIPUP_TRACE_DIR="$KERN_TRACE_FS"
+	else
+		return
+	fi
+
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU) so a stuck bus during chipup retries
+	# cannot grow the capture without limit.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$CHIPUP_TRACE_DIR"/buffer_size_kb 2>/dev/null || true
+	echo "$CHIPUP_I2C_TRACE_FILTER" > "$CHIPUP_TRACE_DIR"/events/i2c/filter 2>/dev/null || true
+	echo 1 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+}
+
+# Append the current chipup trace buffer to the log and clear it (called
+# between retries so each attempt is recorded separately).
+# $1 - attempt number (optional, written as a delimiter before the trace data).
+save_chipup_i2c_trace() {
+	local attempt="${1:-}"
+
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	if [ -n "$attempt" ]; then
+		echo "# --- chipup attempt ${attempt} ---" >> /var/log/chipup_i2c_trace_log
+	fi
+	cat "$CHIPUP_TRACE_DIR"/trace >> /var/log/chipup_i2c_trace_log 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+}
+
+# Stop the chipup tracer and release the dedicated instance (if one was used).
+stop_chipup_i2c_trace() {
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	if [ "$CHIPUP_TRACE_DIR" = "$CHIPUP_I2C_TRACE_INSTANCE" ]; then
+		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
+	fi
+	CHIPUP_TRACE_DIR=""
+}
