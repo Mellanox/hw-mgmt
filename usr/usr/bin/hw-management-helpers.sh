@@ -1,34 +1,15 @@
 #!/bin/bash
-##################################################################################
-# Copyright (c) 2021 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
 #
 
 hw_management_path=/var/run/hw-management
@@ -854,4 +835,86 @@ tracing_log()
 		gzip ${log_file}.$timestamp
 		touch ${log_file}
 	fi
+}
+
+# I2C trace (ftrace i2c event class under tracefs) shared configuration.
+KERN_TRACE_FS="/sys/kernel/debug/tracing"
+# Bound the per-CPU ftrace ring buffer so a stuck or looping bus cannot grow the
+# captured trace without limit. This is the primary size cap: it bounds every
+# "cat trace" dump regardless of how long the tracer runs.
+I2C_TRACE_BUF_SIZE_KB=1024
+
+# Chipup I2C tracer.
+#
+# The chipup tracer runs on its own ftrace instance so it never disturbs the
+# boot-wide tracer, which uses the top-level tracing instance. This matters
+# because chipup is triggered asynchronously (sx-core udev event) and may run
+# while a boot-wide tracer is active; sharing the single top-level
+# buffer/filter/enable would clobber it.
+#
+# start_chipup_i2c_trace stores the tracing directory in CHIPUP_TRACE_DIR
+# (empty when tracing could not be started). The ftrace instance name includes
+# the ASIC index so concurrent chipup on multi-ASIC platforms do not share one
+# buffer.
+# Default filter: capture all CPLD bridge child adapters (i2c-2 and up), not
+# just the ASIC bus, so bus-wide contention is visible. i2c-0 (CPU SMBus) and
+# i2c-1 (bridge parent) are excluded as noise.
+CHIPUP_I2C_TRACE_FILTER="adapter_nr>=2"
+CHIPUP_TRACE_DIR=""
+CHIPUP_I2C_TRACE_INSTANCE=""
+
+start_chipup_i2c_trace() {
+	local asic_index="${1:-0}"
+
+	CHIPUP_TRACE_DIR=""
+	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}"
+
+	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		return
+	fi
+
+	# Preferred: dedicated, isolated ftrace instance per ASIC.
+	if [ -d "$KERN_TRACE_FS/instances" ] &&
+	   mkdir -p "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null &&
+	   [ -d "$CHIPUP_I2C_TRACE_INSTANCE/events/i2c" ]; then
+		CHIPUP_TRACE_DIR="$CHIPUP_I2C_TRACE_INSTANCE"
+	# Fallback: top-level instance, but only when the boot-wide tracer is not
+	# already running, otherwise skip entirely to avoid clobbering it.
+	elif [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "0" ]; then
+		CHIPUP_TRACE_DIR="$KERN_TRACE_FS"
+	else
+		return
+	fi
+
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU) so a stuck bus during chipup retries
+	# cannot grow the capture without limit.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$CHIPUP_TRACE_DIR"/buffer_size_kb 2>/dev/null || true
+	echo "$CHIPUP_I2C_TRACE_FILTER" > "$CHIPUP_TRACE_DIR"/events/i2c/filter 2>/dev/null || true
+	echo 1 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+}
+
+# Append the current chipup trace buffer to the log and clear it (called
+# between retries so each attempt is recorded separately).
+# $1 - attempt number (optional, written as a delimiter before the trace data).
+save_chipup_i2c_trace() {
+	local attempt="${1:-}"
+
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	if [ -n "$attempt" ]; then
+		echo "# --- chipup attempt ${attempt} ---" >> /var/log/chipup_i2c_trace_log
+	fi
+	cat "$CHIPUP_TRACE_DIR"/trace >> /var/log/chipup_i2c_trace_log 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+}
+
+# Stop the chipup tracer and release the dedicated instance (if one was used).
+stop_chipup_i2c_trace() {
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	if [ "$CHIPUP_TRACE_DIR" = "$CHIPUP_I2C_TRACE_INSTANCE" ]; then
+		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
+	fi
+	CHIPUP_TRACE_DIR=""
 }
