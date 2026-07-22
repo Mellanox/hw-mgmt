@@ -747,6 +747,48 @@ configure_max1363_raw_i2c()
 	return 1
 }
 
+# All MAX1363 leak sensors on this platform are wired with Vdd as the ADC reference
+# (full-scale = Vdd ~3.28 V, i.e. Scale 0.0008 V/LSB). With no "vref" regulator in the
+# devicetree the ti-max1363 driver defaults to its internal 2.048 V reference and rails
+# inputs above it to raw 4095; forcing Vdd via sysfs restores correct conversions. Call
+# after the kernel driver is (re)bound so the IIO voltage_reference node exists.
+MAX1363_IIO_REFERENCE="Vdd"
+
+max1363_set_iio_reference()
+{
+	local bus="$1"
+	local address="$2"
+	local a dev_id iio_dir vr d dirs
+
+	a="${address#0x}"
+	a="${a#0X}"
+	dev_id=$(printf '%d-%04x' "$bus" $((16#$a)))
+
+	# IIO device dirs, same discovery order as find_iio_channel_raw: under the I2C
+	# client, then /sys/bus/iio/devices entries whose device link is this client.
+	dirs=""
+	for d in /sys/bus/i2c/devices/"$dev_id"/iio:device*; do
+		[ -e "$d" ] && dirs="$dirs $d"
+	done
+	for d in /sys/bus/iio/devices/iio:device*; do
+		[ -e "$d" ] || continue
+		[ "$(basename "$(readlink -f "$d/device" 2>/dev/null)" 2>/dev/null)" = "$dev_id" ] && dirs="$dirs $d"
+	done
+
+	for iio_dir in $dirs; do
+		vr="$iio_dir/voltage_reference"
+		[ -w "$vr" ] || continue
+		if echo "$MAX1363_IIO_REFERENCE" >"$vr" 2>/dev/null; then
+			log_message "info" "MAX1363 $dev_id: voltage_reference=$MAX1363_IIO_REFERENCE (now: $(cat "$vr" 2>/dev/null))"
+			return 0
+		fi
+		log_message "err" "MAX1363 $dev_id: failed to set voltage_reference=$MAX1363_IIO_REFERENCE (available: $(cat "${vr}_available" 2>/dev/null)) - readings may rail to full scale (driver internal 2.048 V reference)"
+		return 1
+	done
+	log_message "err" "MAX1363 $dev_id: no voltage_reference sysfs node — cannot set $MAX1363_IIO_REFERENCE reference; readings may rail to full scale (driver internal 2.048 V reference)"
+	return 1
+}
+
 # True when ADS1015 config low byte has COMP_QUE=11 (comparator disabled, TI SBAS173).
 ads1015_cfg_comp_disabled()
 {
@@ -1662,6 +1704,7 @@ create_channel_infrastructure()
 		echo "$detector_name" >"$leakage_base/device_name"
 	fi
 	log_message "info" "Leakage runtime: $leakage_base (device_type=$device_type)"
+	write_reference_status_marker "$leakage_base" "$device_type"
 
 	if json_probe_true "$device_json"; then
 		sleep 0.5
@@ -1691,6 +1734,19 @@ create_channel_infrastructure()
 	return 0
 }
 
+# Record/clear a runtime marker when the MAX1363 Vdd reference could not be set, so a
+# railed configuration is observable in the leakage tree (not only the system log).
+write_reference_status_marker()
+{
+	local leakage_base="$1"
+	local device_type="$2"
+	if [ "$device_type" = "MAX1363" ] && [ "${MAX1363_REF_FAILED:-0}" = "1" ]; then
+		echo "voltage_reference not set to ${MAX1363_IIO_REFERENCE}; readings may rail to full scale (driver internal 2.048 V reference)" >"$leakage_base/reference_error"
+	else
+		rm -f "$leakage_base/reference_error"
+	fi
+}
+
 # One logical channel under leakage/<i>/<logical_ch>/ (per-channel Device[] map).
 populate_single_leakage_channel()
 {
@@ -1717,6 +1773,7 @@ populate_single_leakage_channel()
 	if [ ! -f "$leakage_base/device_type" ]; then
 		echo "$device_type" >"$leakage_base/device_type"
 	fi
+	write_reference_status_marker "$leakage_base" "$device_type"
 
 	if json_probe_true "$device_json"; then
 		sleep 0.5
@@ -1820,6 +1877,7 @@ configure_device()
 	bus=$(echo "$device_json" | json_get_number "Bus")
 	address=$(echo "$device_json" | json_get_string "Address")
 	need_rebind=0
+	MAX1363_REF_FAILED=0
 
 	log_message "info" "Checking $device_type device at Bus $bus, Address $address for $device_name"
 
@@ -1844,6 +1902,13 @@ configure_device()
 				"$device_type" "$num_channels" "$hw_channel_id" post_driver; then
 				log_message "info" "$device_type $device_name: post-probe register programming failed — try next Device alternative"
 				return 1
+			fi
+			# MAX1363: force the Vdd ADC reference while the driver is bound and the IIO
+			# sysfs is up, else the ti-max1363 default 2.048 V internal reference rails
+			# inputs above it to raw 4095. Record the outcome so a railed reference is
+			# observable in the leakage tree.
+			if [ "$device_type" = "MAX1363" ] && ! max1363_set_iio_reference "$bus" "$address"; then
+				MAX1363_REF_FAILED=1
 			fi
 			log_message "info" "Device configuration complete for $device_name"
 			return 0
