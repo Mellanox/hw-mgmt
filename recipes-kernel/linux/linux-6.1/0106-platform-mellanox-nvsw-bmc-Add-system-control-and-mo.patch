@@ -6130,7 +6130,7 @@ index 000000000..4f022d9fd
 +		.callback = nvsw_host_dmi_spc6_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
-+			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI1188"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI188"),
 +		},
 +	},
 +	{ }
