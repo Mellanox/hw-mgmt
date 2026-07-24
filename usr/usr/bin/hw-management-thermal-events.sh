@@ -767,7 +767,7 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
 		name=$(< /sys/"$3"/name)
-		if [ "$name" != "jc42" ]; then
+		if [ "$name" != "jc42" ] && [ "$name" != "spd5118" ]; then
 			exit
 		fi
 		check_cpu_type
@@ -798,7 +798,6 @@ if [ "$1" == "add" ]; then
 			$AMD_V3000_CPU)
 				sodimm1_addr='0052'
 				sodimm2_addr='0053'
-				set_sodimm_temp_limits
 			;;
 			*)
 				exit 0
@@ -1379,7 +1378,7 @@ else
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
 		name=$(< /sys/"$3"/name)
-		if [ "$name" != "jc42" ]; then
+		if [ "$name" != "jc42" ] && [ "$name" != "spd5118" ]; then
 			exit
 		fi
 		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
