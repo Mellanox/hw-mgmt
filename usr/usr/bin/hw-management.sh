@@ -1094,8 +1094,7 @@ add_come_named_busses()
 		come_named_busses+=( ${amd_snw_named_busses[@]} )
 		;;
 	*)
-		log_err "unsupported cpu_type '${cpu_type}' for add_come_named_busses"
-		return 1
+		return
 		;;
 	esac
 
