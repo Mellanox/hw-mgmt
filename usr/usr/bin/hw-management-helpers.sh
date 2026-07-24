@@ -1056,7 +1056,7 @@ set_sodimm_temp_limits()
 	# Coffee Lake Comex on part of systems e.g. on Anaconda.
 	# Thus check by CPU type and not by system type.
 	case $cpu_type in
-		$BDW_CPU|$BF3_CPU)
+		$BDW_CPU|$BF3_CPU|$AMD_V3000_CPU|$AMD_FRNG_CPU)
 			return 0
 			;;
 		*)
