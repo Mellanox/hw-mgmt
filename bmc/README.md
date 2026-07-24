@@ -231,7 +231,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 |--------|------|
 | **`hw-management-bmc-helpers-common.sh`** | From OpenBMC **`hw-management-helpers-common.sh`**: shared routines (**`log_event`**, **`log_cpld_dump`** — compact CPLD read for events), PHY **`mdio`** helpers, **`bmc_init_eth`**, **`get_mgmt_board_revision`**, etc.). **`hw-management-bmc-ready.sh`** sources it before **`hw-management-bmc-helpers.sh`**. Requires **bash** (uses **`[[ ]]`, `(( ))`, …). |
 | **`hw-management-bmc-cpld-dump.sh`** | **Merged** from OpenBMC **`recipes-phosphor/dump/files/cpld_dump.sh`** and **`dump_utils.sh`** (**`take_cpld_dump_internal`**, **`take_cpld_dump`** only). Full **16×16** CPLD grid via **256× `i2ctransfer … r1`** (one byte per offset), then prints the grid; optional **`.tar.xz`** CLI (**`-p`**, **`-i`**). Uses **`log_message`** and **`${HW_MANAGEMENT_BMC_PLATFORM_CONF:-/etc/hw-management-bmc-platform.conf}`** (via **`hw-management-bmc-helpers-common.sh`**); no Phosphor **`add_copy_file`**. Requires **bash**. |
-| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (host analog **`hw-management-generate-dump.sh`**). **Parallel** collectors; default **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. **`-v` / `--verbose`** adds **`systemd-analyze/`** (~1 min). Without **`-v`**, writes **`systemd-analyze/skipped.txt`**. See **BMC debug bundle** below. Requires **bash**. |
+| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (host analog **`hw-management-generate-dump.sh`**). **Parallel** collectors include the current boot journal under **`journal/`**; default **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. **`-v` / `--verbose`** adds **`systemd-analyze/`** (~1 min). Without **`-v`**, writes **`systemd-analyze/skipped.txt`**. See **BMC debug bundle** below. Requires **bash**. |
 | **`hw-management-bmc-json-parser.sh`** | From OpenBMC **`switch_json_parser.sh`**: **`json_validate`**, **`json_get_nested_array_element`**, etc. (awk/BusyBox). Sourced by **`hw-management-bmc-a2d-leakage-config.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-gpio-set.sh`** (**`bmc_init_sysfs_gpio`**). |
 | **`hw-management-bmc-copy-cartridge-data.sh`** | **Cartridge SKUs:** sources **`/usr/bin/switch_json_parser.sh`** when **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`** exists; reads cartridge FRU over I2C and programs SWB CPLD registers. See **`README-hw-management-bmc-copy-cartridge-data.md`**. |
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
@@ -295,7 +295,17 @@ Collectors run **in parallel** (disjoint subdirs under **`/tmp/hw-mgmt-bmc-dump/
 | **`HW_MGMT_CAPTURE_PARALLEL_MAX`** | fallback for **`HW_MGMT_BMC_DUMP_WORKERS`** | same |
 | **`SYSTEMD_ANALYZE_PARALLEL_MAX`** | **`$MAX_PARALLEL`** | Per-unit **`systemd-analyze critical-chain`** pool (verbose only) |
 
-Archive top-level: **`dmesg.txt`**, **`uname.txt`**, **`proc/`**, **`network/`**, **`i2c/`**, **`systemctl/`**, **`cpld/`** (**`cpld_dump.log`** via **`take_cpld_dump`**), **`var_run_hw-management/`** (**`tree/`**, **`values/`**).
+Archive top-level: **`dmesg.txt`**, **`uname.txt`**, **`journal/`**, **`proc/`**,
+**`network/`**, **`i2c/`**, **`systemctl/`**, **`cpld/`** (**`cpld_dump.log`** via
+**`take_cpld_dump`**), and **`var_run_hw-management/`** (**`tree/`**, **`values/`**).
+
+**`journal/`** — **`journalctl-b0.txt.gz`** is `journalctl -b0 --no-pager`
+streamed through **`gzip -5`** (full current boot, no line cap). Mid-level
+compression keeps **`/tmp`** usage low on small tmpfs BMCs without the CPU
+cost of **`-9`** on plain text; nested **`.gz`** inside the outer **`.tar.gz`**
+is expected. Collection has a 60-second timeout. If **`journalctl`** or
+**`gzip`** is unavailable, **`skipped.txt`** records that the section was
+skipped.
 
 **`var_run_hw-management/`** — single **`find`** over **`/var/run/hw-management`**, then parallel capture of file/symlink values (EEPROM: **`hexdump -C`**). **`hw-management-bmc-show-reset-cause.sh`** runs first into live **`bmc/show-reset-cause`** (archive **`values/bmc_show-reset-cause.txt`**). For **mlxreg-io** sysfs nodes that are **write-only** (**`--w-------`**), **`[ -r file ]`** may still succeed as root; the dump runs **`cat`** and records **`cat`** errors plus **`(cat returned non-zero; likely write-only or EIO)`** when read fails.
 
