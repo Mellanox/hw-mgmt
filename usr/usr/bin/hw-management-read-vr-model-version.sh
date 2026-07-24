@@ -98,18 +98,24 @@ log_message()
     echo "[$level] $message"
 }
 
-# Safe i2c command execution with error checking
+# Run i2cset without eval (argv only). Optional first arg: expected exit code.
 i2c_cmd()
 {
-    local cmd="$1"
-    local expected_exit="$2"
+    local expected_exit=0
+    local exit_code
 
-    if [[ -z "$expected_exit" ]]; then
-        expected_exit=0
+    if [[ "${1:-}" =~ ^[0-9]+$ ]] && [[ $# -gt 1 ]]; then
+        expected_exit="$1"
+        shift
     fi
 
-    eval "$cmd" >/dev/null 2>&1
-    local exit_code=$?
+    if [[ "$1" != "i2cset" ]]; then
+        return 1
+    fi
+    shift
+
+    i2cset "$@" >/dev/null 2>&1
+    exit_code=$?
 
     if [[ $exit_code -ne $expected_exit ]]; then
         return $exit_code
@@ -156,7 +162,7 @@ get_model()
     local byte_offset="${5:-0}"
 
     # Set page to model ID page
-    if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$model_page'"; then
+    if ! i2c_cmd 0 i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$model_page"; then
         return 1
     fi
 
@@ -181,7 +187,7 @@ get_revision()
     local byte_offset="${5:-0}"
 
     # Set page to revision ID page
-    if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$rev_page'"; then
+    if ! i2c_cmd 0 i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$rev_page"; then
         return 1
     fi
 
@@ -662,7 +668,7 @@ show_voltmon_info_json()
                 "$(json_escape "$internal_name")" \
                 "$(json_escape "${pmic_prefix:-}")" \
                 "$(json_escape "$device_type")" \
-                "$(json_escape "$bus")" \
+                "$(json_escape "$bus_abs")" \
                 "$(json_escape "$address")" \
                 "$(json_escape "$model_id")" \
                 "$(json_escape "$rev_id")"
