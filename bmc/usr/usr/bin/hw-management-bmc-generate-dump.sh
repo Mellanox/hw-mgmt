@@ -33,10 +33,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 ################################################################################
-# BMC debug bundle (SONiC BMC): dmesg, /proc/interrupts, ifconfig (or ip),
-# i2cdetect per non-mux bus, CPLD grid dump, systemctl for hw-management-bmc
-# units, systemd-analyze (time, blame, critical-chain), and /var/run/hw-management
-# tree + file contents (EEPROM via hexdump -C).
+# BMC debug bundle (SONiC BMC): dmesg, journalctl -b0, /proc/interrupts,
+# ifconfig (or ip), i2cdetect per non-mux bus, CPLD grid dump, systemctl for
+# hw-management-bmc units, systemd-analyze (time, blame, critical-chain), and
+# /var/run/hw-management tree + file contents (EEPROM via hexdump -C).
 # Output: gzip-compressed tar (default /tmp/hw-mgmt-bmc-dump.tar.gz). Pattern
 # aligned with usr/usr/bin/hw-management-generate-dump.sh (CPU).
 #
@@ -83,14 +83,17 @@ help()
 	cat <<EOF
 Usage: hw-management-bmc-generate-dump.sh [-v|--verbose] [output_tarball]
 
-  Collects dmesg, /proc/interrupts, ifconfig (fallback: ip addr), i2cdetect -y
-  for each bus from "i2cdetect -l | grep -v mux", CPLD dump (hw-management-bmc-cpld-dump),
-  systemctl status/show for all hw-management-bmc* units, and /var/run/hw-management tree
-  + values (EEPROM paths: hexdump -C).
+  Collects dmesg, journalctl -b0 (gzip'd on the fly), /proc/interrupts,
+  ifconfig (fallback: ip addr), i2cdetect -y for each bus from
+  "i2cdetect -l | grep -v mux", CPLD dump (hw-management-bmc-cpld-dump),
+  systemctl status/show for all hw-management-bmc* units, and
+  /var/run/hw-management tree + values (EEPROM paths: hexdump -C).
   Before archiving, hw-management-bmc-show-reset-cause.sh output is written to
-  /var/run/hw-management/bmc/show-reset-cause so it is included with the runtime snapshot.
+  /var/run/hw-management/bmc/show-reset-cause so it is included with the
+  runtime snapshot.
 
-  -v, --verbose   Also collect systemd-analyze (time, blame, critical-chain); slow (~1 min).
+  -v, --verbose   Also collect systemd-analyze (time, blame, critical-chain);
+                  slow (~1 min).
 
   Default output: /tmp/hw-mgmt-bmc-dump.tar.gz
 EOF
@@ -403,6 +406,31 @@ collect_proc_interrupts()
 	fi
 }
 
+collect_journalctl_boot()
+{
+	local d=$1
+	mkdir -p "$d"
+	if ! command -v journalctl >/dev/null 2>&1; then
+		log_message warning "journalctl not found — skipping boot journal"
+		echo "journalctl not found" >"${d}/skipped.txt"
+		return 0
+	fi
+	if ! command -v gzip >/dev/null 2>&1; then
+		log_message warning "gzip not found — skipping boot journal"
+		echo "gzip not found" >"${d}/skipped.txt"
+		return 0
+	fi
+	# Stream through gzip so a long-lived / verbose boot cannot exhaust /tmp
+	# (often a small tmpfs) while still keeping the full current-boot journal.
+	# stderr is merged into the stream so failures land in the .gz too.
+	if ! (
+		set -o pipefail 2>/dev/null || true
+		timeout 60 journalctl -b0 --no-pager 2>&1 | gzip -5 >"${d}/journalctl-b0.txt.gz"
+	); then
+		log_message warning "journalctl -b0 | gzip failed or timed out"
+	fi
+}
+
 collect_network_ifconfig()
 {
 	local d=$1
@@ -475,6 +503,7 @@ uname -a >"${DUMP_FOLDER}/uname.txt" 2>&1
 
 timeout 20 dmesg >"${DUMP_FOLDER}/dmesg.txt" 2>&1 || log_message warning "dmesg failed or timed out"
 
+run_collect_bg journalctl_boot collect_journalctl_boot "${DUMP_FOLDER}/journal"
 run_collect_bg proc_interrupts collect_proc_interrupts "${DUMP_FOLDER}/proc"
 run_collect_bg network_ifconfig collect_network_ifconfig "${DUMP_FOLDER}/network"
 run_collect_bg i2c_non_mux collect_i2c_non_mux "${DUMP_FOLDER}/i2c"
