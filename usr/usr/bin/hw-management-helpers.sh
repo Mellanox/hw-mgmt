@@ -1231,8 +1231,9 @@ set_sodimm_temp_limits()
 	# Broadwell-DE Comex can be installed interchangeably with new
 	# Coffee Lake Comex on part of systems e.g. on SN3700.
 	# Thus check by CPU type and not by system type.
+	# JC42 driver is not relevant on systems with DDR5 DRAM
 	case $cpu_type in
-		$BDW_CPU|$BF3_CPU)
+		$BDW_CPU|$BF3_CPU|$AMD_V3000_CPU|$AMD_FRNG_CPU)
 			return 0
 			;;
 		*)
