@@ -3168,7 +3168,6 @@ do_start()
 	sleep 1
 	enable_vpd_wp
 	echo 0 > $config_path/events_ready
-	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
@@ -3190,6 +3189,8 @@ do_start()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
+	/usr/bin/hw-management-start-post.sh
+
 	log_info "Init completed."
 }
 
