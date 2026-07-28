@@ -1,5 +1,6 @@
  {
 	"name": "n5100_ld/n5101_ld/n5200_ld/n5300_ld",
+	"tc_version": "2.0",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
