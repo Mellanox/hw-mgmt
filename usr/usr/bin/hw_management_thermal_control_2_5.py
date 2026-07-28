@@ -35,10 +35,10 @@
 #
 
 """
-Created on Oct 01, 2022
+Created on Apr 08, 2025
 
 Author: Oleksandr Shamray <oleksandrs@nvidia.com>
-Version: 2.1.1
+Version: 2.5.1
 
 Description:
 System Thermal control tool
@@ -60,15 +60,15 @@ from hw_management_lib import RepeatedTimer as RepeatedTimer
 from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
 import json
 import re
-import psutil
 import threading
+import psutil
 
 #############################
 # Global const
 #############################
 # pylint: disable=c0301,W0105
 
-VERSION = "2.1.1"
+VERSION = "2.5.1"
 
 #############################
 # Local const
@@ -100,7 +100,9 @@ class CONST:
     SYS_CONF_ERR_MASK = "error_mask"
     SYS_CONF_REDUNDANCY_PARAM = "redundancy"
     SYS_CONF_GENERAL_CONFIG_PARAM = "general_config"
+    SYS_CONF_PWM_UPDATE_PERIOD_PARAM = "pwm_update_period"
     SYS_CONF_TEC_MODULE_SUPPORTED_PARAM = "tec_module_supported"
+    SYS_CONF_USER_CONFIG_PARAM = "user_config"
     SYS_CONF_FAN_STEADY_STATE_DELAY = "fan_steady_state_delay"
     SYS_CONF_FAN_STEADY_STATE_PWM = "fan_steady_state_pwm"
     SYS_CONF_FAN_STEADY_ATTENTION_ITEMS = "attention_fans"
@@ -117,6 +119,10 @@ class CONST:
 
     # default hw-management folder
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
+
+    # second source hw-management user config folder
+    HW_MGMT_USER_CONFIG_SECOND_SOURCE = "/etc/hw-management-thermal/tc_config_user.json"
+
     # Link to thermal data
     SYSTEM_CONFIG_FILE = "config/tc_config.json"
     # File which defined current level filename.
@@ -149,17 +155,17 @@ class CONST:
 
     # Default sensor configuration if not configured other value
     SENSOR_POLL_TIME_DEF = 30
-    TEMP_INIT_VAL_DEF = 25
+    TEMP_INIT_VAL_DEF = 25.0
     TEMP_SENSOR_SCALE = 1000.0
-    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
+    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None, "val_max_clamp": 1000000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
+    MODULE_MAX_COOLING_LVL = 960
     TEMP_NA_VAL = 255
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
     PWM_MAX = 100
     EMERGENCY_PWM = 100
-    PWM_HYSTERESIS_DEF = 0
     PWM_PSU_MIN = 35
 
     VALUE_HYSTERESIS_DEF = 0
@@ -180,20 +186,16 @@ class CONST:
     DMIN_PWM_STEP_MIN = 2
     # PWM smoothing in time
     PWM_MAX_REDUCTION = 8
-    PWM_WORKER_POLL_TIME = 5
+    PWM_UPDATE_TIME_DEF = 5
     PWM_VALIDATE_TIME = 30
     # FAN RPM tolerance in percent
     FAN_RPM_TOLERANCE = 30
 
-    # attention fan insertion recovery defaults
-    FAN_STEADY_STATE_DELAY_DEF = 0
-    FAN_STEADY_STATE_PWM_DEF = 50
-
     # default system devices
     PSU_COUNT_DEF = 2
     FAN_DRWR_COUNT_DEF = 6
-    FAN_TACHO_COUNT_DEF = 6
     PDB_COUNT_DEF = 0
+    FAN_TACHO_COUNT_DEF = 6
     MODULE_COUNT_MAX = 128
 
     # Consistent file read  errors for set error state
@@ -219,6 +221,19 @@ class CONST:
 
     DRWR_ERR_LIST = [DIRECTION, TACHO, PRESENT, SENSOR_READ_ERR]
     PSU_ERR_LIST = [DIRECTION, PRESENT, SENSOR_READ_ERR]
+
+    MIN_SMOOTH_LEVEL = 1
+    # Value average formula type
+    # exponential moving average
+    VAL_AVG_EMA = 1
+    # simple moving average
+    VAL_AVG_SMA = 2
+    # weighted moving average
+    VAL_AVG_WMA = 3
+
+    # attention fan insertion recovery defaults
+    FAN_STEADY_STATE_DELAY_DEF = 0
+    FAN_STEADY_STATE_PWM_DEF = 50
 
     # Memory usage debugging
     DBG_MEMORY_INFO = True
@@ -275,6 +290,37 @@ input_smooth_level - smoothing level for sensor input value reading. Formula to 
     avg = avg_acc / input_smooth_level
 """
 
+SENSOR_PARAM_RANGE = {
+    r'module\d+': {
+        "val_min_offset": {
+            "min": -30000,
+            "max": -5000,
+        },
+        "val_max_offset": {
+            "min": -30000,
+            "max": 0,
+        },
+        "pwm_min": {
+            "min": 20,
+            "max": 100,
+        },
+        "pwm_max": {
+            "min": 30,
+            "max": 100,
+        }
+    },
+    r'.*': {
+        "pwm_min": {
+            "min": 20,
+            "max": 100,
+        },
+        "pwm_max": {
+            "min": 30,
+            "max": 100,
+        }
+    }
+}
+
 # fmt: off
 SENSOR_DEF_CONFIG = {
     r'psu\d+_fan':      {"type": "psu_fan_sensor",
@@ -288,28 +334,29 @@ SENSOR_DEF_CONFIG = {
     r'module\d+':       {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000, "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
-                         "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
+                         "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_WMA,
+                         "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
     r'module\d+_tec':   {"type": "thermal_module_tec_sensor",
-                         "pwm_min": 0, "pwm_max": 100, "val_min": 0, "val_max": 100,
+                         "pwm_min": 0, "pwm_max": 100, "val_min": 0, "val_max": 960,
                          "val_lcrit": 0, "val_hcrit": 1000, "poll_time": 20,
                          "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
-                         "val_lcrit": 5, "val_hcrit": 150000,  "poll_time": 6,
+                         "val_lcrit": 5, "val_hcrit": 150000, "poll_time": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
     r'asic\d*':         {"type": "thermal_asic_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
-                         "value_hyst": 2, "input_smooth_level": 1
+                         "value_hyst": 2
                         },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "90000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
-                         "value_hyst": 5, "input_smooth_level": 3
-                        },
+                                "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "90000",
+                                "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
+                                "value_hyst": 5, "input_smooth_level": 3
+                               },
     r'sodimm\d_temp':   {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!75000", "val_max": 85000,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
@@ -323,9 +370,9 @@ SENSOR_DEF_CONFIG = {
     r'comex_amb':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
                         },
-    r'sensor_amb':      {"type": "ambient_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, 
+    r'sensor_amb':      {"type": "ambient_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000,
                          "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
-                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0, "input_smooth_level": 1
+                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor",
                          "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
@@ -341,7 +388,7 @@ SENSOR_DEF_CONFIG = {
                         },
     r'ibc\d+':          {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60, 
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60,
                          "input_suffix": "_input"
                         },
     r'ctx_amb\d*':      {"type": "thermal_sensor",
@@ -350,35 +397,35 @@ SENSOR_DEF_CONFIG = {
                         },
     r'hotswap\d+_temp': {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30, 
+                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30,
                          "input_suffix": "_input"
                         },
     r'bmc_temp':        {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                         },
-    r'dpu\d+_module':  {"type": "dpu_module",
+    r'dpu\d+_module':   {"type": "dpu_module",
                          "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list" : []
                         },
     r'dpu\d+_cx_amb':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3},
     r'dpu\d+_cpu':      {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", 
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_smooth_level": 1
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000",
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3
                         },
     r'dpu\d+_sodimm\d+': {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70
-                        },
+                          "pwm_min": 30, "pwm_max": 70
+                         },
     r'dpu\d+_drivetemp': {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60
-                        },
+                          "pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000",
+                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60
+                         },
     r'dpu\d+_voltmon\d+_temp': {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", 
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_suffix": "_input"
-                        },
+                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                                "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_suffix": "_input"
+                               },
 }
 # fmt: on
 
@@ -457,6 +504,32 @@ _sig_condition_name = ""
 # ----------------------------------------------------------------------
 
 
+def natural_key(obj):
+    name = obj.name.strip()
+    # Break the string into text and number chunks
+    return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', name)]
+
+# ----------------------------------------------------------------------
+
+
+def g_safe_round(value, digits=1):
+    """
+    @summary: Round values for log/report output while preserving non-numeric sentinel strings.
+    """
+    if value is None:
+        return "N/A"
+
+    try:
+        return round(value, digits)
+    except TypeError:
+        try:
+            return round(float(value), digits)
+        except (TypeError, ValueError):
+            return value
+
+# ----------------------------------------------------------------------
+
+
 def str2bool(val):
     """
     @summary:
@@ -476,8 +549,9 @@ def str2bool(val):
         return False
     return None
 
-
 # ----------------------------------------------------------------------
+
+
 def get_dict_val_by_path(dict_in, path):
     """
     @summary: get value from the multi nested dict_in.
@@ -525,14 +599,13 @@ def g_get_range_val(line, in_value):
 
 
 # ----------------------------------------------------------------------
-def g_get_dmin(thermal_table, temp, path, interpolated=False):
+def g_get_dmin(thermal_table, temp, path):
     """
     @summary: Searching PWM value in dmin table based on input temperature
     @param thermal_table: dict with thermal table for the current system
     @param temp:  temperature
     @param patch: array with thermal cause path.
     Example: ["C2P": "trusted"] or ["C2P": "psu_err", "present']
-    @param interpolated: Use linear interpolation for smoothing PWM jumps
     @return: PWM value
     """
     line = get_dict_val_by_path(thermal_table, path)
@@ -540,33 +613,12 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
     if not line:
         return CONST.PWM_MIN
     # get current range
-    dmin, range_min, range_max = g_get_range_val(line, temp)
-    if not dmin:
-        dmin, _, _ = g_get_range_val(line, 100)
-        return dmin
-
-    if not interpolated:
-        return dmin
-
-    # get range of next step
-    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1)
-    # reached maximum range
-    if dmin_next is None:
-        return dmin
-
-    # calculate smooth step
-    start_smooth_change_position = range_min_next - (dmin_next - dmin) / CONST.DMIN_PWM_STEP_MIN
-    if temp < start_smooth_change_position:
-        return dmin
-    elif start_smooth_change_position < range_min:
-        step = float(dmin_next - dmin) / float(range_max + 1 - range_min)
-    else:
-        step = CONST.DMIN_PWM_STEP_MIN
-    dmin = dmin_next - ((range_min_next - temp) * step)
-    return int(dmin)
-
+    dmin, _, _ = g_get_range_val(line, round(temp))
+    return float(dmin)
 
 # ----------------------------------------------------------------------
+
+
 def add_missing_to_dict(dict_base, dict_new):
     """
     @summary:  Add value to dict. Perform only if value not exists.
@@ -581,10 +633,10 @@ def add_missing_to_dict(dict_base, dict_new):
 
 
 class hw_management_file_op:
-    '''
-    @summary:
-        The following cases providing wrapper for file operations with hw-management files
-    '''
+    """
+    @summary: Base class for hardware management file operations
+    Provides common file operations for hardware management
+    """
 
     def __init__(self, config):
         if not config[CONST.HW_MGMT_ROOT]:
@@ -608,7 +660,7 @@ class hw_management_file_op:
         @summary:
             read file from hw-management tree.
         @param filename: file to read from {hw-management-folder}/filename
-        @return: file contents
+        @return: file contents or None on error
         """
         content = None
         filename = os.path.join(self.root_folder, filename)
@@ -653,6 +705,19 @@ class hw_management_file_op:
         return int(val)
 
     # ----------------------------------------------------------------------
+    def read_file_float(self, filename, scale=1, round_digits=3):
+        """
+        @summary:
+            read file from hw-management/ tree.
+        @param filename: file to read from {hw-management-folder}/filename
+        @param round_digits: precision after the decimal point
+        @return: float value from file
+        """
+        val = self.read_file(filename)
+        val = float(val) / scale
+        return round(val, round_digits)
+
+    # ----------------------------------------------------------------------
     def thermal_read_file_int(self, filename, scale=1):
         """
         @summary:
@@ -661,6 +726,18 @@ class hw_management_file_op:
         @return: int value from file
         """
         val = self.read_file_int(os.path.join("thermal", filename), scale)
+        return val
+
+    # ----------------------------------------------------------------------
+    def thermal_read_file_float(self, filename, scale=1, round_digits=3):
+        """
+        @summary:
+            read file from hw-management/thermal tree.
+        @param filename: file to read from {hw-management-folder}/thermal/filename
+        @param round_digits: precision after the decimal point
+        @return: float value from file
+        """
+        val = self.read_file_float(os.path.join("thermal", filename), scale=scale, round_digits=round_digits)
         return val
 
     # ----------------------------------------------------------------------
@@ -677,7 +754,7 @@ class hw_management_file_op:
         if self.check_file(filename):
             try:
                 val = int(self.read_file(filename)) / scale
-            except (IOError, ValueError, TypeError, OSError):
+            except (ValueError, TypeError, OSError, IOError):
                 pass
         return val
 
@@ -734,22 +811,22 @@ class hw_management_file_op:
         """
         @summary:
             write value to PWM file.
-        @param pwm: PWM value in percent 0..100
+        @param pwm: PWM value in percent 0..100 (float)
         @param validate: Make read-after-write validation. Return True in case no error
         """
         ret = True
         try:
-            pwm_out = int(pwm * 255 / 100)
+            pwm_out = self.percent2pwm(pwm)
             if self.check_file("thermal/pwm1"):
                 self.write_file("thermal/pwm1", pwm_out)
             else:
                 ret = False
-        except (IOError, ValueError, TypeError, OSError):
+        except (ValueError, TypeError, OSError, IOError):
             ret = False
 
         if validate:
-            pwm_get = self.read_pwm()
-            ret = pwm == pwm_get
+            pwm_get = self.read_pwm(0)
+            ret = abs(pwm - pwm_get) < 1
         return ret
 
     # ----------------------------------------------------------------------
@@ -786,7 +863,7 @@ class hw_management_file_op:
         yes_proc = None
         mlxreg_proc = None
         try:
-            pwm_out = int(pwm * 255 / 100)
+            pwm_out = self.percent2pwm(pwm)
             if os.path.exists(self.asic_pcidev):
                 yes_proc = subprocess.Popen(['yes'], stdout=subprocess.PIPE)
                 mlxreg_proc = subprocess.Popen(
@@ -811,7 +888,7 @@ class hw_management_file_op:
 
         if validate:
             pwm_get = self.read_pwm_mlxreg()
-            ret = pwm == pwm_get
+            ret = abs(pwm - pwm_get) < 1
         return ret
 
     # ----------------------------------------------------------------------
@@ -825,8 +902,8 @@ class hw_management_file_op:
         """
         pwm_out = default_val
         try:
-            pwm = int(self.read_file("thermal/pwm1"))
-            pwm_out = int(pwm / 2.55 + 0.5)
+            pwm = self.read_file("thermal/pwm1")
+            pwm_out = self.pwm2percent(pwm)
         except (ValueError, TypeError, OSError, IOError):
             pass
 
@@ -858,7 +935,7 @@ class hw_management_file_op:
                 for line in stdout_lines:
                     if "pwm" in line:
                         pwm = int(line.split("|")[1].strip(), 16)
-                        pwm_out = int(pwm / 2.55 + 0.5)
+                        pwm_out = self.pwm2percent(pwm)
                         break
 
         except (ValueError, TypeError, subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
@@ -869,6 +946,23 @@ class hw_management_file_op:
                 self._terminate_proc(mlxreg_proc, timeout=1.0)
 
         return pwm_out
+
+    # ----------------------------------------------------------------------
+    def percent2pwm(self, pwm_percent):
+        pwm = pwm_percent * 2.55
+        pwm = round(pwm)
+        return pwm
+
+    # ----------------------------------------------------------------------
+    def pwm2percent(self, pwm):
+        pwm_percent = int(pwm) * 100 / 255
+        pwm_percent = round(pwm_percent, 2)
+        return pwm_percent
+
+    # ----------------------------------------------------------------------
+    def round_pwm(self, pwm_percent):
+        pwm = self.percent2pwm(pwm_percent)
+        return self.pwm2percent(pwm)
 
 
 class iterate_err_counter:
@@ -966,7 +1060,172 @@ class iterate_err_counter:
         """
         return self.err_counter_dict.get(err_name, 0)
 
+
+class pwm_regulator_simple():
+    """
+    @summary: PWM regulator class.
+            Calculating PWM based on formula:
+            PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+    """
+    def __init__(self, logger, name, val_min, val_max, pwm_min, pwm_max):
+        self.log = logger
+        self.name = name
+        self.pwm_min = CONST.PWM_MIN
+        self.pwm_max = CONST.PWM_MAX
+        self.val_min = CONST.TEMP_MIN_MAX["val_min"]
+        self.val_max = CONST.TEMP_MIN_MAX["val_max"]
+        self.update_param(val_min, val_max, pwm_min, pwm_max)
+        self.pwm = self.pwm_min
+        if self.log:
+            self.log.info("regulator:{} INIT".format(self.name))
+
     # ----------------------------------------------------------------------
+    def _calculate_pwm_formula(self, val_min, val_max, pwm_min, pwm_max, value):
+        """
+        @summary: Calculate PWM by formula
+        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+        @return: PWM value rounded to nearest value
+        """
+        if val_max == val_min:
+            return pwm_min
+
+        pwm = pwm_min + (float(value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
+        if pwm > pwm_max:
+            pwm = pwm_max
+
+        if pwm < pwm_min:
+            pwm = pwm_min
+        return pwm
+
+    # ----------------------------------------------------------------------
+    def update_param(self, val_min, val_max, pwm_min, pwm_max):
+        """
+        @summary: update parameters
+        """
+        if val_min is not None:
+            self.val_min = val_min
+        if val_max is not None:
+            self.val_max = val_max
+        if pwm_min is not None:
+            self.pwm_min = pwm_min
+        if pwm_max is not None:
+            self.pwm_max = pwm_max
+        if self.log:
+            self.log.debug("regulator:{} update param: val_min:{} val_max:{} pwm_min:{} pwm_max:{}".format(self.name, val_min, val_max, pwm_min, pwm_max))
+
+    # ----------------------------------------------------------------------
+    def tick(self, value):
+        """
+        @summary: tick function
+        """
+        self.pwm = self._calculate_pwm_formula(self.val_min, self.val_max, self.pwm_min, self.pwm_max, value)
+        if self.log:
+            self.log.debug("regulator:{} tick: value:{} pwm: {}".format(self.name, value, self.pwm))
+
+    # ----------------------------------------------------------------------
+    def get_pwm(self):
+        """
+        @summary: get PWM value
+        """
+        return self.pwm
+
+    def __str__(self):
+        return "{}: min:{} max:{} pwm_min:{} pwm_max:{}".format(self.name,
+                                                                self.val_min,
+                                                                self.val_max,
+                                                                self.pwm_min,
+                                                                self.pwm_max)
+
+
+class pwm_regulator_dynamic(pwm_regulator_simple):
+    def __init__(self, logger, name, val_min, val_max, pwm_min, pwm_max, extra_param):
+        pwm_regulator_simple.__init__(self, logger, name, val_min, val_max, pwm_min, pwm_max)
+
+        # threshold for value in comparison with current temperature
+        self.val_up_trh = extra_param.get("val_up_trh", 1)
+        self.val_down_trh = extra_param.get("val_down_trh", 3)
+
+        # multiplier for Iterm
+        self.increase_step = extra_param.get("increase_step", 5)
+        self.decrease_step = extra_param.get("decrease_step", 0.1)
+
+        # threshold for Iterm. If Iterm is below this value, it will be decreased
+        self.Iterm_down_trh = extra_param.get("Iterm_down_trh", 10)
+
+        # subtrahend for value in case of temp lower then (val_max - val_down_trh)
+        self.range = extra_param.get("range", 3)
+
+        self.Iterm = 0
+        self.pwm_max_dynamic = pwm_max
+
+    # ----------------------------------------------------------------------
+    def _calculate_pwm_formula(self, val_min, val_max, pwm_min, pwm_max, value):
+        """
+        @summary: Calculate PWM by formula
+        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+        @return: PWM value rounded to nearest value
+        """
+        if val_max == val_min:
+            return pwm_min
+
+        pwm = pwm_min + (float(value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
+
+        if pwm > CONST.PWM_MAX:
+            pwm = CONST.PWM_MAX
+
+        if pwm < pwm_min:
+            pwm = pwm_min
+        return pwm
+
+    # ----------------------------------------------------------------------
+    def update_param(self, val_min, val_max, pwm_min, pwm_max):
+        """
+        @summary: update parameters
+        """
+        if pwm_max != self.pwm_max:
+            self.pwm_max_dynamic = pwm_max
+        pwm_regulator_simple.update_param(self, val_min, val_max, pwm_min, pwm_max)
+
+    # ----------------------------------------------------------------------
+    def tick(self, value):
+        """
+        @summary: Update PWM based on temperature value
+
+        This method implements a dynamic PWM control algorithm:
+        - When temperature exceeds upper threshold, increases PWM
+        - When temperature drops below lower threshold, decreases PWM
+        - Uses integral term (Iterm) for smooth transitions
+
+        @param value: Current temperature value (float)
+        """
+        if value >= self.val_max - self.val_up_trh:
+            temp_diff = value - self.val_max
+            self.Iterm = temp_diff + 1
+            old_pwm = self.pwm_max_dynamic
+            self.pwm_max_dynamic += self.increase_step * self.Iterm
+            self.pwm_max_dynamic = min(self.pwm_max_dynamic, 100)
+            if old_pwm != self.pwm_max_dynamic and self.log:
+                self.log.info("pwm_max_dynamic increased from {} to {}".format(old_pwm, round(self.pwm_max_dynamic, 1)))
+        elif value < self.val_max - self.val_down_trh:
+            self.Iterm -= self.val_max - value - self.range
+            if self.Iterm < self.Iterm_down_trh:
+                old_pwm = self.pwm_max_dynamic
+                self.pwm_max_dynamic += self.decrease_step * self.Iterm
+                self.pwm_max_dynamic = max(self.pwm_max_dynamic, self.pwm_max)
+                if old_pwm != self.pwm_max_dynamic and self.log:
+                    self.log.info("pwm_max_dynamic decreased from {} to {}".format(old_pwm, round(self.pwm_max_dynamic, 1)))
+                self.Iterm = 0
+        else:
+            self.Iterm = 0
+
+        self.pwm = self._calculate_pwm_formula(self.val_min, self.val_max, self.pwm_min, self.pwm_max_dynamic, value)
+
+    # ----------------------------------------------------------------------
+    def __str__(self):
+        """
+        @summary: return string representation of the class
+        """
+        return "I:{: <3}, pwm_dmax:{}".format(g_safe_round(self.Iterm, 1), round(self.pwm_max_dynamic))
 
 
 class system_device(hw_management_file_op):
@@ -985,10 +1244,9 @@ class system_device(hw_management_file_op):
         self.log.debug("sensor config:\n{}".format(json.dumps(self.sensors_config, indent=4)))
         self.base_file_name = self.sensors_config.get("base_file_name", None)
         self.file_input = "{}{}".format(self.base_file_name, self.sensors_config.get("input_suffix", ""))
-        self.enable = int(self.sensors_config.get("enable", 1))
-        self.input_smooth_level = self.sensors_config.get("input_smooth_level", 1)
-        if self.input_smooth_level < 1:
-            self.input_smooth_level = 1
+        self.enable = bool(self.sensors_config.get("enable", 1))
+        self.input_smooth_level = self.sensors_config.get("input_smooth_level", CONST.MIN_SMOOTH_LEVEL)
+
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.update_timestamp(1000)
         self.scale = CONST.TEMP_SENSOR_SCALE
@@ -998,23 +1256,23 @@ class system_device(hw_management_file_op):
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
         self.pwm_min = CONST.PWM_MIN
         self.pwm_max = CONST.PWM_MAX
-        self.value = CONST.TEMP_INIT_VAL_DEF
-        self.value_acc = self.value * self.input_smooth_level
+        self.value = CONST.TEMP_NA_VAL
+        self.value_acc = 0
         self.last_value = self.value
         self.pwm = CONST.PWM_MIN
         self.last_pwm = self.pwm
-        self.pwm_hysteresis = int(self.sensors_config.get("pwm_hyst", CONST.PWM_HYSTERESIS_DEF))
         self.state = CONST.STOPPED
         self.fread_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
         self.refresh_attr_period = 0
         self.refresh_timeout = 0
-
+        self.pwm_regulator = pwm_regulator_simple(None, name, self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.system_flow_dir = CONST.UNKNOWN
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
         self.value_trend = 0
-        self.value_hyst = int(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
+        self.value_hyst = float(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
+        self.smooth_formula = int(self.sensors_config.get("smooth_formula", CONST.VAL_AVG_EMA))
 
         # ==================
         self.mask_fault_list = []
@@ -1055,9 +1313,16 @@ class system_device(hw_management_file_op):
             return
 
         self.log.info("Starting {}".format(self.name))
-        self.state = CONST.RUNNING
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        if not self.validate_sensor_param("pwm_min", self.pwm_min):
+            self.log.error("{}: pwm_min incorrect value ({})".format(self.name, self.pwm_min), repeat=1)
+            raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
+        if not self.validate_sensor_param("pwm_max", self.pwm_max):
+            self.log.error("{}: pwm_max incorrect value ({})".format(self.name, self.pwm_max), repeat=1)
+            raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
+
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
         if self.refresh_attr_period:
             self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
@@ -1067,13 +1332,16 @@ class system_device(hw_management_file_op):
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
+        self.value_items_lst = None
+        self.value = CONST.TEMP_NA_VAL
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
-        self.enable = int(self.sensors_config.get("enable", 1))
-        self.value_acc = self.value * self.input_smooth_level
+        self.enable = bool(self.sensors_config.get("enable", 1))
+        self.value_acc = 0
         self.fread_err.reset_all()
-        self.sensor_configure()
         self.update_timestamp(1000)
         self.clear_fault_list()
+        self.sensor_configure()
+        self.state = CONST.RUNNING
 
     # ----------------------------------------------------------------------
     def stop(self):
@@ -1153,6 +1421,52 @@ class system_device(hw_management_file_op):
         self.update_pwm_flag = 1
 
     # ----------------------------------------------------------------------
+    def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_EMA):
+        # Value average formula type
+        if formula_type == CONST.VAL_AVG_EMA:
+            input_smooth_level = self.input_smooth_level
+            # first time init
+            if self.value == CONST.TEMP_NA_VAL:
+                self.value_acc = value * input_smooth_level
+
+            # integral filter for smoothing temperature change
+            self.value_acc -= self.value_acc / input_smooth_level
+            self.value_acc += value
+
+            result = round(self.value_acc / input_smooth_level, 3)
+            if abs(result - value) < 0.25:
+                result = value
+
+            return result
+        elif formula_type == CONST.VAL_AVG_SMA:
+            input_smooth_level = self.input_smooth_level + 1
+
+            if self.value == CONST.TEMP_NA_VAL:
+                self.value_items_lst = [value] * input_smooth_level
+
+            self.value_items_lst = [value] + self.value_items_lst[:-1]
+            return sum(self.value_items_lst) / input_smooth_level
+
+        elif formula_type == CONST.VAL_AVG_WMA:
+            input_smooth_level = self.input_smooth_level + 1
+            if self.value == CONST.TEMP_NA_VAL:
+                self.value_items_lst = [value] * input_smooth_level
+
+                # Init weight coef.
+                self.value_items_weight = [0] * input_smooth_level
+                self.value_items_weight[0] = 0.5 + (1 / input_smooth_level)
+                for idx in range(1, input_smooth_level - 1):
+                    self.value_items_weight[idx] = (1 - sum(self.value_items_weight[0:idx])) / 2
+                if input_smooth_level > 2:
+                    self.value_items_weight[self.input_smooth_level] = self.value_items_weight[self.input_smooth_level - 1]
+
+            self.value_items_lst = [value] + self.value_items_lst[:-1]
+            result = [a * b for a, b in zip(self.value_items_lst, self.value_items_weight)]
+            return sum(result)
+        else:
+            return value
+
+    # ----------------------------------------------------------------------
     def update_value(self, value=None):
         """
         @summary: Update sensor value. Value type depends from sensor type and can be: Celsius degree, rpm, ...
@@ -1172,10 +1486,7 @@ class system_device(hw_management_file_op):
         self.last_value = value
         prev_value = self.value
 
-        # integral filter for smoothing temperature change
-        self.value_acc -= self.value_acc / self.input_smooth_level
-        self.value_acc += value
-        self.value = int(round(float(self.value_acc) / self.input_smooth_level))
+        self.value = self._update_value_formula(value, formula_type=self.smooth_formula)
 
         if self.value > prev_value:
             value_trend = 1
@@ -1213,40 +1524,22 @@ class system_device(hw_management_file_op):
         self.system_flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
-    def calculate_pwm_formula(self):
-        """
-        @summary: Calculate PWM by formula
-        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
-        @return: PWM value rounded to nearest value
-        """
-        if self.val_max == self.val_min:
-            return self.pwm_min
-
-        pwm = self.pwm_min + (float(self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
-        if pwm > self.pwm_max:
-            pwm = self.pwm_max
-
-        if pwm < self.pwm_min:
-            pwm = self.pwm_min
-        return int(round(pwm))
-
-    # ----------------------------------------------------------------------
     def read_val_min_max(self, filename, trh_type, scale=1):
         """
         @summary: read device min/max values from file. If file can't be read - returning default value from CONST.TEMP_MIN_MAX
         @param filename: file to be read
         @param trh_type: "min" or "max". this string will be added to filename
         @param scale: scale for read value
-        @return: int min/max value
+        @return: float min/max value
         """
         default_val = self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type])
         try:
             if str(default_val)[0] == "!":
                 # Use config value instead of device parameter reading
                 default_val = default_val[1:]
-                val = int(default_val) / CONST.TEMP_SENSOR_SCALE
+                val = float(default_val) / CONST.TEMP_SENSOR_SCALE
             else:
-                val = self.get_file_val(filename, int(default_val) / CONST.TEMP_SENSOR_SCALE, scale)
+                val = self.get_file_val(filename, float(default_val) / CONST.TEMP_SENSOR_SCALE, scale)
         except (ValueError, TypeError, IndexError):
             val = None
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
@@ -1305,6 +1598,37 @@ class system_device(hw_management_file_op):
         return err_flag
 
     # ----------------------------------------------------------------------
+    def validate_sensor_param(self, param_name, param_value):
+        """
+        @summary: Validate sensor parameter value
+        """
+        if not isinstance(param_value, (int, float)):
+            self.log.error("{}: {} value({}) is not a number".format(self.name, param_name, param_value), repeat=1)
+            return False
+        param_value = float(param_value)
+        for sensor_name_mask, sensor_param_list in SENSOR_PARAM_RANGE.items():
+            if re.match(sensor_name_mask, self.name):
+                if param_name in sensor_param_list:
+                    param_value_range = sensor_param_list[param_name]
+                    if "min" in param_value_range:
+                        if param_value < param_value_range["min"]:
+                            self.log.info("{}: {} value({}) is out of range({}-{})".format(self.name,
+                                                                                           param_name,
+                                                                                           param_value,
+                                                                                           param_value_range["min"],
+                                                                                           param_value_range["max"]))
+                            return False
+                    if "max" in param_value_range:
+                        if param_value > param_value_range["max"]:
+                            self.log.info("{}: {} value({}) is out of range({}-{})".format(self.name,
+                                                                                           param_name,
+                                                                                           param_value,
+                                                                                           param_value_range["min"],
+                                                                                           param_value_range["max"]))
+                            return False
+        return True
+
+    # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
         """
         @summary:  check if sensor disabled. Sensor can be disabled by writing 1 to file {sensor_name}_blacklist
@@ -1336,6 +1660,7 @@ class system_device(hw_management_file_op):
     # ----------------------------------------------------------------------
     def append_fault(self, fault_name):
         """
+        @summary: append fault to fault list
         """
         if fault_name not in self.fault_list:
             self.fault_list.append(fault_name)
@@ -1402,6 +1727,9 @@ class system_device(hw_management_file_op):
 
     # ----------------------------------------------------------------------
     def get_fault_list_str(self):
+        """
+        @summary: get fault list string
+        """
         fault_lst = []
         for fault_name in self.fault_list:
             if fault_name in self.mask_fault_list:
@@ -1423,7 +1751,10 @@ class system_device(hw_management_file_op):
     # ----------------------------------------------------------------------
     def process(self, thermal_table, flow_dir, amb_tmp):
         """
-        @summary: main function to process device/sensor
+        @summary: Process sensor data and update thermal control
+        @param thermal_table: Thermal configuration table
+        @param flow_dir: Air flow direction
+        @param amb_tmp: Ambient temperature
         """
         if self.check_sensor_blocked():
             if self.state == CONST.RUNNING:
@@ -1442,7 +1773,7 @@ class system_device(hw_management_file_op):
             self.collect_err()
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
@@ -1451,13 +1782,13 @@ class system_device(hw_management_file_op):
         if CONST.SENSOR_READ_ERR in fault_list or self.value == CONST.TEMP_NA_VAL:
             value = "N/A"
         else:
-            value = self.value
+            value = g_safe_round(self.value, 1)
         info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], tz_pwm: {}, {}".format(self.name,
                                                                                              value,
-                                                                                             self.val_min,
-                                                                                             self.val_max,
+                                                                                             g_safe_round(self.val_min, 1),
+                                                                                             g_safe_round(self.val_max, 1),
                                                                                              self.get_fault_list_str(),
-                                                                                             self.pwm,
+                                                                                             g_safe_round(self.pwm, 1),
                                                                                              self.state)
         return info_str
 
@@ -1472,6 +1803,7 @@ class thermal_sensor(system_device):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
+
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
 
@@ -1482,6 +1814,7 @@ class thermal_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", self.scale)
         self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1496,7 +1829,7 @@ class thermal_sensor(system_device):
             self.fread_err.handle_err(val_read_file_full_path, cause="missing")
         else:
             try:
-                value = self.read_file_int(val_read_file, self.scale)
+                value = self.read_file_float(val_read_file, self.scale)
                 if not self.is_crit_range_violation(value, val_read_file_full_path):
                     # value is readable and in expected range
                     self.fread_err.handle_err(val_read_file_full_path, reset=True)
@@ -1507,8 +1840,9 @@ class thermal_sensor(system_device):
                     self.fread_err.handle_err(val_read_file_full_path, cause="crit range")
             except (ValueError, TypeError, IOError, OSError):
                 self.fread_err.handle_err(val_read_file_full_path, cause="value")
-        pwm = self.calculate_pwm_formula()
-        self.pwm = pwm
+
+        self.pwm_regulator.tick(self.value)
+        self.pwm = self.pwm_regulator.get_pwm()
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -1527,7 +1861,7 @@ class thermal_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(int(sensor_err), self.pwm)
+            self.pwm = max(float(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
 
@@ -1543,15 +1877,31 @@ class thermal_module_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        self.pwm_prev = self.pwm
+        self.pwm_regulator = pwm_regulator_dynamic(tc_logger,
+                                                   name,
+                                                   self.val_min,
+                                                   self.val_max,
+                                                   self.pwm_min,
+                                                   self.pwm_max,
+                                                   self.sensors_config.get("reg_extra_param", {}))
+
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
 
-        self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
-        self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
+        self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        # taking default values for val_min_offset and val_max_offset
         self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
         self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+
+        # Tmax_crit should be used if module reported Tmax > Tmax_crit
+        # So Tmax should be never bigger than Tmax_crit. (Optional parameter)
+        self.val_max_clamp = self.read_val_min_max(None, "val_max_clamp", self.scale)
+
+        self._validate_config()
 
         self.eeprom_data_timestamp = None
         self.refresh_attr()
@@ -1576,9 +1926,6 @@ class thermal_module_sensor(system_device):
             file_mtime = self.get_file_mtime(filename)
         else:
             file_mtime = 0
-
-        if not hasattr(self, "eeprom_data_timestamp"):
-            self.eeprom_data_timestamp = None
 
         eeprom_data_dict = {}
         change_flag = False
@@ -1629,6 +1976,25 @@ class thermal_module_sensor(system_device):
         return None
 
     # ----------------------------------------------------------------------
+    def _validate_config(self):
+        """
+        @summary: validate custom configuration
+        """
+        if not self.validate_sensor_param("val_min_offset", self.val_min_offset):
+            self.log.error("{}: val_min_offset incorrect value ({})".format(self.name, self.val_min_offset), repeat=1)
+            raise ValueError("Incorrect value of val_min_offset {}".format(self.val_min_offset))
+        if not self.validate_sensor_param("val_max_offset", self.val_max_offset):
+            self.log.error("{}: val_max_offset incorrect value ({})".format(self.name, self.val_max_offset), repeat=1)
+            raise ValueError("Incorrect value of val_max_offset {}".format(self.val_max_offset))
+
+        if not self.validate_sensor_param("pwm_min", self.pwm_min):
+            self.log.error("{}: pwm_min incorrect value ({})".format(self.name, self.pwm_min), repeat=1)
+            raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
+        if not self.validate_sensor_param("pwm_max", self.pwm_max):
+            self.log.error("{}: pwm_max incorrect value ({})".format(self.name, self.pwm_max), repeat=1)
+            raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
+
+    # ----------------------------------------------------------------------
     def refresh_attr(self):
         """
         @summary: refresh sensor attributes.
@@ -1677,34 +2043,17 @@ class thermal_module_sensor(system_device):
                                                                                                         self.pwm_max,
                                                                                                         self.val_min_offset,
                                                                                                         self.val_max_offset))
+            self._validate_config()
 
         val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         if val_max != 0 and self.scale != 0:
             self.val_max = val_max + self.val_max_offset / self.scale
+            self.val_max = min(self.val_max, self.val_max_clamp)
             self.val_min = self.val_max + self.val_min_offset / self.scale
         else:
-            self.val_max = 0
-            self.val_min = 0
-
-    # ----------------------------------------------------------------------
-    def get_fault(self):
-        """
-        @summary: Get module sensor fault status
-        @return: True - in case if sensor is readeble and have consistent values
-            False - if module is in 'faulty' state
-        """
-        status = False
-        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
-        if self.check_file(fault_filename):
-            try:
-                fault_status = int(self.read_file(fault_filename))
-                if fault_status:
-                    status = True
-            except (ValueError, TypeError, OSError, IOError) as e:
-                self.log.warn("{}- Incorrect value in the file: {} ({})".format(self.name, fault_filename, e))
-                status = True
-
-        return status
+            self.val_max = 0.0
+            self.val_min = 0.0
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def get_temp_support_status(self, value=0):
@@ -1734,7 +2083,7 @@ class thermal_module_sensor(system_device):
             self.fread_err.handle_err(val_read_file_full_path, cause="missing")
         else:
             try:
-                value = self.read_file_int(val_read_file, self.scale)
+                value = self.read_file_float(val_read_file, self.scale)
                 self.log.debug("{} value:{}".format(self.name, value))
                 # handle case if cable was replaced by the other cable
                 # cable removed - value == 0 max != 0
@@ -1755,7 +2104,7 @@ class thermal_module_sensor(system_device):
                         # value is not in expected range
                         self.fread_err.handle_err(val_read_file_full_path, cause="crit range")
                 else:
-                    # module is not supporting temperature reading
+                    # module doesn't support temperature reading
                     self.fread_err.handle_err(val_read_file_full_path, reset=True)
             except (ValueError, TypeError, OSError, IOError):
                 self.fread_err.handle_err(val_read_file_full_path, cause="value")
@@ -1763,7 +2112,8 @@ class thermal_module_sensor(system_device):
         # check if module have temperature reading interface
         if self.get_temp_support_status():
             # calculate PWM based on formula
-            pwm = max(self.calculate_pwm_formula(), pwm)
+            self.pwm_regulator.tick(self.value)
+            pwm = max(self.pwm_regulator.get_pwm(), pwm)
         self.pwm = pwm
 
     # ----------------------------------------------------------------------
@@ -1783,30 +2133,38 @@ class thermal_module_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(int(sensor_err), self.pwm)
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR], interpolated=False)
+            self.pwm = max(float(sensor_err), self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
 
         self._update_pwm()
         return None
 
-    # ----------------------------------------------------------------------
-    def info(self):
+        # ----------------------------------------------------------------------
+    def __str__(self):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
         fault_list = self.get_fault_list_filtered()
-        value = self.value if self.get_temp_support_status() else CONST.TEMP_NA_VAL
+        value = g_safe_round(self.value, 1) if self.get_temp_support_status() else CONST.TEMP_NA_VAL
         if CONST.SENSOR_READ_ERR in fault_list or value == CONST.TEMP_NA_VAL:
             value = "N/A"
 
-        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], tz_pwm: {}, {}".format(self.name,
-                                                                                             value,
-                                                                                             self.val_min,
-                                                                                             self.val_max,
-                                                                                             self.get_fault_list_str(),
-                                                                                             self.pwm,
-                                                                                             self.state)
+        if self.pwm > self.pwm_prev:
+            sign = u'\u2191'  # up arrow
+        elif self.pwm < self.pwm_prev:
+            sign = u'\u2193'  # down arrow
+        else:
+            sign = ''  # no change
+        self.pwm_prev = self.pwm
+        info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, [{}], faults:[{}], tz_pwm: {}{}, {}".format(self.name,
+                                                                                                                  value,
+                                                                                                                  g_safe_round(self.val_min, 1),
+                                                                                                                  g_safe_round(self.val_max, 1),
+                                                                                                                  str(self.pwm_regulator),
+                                                                                                                  self.get_fault_list_str(),
+                                                                                                                  g_safe_round(self.pwm, 1), sign,
+                                                                                                                  self.state)
         return info_str
 
 
@@ -1817,16 +2175,18 @@ class thermal_module_tec_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        self.pwm_prev = self.pwm
         self.scale = self.sensors_config.get("scale", 1)
         self.val_lcrit = self.sensors_config.get("val_lcrit", CONST.TEMP_MIN_MAX["val_lcrit"])
         self.val_hcrit = self.sensors_config.get("val_hcrit", CONST.TEMP_MIN_MAX["val_hcrit"])
-        self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
-        self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         self.val_min = self.sensors_config.get("val_min", 0)
         self.val_max = self.sensors_config.get("val_max", 100)
         self.cooling_level = 0
         self.cooling_level_max = 0
         self.temperature = 0
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1847,7 +2207,7 @@ class thermal_module_tec_sensor(system_device):
             else:
                 try:
                     if fname == 'temperature':
-                        value = self.read_file_int(fpath, 1000)
+                        value = self.read_file_float(fpath, 1000)
                     else:
                         value = self.read_file_int(fpath)
                     setattr(self, fname, value)
@@ -1882,7 +2242,8 @@ class thermal_module_tec_sensor(system_device):
             self.fread_err.handle_err(fpath, reset=True)
 
         # calculate PWM value
-        self.pwm = self.calculate_pwm_formula()
+        self.pwm_regulator.tick(self.get_value())
+        self.pwm = self.pwm_regulator.get_pwm()
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -1901,7 +2262,7 @@ class thermal_module_tec_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(sensor_err, self.pwm)
+            self.pwm = max(float(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
 
@@ -1909,29 +2270,38 @@ class thermal_module_tec_sensor(system_device):
         return None
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
         temperature = self.temperature
         cooling_level = self.cooling_level
         cooling_level_max = self.cooling_level_max
 
-        value_str = "temp:{: <3}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(temperature,
-                                                                                     cooling_level,
-                                                                                     cooling_level_max)
+        if self.pwm > self.pwm_prev:
+            sign = u'\u2191'  # up arrow
+        elif self.pwm < self.pwm_prev:
+            sign = u'\u2193'  # down arrow
+        else:
+            sign = ''  # no change
+        self.pwm_prev = self.pwm
+        value_str = "temp:{: <4}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(g_safe_round(temperature, 1),
+                                                                                     g_safe_round(cooling_level, 1),
+                                                                                     g_safe_round(cooling_level_max, 1))
 
-        info_str = "\"{: <8}\" {: <46}, faults:[{}], pwm: {}, {}".format(self.name,
-                                                                         value_str,
-                                                                         self.get_fault_list_str(),
-                                                                         self.pwm,
-                                                                         self.state)
+        info_str = "\"{: <8}\" {: <54}, faults:[{}], pwm: {}{}, {}".format(self.name,
+                                                                           value_str,
+                                                                           self.get_fault_list_str(),
+                                                                           g_safe_round(self.pwm, 1), sign,
+                                                                           self.state)
         return info_str
 
 
-class thermal_asic_sensor(thermal_module_sensor):
+class thermal_asic_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
-        thermal_module_sensor.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.asic_fault_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
@@ -1940,14 +2310,6 @@ class thermal_asic_sensor(thermal_module_sensor):
 
         self.sdk_load_timeout_timestamp = 0
         self._sdk_timeout_restart(timeout_sec=CONST.SDK_LOAD_TIMEOUT_SEC)
-
-    # ----------------------------------------------------------------------
-    def sensor_configure(self):
-        """
-        @summary: this function calling on sensor start after initialization or suspend off
-        """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
-        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
 
     # ----------------------------------------------------------------------
     def _sdk_timeout_restart(self, timeout_sec=CONST.SDK_LOAD_TIMEOUT_SEC):
@@ -1985,55 +2347,63 @@ class thermal_asic_sensor(thermal_module_sensor):
         return asic_ready
 
     # ----------------------------------------------------------------------
+    def sensor_configure(self):
+        """
+        @summary: this function calling on sensor start after initialization or suspend off
+        """
+        # Disable kernel control for this thermal zone
+        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
+        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
         """
         pwm = self.pwm_min
         val_read_file = "thermal/{}".format(self.file_input)
-        val_read_file_full_path = self.get_hw_path(val_read_file)
-
         # need to ignore incorrect sensor file reading error when SDK init is in progress
         sdk_init_in_progress = self._sdk_init_in_progress()
         if not self.check_file(val_read_file):
             # ASIC thermal sensor file must be present even if ASIC/SDK not ready
-            self.fread_err.handle_err(val_read_file_full_path, cause="missing")
+            self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="missing")
         else:
             try:
                 # need only to correct handle emergency value (0) when SDK not started yet
                 asic_ready_state = self._read_asic_ready()
-                value = self.read_file_int(val_read_file, self.scale)
+                value = self.read_file_float(val_read_file, self.scale)
                 if value == 0 and asic_ready_state:
                     self.log.notice("{} Incorrect value: {} in the file: {}. Emergency attention".format(self.name,
                                                                                                          value,
                                                                                                          val_read_file),
                                     id="{} value in {}".format(self.name, val_read_file), repeat=1)
-                    self.asic_fault_err.handle_err(val_read_file_full_path, cause="emergency value (0)")
+                    self.asic_fault_err.handle_err(self.get_hw_path(val_read_file), cause="emergency value (0)")
                 else:
-                    self.asic_fault_err.handle_err(val_read_file_full_path, reset=True)
+                    self.asic_fault_err.handle_err(self.get_hw_path(val_read_file), reset=True)
                     # Print "finalization" message to indicate that the error is resolved. Print only once.
                     self.log.notice(None, id="{} value in {}".format(self.name, val_read_file))
 
-                if not self.is_crit_range_violation(value, val_read_file_full_path):
+                if not self.is_crit_range_violation(value, self.get_hw_path(val_read_file)):
                     # value is readable and in expected range
-                    self.fread_err.handle_err(val_read_file_full_path, reset=True)
+                    self.fread_err.handle_err(self.get_hw_path(val_read_file), reset=True)
                     self.update_value(value)
-                    self.validate_value_in_min_max_range(self.value, val_read_file_full_path)
+                    self.validate_value_in_min_max_range(self.value, self.get_hw_path(val_read_file))
                 else:
-                    # value is not in expected range
+                    # value is not in expected range and ASIC is ready
                     if sdk_init_in_progress:
                         self.log.notice("{}: SDK init in progress, crit range violation is not an issue".format(self.name))
                     else:
-                        self.fread_err.handle_err(val_read_file_full_path, cause="crit range")
+                        self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="crit range")
             except (ValueError, TypeError, OSError, IOError):
                 if sdk_init_in_progress:
                     self.log.notice("{}: SDK init in progress, value reading error is not an issue".format(self.name))
                 else:
-                    self.fread_err.handle_err(val_read_file_full_path, cause="value")
+                    self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="value")
 
         # calculate PWM based on formula
-        pwm = max(self.calculate_pwm_formula(), pwm)
-        self.pwm = pwm
+        self.pwm_regulator.tick(self.value)
+        self.pwm = max(self.pwm_regulator.get_pwm(), pwm)
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -2055,7 +2425,7 @@ class thermal_asic_sensor(thermal_module_sensor):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(int(sensor_err), self.pwm)
+            self.pwm = max(float(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
 
@@ -2087,6 +2457,7 @@ class psu_fan_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
         self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.refresh_attr()
         self.pwm_last = CONST.PWM_MIN
 
@@ -2163,7 +2534,7 @@ class psu_fan_sensor(system_device):
             present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
             if present == 1 and not self.psu_dummy:
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
-                psu_pwm, _, _ = g_get_range_val(self.pwm_decode, pwm)
+                psu_pwm, _, _ = g_get_range_val(self.pwm_decode, round(pwm))
                 if psu_pwm is None:
                     self.log.notice("{} Can't match PWM {} to PSU. PWM value will not be changed".format(self.name, pwm))
                     return
@@ -2295,7 +2666,7 @@ class psu_fan_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(int(sensor_err), self.pwm)
+            self.pwm = max(float(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             pwm_new = max(pwm, pwm_new)
 
@@ -2304,25 +2675,25 @@ class psu_fan_sensor(system_device):
         return
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
         if self.psu_dummy:
             return "\"{}\" dummy psu, faults:[{}] tz_pwm: {}, {}".format(self.name,
                                                                          self.get_fault_list_str(),
-                                                                         self.pwm,
+                                                                         g_safe_round(self.pwm, 1),
                                                                          self.state)
         else:
             if self.value == -1:
                 value = "N/A"
             else:
-                value = self.value
+                value = int(self.value)
             return "\"{}\" rpm:{}, dir:{} faults:[{}] tz_pwm: {}, {}".format(self.name,
                                                                              value,
                                                                              self.fan_dir,
                                                                              self.get_fault_list_str(),
-                                                                             self.pwm,
+                                                                             g_safe_round(self.pwm, 1),
                                                                              self.state)
 
 
@@ -2362,13 +2733,13 @@ class fan_sensor(system_device):
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
         self.pwm_set = self.read_pwm(CONST.PWM_MIN)
 
+        # FAN tacho state. True - ok, False - error (cached for "not stabilized" path)
+        self.fan_tacho_state = True
+
         self.insert_status = 0
         self.insert_event_ts = 0
         self.insert_failed = False
         self.insert_event = False
-
-        # FAN tacho state. True - ok, False - error
-        self.fan_tacho_state = True
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
@@ -2645,7 +3016,7 @@ class fan_sensor(system_device):
             if rpm_max == 0:
                 rpm_max = self.val_max_def
 
-            pwm_min = int(fan_param["pwm_min"])
+            pwm_min = float(fan_param["pwm_min"])
             self.log.debug("Real:{} min:{} max:{}".format(rpm_curr, rpm_min, rpm_max))
             # 1. Check fan speed in range with tolerance.
             # Note: out-of-range is treated as an unconditional hardware fault and
@@ -2672,7 +3043,7 @@ class fan_sensor(system_device):
                 # if FAN speed stabilized after the last change
                 if self.rpm_relax_timestamp <= current_milli_time() and pwm_curr == self.pwm_set:
                     # calculate speed
-                    slope = int(fan_param["slope"])
+                    slope = float(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
                     rpm_calculated = slope * pwm_curr + b
                     rpm_diff = abs(rpm_curr - rpm_calculated)
@@ -2682,12 +3053,13 @@ class fan_sensor(system_device):
                         # don't need to update fan_tacho_state cached value. Just return False because of value error state.
                         # intentionally not set fan_tacho_state to False.
                         return False
+
                     rpm_diff_norm = float(rpm_diff) / rpm_calculated
                     self.log.debug("validate_rpm:{} b:{} rpm_calculated:{} rpm_diff:{} rpm_diff_norm:{:.2f}%".format(self.name,
                                                                                                                      b,
                                                                                                                      rpm_calculated,
                                                                                                                      rpm_diff,
-                                                                                                                     rpm_diff_norm))
+                                                                                                                     rpm_diff_norm * 100))
                     if rpm_diff_norm >= self.rpm_tolerance:
                         self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} @pwm {}".format(self.name,
                                                                                                                     tacho_idx,
@@ -2776,8 +3148,8 @@ class fan_sensor(system_device):
         """
         @summary: get max_reduction value from fan parameters
         """
-        val = self.drwr_param["0"].get("pwm_max_reduction", CONST.PWM_MAX_REDUCTION)
-        return int(val)
+        pwm_reduction = self.drwr_param["0"].get("pwm_max_reduction", CONST.PWM_MAX_REDUCTION)
+        return pwm_reduction
 
     # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
@@ -2809,7 +3181,7 @@ class fan_sensor(system_device):
         """
         @summary: Shutdown FAN
         @param shutdown: bool.
-        @return: True if shutdown successfull. False If shutdown not supportingor error
+        @return: True if shutdown successful. False If shutdown not supporting or error
         """
         ret = True
 
@@ -2920,7 +3292,7 @@ class fan_sensor(system_device):
             if CONST.SENSOR_READ_ERR not in self.mask_fault_list:
                 # get special error case for sensor missing
                 sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-                self.pwm = max(int(sensor_err), self.pwm)
+                self.pwm = max(float(sensor_err), self.pwm)
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
                 pwm_new = max(pwm, pwm_new)
 
@@ -2929,7 +3301,7 @@ class fan_sensor(system_device):
         return
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2937,13 +3309,13 @@ class fan_sensor(system_device):
         if self.rpm_relax_timestamp > current_milli_time():
             fan_speed_stable_sign = u'\u2195'  # up/down arrow
 
-        info_str = "\"{}\" rpm:{}{}, dir:{} faults:[{}] tz_pwm {} {}".format(self.name,
-                                                                             self.value,
-                                                                             fan_speed_stable_sign,
-                                                                             self.fan_dir,
-                                                                             self.get_fault_list_str(),
-                                                                             self.pwm,
-                                                                             self.state)
+        info_str = "\"{: <14}\" rpm:{}{}, dir:{} faults:[{}] tz_pwm {} {}".format(self.name,
+                                                                                  self.value,
+                                                                                  fan_speed_stable_sign,
+                                                                                  self.fan_dir,
+                                                                                  self.get_fault_list_str(),
+                                                                                  g_safe_round(self.pwm, 1),
+                                                                                  self.state)
         return info_str
 
 
@@ -2967,6 +3339,7 @@ class ambient_thermal_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("", "val_min", self.scale)
         self.val_max = self.read_val_min_max("", "val_max", self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def set_flow_dir(self, flow_dir):
@@ -3011,7 +3384,7 @@ class ambient_thermal_sensor(system_device):
                 self.fread_err.handle_err(val_read_file_full_path, cause="missing")
             else:
                 try:
-                    value = self.read_file_int(val_read_file, self.scale)
+                    value = self.read_file_float(val_read_file, self.scale)
                     if not self.is_crit_range_violation(value, val_read_file_full_path):
                         # value is readable and in expected range
                         self.fread_err.handle_err(val_read_file_full_path, reset=True)
@@ -3031,7 +3404,8 @@ class ambient_thermal_sensor(system_device):
         if value != CONST.TEMP_NA_VAL:
             self.update_value(value)
 
-        self.pwm = self.calculate_pwm_formula()
+        self.pwm_regulator.tick(self.value)
+        self.pwm = self.pwm_regulator.get_pwm()
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -3050,14 +3424,14 @@ class ambient_thermal_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(int(sensor_err), self.pwm)
+            self.pwm = max(float(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return None
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -3066,13 +3440,16 @@ class ambient_thermal_sensor(system_device):
         for key, val in self.value_dict.items():
             if val == CONST.TEMP_NA_VAL:
                 val = "N/A"
-            sens_val += "{}:{} ".format(key, val)
+            sens_val += "{}:{} ".format(key, g_safe_round(val, 1))
+        sensor_min_val = self.value_dict[sensor_name_min]
+        if sensor_min_val == CONST.TEMP_NA_VAL:
+            sensor_min_val = "N/A"
         info_str = "\"{}\" {}({}), dir:{}, faults:[{}] tz_pwm:{}, {}".format(self.name,
                                                                              sens_val,
-                                                                             self.value_dict[sensor_name_min],
+                                                                             g_safe_round(sensor_min_val, 1),
                                                                              self.flow_dir,
                                                                              self.get_fault_list_str(),
-                                                                             self.pwm,
+                                                                             g_safe_round(self.pwm, 1),
                                                                              self.state)
         return info_str
 
@@ -3132,7 +3509,7 @@ class dpu_module(system_device):
                 child_obj.enable = False
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state.
         """
@@ -3142,7 +3519,7 @@ class dpu_module(system_device):
 
 """
 Main class for Thermal control. Init and running all devices objects.
-Controlling devices states and calculating PWM based on this information.
+Controlling devices states and calculation PWM based on this information.
 """
 
 
@@ -3191,9 +3568,8 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Preinit Nvidia thermal control v.{}".format(VERSION), repeat=1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
-        except (ValueError, TypeError, IOError, OSError) as e:
-            self.log.warn("Failed write to {}: {}".format(CONST.LOG_LEVEL_FILENAME, str(e)))
-
+        except (OSError, IOError):
+            pass
         self.periodic_report_worker_timer = None
         self.cmd_arg = cmd_arg
 
@@ -3213,7 +3589,6 @@ class ThermalManagement(hw_management_file_op):
         self.sys_config = {}
 
         self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
-        self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
         self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
         self.state = CONST.UNCONFIGURED
@@ -3261,6 +3636,13 @@ class ThermalManagement(hw_management_file_op):
                                                                                          self.fan_steady_state_delay,
                                                                                          self.fan_steady_state_pwm))
 
+        pwm_update_period = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_PWM_UPDATE_PERIOD_PARAM])
+        if pwm_update_period:
+            self.pwm_worker_poll_time = pwm_update_period
+        else:
+            self.pwm_worker_poll_time = CONST.PWM_UPDATE_TIME_DEF
+        self.log.info("PWM update time: {} sec".format(self.pwm_worker_poll_time))
+
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target))
         if not self.write_pwm(self.pwm_target, validate=True):
@@ -3304,6 +3686,8 @@ class ThermalManagement(hw_management_file_op):
         self.dev_err_exclusion_conf = {}
         self.obj_init_continue = True
 
+        self.pwm_level_array = [0] * 10
+        self.pwm_timestamp_array = [0] * 10
         self.memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
 
     # ---------------------------------------------------------------------
@@ -3453,6 +3837,7 @@ class ThermalManagement(hw_management_file_op):
 
         syslog_level = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_SYSLOG_LEVEL])
         log_level = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_LOG_LEVEL])
+
         if isinstance(syslog_level, int) and syslog_level >= 0:
             self.log.info("Setting syslog_level: {}".format(syslog_level))
             self.log.set_syslog_level(syslog_level)
@@ -3606,6 +3991,27 @@ class ThermalManagement(hw_management_file_op):
                     psu_obj.set_pwm(pwm)
 
     # ----------------------------------------------------------------------
+    def _get_pwm_avg(self):
+        pwm_total = 0
+        time_total = 0
+        current_time = current_milli_time()
+        for idx in range(0, len(self.pwm_level_array) - 2):
+            if self.pwm_timestamp_array[idx] == 0:
+                break
+
+            # print("current_time : {}".format(current_time))
+            time_diff = current_time - self.pwm_timestamp_array[idx]
+            time_total += time_diff
+            pwm_total += self.pwm_level_array[idx] * time_diff
+            current_time = self.pwm_timestamp_array[idx]
+
+        if time_total != 0:
+            pwm_avg = pwm_total / time_total
+        else:
+            pwm_avg = 0
+        return pwm_avg
+
+    # ----------------------------------------------------------------------
     def _update_chassis_fan_speed(self, pwm_val, force=False):
         """
         @summary:
@@ -3621,6 +4027,14 @@ class ThermalManagement(hw_management_file_op):
         if not self.is_pwm_exists():
             self.log.warn("Missing PWM link {}".format(pwm_val))
             return
+
+        for idx in range(len(self.pwm_level_array) - 1, 0, -1):
+            self.pwm_level_array[idx] = self.pwm_level_array[idx - 1]
+            self.pwm_timestamp_array[idx] = self.pwm_timestamp_array[idx - 1]
+
+        self.pwm_level_array[0] = pwm_val
+        self.pwm_timestamp_array[0] = current_milli_time()
+
         for drwr_idx in range(1, self.fan_drwr_num + 1):
             fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
             if fan_obj:
@@ -3641,6 +4055,7 @@ class ThermalManagement(hw_management_file_op):
         @summary: Set target PWM for the system
         @param pwm: target PWM value
         """
+        pwm = round(pwm, 2)
         if self.state == CONST.UNCONFIGURED:
             self.log.notice("TC is not configured. Set PWM {}%".format(pwm))
             if not self.write_pwm(pwm, validate=True):
@@ -3652,7 +4067,6 @@ class ThermalManagement(hw_management_file_op):
                 self.log.notice(None, id="PWM write validation mismatch")
             return
 
-        pwm = int(pwm)
         if pwm > CONST.PWM_MAX:
             pwm = CONST.PWM_MAX
 
@@ -3691,7 +4105,7 @@ class ThermalManagement(hw_management_file_op):
                     # Print "finalization" message to indicate that the error is resolved. Print only once.
                     self.log.notice(None, id="Read PWM error")
 
-                if pwm_real != self.pwm:
+                if abs(pwm_real - self.pwm) > 1:
                     self.log.warn("Unexpected pwm value {}%. Force set to {}%".format(pwm_real, self.pwm))
                     self._update_chassis_fan_speed(self.pwm, True)
             elif self.is_pwm_asic_control():  # ASIC controlled PWM but path unavailable
@@ -3715,7 +4129,7 @@ class ThermalManagement(hw_management_file_op):
                 # Print "finalization" message to indicate that the error is resolved. Print only once.
                 self.log.notice(None, id="Read PWM error")
 
-            if pwm_real != self.pwm:
+            if abs(pwm_real - self.pwm) > 1:
                 self.log.warn("Unexpected pwm value {}%. Force set to {}%".format(pwm_real, self.pwm))
                 self._update_chassis_fan_speed(self.pwm, True)
             self.pwm_worker_timer.stop()
@@ -3724,12 +4138,15 @@ class ThermalManagement(hw_management_file_op):
         self.log.debug("PWM target: {} curr: {}".format(self.pwm_target, self.pwm))
         if self.pwm_target < self.pwm:
             diff = abs(self.pwm_target - self.pwm)
-            step = int(round((float(diff) / 2 + 0.5)))
+            step = self.round_pwm(diff / 2)
             if step > self.pwm_max_reduction:
                 step = self.pwm_max_reduction
+            elif step < 0.2:
+                step = diff
             self.pwm -= step
         else:
             self.pwm = self.pwm_target
+        self.pwm = round(self.pwm, 2)
         self._update_chassis_fan_speed(self.pwm)
 
     # ----------------------------------------------------------------------
@@ -3780,13 +4197,15 @@ class ThermalManagement(hw_management_file_op):
         @summary: Create sensor config and add it to main config dict
             1. Use configuration from 'sensors_config'[sensor_name] as base.
             2. Apply initial_config to base config.
-            3. Load "tune" parameters. This parameters can be used for dynamically change sensor configuration.
+            3. Add parameters from optional user_config (from tc_user_config.json). If parameter already present in base config, it will be replaced.
                Sensor name can be defined as regex mask.
-            4. Apply "dev_parameters" parameters from tc_config.json.
+            4. Load "tune" parameters. This parameters can be used for dynamically change sensor configuration.
                Sensor name can be defined as regex mask.
-            5. Apply missing keys from def config (defined in top of this file)
+            5. Apply "dev_parameters" parameters from tc_config.json.
                Sensor name can be defined as regex mask.
-            Steps 1,2,3,4,5 adding only new configuration parameters if they were not added on previous steps.
+            6. Apply missing keys from def config (defined in top of this file)
+               Sensor name can be defined as regex mask.
+            Steps 1,2,4,5,6 adding only new configuration parameters if they were not added on previous steps.
             So next step will not add parameters if they were already added on previous steps.
         @param sensor_type: sensor/device sensor_type
         @param sensor_name: sensor/device sensor_name
@@ -3803,7 +4222,25 @@ class ThermalManagement(hw_management_file_op):
         if initial_config:
             add_missing_to_dict(sensors_config[sensor_name], initial_config)
 
-        # 3. Apply config from dev_tune as extra_param
+        # 3. Apply parameters from optional user_config to sensors_config
+        if self.sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM]:
+            user_config = self.sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM]
+            # 3.1 Apply sensor specific config
+            if CONST.SYS_CONF_SENSORS_CONF in user_config:
+                if sensor_name in user_config[CONST.SYS_CONF_SENSORS_CONF]:
+                    self.log.info("{} update from user_config -> {}".format(sensor_name,
+                                                                            user_config[CONST.SYS_CONF_SENSORS_CONF][sensor_name]))
+                    sensors_config[sensor_name].update(user_config[CONST.SYS_CONF_SENSORS_CONF][sensor_name])
+
+            # 3.2 Apply missing keys from user_config->sensors_config to sensor_conf
+            if CONST.SYS_CONF_DEV_PARAM in user_config:
+                dev_param = user_config[CONST.SYS_CONF_DEV_PARAM]
+                for name_mask, val in dev_param.items():
+                    if re.match(name_mask, sensor_name):
+                        add_missing_to_dict(sensors_config[sensor_name], val)
+                        break
+
+        # 4. Apply config from dev_tune as extra_param
         if CONST.SYS_CONF_DEV_TUNE in self.sys_config:
             dev_tune = self.sys_config[CONST.SYS_CONF_DEV_TUNE]
             for name_mask, dev_tune_val in dev_tune.items():
@@ -3813,7 +4250,7 @@ class ThermalManagement(hw_management_file_op):
                     add_missing_to_dict(sensors_config[sensor_name], {CONST.DEV_CONF_EXTRA_PARAM: dev_tune_val})
                     break
 
-        # 4. Apply missing keys from dev_parameters to sensor_conf
+        # 5. Apply missing keys from dev_parameters to sensor_conf
         dev_param = self.sys_config[CONST.SYS_CONF_DEV_PARAM]
         for name_mask, val in dev_param.items():
             if not name_mask.endswith("$"):
@@ -3822,7 +4259,7 @@ class ThermalManagement(hw_management_file_op):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
 
-        # 5. Apply missing keys from def config to sensor_conf
+        # 6. Apply missing keys from def config to sensor_conf
         dev_param = SENSOR_DEF_CONFIG
         for name_mask, val in dev_param.items():
             if not name_mask.endswith("$"):
@@ -3890,7 +4327,7 @@ class ThermalManagement(hw_management_file_op):
                 try:
                     tacho_cnt = self.read_file("config/max_tachos")
                     ret = bool(int(tacho_cnt))
-                except (IOError, ValueError, TypeError, OSError):
+                except (ValueError, TypeError, OSError, IOError):
                     self.log.notice("Can't read config/max_tachos. None-numeric value: {}".format(tacho_cnt))
                     ret = False
         return ret
@@ -3964,6 +4401,20 @@ class ThermalManagement(hw_management_file_op):
             self.exit.set()
 
     # ----------------------------------------------------------------------
+    def load_user_configuration(self, user_config_file_name):
+        """
+        @summary: Load user configuration file and merge it with system configuration
+        """
+        user_config = {}
+        with open(user_config_file_name) as f:
+            self.log.info("Loading user config from {}".format(user_config_file_name))
+            try:
+                user_config = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                self.log.error("User config file {} broken.".format(user_config_file_name), repeat=1)
+        return user_config
+
+    # ----------------------------------------------------------------------
     def load_configuration(self):
         """
         @summary: Init configuration table.
@@ -3985,7 +4436,7 @@ class ThermalManagement(hw_management_file_op):
                     sys_config = json.load(f)
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
-                except (json.JSONDecodeError, ValueError, KeyError):
+                except (json.JSONDecodeError, ValueError):
                     self.log.critical("System config file {} broken.".format(config_file_name))
                     sys_config["platform_support"] = 0
         else:
@@ -4021,15 +4472,13 @@ class ThermalManagement(hw_management_file_op):
 
         # 6. Init ASIC config
         if CONST.SYS_CONF_ASIC_PARAM not in sys_config:
-            self.log.info("ASIC specific parameters table missing in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
 
         if CONST.SYS_CONF_SENSOR_LIST_PARAM not in sys_config:
-            self.log.info("Static sensor list missing in system_config. Init it from local")
+            self.log.warn("Static sensor list missing orempty in tc_config")
             sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = []
 
         if CONST.SYS_CONF_ERR_MASK not in sys_config:
-            self.log.info("Dmin mask not defined in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ERR_MASK] = []
 
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
@@ -4041,6 +4490,21 @@ class ThermalManagement(hw_management_file_op):
         if CONST.SYS_CONF_DEV_TUNE not in sys_config:
             sys_config[CONST.SYS_CONF_DEV_TUNE] = {}
 
+        user_config = {}
+        user_config_file_name = config_file_name.replace(".json", "_user.json")
+        user_config_file_list = [user_config_file_name, CONST.HW_MGMT_USER_CONFIG_SECOND_SOURCE]
+        for user_config_file_name in user_config_file_list:
+            if os.path.exists(user_config_file_name):
+                try:
+                    self.log.info("Found user config in:{}. Loading it...".format(user_config_file_name),)
+                    user_config = self.load_user_configuration(user_config_file_name)
+                    self.log.info("User config loaded successfully")
+                    break
+                except (json.JSONDecodeError, ValueError, OSError, IOError, KeyError):
+                    self.log.warn("User config file {} load failed. Skip it".format(user_config_file_name), repeat=1)
+        if not user_config:
+            self.log.info("User config not defined")
+        sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
         return sys_config
 
     # ----------------------------------------------------------------------
@@ -4324,7 +4788,8 @@ class ThermalManagement(hw_management_file_op):
     def stop(self, reason=""):
         """
         @summary: Stop sensor service and set PWM to PWM-MAX.
-        Used when suspend mode was de-asserted or when kill signal was revived
+        Used when suspend mode was de-asserted or when kill signal was received
+        @param reason: Reason for stopping the service
         """
         if self.state != CONST.STOPPED:
             if self.pwm_worker_timer:
@@ -4335,6 +4800,7 @@ class ThermalManagement(hw_management_file_op):
                 self.periodic_report_worker_timer.stop()
                 self.periodic_report_worker_timer = None
 
+            # Stop all devices gracefully
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     dev_obj.stop()
@@ -4562,6 +5028,7 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary:  Print memory usage info
         """
+
         if hasattr(self, "process"):
             memory_info = self.process.memory_full_info()
             memory_usage_rss = round(memory_info.rss / 1024, 1)
@@ -4614,15 +5081,15 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("=" * 40)
         if CONST.DBG_MEMORY_INFO:
             self.print_memory_info()
-        self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
-        self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
+        self.log.info("Temperature(C):{} amb:{}".format(asic_info, amb_tmp))
+        self.log.info("Cooling(%):{} (max pwm source:{}), avg:{}".format(self.pwm_target, self.pwm_change_reason, round(self._get_pwm_avg(), 1)))
         self.log.info("dir:{}".format(flow_dir))
         self.log.info("=" * 40)
-        for dev_obj in self.dev_obj_list:
+
+        dev_obj_sorted = sorted(self.dev_obj_list, key=natural_key)
+        for dev_obj in dev_obj_sorted:
             if dev_obj.enable:
-                obj_info_str = dev_obj.info()
-                if obj_info_str:
-                    self.log.info(obj_info_str)
+                self.log.info(str(dev_obj))
         self.log.info("=" * 40)
 
 
@@ -4679,7 +5146,6 @@ if __name__ == '__main__':
                             help="Define custom hw-management root folder",
                             default=CONST.HW_MGMT_FOLDER_DEF)
     args = vars(CMD_PARSER.parse_args())
-
     if args[CONST.LOG_USE_SYSLOG]:
         syslog_level = Logger.NOTICE
     else:
@@ -4700,7 +5166,6 @@ if __name__ == '__main__':
         logger.notice("Thermal control stopped by signal {}".format(_sig_condition_name), repeat=1)
         if thermal_management.sys_config.get("platform_support", 1):
             thermal_management.stop(reason="SIG {}".format(_sig_condition_name))
-        logger.stop()
 
     except Exception as e:
         logger.critical(traceback.format_exc())
