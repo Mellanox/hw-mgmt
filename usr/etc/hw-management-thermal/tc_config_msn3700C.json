@@ -1,5 +1,6 @@
 {
 	"name": "msn3700C",
+	"tc_version": "2.0",
 	"dmin" : {
 		"C2P": {
 			"untrusted": {"-127:25": 20, "26:40": 30, "41:120": 40},
@@ -15,7 +16,7 @@
 			"sensor_read_error" : {"-127:120": 70}
 		},
 		"P2C": {
-			"untrusted":  {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "36:120": 60},
+			"untrusted":  {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
 			"fan_err": {
 				"tacho": {"-127:40": 20, "41:120": 30},
 				"present": {"-127:40": 20, "41:120": 30},
@@ -44,7 +45,7 @@
 		"module\\d+":     {"pwm_min": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
 		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 50, "val_min": 30000, "val_max": 50000, "poll_time": 30},
 		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
-		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
+		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60}
 	},
 	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "psu1", "psu2", "sensor_amb", "voltmon1", "voltmon2"]
 }
