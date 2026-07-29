@@ -1115,21 +1115,11 @@ add_come_named_busses()
 	named_busses+=(${come_named_busses[@]})
 }
 
-start_mst_for_spc1_port_cpld()
-{
-	if [ ! -d /dev/mst ]; then
-		lsmod | grep mst_pci >/dev/null 2>&1
-		if [  $? -ne 0 ]; then
-			mst start  >/dev/null 2>&1
-		fi
-	fi
-}
-
 set_spc1_port_cpld()
 {
 	cpld=$(< $config_path/cpld_port)
 	if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ]; then
-		ver_dec=$CPLD3_VER_DEF
+		ver_dec=${CPLD3_VER_DEF:-0}
 		# check if mlxreg exists
 		if [ -x "$(command -v mlxreg)" ]; then
 			if [ ! -d /dev/mst ]; then
@@ -1191,7 +1181,6 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	case $sku in
 		HI138)
 			# SGN2410_A1
@@ -1219,14 +1208,12 @@ msn24xx_specific()
 	echo cpld3 > $config_path/cpld_port
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
-	set_spc1_port_cpld
 	cpld=$(< $config_path/cpld_port)
 	echo 8 > $config_path/reset_attr_num
 }
 
 msn27xx_msb_msx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSN27*|MSN241*)
@@ -1301,8 +1288,6 @@ msn27xx_msb_msx_specific()
 			echo cpld3 > $config_path/cpld_port
 		;;
 	esac
-
-	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
@@ -4142,6 +4127,10 @@ do_chip_up_down()
 				return 1
 			fi
 
+			if [ -f "$config_path/cpld_port" ]; then
+				set_spc1_port_cpld
+			fi
+
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -4337,6 +4326,10 @@ case $ACTION in
 		fi
 		_hw_management_install_i2c_trace_exit_trap
 		do_start
+		# Restart does not chipdown, so do_chip_up_down below returns early.
+		if [ -f "$config_path/cpld_port" ]; then
+			set_spc1_port_cpld
+		fi
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
 		check_asic_chipup_status && do_chip_up_down 1 1
