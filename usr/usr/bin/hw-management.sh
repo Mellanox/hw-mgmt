@@ -677,13 +677,6 @@ if [ "$board_type" == "VMOD0014" ]; then
 	psu2_i2c_addr=0x58
 fi
 
-is_module()
-{
-    /sbin/lsmod | grep -w "$1" > /dev/null
-    RC=$?
-    return $RC
-}
-
 function get_i2c_bus_frequency_default()
 {
 	# Get I2C base frequency default value.
@@ -3197,7 +3190,7 @@ set_config_data()
 		# if psuX_i2c_bus variable is set - add file psuX_i2c_bus to config_path
 		local psu_i2c_bus=psu"$idx"_i2c_bus
 		if [ ${!psu_i2c_bus} ]; then
-			echo ${!psu_i2c_bus} > $config_path/psu"$idx"_i2c_bus
+			echo ${!psu_i2c_bus} > $config_path/.psu"$idx"_i2c_bus
 		fi
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
@@ -3873,7 +3866,7 @@ map_dummy_psus()
 
 	for ((psu_idx=1; psu_idx <= psu_count; psu_idx+=1)); do
 		# Bus/addr from set_config_data() in hw-management.sh
-		psu_bus=$(< "${config_path}/psu${psu_idx}_i2c_bus")
+		psu_bus=$(< "${config_path}/.psu${psu_idx}_i2c_bus")
 		psu_addr=$(< "${config_path}/psu${psu_idx}_i2c_addr")
 
 		# psuX_i2c_bus is optional; set_config_data() writes it only when set

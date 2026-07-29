@@ -332,7 +332,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI193|HI194)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI193|HI194|HI199|HI200|HI201)
 			return 0
 			;;
 
@@ -570,6 +570,29 @@ unlock_service_state_change_update_and_match()
 		fi
 	fi
 	/usr/bin/flock -u ${LOCKFD}
+}
+
+# Normalize I2C address from config (59 or 0x59) to 0xNN for connect_device/disconnect_device.
+# $1 - raw address from config (59 or 0x59).
+# Prints normalized address on stdout (e.g. 0x59). Zero-pads a single hex digit (5 -> 0x05).
+i2c_config_addr_to_hex() {
+	local raw="$1"
+	local val="${raw,,}"   # convert to lowercase
+	val="${val#0x}"
+	if [ ${#val} -eq 1 ]; then
+		val="0${val}"
+	fi
+	printf '0x%s\n' "$val"
+}
+
+# Check if module is loaded
+# $1 - module name
+# return 0 if module is loaded, 1 otherwise
+is_module()
+{
+	/sbin/lsmod 2>/dev/null | grep -w "$1" > /dev/null
+	RC=$?
+	return $RC
 }
 
 # Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
@@ -839,6 +862,33 @@ function get_i2c_busdev_name()
 	fi
 
 	echo "$dev_name"
+}
+
+# Get device driver name from devtree based on device i2c bus and address
+# $1 - device i2c bus
+# $2 - device i2c address
+# return device driver name if match is found or empty string in other case.
+get_devtree_device_driver_name()
+{
+	local i2c_bus=$1
+	local i2c_address=$2
+
+	if [ -f "$devtree_file" ]; then
+		declare -a devtree_table=($(<"$devtree_file"))
+	else
+		echo ""
+		return
+	fi
+
+	for ((i=0; i<${#devtree_table[@]}; i+=4)); do
+		if [ "$i2c_bus" == "${devtree_table[i+2]}" ] && [ "$i2c_address" == "${devtree_table[i+1]}" ];
+		then
+			echo "${devtree_table[i]}"
+			return
+		fi
+	done
+
+	echo ""
 }
 
 find_dpu_slot_from_i2c_bus()
