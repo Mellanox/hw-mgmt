@@ -535,12 +535,27 @@ function set_fpga_combined_version()
 	echo "$str" > "$path"/system/fpga
 }
 
+# Input parameters:
+# 1 - attribute
+# 2 - event
+# 3 - sysfs path
+# 4 - device path
 function handle_hotplug_fan_event()
 {
 	local attribute=$1
 	local event=$2
 	local bus=
 	local addr=
+
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"attr:$attribute evt:$event sysfs:$3 device:$4 entering..."
+
+	if [ -n "$3" ] && [ -n "$4" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"attr:$attribute init_hotplug_sysfs_event $3$4"
+		init_hotplug_sysfs_event "$3$4" "$attribute" \
+					"$thermal_path/${attribute}_status" "$attribute"
+	fi
 
 	case "$dmi_board_name" in
 	VMOD0014)
@@ -639,6 +654,58 @@ function handle_hotplug_psu_event()
 	fi
 }
 
+# Input parameters:
+# 1 - attribute (psuN name used for config/dummy paths)
+# 2 - event
+# 3 - sysfs path
+# 4 - device path
+# example: handle_soft_hotplug_pwr_event "psu1" 1 "/sys" "/bus/i2c/devices/"
+function handle_soft_hotplug_pwr_event()
+{
+	local psu_name=$1
+	local event=$2
+	local psu_bus_raw
+	local psu_addr_raw
+	local psu_addr_hex
+	local psu_driver
+
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"psu:$psu_name evt:$event entering..."
+
+	# hotplug initialization logic:
+	# 1. Get psu i2c bus and address
+	# 2. get device driver from devtree (based on device i2c bus and address)
+	# 3. Connect/disconnect psu driver
+	# 3.1 don't connect if psu already connected
+	# EEPROM is attached later by hw-management-thermal-events.sh on PSU hwmon add
+	if [ -f "${config_path}/${psu_name}_i2c_addr" ]; then
+		psu_addr_raw=$(< "${config_path}/${psu_name}_i2c_addr") || true
+		psu_bus_raw=$(< "${config_path}/.${psu_name}_i2c_bus") || true
+	fi
+
+	if [ -n "$psu_bus_raw" ] && [ -n "$psu_addr_raw" ]; then
+		psu_addr_hex=$(i2c_config_addr_to_hex "$psu_addr_raw")
+		psu_driver=$(get_devtree_device_driver_name "$psu_bus_raw" "$psu_addr_hex")
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"psu:$psu_name bus:$psu_bus_raw addr:$psu_addr_hex driver:$psu_driver"
+		# if psu driver is not empty, then connect/disconnect psu driver
+		if [ -n "$psu_driver" ]; then
+			if [ "$event" -eq 1 ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"psu:$psu_name connect $psu_driver $psu_addr_hex bus:$psu_bus_raw"
+				connect_device "$psu_driver" "$psu_addr_hex" "$psu_bus_raw"
+			else
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"psu:$psu_name disconnect $psu_addr_hex bus:$psu_bus_raw"
+				disconnect_device "$psu_addr_hex" "$psu_bus_raw"
+			fi
+		fi
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"psu:$psu_name skip: missing i2c bus/addr config"
+	fi
+}
+
 function handle_hotplug_event()
 {
 	local attribute
@@ -706,6 +773,52 @@ function handle_hotplug_event()
 		;;
 	psu*)
 		handle_hotplug_psu_event "$attribute" "$event"
+		;;
+	*)
+		;;
+	esac
+}
+
+function handle_soft_hotplug_event()
+{
+	local attribute
+	local event
+	local sysfs_path
+	local device_path
+
+	attribute=$(echo "$1" | awk '{print tolower($0)}')
+	event=$2
+	sysfs_path=$3
+	device_path=$4
+
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"attr:$attribute evt:$event sysfs:$sysfs_path device:$device_path entering..."
+
+	if [ -f "$events_path"/"$attribute" ]; then
+		echo "$event" > "$events_path"/"$attribute"
+		log_info "Event ${event} is received for attribute ${attribute}"
+	fi
+
+	case "$attribute" in
+	fan*)
+		print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute dispatch fan"
+		handle_hotplug_fan_event "$attribute" "$event" "$sysfs_path" "$device_path"
+		;;
+	psu*)
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"attr:$attribute init_hotplug_sysfs_event $sysfs_path$device_path"
+		init_hotplug_sysfs_event "$sysfs_path$device_path" "$attribute" \
+			"$thermal_path/${attribute}_status" "$attribute"
+		;;
+	pwr*)
+		local pwr_index
+		pwr_index=$(echo "$attribute" | cut -c 4-)
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"attr:$attribute dispatch pwr index:$pwr_index"
+		init_hotplug_sysfs_event "$sysfs_path$device_path" "$attribute" \
+			"$thermal_path/psu${pwr_index}_pwr_status" "$attribute"
+
+		handle_soft_hotplug_pwr_event "psu${pwr_index}" "$event" "$sysfs_path" "$device_path"
 		;;
 	*)
 		;;
@@ -943,6 +1056,10 @@ if [ "$1" == "add" ]; then
 		prefix=$(get_i2c_busdev_name "$2" "$4")
 		if [[ $prefix == "undefined" ]] && [[ $5 != "dpu" ]];
 		then
+			exit
+		fi
+		# ignore sensors started with "psu"
+		if [[ "$prefix" == "psu"* ]]; then
 			exit
 		fi
 		# Voltmon MUST have at least one input.
@@ -1452,6 +1569,12 @@ elif [ "$1" == "hotplug-event" ]; then
 		exit 0
 	fi
 	handle_hotplug_event "${2}" "${3}"
+elif [ "$1" == "soft-hotplug-event" ]; then
+	# Don't process udev events until service is started and directories are created
+	if [ ! -f ${udev_ready} ]; then
+		exit 0
+	fi
+	handle_soft_hotplug_event "${2}" "${3}" "${4}" "${5}"
 elif [ "$1" == "hotplug-dpu-event" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
