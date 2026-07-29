@@ -15,8 +15,8 @@ Use this as a checklist when copying or updating files from the OpenBMC meta-nvi
 | File | Role |
 |------|------|
 | **`debian/hw-management-bmc.postinst`** | Custom **`configure`**: **`daemon-reload`**; fresh-install **`systemctl start --no-block`** (non-blocking first-boot under **`rc.local`**). See **`bmc/README.md`** § *Debian maintainer scripts*. Issue **#4992267**. |
-| **`debian/hw-management-bmc.prerm`** | Custom **`remove`**: parallel **`systemctl stop`** for nine BMC units. Upgrade path no-op. |
-| **`debian/rules`** (BMC **`override_dh_systemd_*`**) | Single positional **`dh_systemd_enable`** / **`dh_systemd_start --no-start --no-restart-after-upgrade`** allow-list (nine services). |
+| **`debian/hw-management-bmc.prerm`** | Custom **`remove`**: parallel **`systemctl stop`** for the BMC units. Upgrade path no-op. |
+| **`debian/rules`** (BMC **`override_dh_systemd_*`**) | Single positional **`dh_systemd_enable`** / **`dh_systemd_start --no-start --no-restart-after-upgrade`** allow-list. |
 
 ---
 
@@ -32,6 +32,7 @@ Use this as a checklist when copying or updating files from the OpenBMC meta-nvi
 | meta-nvidia/meta-switch/recipes-nvidia/**bmc-post-boot-cfg**/files/bmc-plat-specific-preps.service | **hw-management-bmc-plat-specific-preps.service** |
 | meta-nvidia/meta-switch/recipes-nvidia/**bmc-post-boot-cfg**/files/bmc-recovery-handler.service | **hw-management-bmc-recovery-handler.service** |
 | *(SONiC BMC only; not copied from OpenBMC by default)* | **hw-management-bmc-early-config.service** |
+| *(SONiC BMC only; stop-gap ABR-watchdog heartbeat to Bali/Caliptra over MCTP)* | **hw-management-bmc-wd-heartbeat.service** |
 | ~~bmc-svn-update.service~~ | removed (Microsoft doesn't need) |
 
 ---
@@ -66,6 +67,7 @@ On the target system the **hw-management-bmc** Debian package installs this tree
 | .../spc6-ast2700-a1/.../spc6-bmc.conf | usr/etc/HI189/**hw-management-bmc.conf** (→ **`/etc/modprobe.d/hw-management-bmc.conf`** at boot) |
 | *(maintain in repo per platform)* | usr/etc/HI189/**hw-management-bmc-network.conf** (→ **`/etc/hw-management-bmc-usb0.conf`**, drives **`usb0`** **`Address=`** in generated **`.network`**) |
 | *(SONiC BMC; not from OpenBMC)* | usr/etc/HI189/**hw-management-bmc-boot-complete.conf** (→ **`/etc/hw-management-bmc-boot-complete.conf`** at boot; thresholds for **`hw-management-bmc-boot-complete.sh`**) |
+| *(SONiC BMC; not from OpenBMC)* | usr/etc/HI189/**hw-management-bmc-wd-heartbeat.conf** (→ **`/etc/hw-management-bmc-wd-heartbeat.conf`** at boot; EID / interval / payload for **`hw-management-bmc-wd-heartbeat.sh`**) |
 | .../spc6-ast2700-a1/.../spc6-ast2700-a1-bmc/ (directory) | usr/etc/HI189/ |
 
 ---
@@ -94,6 +96,7 @@ On the target system the **hw-management-bmc** Debian package installs this tree
 | ~~ast2700-a1-spc6-switch-erots-info.sh~~ | removed (Microsoft doesn't need) |
 | .../spc6-ast2700-a1/.../bmc-plat-specific-preps.sh | usr/usr/bin/**hw-management-bmc-plat-specific-preps.sh** |
 | *(SONiC BMC; replaces OpenBMC i2c-boot-progress.sh)* | usr/usr/bin/**hw-management-bmc-boot-complete.sh** |
+| *(SONiC BMC; stop-gap ABR-watchdog heartbeat)* | usr/usr/bin/**hw-management-bmc-wd-heartbeat.sh** — starts **`mctpd`**, brings up **`mctpirot0`**, discovers the Bali (Caliptra) EID via **`busctl … SetupEndpoint`** (fallback EID 8), then loops **`mctp-client eid <EID> type control data 80 03`**; no-ops when disabled in conf or **`mctp-client`** absent |
 | .../spc6-ast2700-a1/.../i2c-slave-config.sh | usr/usr/bin/**hw-management-bmc-i2c-slave-config.sh** |
 | ~~spc6-svn-check.sh~~ | removed (Microsoft doesn't need) |
 | meta-nvidia/meta-switch/recipes-phosphor/**dump**/files/**cpld_dump.sh** + **dump_utils.sh** ( **`take_cpld_dump_internal`**, **`take_cpld_dump`** only) | usr/usr/bin/**hw-management-bmc-cpld-dump.sh** (merged SONiC script; no **`switch-erots-info`** / Phosphor **`add_copy_file`**; **`log_message`** + **`hw-management-bmc-platform.conf`** via **`helpers-common`**) |
