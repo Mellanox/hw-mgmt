@@ -47,6 +47,12 @@ log_message()
     echo "[$level] $message"
 }
 
+# MPS updater expects hid### (see hw-management-vr-dpc-update.sh); JSON may use HI### or HID###.
+normalize_system_hid_for_mps()
+{
+    echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/'
+}
+
 # Function to display usage
 usage()
 {
@@ -85,10 +91,44 @@ usage()
     echo ""
 }
 
+# Return 0 if JSON Devices[] contains at least one entry for vendor (mps|infineon).
+json_config_needs_vendor()
+{
+    local json_file="$1"
+    local vendor="$2"
+    local num_devices dev_idx device_type
+
+    num_devices=$(jq '.Devices | length // 0' "$json_file" 2>/dev/null)
+    if [[ -z "$num_devices" ]] || ! echo "$num_devices" | grep -qE '^[0-9]+$'; then
+        return 1
+    fi
+
+    dev_idx=0
+    while [ $dev_idx -lt $num_devices ]; do
+        device_type=$(jq -r ".Devices[$dev_idx].DeviceType // empty" "$json_file" 2>/dev/null)
+        case "$vendor" in
+            infineon)
+                if [[ "${device_type,,}" =~ ^xdpe ]]; then
+                    return 0
+                fi
+                ;;
+            mps)
+                if [[ "${device_type,,}" =~ ^mp ]]; then
+                    return 0
+                fi
+                ;;
+        esac
+        dev_idx=$((dev_idx + 1))
+    done
+
+    return 1
+}
+
 # Function to check dependencies
 check_dependencies()
 {
     local skip_dpc_check="$1"
+    local json_file="${2:-}"
 
     # Check for jq (JSON parser)
     if ! command -v jq >/dev/null 2>&1; then
@@ -96,14 +136,23 @@ check_dependencies()
         return 1
     fi
 
-    # Check for DPC update scripts (skip if only validating)
+    # Check vendor DPC scripts only when JSON needs them (skip if only validating)
     if [[ "$skip_dpc_check" != "skip" ]]; then
-        if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
+        if [[ -n "$json_file" ]] && [[ -f "$json_file" ]]; then
+            if json_config_needs_vendor "$json_file" mps; then
+                if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
+                    log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+                    return 1
+                fi
+            fi
+            if json_config_needs_vendor "$json_file" infineon; then
+                if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
+                    log_message "err" "Infineon DPC update script not found or not executable: $DPC_INFINEON_UPDATE_SCRIPT"
+                    return 1
+                fi
+            fi
+        elif [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
             log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
-            return 1
-        fi
-        if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
-            log_message "err" "Infineon DPC update script not found or not executable: $DPC_INFINEON_UPDATE_SCRIPT"
             return 1
         fi
     fi
@@ -144,9 +193,9 @@ validate_json_config()
         echo "FAILED"
         echo "[ERROR] Missing 'System HID' field"
         validation_errors=$((validation_errors + 1))
-    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii][0-9]{3}$'; then
+    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii]([Dd])?[0-9]{3}$'; then
         echo "FAILED"
-        echo "[ERROR] Invalid 'System HID' format. Expected format: HI### or hi### (where ### is 3 digits)"
+        echo "[ERROR] Invalid 'System HID' format. Expected HI###, HID###, or hid###"
         validation_errors=$((validation_errors + 1))
     else
         echo "OK (System HID: $system_hid)"
@@ -400,6 +449,13 @@ process_json_config()
             # Infineon device - use hw-management-vr-dpc-infineon-update.sh
             log_message "info" "Detected Infineon device: $device_type"
 
+            if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
+                log_message "err" "Infineon DPC update script not found or not executable: $DPC_INFINEON_UPDATE_SCRIPT"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
             # Validate Addr field (required for Infineon)
             if [[ -z "$addr" ]]; then
                 log_message "err" "Missing Addr field for Infineon device $dev_idx"
@@ -416,6 +472,13 @@ process_json_config()
             # MPS device - use hw-management-vr-dpc-update.sh
             log_message "info" "Detected MPS device: $device_type"
 
+            if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
+                log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
             # Validate MPS-specific fields
             if [[ -z "$crc_file" ]]; then
                 log_message "err" "Missing CrcFile for MPS device $dev_idx"
@@ -431,9 +494,9 @@ process_json_config()
                 continue
             fi
 
-            # Convert system HID to lowercase for MPS command
+            # Normalize System HID for MPS updater (HI180 / HID180 -> hid180)
             local system_hid_lower
-            system_hid_lower=$(echo "$system_hid" | tr '[:upper:]' '[:lower:]')
+            system_hid_lower="$(normalize_system_hid_for_mps "$system_hid")"
 
             # Build MPS command
             cmd=("$DPC_UPDATE_SCRIPT" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
@@ -529,8 +592,8 @@ main()
     # Normal operation: batch update
     log_message "info" "Voltage Regulator DPC Batch Update Started"
 
-    # Check dependencies
-    if ! check_dependencies; then
+    # Check dependencies (vendor scripts only if JSON lists those device types)
+    if ! check_dependencies "" "$json_file"; then
         log_message "err" "Dependency check failed - exiting"
         exit 1
     fi
