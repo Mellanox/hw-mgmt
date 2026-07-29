@@ -2532,7 +2532,10 @@ class psu_fan_sensor(system_device):
         """
         try:
             present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
-            if present == 1 and not self.psu_dummy:
+            if present == 1:
+                self.psu_dummy = self._get_dummy()
+                if self.psu_dummy:
+                    return
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
                 psu_pwm, _, _ = g_get_range_val(self.pwm_decode, round(pwm))
                 if psu_pwm is None:
@@ -2585,7 +2588,11 @@ class psu_fan_sensor(system_device):
         self.pwm = self.pwm_min
         # check if PSU present.
         # if PSU is plugged in then PSU fan missing is not an error
-        if not self.psu_dummy and self._get_status() == 1:
+        if self._get_status() == 1:
+            self.psu_dummy = self._get_dummy()
+            if self.psu_dummy:
+                self.update_value(-1)
+                return
             try:
                 val_read_file = "thermal/{}".format(self.file_input)
                 value = int(self.read_file(val_read_file))
@@ -2600,8 +2607,10 @@ class psu_fan_sensor(system_device):
     # ----------------------------------------------------------------------
     def collect_err(self):
         self.clear_fault_list()
+        if self.psu_dummy:
+            return
 
-        if not self.psu_dummy and self._get_status() == 0:
+        if self._get_status() == 0:
             self.append_fault(CONST.PRESENT)
 
         # truth table for fan direction
@@ -2615,9 +2624,8 @@ class psu_fan_sensor(system_device):
         #  UNKNOWN C2P        False
         #  UNKNOWN P2C        False
         #  UNKNOWN UNKNOWN    False
-        if not self.psu_dummy and \
-           ((self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or
-                (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P)):
+        if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
+                (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.append_fault(CONST.DIRECTION)
 
         if self.fread_err.check_err():
