@@ -49,7 +49,7 @@ index 7526a0906..c3d7af771 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe.h
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
 @@ -1326,6 +1326,7 @@ struct xgbe_prv_data {
-	 */
+ 	 */
  	bool data_path_stopped;
  	bool mode_set;
 +	struct phy_device *phydev;
