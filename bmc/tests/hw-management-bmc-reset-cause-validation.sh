@@ -143,20 +143,21 @@ OUT_DIR_TEST="$WORK/bmc"
 DOMAINS_DIR_TEST="$OUT_DIR_TEST/domains"
 mkdir -p "$OUT_DIR_TEST" "$DOMAINS_DIR_TEST"
 
-# Replicate set_reset_file from the script.
+# Hardware detail → domains/; SONiC primaries → OUT_DIR root (v3).
 set_reset_file_test() {
     local name="$1" value="$2"
     case "${name}" in
-    ahb|caliptra|emmc|espi|external|msi|soc|spi|usb)
-        echo "${value}" >"${DOMAINS_DIR_TEST}/reset_${name}"
+    pwr_cycle|soft_reboot|unknown)
+        echo "${value}" >"${OUT_DIR_TEST}/reset_${name}"
         ;;
     *)
-        echo "${value}" >"${OUT_DIR_TEST}/reset_${name}"
+        echo "${value}" >"${DOMAINS_DIR_TEST}/reset_${name}"
         ;;
     esac
 }
 
-for domain_name in ahb caliptra emmc espi external msi soc spi usb; do
+for domain_name in ahb caliptra emmc espi external msi soc spi usb \
+    power_on watchdog software cpu security_watchdog2 abr others; do
     set_reset_file_test "$domain_name" "1"
     if [[ -f "${DOMAINS_DIR_TEST}/reset_${domain_name}" ]]; then
         ok "domain '$domain_name' → domains/reset_${domain_name}"
@@ -168,15 +169,15 @@ for domain_name in ahb caliptra emmc espi external msi soc spi usb; do
     fi
 done
 
-for top_name in power_on watchdog software cpu security_watchdog2 others; do
+for top_name in pwr_cycle soft_reboot unknown; do
     set_reset_file_test "$top_name" "0"
     if [[ -f "${OUT_DIR_TEST}/reset_${top_name}" ]]; then
-        ok "top-level '$top_name' → OUT_DIR/reset_${top_name}"
+        ok "primary '$top_name' → OUT_DIR/reset_${top_name}"
     else
-        fail "top-level '$top_name' should be in OUT_DIR root"
+        fail "primary '$top_name' should be in OUT_DIR root"
     fi
     if [[ -f "${DOMAINS_DIR_TEST}/reset_${top_name}" ]]; then
-        fail "top-level '$top_name' should NOT be under domains/"
+        fail "primary '$top_name' should NOT be under domains/"
     fi
 done
 
@@ -191,21 +192,13 @@ else
     MOCK_BIN="$WORK/mock_bin"
     mkdir -p "$MOCK_BIN"
 
-    # SCU values chosen so:
-    #   power_on = 1  (SCU1_LOG0 bit 11 set)
-    #   watchdog = 0  (SCU1_LOG3=0, SCU0_LOG2=0)
-    #   software = 0
-    #   external = 0
-    #   others   = 0  (power_on is set, so others = !(1|0|0|0|0) = 0)
-    # SCU0_LOG0 = 0x00000800  → bit 11 → power_on via scu0 path (combined OR)
-    # SCU1_LOG0 = 0x00000800  → bit 11 → power_on via scu1 path
-    # SCU0_LOG2 = 0x00000000
-    # SCU1_LOG3 = 0x00000000
-
+    # Case A: PWRST only (bit 11) - no SRST/EXTRST, no WDT/ABR -> reset_unknown
+    # Domain power_on=1 from PWRST.
     cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
 #!/bin/sh
 case "$2" in
 reset_cause_scu0_0) echo "0x00000800" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
 reset_cause_scu0_2) echo "0x00000000" ;;
 reset_cause_scu1_0) echo "0x00000800" ;;
 reset_cause_scu1_3) echo "0x00000000" ;;
@@ -214,7 +207,8 @@ esac
 SHIM
     chmod +x "$MOCK_BIN/fw_printenv"
 
-    # Disable devmem — should not be called when fw_printenv succeeds.
+    # Disable devmem - should not be called when fw_printenv succeeds
+    # (CLEAR_SCU_RESET_LOG=0 skips W1C writes).
     cat >"$MOCK_BIN/devmem" <<'SHIM'
 #!/bin/sh
 echo "MOCK-devmem-should-not-run: $*" >&2
@@ -228,6 +222,7 @@ SHIM
     PATH="$MOCK_BIN:$PATH" \
     OUT_DIR="$RUN_OUT" \
     DOMAINS_DIR="$RUN_DOMAINS" \
+    CLEAR_SCU_RESET_LOG=0 \
     sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
     rc=$?
 
@@ -237,25 +232,29 @@ SHIM
         fail "get-reset-cause script exited $rc"
     fi
 
-    # Verify raw SCU log files.
-    for raw_f in raw_scu0_reset_event_log0 raw_scu0_reset_event_log2 \
-                 raw_scu1_reset_event_log0 raw_scu1_reset_event_log3; do
+    for raw_f in raw_scu0_reset_event_log0 raw_scu0_reset_event_log1 \
+                 raw_scu0_reset_event_log2 raw_scu1_reset_event_log0 \
+                 raw_scu1_reset_event_log3; do
         check_file_exists "$RUN_OUT/$raw_f" "$raw_f"
     done
 
-    check_file_value "$RUN_OUT/reset_power_on"          "1" "reset_power_on"
-    check_file_value "$RUN_OUT/reset_watchdog"          "0" "reset_watchdog"
-    check_file_value "$RUN_OUT/reset_software"          "0" "reset_software"
-    check_file_value "$RUN_OUT/reset_cpu"               "0" "reset_cpu"
-    check_file_value "$RUN_OUT/reset_security_watchdog2" "0" "reset_security_watchdog2"
-    check_file_value "$RUN_OUT/reset_others"            "0" "reset_others"
-    check_file_value "$RUN_DOMAINS/reset_external"      "0" "domains/reset_external"
-    check_file_value "$RUN_DOMAINS/reset_ahb"           "0" "domains/reset_ahb"
-    check_file_value "$RUN_DOMAINS/reset_soc"           "0" "domains/reset_soc"
+    check_file_value "$RUN_OUT/reset_pwr_cycle"   "0" "primary reset_pwr_cycle"
+    check_file_value "$RUN_OUT/reset_soft_reboot"  "0" "primary reset_soft_reboot"
+    check_file_value "$RUN_OUT/reset_unknown"      "1" "primary reset_unknown (PWRST only)"
+    check_file_value "$RUN_DOMAINS/reset_power_on" "1" "domains/reset_power_on"
+    check_file_value "$RUN_DOMAINS/reset_watchdog" "0" "domains/reset_watchdog"
+    check_file_value "$RUN_DOMAINS/reset_abr"      "0" "domains/reset_abr"
+    check_file_value "$RUN_DOMAINS/reset_software" "0" "domains/reset_software"
+    check_file_value "$RUN_DOMAINS/reset_cpu"      "0" "domains/reset_cpu"
+    check_file_value "$RUN_DOMAINS/reset_security_watchdog2" "0" "domains/reset_security_watchdog2"
+    check_file_value "$RUN_DOMAINS/reset_others"   "0" "domains/reset_others"
+    check_file_value "$RUN_DOMAINS/reset_external" "0" "domains/reset_external"
+    check_file_value "$RUN_DOMAINS/reset_ahb"      "0" "domains/reset_ahb"
+    check_file_value "$RUN_DOMAINS/reset_soc"      "0" "domains/reset_soc"
 
-    # Verify raw word formatting (must be 0x followed by 8 hex digits).
-    for raw_f in raw_scu0_reset_event_log0 raw_scu0_reset_event_log2 \
-                 raw_scu1_reset_event_log0 raw_scu1_reset_event_log3; do
+    for raw_f in raw_scu0_reset_event_log0 raw_scu0_reset_event_log1 \
+                 raw_scu0_reset_event_log2 raw_scu1_reset_event_log0 \
+                 raw_scu1_reset_event_log3; do
         v=$(tr -d '[:space:]' <"$RUN_OUT/$raw_f" 2>/dev/null)
         if [[ "$v" =~ ^0x[0-9a-fA-F]{8}$ ]]; then
             ok "$raw_f format: '$v' matches 0x????????"
@@ -264,11 +263,12 @@ SHIM
         fi
     done
 
-    # Second run: watchdog-only reset (SCU1_LOG3 non-zero WDT SOC nibble, bit 2 set = 0x4).
+    # Case B: WDT-only (SCU1 0x080 = 0x4) - soft_reboot; domains watchdog=1
     cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
 #!/bin/sh
 case "$2" in
 reset_cause_scu0_0) echo "0x00000000" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
 reset_cause_scu0_2) echo "0x00000000" ;;
 reset_cause_scu1_0) echo "0x00000000" ;;
 reset_cause_scu1_3) echo "0x00000004" ;;
@@ -276,10 +276,142 @@ reset_cause_scu1_3) echo "0x00000004" ;;
 esac
 SHIM
     RUN_OUT2="$WORK/run_out2"
-    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT2" sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
-    check_file_value "$RUN_OUT2/reset_watchdog" "1" "watchdog run: reset_watchdog=1"
-    check_file_value "$RUN_OUT2/reset_power_on" "0" "watchdog run: reset_power_on=0"
-    check_file_value "$RUN_OUT2/reset_others"   "0" "watchdog run: reset_others=0"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT2" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT2/reset_soft_reboot" "1" "WDT: reset_soft_reboot=1"
+    check_file_value "$RUN_OUT2/reset_pwr_cycle"    "0" "WDT: reset_pwr_cycle=0"
+    check_file_value "$RUN_OUT2/reset_unknown"       "0" "WDT: reset_unknown=0"
+    check_file_value "$RUN_OUT2/domains/reset_watchdog" "1" "WDT: domains/reset_watchdog=1"
+    check_file_value "$RUN_OUT2/domains/reset_power_on" "0" "WDT: domains/reset_power_on=0"
+
+    # Case C: AC fingerprint (SRST, no WDT/ABR) - pwr_cycle
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xffffff31" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x00000000" ;;
+reset_cause_scu1_0) echo "0xffffef70" ;;
+reset_cause_scu1_3) echo "0x00000000" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT3="$WORK/run_out3"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT3" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT3/reset_pwr_cycle"   "1" "AC: reset_pwr_cycle=1"
+    check_file_value "$RUN_OUT3/reset_soft_reboot"  "0" "AC: reset_soft_reboot=0"
+    check_file_value "$RUN_OUT3/reset_unknown"      "0" "AC: reset_unknown=0"
+
+    # Case D: u-boot reset fingerprint - soft_reboot
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xd1ff3030" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x00000001" ;;
+reset_cause_scu1_0) echo "0xc3ef2040" ;;
+reset_cause_scu1_3) echo "0x00000004" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT4="$WORK/run_out4"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT4" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT4/reset_soft_reboot" "1" "reset: reset_soft_reboot=1"
+    check_file_value "$RUN_OUT4/reset_pwr_cycle"    "0" "reset: reset_pwr_cycle=0"
+    check_file_value "$RUN_OUT4/reset_unknown"       "0" "reset: reset_unknown=0"
+
+    # Case E: sticky SRST+WDT - unknown
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xffffff31" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x00000000" ;;
+reset_cause_scu1_0) echo "0xffffef70" ;;
+reset_cause_scu1_3) echo "0x00000004" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT5="$WORK/run_out5"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT5" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT5/reset_unknown"      "1" "sticky: reset_unknown=1"
+    check_file_value "$RUN_OUT5/reset_pwr_cycle"    "0" "sticky: reset_pwr_cycle=0"
+    check_file_value "$RUN_OUT5/reset_soft_reboot"  "0" "sticky: reset_soft_reboot=0"
+
+    # Case E2: ABR alone (SCU0 0x060 bit31) - soft_reboot; domains abr=1
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0x00000000" ;;
+reset_cause_scu0_1) echo "0x80000000" ;;
+reset_cause_scu0_2) echo "0x00000000" ;;
+reset_cause_scu1_0) echo "0x00000000" ;;
+reset_cause_scu1_3) echo "0x00000000" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT5b="$WORK/run_out5b"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT5b" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT5b/reset_soft_reboot" "1" "ABR: reset_soft_reboot=1"
+    check_file_value "$RUN_OUT5b/reset_pwr_cycle"   "0" "ABR: reset_pwr_cycle=0"
+    check_file_value "$RUN_OUT5b/domains/reset_abr"  "1" "ABR: domains/reset_abr=1"
+
+    # Case E3: SRST+ABR sticky - unknown
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xffffff31" ;;
+reset_cause_scu0_1) echo "0x80000000" ;;
+reset_cause_scu0_2) echo "0x00000000" ;;
+reset_cause_scu1_0) echo "0xffffef70" ;;
+reset_cause_scu1_3) echo "0x00000000" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT5c="$WORK/run_out5c"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT5c" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT5c/reset_unknown" "1" "SRST+ABR: reset_unknown=1"
+
+    # Case F: CLEAR_SCU_RESET_LOG=1 issues W1C writes via devmem
+    CLEAR_LOG="$WORK/devmem_writes.log"
+    : >"$CLEAR_LOG"
+    cat >"$MOCK_BIN/devmem" <<SHIM
+#!/bin/sh
+echo "\$*" >>"$CLEAR_LOG"
+exit 0
+SHIM
+    chmod +x "$MOCK_BIN/devmem"
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xffffff31" ;;
+reset_cause_scu0_1) echo "0x80000000" ;;
+reset_cause_scu0_2) echo "0x00000000" ;;
+reset_cause_scu1_0) echo "0xffffef70" ;;
+reset_cause_scu1_3) echo "0x00000000" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT6="$WORK/run_out6"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT6" CLEAR_SCU_RESET_LOG=1 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    if grep -q "0x12c02050 32 0x00000001" "$CLEAR_LOG" \
+        && grep -q "0x12c02060 32 0x80000000" "$CLEAR_LOG" \
+        && grep -q "0x12c02070 32 0x00000000" "$CLEAR_LOG" \
+        && grep -q "0x14c02080 32 0x00000000" "$CLEAR_LOG"; then
+        if grep -q "0x14c02050" "$CLEAR_LOG"; then
+            fail "CLEAR_SCU_RESET_LOG=1 must not clear SCU1 0x050 (log=$(cat "$CLEAR_LOG"))"
+        else
+            ok "CLEAR_SCU_RESET_LOG=1 wrote snapshot W1C masks (not blanket ffffffff)"
+        fi
+    else
+        fail "CLEAR_SCU_RESET_LOG=1 missing snapshot W1C writes (log=$(cat "$CLEAR_LOG"))"
+    fi
 fi
 
 # ── reset-cause-logger smoke test ─────────────────────────────────────────────
