@@ -179,7 +179,7 @@ declare -A sn58xxld_comex_amd_snw_alternatives=( \
 )
 
 declare -A comex_amd_v3000_alternatives=( \
-	["jc42_0"]="jc42 0x52 0 somdimm_temp1" \
+	["spd5118_0"]="spd5118 0x52 0 somdimm_temp1" \
 	["mp2845_0"]="mp2845 0x69 15 comex_voltmon1" \
 	["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
 	["24c32_0"]="24c32 0x50 16 cpu_info" \
