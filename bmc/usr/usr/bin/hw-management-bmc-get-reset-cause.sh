@@ -37,34 +37,50 @@
 # BusyBox ash (/bin/sh): POSIX sh + C-style 0x arithmetic and bitwise ops; no bashisms.
 #
 # AST2700 primary source:
-#   SCU1 0x050 (Reset Event Log Set 1) + SCU1 0x080 (Reset Event Log Set 4)
-#   and SCU0 0x070 as additional watchdog evidence.
-#   SCU0 0x050 is also read for eMMC/MSI reset logs.
+#   SCU0 0x050 (Reset Event Log Set 0) - SRST# / EXTRST# for power-channel
+#   SCU0 0x060 (Reset Event Log Set 2) - ABR / WDTA bit 31
+#   SCU0 0x070 (Reset Event Log Set 3) + SCU1 0x080 (Set 4) - WDT evidence
+#   SCU1 0x050 (Set 1) - domain detail (also eMMC/MSI via SCU0 0x050).
 #   AST2700 SCU base uses +0x2000 window (e.g. 0x12c02050, 0x14c02080).
 #
 # U-Boot env / kernel cmdline names (per SCU register; snap_bootargs tokens):
 #   reset_cause_scu0_0 -> SCU0 0x050
+#   reset_cause_scu0_1 -> SCU0 0x060
 #   reset_cause_scu0_2 -> SCU0 0x070
 #   reset_cause_scu1_0 -> SCU1 0x050
 #   reset_cause_scu1_3 -> SCU1 0x080
 #
 # Source priority per word: fw_printenv, then /proc/cmdline, then devmem.
 #
-# SONiC BMC primary cause (exactly one 1 under OUT_DIR):
-#   reset_pwr_cycle | reset_soft_reboot | reset_unknown  (v2: WDT 0x070/0x080 + SCU0 0x050 EXTRST#)
-# Hardware / domain-detail flags under OUT_DIR/domains/ (reset_power_on, reset_watchdog, …).
+# SONiC BMC primary cause (exactly one 1 under OUT_DIR) - v3:
+#   reset_pwr_cycle | reset_soft_reboot | reset_unknown
+#   pwr_like = SRST|EXTRST; warm_evidence = WDT (0x070/0x080) | ABR (0x060 bit31)
+#   pwr_cycle   = pwr_like && !warm_evidence
+#   soft_reboot = warm_evidence && !SRST   (EXTRST+WDT without SRST is soft)
+#   unknown     = (SRST && warm_evidence) || (!pwr_like && !warm_evidence)
+#   Note: SRST (bit0), not EXTRST (bit1), distinguishes soft_reboot vs unknown
+#   when warm evidence is present. No-WDT/EXTRST-clear is unknown, not soft.
+# Hardware / domain-detail flags under OUT_DIR/domains/.
+# After export: W1C-clear only bits from the exported snapshot (SCU0 0x050
+# SRST|EXTRST that were set, SCU0 0x060 ABR if set, exported WDT words;
+# skip SCU1 0x050). Avoids wiping newer live MMIO on stale env re-run.
+# CLEAR_SCU_RESET_LOG=1 default.
 ################################################################################
 
 OUT_DIR="${OUT_DIR:-/var/run/hw-management/bmc}"
 DOMAINS_DIR="${DOMAINS_DIR:-${OUT_DIR}/domains}"
-SCU0_LOG2_ADDR="${SCU0_LOG2_ADDR:-0x12c02070}"
 SCU0_LOG0_ADDR="${SCU0_LOG0_ADDR:-0x12c02050}"
+SCU0_LOG1_ADDR="${SCU0_LOG1_ADDR:-0x12c02060}"
+SCU0_LOG2_ADDR="${SCU0_LOG2_ADDR:-0x12c02070}"
 SCU1_LOG0_ADDR="${SCU1_LOG0_ADDR:-0x14c02050}"
 SCU1_LOG3_ADDR="${SCU1_LOG3_ADDR:-0x14c02080}"
 ENV_SCU0_LOG0="${ENV_SCU0_LOG0:-reset_cause_scu0_0}"
+ENV_SCU0_LOG1="${ENV_SCU0_LOG1:-reset_cause_scu0_1}"
 ENV_SCU0_LOG2="${ENV_SCU0_LOG2:-reset_cause_scu0_2}"
 ENV_SCU1_LOG0="${ENV_SCU1_LOG0:-reset_cause_scu1_0}"
 ENV_SCU1_LOG3="${ENV_SCU1_LOG3:-reset_cause_scu1_3}"
+# Set to 0 to skip MMIO write-1-to-clear after export (offline tests / debug).
+CLEAR_SCU_RESET_LOG="${CLEAR_SCU_RESET_LOG:-1}"
 
 umask 022
 mkdir -p "${OUT_DIR}"
@@ -94,6 +110,52 @@ read_devmem_val() {
 	[ -n "${raw}" ] || return 1
 	normalize_hex "${raw}" || return 1
 	eval "${outvar}=\$val"
+	return 0
+}
+
+# AST2700 reset-event logs are write-1-to-clear (RUWT/RW1C).
+# $2 must be a 0x... hex word (passed through to devmem; no signed $(( ))).
+write_devmem_val() {
+	addr="$1"
+	hex="$2"
+	case "${hex}" in
+	0x* | 0X*) ;;
+	*)
+		return 1
+		;;
+	esac
+	if command -v devmem >/dev/null 2>&1; then
+		devmem "${addr}" 32 "${hex}" >/dev/null 2>&1 && return 0
+	fi
+	if command -v busybox >/dev/null 2>&1; then
+		busybox devmem "${addr}" 32 "${hex}" >/dev/null 2>&1 && return 0
+	fi
+	return 1
+}
+
+clear_scu_reset_logs() {
+	# W1C only bits present in the *exported* snapshot (primary-relevant masks).
+	# Do not blanket-clear 0x3 / 0xffffffff: a re-run that classified from stale
+	# fw_printenv|/proc/cmdline must not wipe newer live MMIO events that were
+	# never exported. Writing 0 is a no-op for W1C.
+	#   SCU0 0x050: exported & (SRST|EXTRST)
+	#   SCU0 0x060: ABR bit31 only if exported abr was set
+	#   SCU0 0x070 / SCU1 0x080: exported WDT words as-is
+	#   SCU1 0x050: skipped
+	_c_fail=0
+	_m050="$(printf '0x%08x' "$((scu0_log0 & 3))")"
+	write_devmem_val "${SCU0_LOG0_ADDR}" "${_m050}" || _c_fail=1
+	if [ "$(((scu0_log1 >> 31) & 1))" -eq 1 ]; then
+		write_devmem_val "${SCU0_LOG1_ADDR}" 0x80000000 || _c_fail=1
+	fi
+	# Use already-formatted raw files (avoids signed 32-bit printf issues).
+	_m070="$(cat "${OUT_DIR}/raw_scu0_reset_event_log2" 2>/dev/null || echo 0x0)"
+	_m080="$(cat "${OUT_DIR}/raw_scu1_reset_event_log3" 2>/dev/null || echo 0x0)"
+	write_devmem_val "${SCU0_LOG2_ADDR}" "${_m070}" || _c_fail=1
+	write_devmem_val "${SCU1_LOG3_ADDR}" "${_m080}" || _c_fail=1
+	if [ "${_c_fail}" -ne 0 ]; then
+		echo "warning: failed to W1C-clear one or more SCU reset-event logs" >&2
+	fi
 	return 0
 }
 
@@ -135,7 +197,7 @@ set_domain_reset_file() {
 	echo "$2" >"${DOMAINS_DIR}/reset_$1"
 }
 
-# Pre-v2 primary flags at bmc/ root (hardware detail now under domains/). v2 primaries are
+# Pre-v2 primary flags at bmc/ root (hardware detail now under domains/). v3 primaries are
 # replaced atomically above, not removed here. Belt for apt upgrade from pre-v2 exporter.
 remove_v1_primary_reset_files() {
 	for legacy in power_on watchdog software cpu security_watchdog2 others; do
@@ -143,7 +205,7 @@ remove_v1_primary_reset_files() {
 	done
 }
 
-# Write all v2 primary flags first (atomic per file), then drop stale v1 root flags.
+# Write all v3 primary flags first (atomic per file), then drop stale v1 root flags.
 publish_primary_reset_cause() {
 	set_primary_reset_file pwr_cycle "${pwr_cycle}" || return 1
 	set_primary_reset_file soft_reboot "${soft_reboot}" || return 1
@@ -153,14 +215,18 @@ publish_primary_reset_cause() {
 }
 
 # Per-register: U-Boot env, then /proc/cmdline, then devmem.
-scu0_log2_ok=0
 scu0_log0_ok=0
+scu0_log1_ok=0
+scu0_log2_ok=0
 scu1_log0_ok=0
 scu1_log3_ok=0
 
 if command -v fw_printenv >/dev/null 2>&1; then
 	if read_env_val "${ENV_SCU0_LOG0}" scu0_log0; then
 		scu0_log0_ok=1
+	fi
+	if read_env_val "${ENV_SCU0_LOG1}" scu0_log1; then
+		scu0_log1_ok=1
 	fi
 	if read_env_val "${ENV_SCU0_LOG2}" scu0_log2; then
 		scu0_log2_ok=1
@@ -176,6 +242,9 @@ fi
 if [ "${scu0_log0_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU0_LOG0}" scu0_log0; then
 	scu0_log0_ok=1
 fi
+if [ "${scu0_log1_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU0_LOG1}" scu0_log1; then
+	scu0_log1_ok=1
+fi
 if [ "${scu0_log2_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU0_LOG2}" scu0_log2; then
 	scu0_log2_ok=1
 fi
@@ -186,11 +255,14 @@ if [ "${scu1_log3_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU1_LOG3}" scu1_log3;
 	scu1_log3_ok=1
 fi
 
-if [ "${scu0_log2_ok}" -ne 1 ] && read_devmem_val "${SCU0_LOG2_ADDR}" scu0_log2; then
-	scu0_log2_ok=1
-fi
 if [ "${scu0_log0_ok}" -ne 1 ] && read_devmem_val "${SCU0_LOG0_ADDR}" scu0_log0; then
 	scu0_log0_ok=1
+fi
+if [ "${scu0_log1_ok}" -ne 1 ] && read_devmem_val "${SCU0_LOG1_ADDR}" scu0_log1; then
+	scu0_log1_ok=1
+fi
+if [ "${scu0_log2_ok}" -ne 1 ] && read_devmem_val "${SCU0_LOG2_ADDR}" scu0_log2; then
+	scu0_log2_ok=1
 fi
 if [ "${scu1_log0_ok}" -ne 1 ] && read_devmem_val "${SCU1_LOG0_ADDR}" scu1_log0; then
 	scu1_log0_ok=1
@@ -199,13 +271,14 @@ if [ "${scu1_log3_ok}" -ne 1 ] && read_devmem_val "${SCU1_LOG3_ADDR}" scu1_log3;
 	scu1_log3_ok=1
 fi
 
-if [ "${scu0_log2_ok}" -ne 1 ] || [ "${scu0_log0_ok}" -ne 1 ] || [ "${scu1_log0_ok}" -ne 1 ] || [ "${scu1_log3_ok}" -ne 1 ]; then
-	echo "cannot get complete reset causes from env/cmdline/devmem (SCU0_LOG2, SCU0_LOG0, SCU1_LOG0, SCU1_LOG3)" >&2
+if [ "${scu0_log0_ok}" -ne 1 ] || [ "${scu0_log1_ok}" -ne 1 ] || [ "${scu0_log2_ok}" -ne 1 ] || [ "${scu1_log0_ok}" -ne 1 ] || [ "${scu1_log3_ok}" -ne 1 ]; then
+	echo "cannot get complete reset causes from env/cmdline/devmem (SCU0_LOG0, SCU0_LOG1, SCU0_LOG2, SCU1_LOG0, SCU1_LOG3)" >&2
 	exit 1
 fi
 
 # Store raw SCU reset-log words.
 echo "$(printf '0x%08x' "${scu0_log0}")" >"${OUT_DIR}/raw_scu0_reset_event_log0"
+echo "$(printf '0x%08x' "${scu0_log1}")" >"${OUT_DIR}/raw_scu0_reset_event_log1"
 echo "$(printf '0x%08x' "${scu0_log2}")" >"${OUT_DIR}/raw_scu0_reset_event_log2"
 echo "$(printf '0x%08x' "${scu1_log0}")" >"${OUT_DIR}/raw_scu1_reset_event_log0"
 echo "$(printf '0x%08x' "${scu1_log3}")" >"${OUT_DIR}/raw_scu1_reset_event_log3"
@@ -235,38 +308,50 @@ watchdog=$((((scu1_log3 & non_soft_wdt_mask) != 0) | (scu0_log2 != 0)))
 # WDT2 group at bits [11:8] in SCU1 0x080.
 security_watchdog2=$((((scu1_log3 >> 8) & 0xF) != 0))
 
-# Diagnostic: no PWRST/WDT/CPU/WDT2 hardware bits (domains only).
-others=$((!(power_on | watchdog | software | cpu | security_watchdog2)))
+# SCU0 0x060 bit 31: ABR / WDTA (Alternate Boot Recovery) reset log.
+abr=$(((scu0_log1 >> 31) & 1))
 
-# Primary SONiC cause: power-cycle-like vs warm reboot (HI189 heuristic v2).
+# Diagnostic: no PWRST/WDT/CPU/WDT2/ABR hardware bits (domains only).
+others=$((!(power_on | watchdog | software | cpu | security_watchdog2 | abr)))
+
+# Primary SONiC cause v3 (OpenBMC-aligned; requires uncleared SCU logs).
 # Inputs:
-#   any_wdt_log      - SCU0 0x070 or SCU1 0x080 non-zero (WDT participation logged).
-#   scu0_extrst_bit1 - SCU0 0x050 bit 1 (EXTRST#); often set on AC-style reset, clear on warm
-#                      (e.g. 0xffffff32 vs 0xffffff30). Sticky; not a datasheet cold/warm enum.
-# Branches: reset_unknown when both signals conflict; reset_soft_reboot when WDT logged or
-# EXTRST# clear; reset_pwr_cycle when no WDT log and EXTRST# set.
+#   scu0_srst_bit0   - SCU0 0x050 bit 0 (SRST#)
+#   scu0_extrst_bit1 - SCU0 0x050 bit 1 (EXTRST#)
+#   any_wdt_log      - SCU0 0x070 or SCU1 0x080 non-zero
+#   abr              - SCU0 0x060 bit 31 (ABR/WDTA)
+#   warm_evidence    - any_wdt_log or abr
+# Branches:
+#   pwr_cycle   - (SRST|EXTRST) and no warm evidence
+#   soft_reboot - warm evidence and no SRST
+#   unknown     - SRST+warm sticky/mixed, or neither power-like nor warm
 any_wdt_log=0
 if [ "${scu0_log2}" -ne 0 ] || [ "${scu1_log3}" -ne 0 ]; then
 	any_wdt_log=1
 fi
+warm_evidence=0
+if [ "${any_wdt_log}" -eq 1 ] || [ "${abr}" -eq 1 ]; then
+	warm_evidence=1
+fi
+scu0_srst_bit0=$((scu0_log0 & 1))
 scu0_extrst_bit1=$(((scu0_log0 >> 1) & 1))
+pwr_like=0
+if [ "${scu0_srst_bit0}" -eq 1 ] || [ "${scu0_extrst_bit1}" -eq 1 ]; then
+	pwr_like=1
+fi
 
 pwr_cycle=0
 soft_reboot=0
 unknown=0
 
-if [ "${any_wdt_log}" -eq 1 ] && [ "${scu0_extrst_bit1}" -eq 1 ]; then
-	# WDT log and EXTRST# both set: sticky or mixed reset path.
-	unknown=1
-elif [ "${any_wdt_log}" -eq 1 ]; then
-	# WDT participation in SCU0 0x070 or SCU1 0x080.
-	soft_reboot=1
-elif [ "${scu0_extrst_bit1}" -eq 0 ]; then
-	# No WDT log; EXTRST# clear (warm log0 pattern, e.g. 0xffffff30).
-	soft_reboot=1
-else
-	# No WDT log; EXTRST# set (power-cycle-like on this SKU, e.g. 0xffffff32).
+if [ "${pwr_like}" -eq 1 ] && [ "${warm_evidence}" -eq 0 ]; then
 	pwr_cycle=1
+elif [ "${warm_evidence}" -eq 1 ] && [ "${scu0_srst_bit0}" -eq 0 ]; then
+	soft_reboot=1
+elif [ "${scu0_srst_bit0}" -eq 1 ] && [ "${warm_evidence}" -eq 1 ]; then
+	unknown=1
+else
+	unknown=1
 fi
 
 publish_primary_reset_cause || exit 1
@@ -286,6 +371,11 @@ set_domain_reset_file espi "${espi}"
 set_domain_reset_file emmc "${emmc}"
 set_domain_reset_file msi "${msi}"
 set_domain_reset_file security_watchdog2 "${security_watchdog2}"
+set_domain_reset_file abr "${abr}"
 set_domain_reset_file others "${others}"
+
+if [ "${CLEAR_SCU_RESET_LOG}" != "0" ]; then
+	clear_scu_reset_logs
+fi
 
 exit 0
