@@ -1740,7 +1740,7 @@ C2P
 
 **Node name:** `$bsp_path/config/fan_dir_eeprom`
 
-**Description:** Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM.
+**Description:** Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM. On these systems, each fan drawer direction (`thermal/fan<index>_dir`) is taken from the fan module EEPROM VPD. When the fan is removed, the corresponding `fan<index>_dir` attribute may also be removed. See [Read Fan Direction](#read-fan-direction).
 
 **Access:** Read only
 
@@ -6239,22 +6239,29 @@ cat $bsp_path/thermal/fan1_speed_tolerance
 
 ### Read Fan Direction
 
-**Node name:** `$bsp_path/thermal/fan<index>_direction`
+**Node name:** `$bsp_path/thermal/fan<index>_dir`
 
-**Description:** Read fan<index> direction
+**Description:** Read fan drawer `<index>` airflow direction.
 
 **Access:** Read only
 
 **Release version:** 1.0
 
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
+**Values:**
+| Value | Meaning |
+|------|---------|
+| 0 | Reverse (C2P) |
+| 1 | Forward (P2C) |
+| 2 | Direction cannot be determined (fan missing, or fan present but direction debounce failed) |
+
+**Notes:**
+- If the fan is not present (`thermal/fan<index>_status` is 0), `fan<index>_dir` is irrelevant and must be ignored by consumers.
+- On systems that report direction via CPLD (`system/fan_dir`), a remove event keeps `fan<index>_dir` present and sets it to `2`.
+- On systems with fan-module EEPROM direction detection (`config/fan_dir_eeprom`), direction is taken from EEPROM VPD data. When the fan (and its EEPROM) is removed, `fan<index>_dir` may also be removed.
 
 **Example:** Read fan1 direction:
 ```bash
-cat $bsp_path/thermal/fan1_direction
+cat $bsp_path/thermal/fan1_dir
 ```
 ### Read Fan Status
 
