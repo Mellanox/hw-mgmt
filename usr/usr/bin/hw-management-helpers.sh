@@ -119,7 +119,9 @@ declare -A sys_fandir_vs_pn=(["00MP584"]=F ["00MP594"]=R ["00MP593"]=R \
 
 base_cpu_bus_offset=10
 max_tachos=20
-fan_debounce_timeout_ms=2000
+fan_debounce_timeout_ms=750
+fan_debounce_poll_ms=50
+fan_dir_lock_file="/var/run/hw-management-fan-dir.lock"
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
 i2c_bus_min=1
@@ -1397,6 +1399,94 @@ print_function_call() {
 		"$argument" >> "$LOG_FILE"
 }
 
+# Check fan presence. fanX_status is linked to the CPLD hotplug attribute, so
+# it always reflects the current state, unlike the cached hotplug event.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# Return: 0 if the fan is present or presence can't be read, 1 if it is removed
+function is_fan_present()
+{
+	local attribute="$1"
+	local status_file="$thermal_path/${attribute}_status"
+	local status
+
+	if [ ! -e "$status_file" ]; then
+		return 0
+	fi
+	status=$(< "$status_file")
+	if [[ ! "$status" =~ ^[0-9]+$ ]]; then
+		return 0
+	fi
+	[ "$status" -ne 0 ]
+}
+
+# Allocate a new fan direction generation for a fan.
+# Each presence event gets its own generation, so a debounce started by an
+# older event can detect that it was superseded and leave fanX_dir alone.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# Return: allocated generation on stdout
+function fan_dir_generation_new()
+{
+	local attribute="$1"
+	local gen_file="$hw_management_path/.${attribute}_dir_generation"
+	local generation
+
+	(
+		/usr/bin/flock -x 9
+		generation=0
+		if [ -f "$gen_file" ]; then
+			generation=$(< "$gen_file")
+		fi
+		if [[ ! "$generation" =~ ^[0-9]+$ ]]; then
+			generation=0
+		fi
+		generation=$((generation + 1))
+		echo "$generation" > "$gen_file"
+		echo "$generation"
+	) 9>>"$fan_dir_lock_file"
+}
+
+# Check whether the caller still owns the last fan direction generation.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# $2 - "$generation" obtained from fan_dir_generation_new
+# Return: 0 if the generation is still the current one, 1 otherwise
+function fan_dir_generation_is_current()
+{
+	local attribute="$1"
+	local generation="$2"
+	local gen_file="$hw_management_path/.${attribute}_dir_generation"
+
+	if [ ! -f "$gen_file" ]; then
+		return 1
+	fi
+	[ "$(< "$gen_file")_" == "${generation}_" ]
+}
+
+# Store fan direction, unless a newer presence event was registered meanwhile.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# $2 - "$fan_direction" (0 - Reverse, 1 - Forward, 2 - unknown)
+# $3 - "$generation" obtained from fan_dir_generation_new
+# Return: None
+function set_fan_dir_attr()
+{
+	local attribute="$1"
+	local fan_direction="$2"
+	local generation="$3"
+
+	(
+		/usr/bin/flock -x 9
+		if fan_dir_generation_is_current "$attribute" "$generation"; then
+			echo "$fan_direction" > "$thermal_path/${attribute}_dir"
+		else
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"$attribute gen:$generation superseded, dir:$fan_direction dropped"
+		fi
+	) 9>>"$fan_dir_lock_file"
+}
+
 # Set fan direction for a single fan
 #
 # Input parameters:
@@ -1417,12 +1507,30 @@ function set_fan_direction()
 	local fan_dir_old
 	local fan_index
 	local fan_direction
+	local generation
+	local __t0 __t1 __elapsed_ms
 
+	__t0=$(date +%s%3N 2>/dev/null || date +%s)
 	print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event entering..."
 	case $attribute in
 	fan*)
+		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
+		fan_index=${attribute#fan}
+		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
+			return
+		fi
+		fan_index=$((fan_index - 1))
+
+		# Invalidate a debounce which may still be running for this fan on
+		# behalf of a previous event: the last event is the one which decides.
+		generation=$(fan_dir_generation_new "$attribute")
+
 		if [ "$event" -eq 0 ]; then
-			echo 2 > "$thermal_path/${attribute}_dir"
+			set_fan_dir_attr "$attribute" 2 "$generation"
+			__t1=$(date +%s%3N 2>/dev/null || date +%s)
+			__elapsed_ms=$((__t1 - __t0))
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"attr:$attribute evt:$event exiting... elapsed_ms:$__elapsed_ms"
 			return
 		fi
 		if [ -f "$config_path/fan_dir_eeprom" ]; then
@@ -1449,28 +1557,36 @@ function set_fan_direction()
 				fan_dir_old=$fan_dir
 				fan_debounce_counter=0
 			fi
-			fan_debounce_timer=$((fan_debounce_timer - 200))
-			sleep 0.2
+			fan_debounce_timer=$((fan_debounce_timer - fan_debounce_poll_ms))
+			# Sleep duration must track fan_debounce_poll_ms (was hardcoded 0.2).
+			sleep "$(awk -v ms="$fan_debounce_poll_ms" 'BEGIN { printf "%.3f", ms / 1000 }')"
+			if ! fan_dir_generation_is_current "$attribute" "$generation"; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"$attribute gen:$generation superseded by a newer event, aborting debounce"
+				return
+			fi
 			fan_dir=$(< "$system_path/fan_dir")
 		done
 
-		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
-		fan_index=${attribute#fan}
-		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
-			return
-		fi
-		fan_index=$((fan_index - 1))
-
 		#  Debounce is not success. Set fan dir as not recognized value "2".
-		if [ ! -z "$fan_debounce_timer" ] && [ "$fan_debounce_timer" -le 0 ]; then
+		if (("$fan_debounce_counter" < 2)); then
 			fan_direction=2
 		else
 			# fan_dir is an integer bitfield; one bit per fan direction.
 			fan_direction=$(( (fan_dir >> fan_index) & 1 ))
 		fi
+
+		# fan_dir bits are not cleared on removal, so a stable bitfield alone
+		# does not prove the fan is still in the slot.
+		if ! is_fan_present "$attribute"; then
+			fan_direction=2
+		fi
 		print_function_call "$0" "${FUNCNAME[0]}" "$attribute $event. Debounce timer left: $fan_debounce_timer ms, fan_dir: $fan_dir, fan_index: $fan_index, fan_direction: $fan_direction"
-		echo "$fan_direction" > "$thermal_path/${attribute}_dir"
-		print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event exiting..."
+		set_fan_dir_attr "$attribute" "$fan_direction" "$generation"
+		__t1=$(date +%s%3N 2>/dev/null || date +%s)
+		__elapsed_ms=$((__t1 - __t0))
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"attr:$attribute evt:$event exiting... elapsed_ms:$__elapsed_ms"
 	;;
 	*)
 		;;
