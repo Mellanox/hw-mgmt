@@ -48,7 +48,7 @@ declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603" ["b"]="ads1015")
 
 declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus" ["d"]="raa228000" ["e"]="mp29502" ["f"]="raa228004")
 
-declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066" ["c"]="lm5066i")
+declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066" ["c"]="lm5066i" ["d"]="mp5926")
 
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
@@ -370,6 +370,7 @@ declare -A gb300_swb_alternatives=(["mp29816_0"]="mp29816 0x66 5 voltmon1" \
 						["24c512_0"]="24c512 0x51 11 swb_info" \
 						["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
 				   		["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+						["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" \
 						["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
 				   		["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" )
 
