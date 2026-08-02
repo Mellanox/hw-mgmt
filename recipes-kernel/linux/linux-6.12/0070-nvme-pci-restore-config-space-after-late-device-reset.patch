@@ -1,0 +1,72 @@
+Subject: [PATCH] nvme-pci: restore config space if the device resets again after FLR
+
+A controller can lose its PCI config space again shortly after the FLR
+fallback has restored it, either because the FLR completes
+asynchronously after pcie_flr()'s pci_dev_wait() saw config space start
+responding, or because the firmware begins its own internal reset.  The
+function still answers config reads, but it is back at power-on
+defaults: PCI_COMMAND reads 0 and the BARs are unassigned, so the
+register window decodes nothing and every MMIO read returns ~0.  The
+next reset then fails at the CSTS check in nvme_pci_enable() with
+-ENODEV, which nvme_reset_work() turns into a dead controller with no
+retry, so the drive needs a power cycle after all.
+
+The driver cannot recover from this today for two reasons.  Nothing
+restores the config space a second time, as pci_enable_resources() only
+ORs the command bits and never rewrites BARs.  And pci_restore_state()
+ends with "dev->state_saved = false", so any further restore is a silent
+no-op; nvme_pci_enable() does re-arm the saved copy with
+pci_save_state(), but that call sits after the CSTS check and the
+failing path never reaches it.
+
+Fix both halves.  Re-arm the saved copy right after the FLR restore in
+nvme_dev_disable(), where dev->saved_config_space still holds the
+known-good copy we just wrote, and make nvme_pci_enable() restore it
+once more and retry the CSTS read before declaring the device gone.  A
+genuinely absent device still fails the second read and returns -ENODEV
+as before, so no reset is prolonged.
+
+---
+diff -Nur a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
+--- a/drivers/nvme/host/pci.c
++++ b/drivers/nvme/host/pci.c
+@@ -2674,8 +2674,20 @@
+ 	pci_set_master(pdev);
+ 
+ 	if (readl(dev->bar + NVME_REG_CSTS) == -1) {
+-		result = -ENODEV;
+-		goto disable;
++		/*
++		 * A device that finishes an internal reset after its config
++		 * space was restored comes back with default BARs and command
++		 * register, so its register window decodes nothing and every
++		 * read returns ~0. Restore the config space once more and
++		 * retry before declaring the device gone.
++		 */
++		pci_restore_state(pdev);
++		if (readl(dev->bar + NVME_REG_CSTS) == -1) {
++			result = -ENODEV;
++			goto disable;
++		}
++		dev_info(dev->ctrl.device,
++			 "config space restored after late device reset\n");
+ 	}
+ 
+ 	/*
+@@ -2806,6 +2818,14 @@
+ 					 result);
+ 			} else {
+ 				pci_restore_state(pdev);
++				/*
++				 * pci_restore_state() clears state_saved, but
++				 * the device can lose its config space again
++				 * if it completes an internal reset after this
++				 * point. Re-arm the saved copy so the reset
++				 * path can restore it once more.
++				 */
++				pci_save_state(pdev);
+ 				dev_info(dev->ctrl.device,
+ 					 "controller %s completed after pcie flr\n",
+ 					 shutdown ? "shutdown" : "disable");
+-- 
+2.34.1
