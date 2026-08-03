@@ -1,72 +1,157 @@
-Subject: [PATCH] nvme-pci: restore config space if the device resets again after FLR
+Subject: [PATCH] nvme-pci: wait out a controller reset that outlasts its FLR
 
-A controller can lose its PCI config space again shortly after the FLR
-fallback has restored it, either because the FLR completes
-asynchronously after pcie_flr()'s pci_dev_wait() saw config space start
-responding, or because the firmware begins its own internal reset.  The
-function still answers config reads, but it is back at power-on
-defaults: PCI_COMMAND reads 0 and the BARs are unassigned, so the
-register window decodes nothing and every MMIO read returns ~0.  The
-next reset then fails at the CSTS check in nvme_pci_enable() with
--ENODEV, which nvme_reset_work() turns into a dead controller with no
-retry, so the drive needs a power cycle after all.
+The FLR fallback restores config space as soon as pcie_flr() returns,
+which is as soon as pci_dev_wait() sees the device answer a config read.
+A controller can keep re-applying its reset defaults well past that
+point.  When it does, the BARs end up unassigned, the register window
+decodes nothing, and the next reset dies on its first register read:
 
-The driver cannot recover from this today for two reasons.  Nothing
-restores the config space a second time, as pci_enable_resources() only
-ORs the command bits and never rewrites BARs.  And pci_restore_state()
-ends with "dev->state_saved = false", so any further restore is a silent
-no-op; nvme_pci_enable() does re-arm the saved copy with
-pci_save_state(), but that call sits after the CSTS check and the
-failing path never reaches it.
+	if (readl(dev->bar + NVME_REG_CSTS) == -1) {
+		result = -ENODEV;
+		goto disable;
+	}
 
-Fix both halves.  Re-arm the saved copy right after the FLR restore in
-nvme_dev_disable(), where dev->saved_config_space still holds the
-known-good copy we just wrote, and make nvme_pci_enable() restore it
-once more and retry the CSTS read before declaring the device gone.  A
-genuinely absent device still fails the second read and returns -ENODEV
-as before, so no reset is prolonged.
+nvme_reset_work() turns that -ENODEV into a dead controller with no
+retry, so the drive needs a power cycle after all.  The giveaway in the
+log is pci_enable_resources() reporting a command register of 0, which
+it only prints when the value actually changes:
+
+	nvme 0000:01:00.0: enabling device (0000 -> 0002)
+	nvme nvme0: Disabling device after reset failure: -19
+
+Restoring config space once more is not enough, because the device can
+be dropping the writes for as long as it is still resetting.  Retry the
+restore until the registers answer, bounded by NVME_FLR_SETTLE_MS.
+
+Re-arming has to be done by hand.  pci_restore_state() ends with
+"dev->state_saved = false" so a second restore is a silent no-op, and
+nvme_pci_enable() only re-arms via pci_save_state() after the CSTS check
+that the failing path never gets past.  Setting state_saved directly
+keeps the known-good copy that pci_restore_state() leaves behind in
+dev->saved_config_space; calling pci_save_state() instead would snapshot
+the config space the device is busy resetting and destroy that copy.
+e1000e and ipr re-arm the same way around a reset.
+
+Skip the retry when no copy is armed, so a device that was never
+successfully enabled still fails immediately instead of having zeroes
+written to its BARs.  Log the vendor ID, command register and BAR0 on
+both the giving-up and the recovered path, and the command register
+after the FLR restore, so a recurrence shows whether config space was
+restored and whether the device was answering config reads at all.
 
 ---
 diff -Nur a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
 --- a/drivers/nvme/host/pci.c
 +++ b/drivers/nvme/host/pci.c
-@@ -2674,8 +2674,20 @@
+@@ -10,6 +10,7 @@
+ #include <linux/blk-mq.h>
+ #include <linux/blk-mq-pci.h>
+ #include <linux/blk-integrity.h>
++#include <linux/delay.h>
+ #include <linux/dmi.h>
+ #include <linux/init.h>
+ #include <linux/interrupt.h>
+@@ -46,6 +47,12 @@
+ #define NVME_MAX_META_SEGS 15
+ #define NVME_MAX_NR_ALLOCATIONS	5
+ 
++/*
++ * How long to keep restoring config space while waiting for a controller to
++ * finish an internal reset that outlasted its PCIe FLR.
++ */
++#define NVME_FLR_SETTLE_MS	2000
++
+ static int use_threaded_interrupts;
+ module_param(use_threaded_interrupts, int, 0444);
+ 
+@@ -2674,8 +2681,59 @@
  	pci_set_master(pdev);
  
  	if (readl(dev->bar + NVME_REG_CSTS) == -1) {
 -		result = -ENODEV;
 -		goto disable;
++		unsigned long settle;
++		bool responded = false;
++		u16 vendor, cmd;
++		u32 bar0;
++
 +		/*
-+		 * A device that finishes an internal reset after its config
-+		 * space was restored comes back with default BARs and command
-+		 * register, so its register window decodes nothing and every
-+		 * read returns ~0. Restore the config space once more and
-+		 * retry before declaring the device gone.
++		 * A controller can keep re-applying its reset defaults for a
++		 * while after pcie_flr()'s pci_dev_wait() saw config space
++		 * start responding again. That leaves the BARs unassigned, so
++		 * the register window decodes nothing and every read comes
++		 * back as ~0. Keep restoring config space until the registers
++		 * answer. Without an armed copy there is nothing to restore,
++		 * and writing the zeroed one would only make things worse.
 +		 */
-+		pci_restore_state(pdev);
-+		if (readl(dev->bar + NVME_REG_CSTS) == -1) {
++		if (!pdev->state_saved) {
 +			result = -ENODEV;
 +			goto disable;
 +		}
++
++		settle = jiffies + msecs_to_jiffies(NVME_FLR_SETTLE_MS);
++		for (;;) {
++			/*
++			 * pci_restore_state() only clears state_saved, the
++			 * saved copy itself stays valid, so re-arm the flag to
++			 * be able to restore again on the next attempt.
++			 */
++			pci_restore_state(pdev);
++			pdev->state_saved = true;
++
++			if (readl(dev->bar + NVME_REG_CSTS) != -1) {
++				responded = true;
++				break;
++			}
++			if (time_after(jiffies, settle))
++				break;
++			msleep(100);
++		}
++
++		pci_read_config_word(pdev, PCI_VENDOR_ID, &vendor);
++		pci_read_config_word(pdev, PCI_COMMAND, &cmd);
++		pci_read_config_dword(pdev, PCI_BASE_ADDRESS_0, &bar0);
++
++		if (!responded) {
++			dev_warn(dev->ctrl.device,
++				 "registers unreachable after flr: vid %#06x cmd %#06x bar0 %#010x\n",
++				 vendor, cmd, bar0);
++			result = -ENODEV;
++			goto disable;
++		}
++
 +		dev_info(dev->ctrl.device,
-+			 "config space restored after late device reset\n");
++			 "registers responded after restoring config space: cmd %#06x bar0 %#010x\n",
++			 cmd, bar0);
  	}
  
  	/*
-@@ -2806,6 +2818,14 @@
+@@ -2805,10 +2863,24 @@
+ 					 "pcie flr fallback failed (%d)\n",
  					 result);
  			} else {
- 				pci_restore_state(pdev);
++				u16 cmd;
++
 +				/*
-+				 * pci_restore_state() clears state_saved, but
-+				 * the device can lose its config space again
-+				 * if it completes an internal reset after this
-+				 * point. Re-arm the saved copy so the reset
-+				 * path can restore it once more.
++				 * Re-arm the saved copy around the restore so
++				 * the reset path can restore it again if the
++				 * device drops its config space once more.
++				 * pci_save_state() would instead snapshot a
++				 * config space the device may still be
++				 * resetting, losing the known-good copy.
 +				 */
-+				pci_save_state(pdev);
++				pdev->state_saved = true;
+ 				pci_restore_state(pdev);
++				pdev->state_saved = true;
++
++				pci_read_config_word(pdev, PCI_COMMAND, &cmd);
  				dev_info(dev->ctrl.device,
- 					 "controller %s completed after pcie flr\n",
- 					 shutdown ? "shutdown" : "disable");
+-					 "controller %s completed after pcie flr\n",
+-					 shutdown ? "shutdown" : "disable");
++					 "controller %s completed after pcie flr (cmd %#06x)\n",
++					 shutdown ? "shutdown" : "disable", cmd);
+ 			}
+ 		}
+ 		nvme_poll_irqdisable(&dev->queues[0]);
 -- 
 2.34.1
