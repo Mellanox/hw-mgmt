@@ -368,7 +368,7 @@ check_tc_is_supported()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI185|HI193)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193)
 			return 0
 			;;
 
