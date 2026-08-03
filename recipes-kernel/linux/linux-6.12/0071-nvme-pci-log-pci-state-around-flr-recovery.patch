@@ -1,0 +1,147 @@
+Subject: [PATCH] nvme-pci: log PCI state around FLR recovery (diagnostic only)
+
+Diagnostic patch on top of 0070, no behaviour change. Drop once the
+question below is answered.
+
+0070's logging showed the controller reading back a command register of
+~0 right after pcie_flr() returned, and the recovery only works because
+config space is restored again later from nvme_pci_enable(). What it
+cannot tell us is which of two very different things the controller is
+doing at that moment, because a config read of the command register
+returns ~0 in both cases:
+
+  - Answering Request Retry Status, i.e. "still initialising, come back".
+    That is legal, and the root port synthesizes ~0 to complete the read
+    for every register except the Vendor ID.
+
+  - Not completing config requests at all. Per PCIe r4.0 sec 6.6.2 a
+    function may only discard requests while its FLR is in progress, so
+    this far past the FLR it is a violation.
+
+The Vendor ID separates them. The root port on this system reports
+RootCtl CRSVisible+, so Configuration RRS Software Visibility is enabled
+and a Vendor ID read that got RRS is synthesized as 0x0001 rather than
+~0. A Vendor ID of ~0 therefore means the controller is not answering.
+
+Sample the Vendor ID, command register, and the root port's link and
+device status at three points: right after pcie_reset_flr() returns and
+before pci_restore_state() does any config access of its own, on entry
+to the recovery path in nvme_pci_enable(), and if that path gives up.
+Also report how many restore attempts the settle loop needed.
+
+Reading the log:
+
+  vid low half 0x0001	controller is in RRS, behaving legally but slower
+			than pcie_flr() allows for; a host-side problem
+  vid ~0		controller is not completing config requests; a
+			controller firmware problem
+  rp lnksta bit 13	Data Link Layer Link Active, clear means the link
+			dropped rather than requests being discarded
+  rp lnksta bit 11	Link Training
+  rp devsta bit 3	Unsupported Request Detected
+
+The interesting line is "flr returned", since that is the state
+pci_dev_wait() judged to be ready. If it shows a Vendor ID of ~0 then
+pci_dev_wait() mistook a silent controller for a ready one, because its
+RRS branch only tests for the 0x0001 marker and treats everything else,
+including ~0, as ready. The enumeration path guards against exactly that
+in pci_bus_generic_read_dev_vendor_id() before testing for RRS.
+
+---
+diff -Nur a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
+--- a/drivers/nvme/host/pci.c
++++ b/drivers/nvme/host/pci.c
+@@ -2669,6 +2669,34 @@
+ 	return true;
+ }
+ 
++/*
++ * Diagnostic for post-FLR recovery. The Vendor ID is the interesting field:
++ * with Configuration RRS Software Visibility enabled on the root port, a low
++ * half of 0x0001 means the controller answered Request Retry Status, i.e. it
++ * is still initialising but is completing config requests as the spec
++ * requires. ~0 instead means it is not completing them at all, which it may
++ * only do while an FLR is still in progress. The root port's link and device
++ * status distinguish a dropped link from requests being discarded.
++ */
++static void nvme_pci_log_reset_state(struct nvme_dev *dev, const char *when)
++{
++	struct pci_dev *pdev = to_pci_dev(dev->dev);
++	struct pci_dev *bridge = pci_upstream_bridge(pdev);
++	u16 cmd, lnksta = 0, devsta = 0;
++	u32 vid;
++
++	pci_read_config_dword(pdev, PCI_VENDOR_ID, &vid);
++	pci_read_config_word(pdev, PCI_COMMAND, &cmd);
++	if (bridge) {
++		pcie_capability_read_word(bridge, PCI_EXP_LNKSTA, &lnksta);
++		pcie_capability_read_word(bridge, PCI_EXP_DEVSTA, &devsta);
++	}
++
++	dev_info(dev->ctrl.device,
++		 "flr diag %s: vid %#010x cmd %#06x rp lnksta %#06x devsta %#06x\n",
++		 when, vid, cmd, lnksta, devsta);
++}
++
+ static int nvme_pci_enable(struct nvme_dev *dev)
+ {
+ 	int result = -ENOMEM;
+@@ -2683,9 +2711,12 @@
+ 	if (readl(dev->bar + NVME_REG_CSTS) == -1) {
+ 		unsigned long settle;
+ 		bool responded = false;
++		unsigned int attempts = 0;
+ 		u16 vendor, cmd;
+ 		u32 bar0;
+ 
++		nvme_pci_log_reset_state(dev, "csts unreadable");
++
+ 		/*
+ 		 * A controller can keep re-applying its reset defaults for a
+ 		 * while after pcie_flr()'s pci_dev_wait() saw config space
+@@ -2702,6 +2733,8 @@
+ 
+ 		settle = jiffies + msecs_to_jiffies(NVME_FLR_SETTLE_MS);
+ 		for (;;) {
++			attempts++;
++
+ 			/*
+ 			 * pci_restore_state() only clears state_saved, the
+ 			 * saved copy itself stays valid, so re-arm the flag to
+@@ -2725,15 +2758,16 @@
+ 
+ 		if (!responded) {
+ 			dev_warn(dev->ctrl.device,
+-				 "registers unreachable after flr: vid %#06x cmd %#06x bar0 %#010x\n",
+-				 vendor, cmd, bar0);
++				 "registers unreachable after flr: vid %#06x cmd %#06x bar0 %#010x (%u attempts)\n",
++				 vendor, cmd, bar0, attempts);
++			nvme_pci_log_reset_state(dev, "gave up");
+ 			result = -ENODEV;
+ 			goto disable;
+ 		}
+ 
+ 		dev_info(dev->ctrl.device,
+-			 "registers responded after restoring config space: cmd %#06x bar0 %#010x\n",
+-			 cmd, bar0);
++			 "registers responded after restoring config space: cmd %#06x bar0 %#010x (%u attempts)\n",
++			 cmd, bar0, attempts);
+ 	}
+ 
+ 	/*
+@@ -2866,6 +2900,13 @@
+ 				u16 cmd;
+ 
+ 				/*
++				 * Sample the state pci_dev_wait() decided was
++				 * ready, before the restore does any config
++				 * access of its own.
++				 */
++				nvme_pci_log_reset_state(dev, "flr returned");
++
++				/*
+ 				 * Re-arm the saved copy around the restore so
+ 				 * the reset path can restore it again if the
+ 				 * device drops its config space once more.
+-- 
+2.34.1

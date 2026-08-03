@@ -831,6 +831,7 @@ Kernel-6.12
 |0068-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          |            | NVME SSD fallback recovery                     |
 |0069-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |0070-nvme-pci-restore-config-space-after-late-device-reset.patch |                    | Downstream accepted                      |            | NVME SSD restore config space after FLR        |
+|0071-nvme-pci-log-pci-state-around-flr-recovery.patch            |                    | Downstream accepted                      |            | Temp debug PCIe recovery after                 |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
