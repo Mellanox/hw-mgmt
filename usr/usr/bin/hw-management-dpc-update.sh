@@ -823,10 +823,13 @@ apply_cmd() {
           continue
           ;;
         UP_TO_DATE)
-          info "Skipping device[$i] (up-to-date): Type=$device_type Bus=$bus Addr=${lookup_addr:-} model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
-          skip=$((skip + 1))
-          i=$((i + 1))
-          continue
+          if [[ $skip_identical -eq 1 ]]; then
+            info "Skipping device[$i] (up-to-date): Type=$device_type Bus=$bus Addr=${lookup_addr:-} model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
+            skip=$((skip + 1))
+            i=$((i + 1))
+            continue
+          fi
+          info "Forcing update for device[$i] (already up-to-date): Type=$device_type Bus=$bus Addr=${lookup_addr:-} model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
           ;;
         NO_TARGET)
           info "WARN: device[$i] could not parse target model/revision; attempting update"
