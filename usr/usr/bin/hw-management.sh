@@ -826,8 +826,16 @@ set_jtag_gpio()
 			jtag_tck=132
 			jtag_tms=7
 			jtag_tdo=8
-			echo 0x20e5 > $config_path/jtag_rw_reg
-			echo 0x20e6 > $config_path/jtag_ro_reg
+			case $sku in
+			HI198)
+				echo 0x2094 > $config_path/jtag_rw_reg
+				echo 0x2095 > $config_path/jtag_ro_reg
+			;;
+			*)
+				echo 0x20e5 > $config_path/jtag_rw_reg
+				echo 0x20e6 > $config_path/jtag_ro_reg
+			;;
+			esac
 			;;
 		*)
 			return 0
