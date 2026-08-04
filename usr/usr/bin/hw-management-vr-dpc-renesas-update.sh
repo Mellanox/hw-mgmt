@@ -177,7 +177,10 @@ FLASH OPTIONS:
   -F              Force. Overrides these safety stops: (1) already-programmed device (normally
                   skipped to avoid wasting an NVM save); (2) unreadable NVM saves counter
                   (normally aborts, since room/verification cannot be confirmed); (3) unsupported
-                  .hex record type (normally aborts; with -F the record is skipped). Each real
+                  .hex record type (normally aborts; with -F the record is skipped); (4) failed
+                  offline file validation, i.e. the same checks as 'checkfile' — record
+                  structure, declared lengths and per-line CRC8 — which flash runs before any
+                  write (normally aborts; with -F a corrupted file is flashed anyway). Each real
                   flash consumes one NVM save. Use with care.
   -y              Non-interactive: skip the "Continue?" confirmation prompt (for batch use).
   -P0 | -P1       SMBus PEC on/off for i2ctransfer helpers (default: OFF)
@@ -1478,6 +1481,20 @@ flash_with_redundancy() {
     local rep=${REDUNDANCY:-1}
     [ "$rep" -lt 1 ] 2>/dev/null && rep=1
     local until_full=${REPEAT_UNTIL_FULL:-0}
+
+    # Validate the file OFFLINE before touching the device. program_device only checks a
+    # minimum byte count per record, so a corrupted payload, wrong encoded length, or bad
+    # trailing CRC8 would otherwise be written to the regulator and consume an NVM save.
+    if ! check_file; then
+        if [ "$DRY_RUN" -eq 1 ]; then
+            log_warn "File validation FAILED. Dry-run: continuing (no writes)."
+        elif [ "${FORCE_FLASH:-0}" -eq 1 ]; then
+            log_warn "File validation FAILED. Overridden by -F (force): writing a corrupted configuration."
+        else
+            log_error "File validation FAILED for $CONFIG_FILE: refusing to flash. Run 'checkfile' for details, or use -F to override."
+            return 1
+        fi
+    fi
 
     # Pre-flight ONCE: detect, verify file<->device, report version/CONFIG_CRC, idempotency.
     preflight_check || return 1
