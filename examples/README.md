@@ -26,13 +26,18 @@ updater. Use it for Renesas Gen3.5 `.hex` files with an explicit I2C bus and
 device address:
 
 ```sh
+hw-management-vr-dpc-renesas-update.sh checkfile -f <file.hex>
 hw-management-vr-dpc-renesas-update.sh verify -b <bus> -a <addr> -f <file.hex>
 hw-management-vr-dpc-renesas-update.sh flash -y -b <bus> -a <addr> -f <file.hex>
 ```
 
-`verify` is read-only and checks the target device ID plus the live
-`CONFIG_CRC`; `flash` programs the configuration and skips an already
-programmed device unless forced by the updater options.
+`checkfile` validates a `.hex` offline (header, record structure, per-line
+CRC8) with no device access. `verify` is read-only and checks the target
+device ID plus the live `CONFIG_CRC`. `flash` runs the same offline checks
+as `checkfile` before any I2C write, then programs the configuration and
+skips an already programmed device unless forced (`-F`, `-r N`, or
+`-r max`). Use `-F` to override failed file validation as well (writes a
+bad file anyway; use with care).
 
 ### Renesas DPC model and revision
 
@@ -75,10 +80,14 @@ hardware by **bus + I2C address**, then compares **`DeviceType`**:
 | Live device type differs from JSON entry | **Skip** (vendor mismatch; no flash) |
 | Types match, model/revision match package | **Skip** (up-to-date; no flash) |
 | Types match, model/revision differ | **Update** that device |
+| Types match, model/revision match, **`--force`** | **Update** anyway (reflash) |
 
 On a Renesas-only system with a combined MPS+Renesas tarball, MPS entries
 are skipped and Renesas entries are updated only when needed. **`--verify`**
 reports **`SKIP_VND`**, **`OK`**, **`DIFF`**, etc. per entry.
+**`--force`** still skips vendor-mismatch and missing-hardware entries; it
+only bypasses the up-to-date skip so matched model/revision devices are
+reflashed.
 
 Manual check on target:
 
