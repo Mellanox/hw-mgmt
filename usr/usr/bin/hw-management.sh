@@ -4055,6 +4055,12 @@ do_start()
 	sleep 1
 	enable_vpd_wp
 	echo 0 > $config_path/events_ready
+
+	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+		cp $thermal_control_config $config_path/tc_config.json
+	else
+		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
+	fi
 	/usr/bin/hw-management-start-post.sh
 	map_dummy_psus
 
@@ -4070,11 +4076,6 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
-	fi
-	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		cp $thermal_control_config $config_path/tc_config.json
-	else
-		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	/usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
