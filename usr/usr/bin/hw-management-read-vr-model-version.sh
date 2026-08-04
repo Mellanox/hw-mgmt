@@ -74,7 +74,9 @@ get_device_registers()
             echo "0x55 0x43 1 1"
             ;;
         mp2975|mp2974)
-            echo "0xba 0xbb 0 0"
+            # DPC_MODEL_ID / DPC_REVISION_ID live on page 1 (same as
+            # hw-management-dpc-update.sh defaults DPC_*_PAGE=1).
+            echo "0xba 0xbb 1 1"
             ;;
         xdpe1a2g7b)
             # Block read exposes a leading byte before the 16-bit MFR value.
