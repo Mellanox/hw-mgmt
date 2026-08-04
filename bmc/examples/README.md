@@ -11,7 +11,7 @@ here apply to the **BMC package** only; host reference layouts use `usr/etc/hw-m
 | File | Purpose |
 |------|---------|
 | [hw-management-bmc-a2d-leakage-config-example.json](hw-management-bmc-a2d-leakage-config-example.json) | A2D leakage config: field reference, example array, deploy notes → **`/etc/hw-management-bmc-a2d-leakage-config.json`**. |
-| [hw-management-bmc-bom-example.json](hw-management-bmc-bom-example.json) | SMBIOS BOM alternate maps for **`hw-management-bmc-devtree.sh`**: **`swb`** / **`platform`** / **`pwr`** arrays → deploy as **`/etc/hw-management-bmc-bom.json`** (from **`usr/etc/<HID>/hw-management-bmc-bom.json`** on the image). Schema only; I2C bus numbers are platform-specific. |
+| [hw-management-bmc-bom-example.json](hw-management-bmc-bom-example.json) | SMBIOS BOM alternate maps for **`hw-management-bmc-devtree.sh`**: **`swb`** / **`platform`** / **`pwr`** / **`port`** arrays → deploy as **`/etc/hw-management-bmc-bom.json`** (from **`usr/etc/<HID>/hw-management-bmc-bom.json`** on the image). Schema only; I2C bus numbers are platform-specific. |
 | [hw-management-bmc-gpio-config-example.json](hw-management-bmc-gpio-config-example.json) | GPIO JSON for **`bmc_init_sysfs_gpio`**: **`field_reference`**, deployable **`example_platform`** → **`/etc/hw-management-bmc-gpio-pins.json`**. |
 | [HI189/hw-management-bmc-gpio-config.txt](HI189/hw-management-bmc-gpio-config.txt) | HI189 GPIO offset/symlink reference for **`usr/etc/HI189/hw-management-bmc-gpio-pins.json`**. |
 | [hw-management-bmc-leakage-sysfs.txt](hw-management-bmc-leakage-sysfs.txt) | **`/var/run/hw-management/leakage/`** tree (detectors, channels, **`type`**, **`ChnlNames`**, non‑sequential **`ChannelId`** / per‑channel device‑map, handler artifacts). |
