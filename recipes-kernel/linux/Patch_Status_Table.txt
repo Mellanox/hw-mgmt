@@ -828,7 +828,7 @@ Kernel-6.12
 |0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
 |0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
 |0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
-|0068-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          |            | NVME SSD fallback recovery                     |
+|0068-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.12.43    | NVME SSD fallback recovery                     |
 |0069-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |0070-nvme-pci-restore-config-space-after-late-device-reset.patch |                    | Downstream accepted                      |            | NVME SSD restore config space after FLR        |
 |0071-nvme-pci-log-pci-state-around-flr-recovery.patch            |                    | Downstream accepted                      |            | Temp debug PCIe recovery after                 |
