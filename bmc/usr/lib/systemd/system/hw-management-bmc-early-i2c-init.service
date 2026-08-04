@@ -7,7 +7,7 @@ DefaultDependencies=no
 # before this unit reads it.  See issue #4992267.
 Requires=hw-management-bmc-early-config.service
 After=hw-management-bmc-early-config.service
-Before=nvidia_update_mac.service
+Before=hw-management-bmc-sync-ethaddr.service
 
 [Service]
 Type=oneshot

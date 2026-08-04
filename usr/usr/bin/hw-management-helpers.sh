@@ -119,6 +119,7 @@ declare -A sys_fandir_vs_pn=(["00MP584"]=F ["00MP594"]=R ["00MP593"]=R \
 
 base_cpu_bus_offset=10
 max_tachos=20
+fan_debounce_timeout_ms=2000
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
 i2c_bus_min=1
@@ -218,6 +219,7 @@ show_hw_info()
 check_cpu_type()
 {
 	if [ ! -f $config_path/cpu_type ]; then
+		mkdir -p $config_path
 		# ARM CPU provide "CPU part" field, x86 does not. Check for ARM first.
 		cpu_pn=$(grep -m1 "CPU part" /proc/cpuinfo | awk '{print $4}')
 		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
@@ -1175,7 +1177,7 @@ set_sodimm_temp_limits()
 	# SODIMM temp reading is not supported on Broadwell-DE Comex
 	# and on BF# Comex.
 	# Broadwell-DE Comex can be installed interchangeably with new
-	# Coffee Lake Comex on part of systems e.g. on Anaconda.
+	# Coffee Lake Comex on part of systems e.g. on SN3700.
 	# Thus check by CPU type and not by system type.
 	# JC42 driver is not relevant on systems with DDR5 DRAM
 	case $cpu_type in
@@ -1215,6 +1217,12 @@ set_sodimm_temp_limits()
 
 # Start i2c trace (ftrace i2c event class under tracefs).
 KERN_TRACE_FS="/sys/kernel/debug/tracing"
+I2C_TRACE_LOG="/var/log/hw-mgmt-i2c-trace.log"
+# Bound the per-CPU ftrace ring buffer so a stuck or looping bus cannot grow the
+# captured trace without limit. Applied to both the boot-wide tracer and the
+# chipup tracer. This is the primary size cap: it bounds every "cat trace" dump
+# regardless of how long the tracer runs.
+I2C_TRACE_BUF_SIZE_KB=1024
 start_i2c_trace() {
 	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
 		return
@@ -1226,8 +1234,8 @@ start_i2c_trace() {
 		return
 	fi
 
-	# configure i2c trace buffer size
-	# echo 1024 > "$KERN_TRACE_FS"/buffer_size_kb  # 1 MiB (per-buffer; see tracing doc)
+	# Bound the ring buffer size (per-CPU) so the capture cannot grow unbounded.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$KERN_TRACE_FS"/buffer_size_kb 2>/dev/null || true
 	# reset i2c trace
 	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
 	# clear i2c trace buffer
@@ -1255,9 +1263,109 @@ stop_i2c_trace() {
 	# disable (stop) i2c trace
 	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
 	# save i2c trace to file
-	cat "$KERN_TRACE_FS"/trace >> /var/log/hw-mgmt-i2c-trace.log
+	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG"
 	# clear i2c trace buffer
 	echo 0 > "$KERN_TRACE_FS"/trace
+}
+
+# Snapshot the boot-wide (top-level) I2C trace buffer into the trace log, tagged
+# with the supplied reason, then clear the buffer so the tracer keeps running
+# with a fresh window.
+#
+# Unlike stop_i2c_trace this does NOT disable the tracer: it is meant to be
+# called mid-boot to preserve evidence for a device other than the ASIC
+# (mlxsw_minimal), e.g. a device that fails to connect in connect_platform, so
+# the failure context is not lost when the (now bounded) ring buffer wraps or
+# when the final stop_i2c_trace dump happens much later. The chipup path has its
+# own dedicated tracer (start/save/stop_chipup_i2c_trace) and does not use this.
+# $1 - human-readable reason written as a delimiter before the trace data.
+save_i2c_trace_on_failure() {
+	local reason="${1:-unspecified failure}"
+
+	# Only act when the boot-wide tracer is available and actually running.
+	[ -f "$KERN_TRACE_FS"/events/i2c/enable ] || return
+	[ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "1" ] || return
+
+	echo "# --- i2c trace saved on: ${reason} ($(date '+%Y-%m-%d %H:%M:%S')) ---" >> "$I2C_TRACE_LOG"
+	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG" 2>/dev/null
+	# Clear so the tracer continues with a fresh, bounded window (and the final
+	# stop_i2c_trace dump does not duplicate what we just saved).
+	echo 0 > "$KERN_TRACE_FS"/trace 2>/dev/null
+}
+
+# Chipup I2C tracer.
+#
+# The chipup tracer runs on its own ftrace instance so it never disturbs the
+# boot-wide tracer (start_i2c_trace/stop_i2c_trace), which uses the top-level
+# tracing instance. This matters because chipup is triggered asynchronously
+# (sx-core udev event) and may run while do_start's boot-wide tracer is active;
+# sharing the single top-level buffer/filter/enable would clobber it.
+#
+# start_chipup_i2c_trace stores the tracing directory in CHIPUP_TRACE_DIR
+# (empty when tracing could not be started). The ftrace instance name includes
+# the ASIC index so concurrent chipup on multi-ASIC platforms do not share one
+# buffer.
+# Default filter: capture all CPLD bridge child adapters (i2c-2 and up), not
+# just the ASIC bus, so bus-wide contention is visible. i2c-0 (CPU SMBus) and
+# i2c-1 (bridge parent) are excluded as noise.
+CHIPUP_I2C_TRACE_FILTER="adapter_nr>=2"
+CHIPUP_TRACE_DIR=""
+CHIPUP_I2C_TRACE_INSTANCE=""
+
+start_chipup_i2c_trace() {
+	local asic_index="${1:-0}"
+
+	CHIPUP_TRACE_DIR=""
+	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}"
+
+	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		return
+	fi
+
+	# Preferred: dedicated, isolated ftrace instance per ASIC.
+	if [ -d "$KERN_TRACE_FS/instances" ] &&
+	   mkdir -p "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null &&
+	   [ -d "$CHIPUP_I2C_TRACE_INSTANCE/events/i2c" ]; then
+		CHIPUP_TRACE_DIR="$CHIPUP_I2C_TRACE_INSTANCE"
+	# Fallback: top-level instance, but only when the boot-wide tracer is not
+	# already running, otherwise skip entirely to avoid clobbering it.
+	elif [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "0" ]; then
+		CHIPUP_TRACE_DIR="$KERN_TRACE_FS"
+	else
+		return
+	fi
+
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU) so a stuck bus during chipup retries
+	# cannot grow the capture without limit.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$CHIPUP_TRACE_DIR"/buffer_size_kb 2>/dev/null || true
+	echo "$CHIPUP_I2C_TRACE_FILTER" > "$CHIPUP_TRACE_DIR"/events/i2c/filter 2>/dev/null || true
+	echo 1 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+}
+
+# Append the current chipup trace buffer to the log and clear it (called
+# between retries so each attempt is recorded separately).
+# $1 - attempt number (optional, written as a delimiter before the trace data).
+save_chipup_i2c_trace() {
+	local attempt="${1:-}"
+
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	if [ -n "$attempt" ]; then
+		echo "# --- chipup attempt ${attempt} ---" >> /var/log/chipup_i2c_trace_log
+	fi
+	cat "$CHIPUP_TRACE_DIR"/trace >> /var/log/chipup_i2c_trace_log 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+}
+
+# Stop the chipup tracer and release the dedicated instance (if one was used).
+stop_chipup_i2c_trace() {
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	if [ "$CHIPUP_TRACE_DIR" = "$CHIPUP_I2C_TRACE_INSTANCE" ]; then
+		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
+	fi
+	CHIPUP_TRACE_DIR=""
 }
 
 # Print function trace to the log file(s)
@@ -1288,4 +1396,129 @@ print_function_call() {
 		"$TS" \
 		"$function_name" \
 		"$argument" >> "$LOG_FILE"
+}
+
+# Set fan direction for a single fan
+#
+# Input parameters:
+# 1 - "$attribute" (fan1, fan2, fan3, fan4)
+# 2 - "$event" (1 - Present, 0 - Removed)
+# Return: None
+#
+# Example:
+# set_fan_direction "fan1" 1 # Set fan1 direction
+# set_fan_direction "fan1" 0 # Remove fan1 direction
+function set_fan_direction()
+{
+	local attribute="$1"
+	local event="$2"
+	local fan_debounce_timer
+	local fan_debounce_counter
+	local fan_dir
+	local fan_dir_old
+	local fan_index
+	local fan_direction
+
+	print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event entering..."
+	case $attribute in
+	fan*)
+		if [ "$event" -eq 0 ]; then
+			echo 2 > "$thermal_path/${attribute}_dir"
+			return
+		fi
+		if [ -f "$config_path/fan_dir_eeprom" ]; then
+			return
+		fi
+		# Check if CPLD fan direction exists
+		if [ ! -f "$system_path/fan_dir" ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "./system/fan_dir not found"
+			return
+		fi
+		if [[ "$ui_tree_sku" == "HI117" ]]; then
+			return
+		fi
+		fan_dir=$(< "$system_path/fan_dir")
+		fan_debounce_counter=0
+		fan_dir_old=-1
+		fan_debounce_timer=$fan_debounce_timeout_ms
+		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
+		do
+			if [ "${fan_dir}_" == "${fan_dir_old}_" ];
+			then
+				fan_debounce_counter=$((fan_debounce_counter + 1))
+			else
+				fan_dir_old=$fan_dir
+				fan_debounce_counter=0
+			fi
+			fan_debounce_timer=$((fan_debounce_timer - 200))
+			sleep 0.2
+			fan_dir=$(< "$system_path/fan_dir")
+		done
+
+		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
+		fan_index=${attribute#fan}
+		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
+			return
+		fi
+		fan_index=$((fan_index - 1))
+
+		#  Debounce is not success. Set fan dir as not recognized value "2".
+		if [ ! -z "$fan_debounce_timer" ] && [ "$fan_debounce_timer" -le 0 ]; then
+			fan_direction=2
+		else
+			# fan_dir is an integer bitfield; one bit per fan direction.
+			fan_direction=$(( (fan_dir >> fan_index) & 1 ))
+		fi
+		print_function_call "$0" "${FUNCNAME[0]}" "$attribute $event. Debounce timer left: $fan_debounce_timer ms, fan_dir: $fan_dir, fan_index: $fan_index, fan_direction: $fan_direction"
+		echo "$fan_direction" > "$thermal_path/${attribute}_dir"
+		print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event exiting..."
+	;;
+	*)
+		;;
+	esac
+}
+
+# $1 - force (optional, default 1):
+#      1 = re-init fanX_dir for all present fans
+#      0 = only initialize fans whose fanX_dir file is missing
+function set_fan_direction_for_all_fans()
+{
+	local max_tachos
+	local i
+	local status
+
+	print_function_call "$0" "${FUNCNAME[0]}" "Starting..."
+	local force="$1"
+	if [ -z "$force" ]; then
+		force=1
+	fi
+
+	if [ ! -f "$config_path/max_tachos" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "max_tachos file not found - skipping"
+		return
+	fi
+
+	max_tachos=$(<"$config_path/max_tachos")
+	if ! [[ "$max_tachos" =~ ^[0-9]+$ ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "invalid max_tachos: '$max_tachos' - skipping"
+		return
+	fi
+	print_function_call "$0" "${FUNCNAME[0]}" "max_tachos: $max_tachos"
+
+	for ((i=1; i<="$max_tachos"; i+=1)); do
+		if [ -L "${thermal_path}"/fan"${i}"_status ]; then
+			# check if forse is not set and fan_dir present - skip
+			if [ "$force" -ne 1 ] && [ -f "$thermal_path/fan${i}_dir" ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" "fan${i}_dir present and force is not set - skipping"
+				continue
+			fi
+			# check if fan status is set
+			status=$(< "${thermal_path}"/fan"${i}"_status)
+			print_function_call "$0" "${FUNCNAME[0]}" "fan${i}_status: $status"
+			if [ "$status" -eq 1 ]; then
+				set_fan_direction "fan${i}" "$status"
+			fi
+		fi
+	done
+	print_function_call "$0" "${FUNCNAME[0]}" "Finished"
 }

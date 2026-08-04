@@ -706,7 +706,7 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        exit_wait(EXIT, 1, chunk_sec=0.2)
+        exit_wait(EXIT, 1)
 
     LOGGER.notice("hw-management-peripheral-updater: stopped main loop ({})".format(_sig_condition_name))
     return

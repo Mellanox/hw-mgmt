@@ -267,6 +267,8 @@ def asic_temp_populate(arg_list, arg):
     @param arg: Unused parameter (for interface compatibility)
     """
     for asic_name, asic_attr in arg_list.items():
+        if EXIT.is_set():
+            break
         cntrs_obj = asic_attr.get("counters")
         if not cntrs_obj:
             cntrs_obj = Counter()
@@ -360,6 +362,8 @@ def module_temp_populate(arg_list, _dummy):
     offset = arg_list["fout_idx_offset"]
     LOGGER.debug("module_temp_populate")
     for idx in range(module_count):
+        if EXIT.is_set():
+            break
         module_name = "module{}".format(idx + offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
@@ -588,6 +592,8 @@ def main():
     while not EXIT.is_set():
         try:
             for attr in thermal_attr:
+                if EXIT.is_set():
+                    break
                 update_thermal_attr(attr)
             try:
                 log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
@@ -606,7 +612,7 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        exit_wait(EXIT, 1, chunk_sec=0.2)
+        exit_wait(EXIT, 1)
 
     LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
 

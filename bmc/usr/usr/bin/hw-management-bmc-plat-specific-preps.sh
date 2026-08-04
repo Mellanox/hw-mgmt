@@ -156,6 +156,11 @@ deploy_hw_management_bmc_platform_files()
 		chmod 0644 /etc/hw-management-bmc-boot-complete.conf
 		echo "plat-specific: installed /etc/hw-management-bmc-boot-complete.conf from $HID_SRC"
 	fi
+	if [ -f "$HID_SRC/hw-management-bmc-wd-heartbeat.conf" ]; then
+		cp -f "$HID_SRC/hw-management-bmc-wd-heartbeat.conf" /etc/hw-management-bmc-wd-heartbeat.conf
+		chmod 0644 /etc/hw-management-bmc-wd-heartbeat.conf
+		echo "plat-specific: installed /etc/hw-management-bmc-wd-heartbeat.conf from $HID_SRC"
+	fi
 	if [ -f "$HID_SRC/hw-management-bmc.conf" ]; then
 		mkdir -p /etc/modprobe.d
 		ln -sfn "$HID_SRC/hw-management-bmc.conf" /etc/modprobe.d/hw-management-bmc.conf

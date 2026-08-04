@@ -1,0 +1,39 @@
+From b67bc9a5f01fea21a3c2697b8fa62d843157062e Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Wed, 17 Jun 2026 19:57:44 +0300
+Subject: [PATCH] i2c: designware: Fix ACPI power-on of AMD I2C after kexec
+
+After kexec, AMD DesignWare I2C controllers (AMDI0010) may be left in a
+low-power state by the previous kernel while the ACPI core assumes D0
+because the DSDT provides _PS0/_PS3 without _PSC. acpi_device_set_power()
+then skips _PS0 evaluation and the driver reads 0xffffffff from
+DW_IC_COMP_TYPE.
+
+Call acpi_device_fix_up_power() before accessing the controller, matching
+the approach used by i2c-hid-acpi and ACPI LPSS enumeration.
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ drivers/i2c/busses/i2c-designware-platdrv.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-designware-platdrv.c b/drivers/i2c/busses/i2c-designware-platdrv.c
+index 7466d748b..ad5fcc7b5 100644
+--- a/drivers/i2c/busses/i2c-designware-platdrv.c
++++ b/drivers/i2c/busses/i2c-designware-platdrv.c
+@@ -285,6 +285,12 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
+ 	dev->irq = irq;
+ 	platform_set_drvdata(pdev, dev);
+ 
++	if (has_acpi_companion(&pdev->dev)) {
++		ret = acpi_device_fix_up_power(ACPI_COMPANION(&pdev->dev));
++		if (ret)
++			return ret;
++	}
++
+ 	ret = dw_i2c_plat_request_regs(dev);
+ 	if (ret)
+ 		return ret;
+-- 
+2.34.1
+
