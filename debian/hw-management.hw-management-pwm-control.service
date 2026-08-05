@@ -1,0 +1,20 @@
+[Unit]
+Description=ASIC FAN PWM/tacho control via mlxreg (PCIe) for Nvidia systems
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+Documentation=man:hw-management.service(8)
+
+StartLimitIntervalSec=1200
+StartLimitBurst=15
+
+[Service]
+ExecStart=/bin/sh -c "/usr/bin/hw_management_pwm_control.py"
+ExecStop=/bin/kill $MAINPID
+TimeoutStopSec=10
+
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target
