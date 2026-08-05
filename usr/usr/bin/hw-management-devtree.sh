@@ -673,10 +673,10 @@ declare -A n63xxld_swb_alternatives=( \
 )
 
 declare -A n64xxld_platform_alternatives=( \
-	["24c512_1"]="24c512 0x51 1 vpd_info" \
-	["spd5118_0"]="spd5118 0x52 2 somdimm_temp1" \
-	["spd5118_1"]="spd5118 0x53 2 somdimm_temp2" \
-	["mp2855_0"]="mp2845 0x69 5 comex_voltmon1" \
+	["24c512_0"]="24c512 0x51 1 vpd_info" \
+	["spd5118_0"]="spd5118 0x52 10 somdimm_temp1" \
+	["spd5118_1"]="spd5118 0x53 10 somdimm_temp2" \
+	["mp2845_0"]="mp2845 0x69 5 comex_voltmon1" \
 	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2" \
 )
 
