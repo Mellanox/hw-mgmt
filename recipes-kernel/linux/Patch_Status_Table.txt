@@ -837,6 +837,9 @@ Kernel-6.12
 |0064-5-amd-xgbe-fix-sleep-while-atomic-on-suspend-resume.patch   | d6bdc685e19fa      | Feature upstream                         | 6.12.77    | backport upstream patch                        |
 |0064-6-amd-xgbe-fix-link-status-handling-in-xgbe_rx_adaptat.patch| 9285fe46130ca      | Feature upstream                         | 6.12.78    | backport upstream patch                        |
 |0064-7-amd-xgbe-prevent-CRC-errors-during-RX-adaptation-wit.patch| 4f9c20113f87d      | Feature upstream                         | 6.12.78    | backport upstream patch                        |
+|0069-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.12.43    | NVME SSD fallback recovery                     |
+|0070-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
+|0071-nvme-pci-restore-config-space-after-late-device-reset.patch |                    | Downstream accepted                      |            | NVME SSD restore config space after FLR        |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
