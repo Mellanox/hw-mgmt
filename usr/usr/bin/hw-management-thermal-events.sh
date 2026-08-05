@@ -304,6 +304,23 @@ function set_asic_ready()
 	fi
 }
 
+# SN2700: userspace FAN PWM/tacho over PCIe (mlxreg). Started/stopped with
+# sxcore chipup/chipdown; not enabled for other minimal_unsupported SKUs.
+function pwm_control_service_set()
+{
+	local action=$1
+	local product
+
+	product=$(< /sys/devices/virtual/dmi/id/product_name)
+	case $product in
+		MSN2700*)
+			systemctl "$action" hw-management-pwm-control.service >/dev/null 2>&1
+			;;
+		*)
+			;;
+	esac
+}
+
 # Don't process udev events until service is started and directories are created
 if [ ! -f ${udev_ready} ]; then
 	exit 0
@@ -1085,6 +1102,8 @@ if [ "$1" == "add" ]; then
 		fi
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
 		set_asic_ready "$4/$5" 1
+		# SN2700: publish FAN PWM/tacho via mlxreg (no mlxsw_minimal)
+		pwm_control_service_set start
 	fi
 	if [ "$2" == "nvme_temp" ]; then
 		dev_name=$(cat "$3""$4"/name)
@@ -1442,6 +1461,8 @@ else
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
+		# SN2700: stop PWM publisher before ASIC chipdown
+		pwm_control_service_set stop
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 		set_asic_ready "$4/$5" 0
 	fi

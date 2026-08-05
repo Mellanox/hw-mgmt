@@ -5,6 +5,9 @@ Requires=hw-management.service
 PartOf=hw-management.service
 Documentation=man:hw-management.service(8)
 
+# Started/stopped from hw-management-thermal-events.sh on sxcore
+# chipup/chipdown for SN2700 (MSN2700*). Do not enable globally.
+
 StartLimitIntervalSec=1200
 StartLimitBurst=15
 
@@ -15,6 +18,3 @@ TimeoutStopSec=10
 
 Restart=on-failure
 RestartSec=60s
-
-[Install]
-WantedBy=multi-user.target
