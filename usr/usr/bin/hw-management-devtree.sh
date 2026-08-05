@@ -804,12 +804,6 @@ declare -A fan_type1_alternatives=( \
 	["lm5066i_0"]="lm5066i 0x14 6 fan_hotswap1" \
 )
 
-# Currently system can have just multiple clock boards.
-declare -A clk_type0_alternatives=( \
-	["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
-	["24c128_1"]="24c128 0x57 5 clk_eeprom2" \
-)
-
 # Remove ICP201xx pressure sensors from SMBIOS BOM mechanism
 # These pressure sensors don't have upstream kernel driver.
 # They will be instantiated manually in OPT-OS only.
@@ -1244,9 +1238,6 @@ devtr_check_supported_system_init_alternatives()
 			for key in "${!fan_type1_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
 			done
-			for key in "${!clk_type0_alternatives[@]}"; do
-				clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
-			done
 			return 0
 			;;
 		VMOD0017)
@@ -1412,10 +1403,6 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!fan_type1_alternatives[@]}"; do
 					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
-				done
-
-				for key in "${!clk_type0_alternatives[@]}"; do
-					clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
 				done
 				;;
 			*)
