@@ -64,8 +64,9 @@ G_ETHER_DEV_ADDR="${G_ETHER_DEV_ADDR:-46:44:8a:c8:7f:bd}"
 # Wait for GP_STBY_PG (BMC standby-ready) via sysfs GPIO value file.
 # Uses global BMC_STBY_READY (path to the value file), set in
 # bmc_init_sysfs_gpio() from hw-management-bmc-gpio-set.sh before this runs.
+# Timeout uses /proc/uptime (monotonic) so wall-clock steps do not affect it.
 # ARGUMENTS:
-#   $1 timeout (seconds, default 10) — max wall time to wait
+#   $1 timeout (seconds, default 10) — max wait time
 #   $2 interval (seconds, default 1) — sleep between polls
 # RETURN:
 #   0 if the value reads 1 within the timeout
@@ -75,7 +76,11 @@ wait_bmc_standby_ready()
 {
 	local timeout_sec=${1:-10}
 	local interval_secs=${2:-1}
-	local start_time=$EPOCHSECONDS
+	local start_uptime now_uptime elapsed
+	local ready_status
+
+	read -r start_uptime _ </proc/uptime
+	start_uptime=${start_uptime%%.*}
 
 	if [ -z "${BMC_STBY_READY:-}" ] || [ ! -r "$BMC_STBY_READY" ]; then
 		echo "[ERROR] BMC_STBY_READY is not set or not readable: ${BMC_STBY_READY:-<unset>}"
@@ -86,7 +91,6 @@ wait_bmc_standby_ready()
 	echo "Expecting $BMC_STBY_READY set HIGH"
 
 	while true; do
-		local ready_status
 		read -r ready_status < "$BMC_STBY_READY" || true
 		ready_status="${ready_status//$'\r'/}"
 
@@ -95,10 +99,16 @@ wait_bmc_standby_ready()
 			return 0
 		fi
 
-		echo "Waiting for BMC standby ready signal, elapsed $((EPOCHSECONDS - start_time))s"
+		read -r now_uptime _ </proc/uptime
+		now_uptime=${now_uptime%%.*}
+		elapsed=$((now_uptime - start_uptime))
+
+		echo "Waiting for BMC standby ready signal, elapsed ${elapsed}s"
 		sleep "$interval_secs"
 
-		if ((EPOCHSECONDS - start_time >= timeout_sec)); then
+		read -r now_uptime _ </proc/uptime
+		now_uptime=${now_uptime%%.*}
+		if ((now_uptime - start_uptime >= timeout_sec)); then
 			echo "[ERROR] BMC standby not ready in ${timeout_sec} secs"
 			return 1
 		fi

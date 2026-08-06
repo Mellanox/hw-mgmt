@@ -72,9 +72,8 @@ I2C_XFER_FLAGS="-y"
 I2C_MAX_RETRY=${I2C_MAX_RETRY:-3}
 I2C_RETRY_DELAY=${I2C_RETRY_DELAY:-0.05}
 
-# Poll timeout (record type 0x11). Uses a deterministic iteration budget instead of
-# wall-clock: `date +%s%3N` has no %N on BusyBox and would otherwise disable the timeout,
-# allowing an infinite poll on a stuck device.
+# Poll timeout (record type 0x11). Time budget from /proc/uptime (monotonic) plus an
+# iteration-count backstop so a stuck device cannot poll forever if uptime is unreadable.
 POLL_MAX_MS=${POLL_MAX_MS:-2000}
 POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-50}
 
@@ -789,9 +788,9 @@ execute_poll_line() {
     [ -n "$MASK_U32" ] && bitmask=$(and_u32_hex "$bitmask" "$MASK_U32")
 
     # Timeout is BusyBox-robust and enforced two independent ways so the poll can never
-    # loop forever, regardless of `date`/`sleep` capabilities:
-    #   1) wall-clock in whole SECONDS via `date +%s` (BusyBox supports %s, just not %N);
-    #   2) an iteration-count backstop, used when `date +%s` is unusable.
+    # loop forever, regardless of wall-clock/`sleep` capabilities:
+    #   1) monotonic whole seconds via /proc/uptime (immune to date/NTP steps);
+    #   2) an iteration-count backstop, used when /proc/uptime is unreadable.
     # Sub-second pacing is best-effort (_sleep_frac): if BusyBox cannot fractional-sleep,
     # the loop simply polls faster (more I2C reads) but stays bounded by (1)/(2).
     local interval_ms=${POLL_INTERVAL_MS:-50}
@@ -802,11 +801,16 @@ execute_poll_line() {
     local timeout_s=$(( ( ${POLL_MAX_MS:-2000} + 999 ) / 1000 ))   # ceil to whole seconds
     [ "$timeout_s" -ge 1 ] || timeout_s=1
     # Backstop: generous so it never ends BEFORE timeout_s when sleeps are skipped
-    # (fast spin), but still finite if `date` is broken. ~POLL_MAX_MS/ms + 100k margin.
+    # (fast spin), but still finite if uptime is unreadable. ~POLL_MAX_MS/ms + 100k margin.
     local iter_cap=$(( ${POLL_MAX_MS:-2000} / interval_ms + 100000 ))
 
-    local start_s; start_s=$(date +%s 2>/dev/null)
-    case "$start_s" in ''|*[!0-9]*) start_s="" ;; esac
+    local start_s=""
+    if read -r start_s _ </proc/uptime 2>/dev/null; then
+        start_s=${start_s%%.*}
+        case "$start_s" in ''|*[!0-9]*) start_s="" ;; esac
+    else
+        start_s=""
+    fi
 
     local iter=0
     while : ; do
@@ -831,9 +835,14 @@ execute_poll_line() {
 
         # ---- stop conditions ----
         if [ -n "$start_s" ]; then
-            local now_s; now_s=$(date +%s 2>/dev/null)
-            case "$now_s" in ''|*[!0-9]*) now_s="$start_s" ;; esac
-            [ $(( now_s - start_s )) -ge "$timeout_s" ] && break
+            local now_s=""
+            if read -r now_s _ </proc/uptime 2>/dev/null; then
+                now_s=${now_s%%.*}
+                case "$now_s" in ''|*[!0-9]*) now_s="" ;; esac
+            else
+                now_s=""
+            fi
+            [ -n "$now_s" ] && [ $(( now_s - start_s )) -ge "$timeout_s" ] && break
         fi
         [ "$iter" -ge "$iter_cap" ] && break
 

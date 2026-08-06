@@ -68,6 +68,20 @@ readlink_canonical()
 	readlink "$p" 2>/dev/null
 }
 
+# Monotonic seconds since boot (integer). Immune to wall-clock / NTP steps.
+# Echoes empty string if /proc/uptime is unreadable.
+_uptime_sec()
+{
+	local u
+	if ! read -r u _ </proc/uptime 2>/dev/null; then
+		echo ""
+		return 1
+	fi
+	u=${u%%.*}
+	case "$u" in ''|*[!0-9]*) echo ""; return 1 ;; esac
+	echo "$u"
+}
+
 export LOG_TAG="hw-management-bmc-generate-dump"
 # shellcheck source=/dev/null
 source /usr/bin/hw-management-bmc-helpers-common.sh
@@ -292,8 +306,9 @@ run_systemd_analyze_cmd_bg()
 	label=$(basename "$outfile" .txt)
 
 	(
-		local t0=$SECONDS rc elapsed
+		local t0 rc elapsed now
 
+		t0=$(_uptime_sec)
 		log_message info "systemd-analyze ${label}: start"
 		if timeout "$timeout_sec" systemd-analyze "$@" --no-pager >"$outfile" 2>&1; then
 			rc=0
@@ -301,7 +316,12 @@ run_systemd_analyze_cmd_bg()
 			rc=$?
 			log_message warning "systemd-analyze $* failed or timed out"
 		fi
-		elapsed=$((SECONDS - t0))
+		now=$(_uptime_sec)
+		if [ -n "$t0" ] && [ -n "$now" ]; then
+			elapsed=$((now - t0))
+		else
+			elapsed="?"
+		fi
 		if [ "$rc" -eq 0 ]; then
 			log_message info "systemd-analyze ${label}: end (${elapsed}s)"
 		else
@@ -479,19 +499,25 @@ collect_i2c_non_mux()
 	done
 }
 
-# Run a collector in a background subshell; log start/end and wall time (journal + stderr).
+# Run a collector in a background subshell; log start/end and elapsed time (journal + stderr).
 run_collect_bg()
 {
 	local name=$1
 	shift
 
 	(
-		local t0=$SECONDS rc elapsed
+		local t0 rc elapsed now
 
+		t0=$(_uptime_sec)
 		log_message info "collect ${name}: start"
 		"$@"
 		rc=$?
-		elapsed=$((SECONDS - t0))
+		now=$(_uptime_sec)
+		if [ -n "$t0" ] && [ -n "$now" ]; then
+			elapsed=$((now - t0))
+		else
+			elapsed="?"
+		fi
 		if [ "$rc" -eq 0 ]; then
 			log_message info "collect ${name}: end (${elapsed}s)"
 		else
@@ -536,7 +562,7 @@ if ! command -v gzip >/dev/null 2>&1; then
 	rm -rf "$DUMP_FOLDER"
 	exit 1
 fi
-archive_t0=$SECONDS
+archive_t0=$(_uptime_sec)
 log_message info "archive: start"
 set -o pipefail 2>/dev/null || true
 if ! tar cf - -C "$DUMP_FOLDER" . | gzip -9 >"$OUTPUT_TAR"; then
@@ -545,7 +571,12 @@ if ! tar cf - -C "$DUMP_FOLDER" . | gzip -9 >"$OUTPUT_TAR"; then
 	exit 1
 fi
 set +o pipefail 2>/dev/null || true
-log_message info "archive: end ($((SECONDS - archive_t0))s)"
+archive_now=$(_uptime_sec)
+if [ -n "$archive_t0" ] && [ -n "$archive_now" ]; then
+	log_message info "archive: end ($((archive_now - archive_t0))s)"
+else
+	log_message info "archive: end"
+fi
 
 rm -rf "$DUMP_FOLDER"
 log_message info "BMC dump created: $OUTPUT_TAR"
