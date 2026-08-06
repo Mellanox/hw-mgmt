@@ -60,12 +60,27 @@ fi
 G_ETHER_HOST_ADDR="${G_ETHER_HOST_ADDR:-46:44:8a:c8:7f:bf}"
 G_ETHER_DEV_ADDR="${G_ETHER_DEV_ADDR:-46:44:8a:c8:7f:bd}"
 
+# Monotonic seconds since boot (integer). Immune to wall-clock / NTP steps.
+# Echoes empty string if /proc/uptime is unreadable.
+_uptime_sec()
+{
+	local u
+	if ! read -r u _ </proc/uptime 2>/dev/null; then
+		echo ""
+		return 1
+	fi
+	u=${u%%.*}
+	case "$u" in ''|*[!0-9]*) echo ""; return 1 ;; esac
+	echo "$u"
+}
+
 #######################################
 # Wait for GP_STBY_PG (BMC standby-ready) via sysfs GPIO value file.
 # Uses global BMC_STBY_READY (path to the value file), set in
 # bmc_init_sysfs_gpio() from hw-management-bmc-gpio-set.sh before this runs.
+# Timeout uses /proc/uptime (monotonic) so wall-clock steps do not affect it.
 # ARGUMENTS:
-#   $1 timeout (seconds, default 10) — max wall time to wait
+#   $1 timeout (seconds, default 10) — max wait time
 #   $2 interval (seconds, default 1) — sleep between polls
 # RETURN:
 #   0 if the value reads 1 within the timeout
@@ -75,7 +90,15 @@ wait_bmc_standby_ready()
 {
 	local timeout_sec=${1:-10}
 	local interval_secs=${2:-1}
-	local start_time=$EPOCHSECONDS
+	local start_uptime now_uptime elapsed
+	local ready_status
+
+	start_uptime=$(_uptime_sec)
+	if [ -z "$start_uptime" ]; then
+		echo "[ERROR] /proc/uptime unreadable; cannot enforce BMC standby timeout"
+		sleep "$interval_secs"
+		return 1
+	fi
 
 	if [ -z "${BMC_STBY_READY:-}" ] || [ ! -r "$BMC_STBY_READY" ]; then
 		echo "[ERROR] BMC_STBY_READY is not set or not readable: ${BMC_STBY_READY:-<unset>}"
@@ -86,7 +109,6 @@ wait_bmc_standby_ready()
 	echo "Expecting $BMC_STBY_READY set HIGH"
 
 	while true; do
-		local ready_status
 		read -r ready_status < "$BMC_STBY_READY" || true
 		ready_status="${ready_status//$'\r'/}"
 
@@ -95,13 +117,20 @@ wait_bmc_standby_ready()
 			return 0
 		fi
 
-		echo "Waiting for BMC standby ready signal, elapsed $((EPOCHSECONDS - start_time))s"
-		sleep "$interval_secs"
+		now_uptime=$(_uptime_sec)
+		if [ -z "$now_uptime" ]; then
+			echo "[ERROR] /proc/uptime unreadable while waiting for BMC standby ready"
+			sleep "$interval_secs"
+			return 1
+		fi
+		elapsed=$((now_uptime - start_uptime))
 
-		if ((EPOCHSECONDS - start_time >= timeout_sec)); then
+		echo "Waiting for BMC standby ready signal, elapsed ${elapsed}s"
+		if ((elapsed >= timeout_sec)); then
 			echo "[ERROR] BMC standby not ready in ${timeout_sec} secs"
 			return 1
 		fi
+		sleep "$interval_secs"
 	done
 }
 
