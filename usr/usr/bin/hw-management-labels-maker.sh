@@ -1,7 +1,7 @@
 #!/bin/bash
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@ source hw-management-helpers.sh
 set -x
 sku=$(< $sku_file)
 ui_path=$hw_management_path/ui 
+cache_path=$hw_management_path/.cache
 
 # Obtain label file (/var/run/hw-management/config/lm_sensors_labels).
 json_file=$hw_management_path/config/lm_sensors_labels
@@ -44,8 +45,9 @@ if [ ! -f $json_file ]; then
 fi
 
 # Check if the dictionary has already been loaded
-if [ ! -f "/tmp/sensor_labels_dictionary.pkl" ]; then
+if [ ! -f "$cache_path/sensor_labels_dictionary.pkl" ]; then
 	lock_service_state_change
+	mkdir -p "$cache_path"
 	# Call the Python program to load the JSON file and store the dictionary
 	hw_management_parse_labels.py --json_file "$json_file" --sku "$sku" 
 	unlock_service_state_change
