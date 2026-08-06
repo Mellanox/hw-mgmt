@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@ import pickle
 import re
 
 HW_MGMT_PATH = "/var/run/hw-management/"
+HW_MGMT_CACHE = f"{HW_MGMT_PATH}.cache/"
 
 
 def load_json(json_file):
@@ -101,7 +102,7 @@ def retrieve_value(dictionary, label, key):
 def main():
     parser = argparse.ArgumentParser(description='JSON Dictionary')
     parser.add_argument('--json_file', help='Path to JSON file')
-    parser.add_argument('--dictionary_file', default='/tmp/sensor_labels_dictionary.pkl', help='Path to dictionary file')
+    parser.add_argument('--dictionary_file', default=f"{HW_MGMT_CACHE}sensor_labels_dictionary.pkl", help='Path to dictionary file')
     parser.add_argument('--get_value', action='store_true', help='Retrieve value for a given key')
     parser.add_argument('--label', help='Label section in the json file')
     parser.add_argument('--key', help='Key for value retrieval')
