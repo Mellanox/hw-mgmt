@@ -90,6 +90,9 @@ VMOD0013)
 VMOD0021)
 	i2c_bus_def_off_eeprom_vpd=2
 	;;
+VMOD0025)
+	i2c_bus_def_off_eeprom_psu=6
+	;;
 default)
 	;;
 esac
@@ -604,6 +607,9 @@ function handle_hotplug_psu_event()
 	init_hotplug_sysfs_event "$3$4" "$psu_name" \
 				"$thermal_path/${psu_name}_status" "$psu_name"
 
+	set -x
+	exec 3>&1 4>&2 >>/tmp/bashstart.$$.log 2>&1
+
 	# hotplug initialization logic:
 	# 1. Get psu i2c bus and address
 	# 2. get device driver from devtree (based on device i2c bus and address)
@@ -904,6 +910,10 @@ if [ "$1" == "add" ]; then
 		prefix=$(get_i2c_busdev_name "$2" "$4")
 		if [[ $prefix == "undefined" ]] && [[ $5 != "dpu" ]];
 		then
+			exit
+		fi
+		# ignore sensors started with "psu"
+		if [[ "$prefix" == "psu"* ]]; then
 			exit
 		fi
 		# Voltmon MUST have at least one input.

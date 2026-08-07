@@ -578,6 +578,8 @@ def sw_hotplug_handler(arg: dict, _dummy: any):
                status = 1 : means dev was removed and inserted fast. Send 2 hotplug events with status = 0 and then with status = 1.
         - _status_reg: Status register name (e.g. fan_status). Bits packed to decimal value
           '1' - Present; '0' - Not Present
+        - _inversed: If True - invert status register bits (masked) before handling.
+          Use when hardware polarity is inverted: '0' - Present; '1' - Not Present.
         - _mask: Mask value (e.g. 00111111). LSB is first device.
         - _src_path: Source path (e.g. /sys/devices/platform/mlxplat/mlxreg-io/hwmon/).
           Sysfs path to read status/event register from. If path contains 'hwmon' - resolve hwmon name and append to path.
@@ -670,6 +672,10 @@ def sw_hotplug_handler(arg: dict, _dummy: any):
         return
     else:
         LOGGER.notice(None, id="failed_to_read_register {}".format(status_reg_name))
+
+    # Invert masked status bits when hardware polarity is inverted.
+    if arg.get("_inversed", False) is True:
+        status_byte ^= mask_val
 
     dev_idx = 0
     for bit in range(len(mask)):

@@ -2832,6 +2832,7 @@ sn66xx_specific()
 		echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
 		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+		i2c_comex_mon_bus_default=6
 		;;
 	# SN6600 (Air cooled)
 	HI186)
@@ -2864,13 +2865,13 @@ sn66xx_specific()
 		echo C2P > $config_path/system_flow_capability
 
 		# PSU I2C bus and address
-		psu1_i2c_bus=4
+		psu1_i2c_bus=6
 		psu1_i2c_addr=0x59
-		psu2_i2c_bus=4
+		psu2_i2c_bus=6
 		psu2_i2c_addr=0x58
-		psu3_i2c_bus=4
+		psu3_i2c_bus=6
 		psu3_i2c_addr=0x5b
-		psu4_i2c_bus=4
+		psu4_i2c_bus=6
 		psu4_i2c_addr=0x5a
 
 		# Add PSU to devtree. It needed for PSU hotplug handler
@@ -2894,6 +2895,7 @@ sn66xx_specific()
 		echo "$sn6600_reset_attr_num" > $config_path/reset_attr_num
 		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_sn6600.json"
+		i2c_comex_mon_bus_default=255
 		;;
 	esac
 
@@ -2905,7 +2907,6 @@ sn66xx_specific()
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }

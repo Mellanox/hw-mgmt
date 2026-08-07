@@ -41,7 +41,7 @@
 	"sensor_list" : ["asic1", "cpu", "drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", 
 	"psu1", "psu2", "psu3", "psu4", "sensor_amb", "sodimm1", "sodimm2", 
 	"voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5", "voltmon6", "voltmon7", "voltmon8", "voltmon9", "voltmon10", 
-	"voltmon11", "voltmon12", "voltmon13", "voltmon14", "voltmon15", "voltmon16", "voltmon17", "voltmon18", "voltmon19", "voltmon20"],
+	"voltmon11", "voltmon12", "voltmon13", "voltmon14", "voltmon15", "voltmon16", "voltmon17", "voltmon18"],
 	"redundancy" : {"fan_err" : {"min_err_cnt" : "2" }},
 	"error_mask" : {"psu_err" : ["direction", "present"]}
 }
