@@ -131,6 +131,12 @@ sn68xx_reset_attr_num=14
 n61xx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
+# When the mlxsw_minimal I2C probe permanently fails on legacy SPC1 systems,
+# still account the ASIC in asic_chipup_completed / asics_init_done so that OS
+# services gated on these attributes (SONiC pmon) can come up. FAN speed is not
+# touched in this flow and stays at the hardware default (100%).
+# Enabled only for VMOD0001/0002/003/0004/0005/0009 in set_config_data().
+chipup_degraded_mode_default=0
 
 # Set FAN speed tolerance based on spec +-30%
 fan_speed_tolerance=30
@@ -3284,6 +3290,15 @@ set_config_data()
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
+	case $board_type in
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
+		echo 1 > $config_path/chipup_degraded_mode
+		;;
+	*)
+		echo $chipup_degraded_mode_default > $config_path/chipup_degraded_mode
+		;;
+	esac
+	echo 0 > $config_path/asic_chipup_degraded
 	echo $hotplug_psus > $config_path/hotplug_psus
 	echo $hotplug_pwrs > $config_path/hotplug_pwrs
 	echo $hotplug_pdbs > $config_path/hotplug_pdbs
@@ -4114,6 +4129,92 @@ function find_asic_hwmon_path()
 	return 0
 }
 
+# Number of ASICs currently counted in asic_chipup_completed without a working
+# mlxsw_minimal instance behind them.
+get_asic_chipup_degraded()
+{
+	local degraded=0
+
+	[ -f "$config_path/asic_chipup_degraded" ] && degraded=$(< $config_path/asic_chipup_degraded)
+	echo "$degraded"
+}
+
+# Normalize ASIC index from chipup/sxcore callers to config file numbering.
+# sxcore may pass 0; config files use asic1_ready, asic2_ready, ...
+normalize_asic_index()
+{
+	local asic_index=$1
+
+	if [ -z "$asic_index" ] || [ "$asic_index" -eq 0 ]; then
+		echo 1
+	else
+		echo "$asic_index"
+	fi
+}
+
+# Set ASIC ready state in config for NOS services that gate on asic*_ready.
+# $1 - ASIC index (0-based sxcore index or 1-based chipup index)
+# $2 - ready state (0 or 1)
+set_asic_ready_by_index()
+{
+	local asic_index
+	local asic_id
+	local state=$2
+
+	asic_index=$(normalize_asic_index "$1")
+	asic_id=$asic_index
+	echo "$state" > "$config_path/asic${asic_id}_ready"
+	if [ "$asic_id" -eq 1 ]; then
+		echo "$state" > "$config_path/asic_ready"
+	fi
+}
+
+# Count one ASIC as "chipup completed" although its I2C driver never probed.
+# Services which are gated on asic_chipup_completed / asics_init_done (SONiC
+# pmon) can then start, at the cost of losing ASIC and port temperatures, fan
+# tachometers and PWM control for that ASIC. PWM is intentionally not written
+# here: without mlxsw_minimal nothing overrides the hardware default of 100%.
+# $1 - ASIC index
+set_asic_chipup_degraded()
+{
+	local asic_index=$1
+	local degraded_mode=0
+
+	[ -f "$config_path/chipup_degraded_mode" ] && degraded_mode=$(< $config_path/chipup_degraded_mode)
+	if [ "$degraded_mode" -ne 1 ]; then
+		return 1
+	fi
+
+	log_err "I2C communication problem with ASIC $asic_index on $sku: mlxsw_minimal driver is not connected"
+	log_err "ASIC $asic_index on $sku reported as initialized in degraded mode: ASIC and port temperatures, fan tachometers and PWM control are not available, FAN speed stays at hardware default (100%)"
+
+	lock_service_state_change
+	[ -f "$config_path/asic_chipup_completed" ] || echo 0 > "$config_path"/asic_chipup_completed
+	[ -f "$config_path/asics_init_done" ] || echo 0 > "$config_path"/asics_init_done
+	[ -f "$config_path/asic_chipup_degraded" ] || echo 0 > "$config_path"/asic_chipup_degraded
+	change_file_counter "$config_path"/asic_chipup_degraded 1
+	set_asic_ready_by_index "$asic_index" 1
+	unlock_service_state_change_update_and_match "$config_path"/asic_chipup_completed 1 \
+		"$config_path"/asic_num "$config_path"/asics_init_done
+	return 0
+}
+
+# Roll back one degraded-mode entry, so that a later successful chipup or a
+# chipdown does not double count asic_chipup_completed.
+clear_asic_chipup_degraded()
+{
+	lock_service_state_change
+	if [ "$(get_asic_chipup_degraded)" -le 0 ]; then
+		unlock_service_state_change
+		return 0
+	fi
+
+	log_info "Leaving ASIC chipup degraded mode"
+	change_file_counter "$config_path"/asic_chipup_degraded -1
+	unlock_service_state_change_update_and_match "$config_path"/asic_chipup_completed -1 \
+		"$config_path"/asic_num "$config_path"/asics_init_done
+}
+
 do_chip_up_down()
 {
 	local action=$1
@@ -4333,7 +4434,9 @@ case $ACTION in
 		do_start
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
-		check_asic_chipup_status && do_chip_up_down 1 1
+		if check_asic_chipup_status; then
+			do_chip_up_down 1 1 || set_asic_chipup_degraded 1
+		fi
 	;;
 	stop)
 		if [ -d /var/run/hw-management ]; then
@@ -4360,6 +4463,10 @@ case $ACTION in
 			asic_chipup_rc=1
 			asic_index="$2"
 			chipup_trace_attempt=1
+
+			# Drop any accounting left by a previous degraded run before
+			# retrying, so this run counts the ASIC exactly once.
+			clear_asic_chipup_degraded
 
 			# Rotate the trace log at invocation start so all retries within one
 			# chipup run stay in the same file (rotation at the end could split
@@ -4405,10 +4512,12 @@ case $ACTION in
 			done
 			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
+			set_asic_chipup_degraded "$asic_index"
 		fi
 	;;
 	chipdown)
 		if [ -d /var/run/hw-management ]; then
+			clear_asic_chipup_degraded
 			do_chip_up_down 0 "$2" "$3"
 		fi
 	;;
@@ -4447,7 +4556,9 @@ case $ACTION in
 		do_start
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
-		check_asic_chipup_status && do_chip_up_down 1 1
+		if check_asic_chipup_status; then
+			do_chip_up_down 1 1 || set_asic_chipup_degraded 1
+		fi
 	;;
 	reset-cause)
 		for f in $system_path/reset_*;
