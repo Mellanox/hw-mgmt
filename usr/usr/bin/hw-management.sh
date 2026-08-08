@@ -1247,10 +1247,18 @@ msn27xx_msb_msx_specific()
 			connect_table+=(${msn2700_A2D_base_connect_table[@]})
 			;;
 	esac
-	# Connect TC data table 
+	# Connect TC data table
 	case $product in
+		MSN2700*)
+			# SN2700: mlxsw_minimal is not used; FAN PWM/tacho via
+			# hw-management-pwm-control.service (mlxreg over PCIe).
+			# Same as other minimal_unsupported platforms: chipup does
+			# not set asic_chipup_completed.
+			minimal_unsupported=1
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
+			;;
 		MSN27*)
-			# SN2700
+			# Other MSN27xx (e.g. MSN2740)
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
 			;;
 		MSN241*)
