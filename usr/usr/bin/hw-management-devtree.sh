@@ -747,6 +747,17 @@ declare -A sn66xxld_port_alternatives=( \
 	["stts751_0"]="stts751 0x4a 7 port_amb" \
 )
 
+# Devices located on SN66XX (AC) port board
+declare -A sn66xx_port_alternatives=( \
+	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
+	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
+	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
+	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
+	["tmp102_0"]="tmp102 0x48 26 port_amb" \
+	["adt75_0"]="adt75 0x48 26 port_amb" \
+	["stts751_0"]="stts751 0x48 26 port_amb" \
+)
+
 # Devices located on SN66XX_LD power board
 declare -A sn66xxld_pwr_alternatives=( \
 	["raa228004_0"]="raa228004 0x60 6 pdb_pwr_conv1" \
@@ -1472,12 +1483,12 @@ devtr_check_supported_system_init_alternatives()
 					swb_alternatives["$key"]="${sn66xx_swb_alternatives["$key"]}"
 				done
 
-				for key in "${!sn66xxld_platform_alternatives[@]}"; do
-					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
+				for key in "${!sn66xx_port_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xx_port_alternatives["$key"]}"
 				done
 
-				for key in "${!sn66xxld_port_alternatives[@]}"; do
-					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
+				for key in "${!sn66xx_port_alternatives[@]}"; do
+					port_alternatives["$key"]="${sn66xx_port_alternatives["$key"]}"
 				done
 				for key in "${!fan_type0_alternatives[@]}"; do
 					fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
