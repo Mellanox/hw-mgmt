@@ -14,8 +14,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/hwmon/pmbus/Kconfig  |   9 ++
  drivers/hwmon/pmbus/Makefile |   1 +
- drivers/hwmon/pmbus/mp5926.c | 184 +++++++++++++++++++++++++++++++++++
- 3 files changed, 194 insertions(+)
+ drivers/hwmon/pmbus/mp5926.c | 188 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 198 insertions(+)
  create mode 100644 drivers/hwmon/pmbus/mp5926.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
@@ -55,7 +55,7 @@ new file mode 100644
 index 0000000..30e59c0
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp5926.c
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,188 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * mp5926.c  - pmbus driver for mps mp5926
@@ -180,6 +180,10 @@ index 0000000..30e59c0
 +	struct mp5926_data *data;
 +	struct pmbus_driver_info *info;
 +	int ret;
++
++	ret = i2c_smbus_write_byte_data(client, PMBUS_PAGE, 0);
++	if (ret < 0)
++		return ret;
 +
 +	data = devm_kzalloc(&client->dev, sizeof(struct mp5926_data),
 +			    GFP_KERNEL);
