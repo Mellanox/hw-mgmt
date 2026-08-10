@@ -128,11 +128,11 @@ index 0000000..e66701b
 +			return ret;
 +		/*
 +		 * Because the VOUT format used by the chip is linear11 and not
-+		 * linear16, we disregard bits[15:11]. The exponent is reported
-+		 * as part of the VOUT_MODE command.
++		 * linear16, keep its unsigned 11-bit mantissa for the PMBus core.
++		 * The exponent is reported separately through VOUT_MODE.
 +		 */
 +		if (data->vout_mode == linear)
-+			ret = ((s16)((ret & 0x7ff) << 5)) >> 5;
++			ret &= GENMASK(10, 0);
 +		break;
 +	default:
 +		ret = -ENODATA;
