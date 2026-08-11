@@ -2893,7 +2893,7 @@ sn66xx_specific()
 		echo 5 > $config_path/fan_drwr_num
 		named_busses+=(${sn6600_named_busses[@]})
 		echo "$sn6600_reset_attr_num" > $config_path/reset_attr_num
-		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
+		lm_sensors_config="$lm_sensors_configs_path/sn66xx_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_sn6600.json"
 		i2c_comex_mon_bus_default=255
 		;;

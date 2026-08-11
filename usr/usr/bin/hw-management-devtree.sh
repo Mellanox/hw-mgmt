@@ -733,6 +733,9 @@ declare -A sn66xx_swb_alternatives=( \
 	["mp29816_15"]="mp29816 0x60 16 voltmon16" \
 	["mp29816_16"]="mp29816 0x67 16 voltmon17" \
 	["mp29816_17"]="mp29816 0x68 16 voltmon18" \
+	["tmp102_0"]="tmp102 0x48 24 port_amb" \
+	["adt75_0"]="adt75 0x48 24 port_amb" \
+	["stts751_0"]="stts751 0x48 24 port_amb" \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
@@ -1483,8 +1486,8 @@ devtr_check_supported_system_init_alternatives()
 					swb_alternatives["$key"]="${sn66xx_swb_alternatives["$key"]}"
 				done
 
-				for key in "${!sn66xx_port_alternatives[@]}"; do
-					platform_alternatives["$key"]="${sn66xx_port_alternatives["$key"]}"
+				for key in "${!sn66xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
 				done
 
 				for key in "${!sn66xx_port_alternatives[@]}"; do
