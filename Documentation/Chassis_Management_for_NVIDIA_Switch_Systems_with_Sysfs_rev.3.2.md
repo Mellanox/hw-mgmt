@@ -1614,6 +1614,43 @@ used for internal purposes
 
 **Example:** 
 
+### I2C SWB Bus
+
+**Node name:** `$bsp_path/config/i2c_swb_bus`
+
+**Description:** Absolute I2C adapter number for the switch-board (SWB) CPLD
+used for cartridge identity registers (rack id, topology id, tray id, slot id)
+at slave address `0x31`. Platform-specific (for example HI176 CPU bus 18,
+HI180 CPU bus 53). Created from platform.json `variables.i2c_swb_bus` or from
+legacy `*_specific()` init. Used by `hw-management-generate-dump.sh` to
+produce archive member `cpld_swb_cartridge_dump` when the node exists
+(rack_id 13 bytes + ASCII, topology/tray/slot).
+
+**Access:** Read only
+
+**Release version:** 
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+|      | Integer | Bus number |
+
+**Example:** 
+```bash
+cat $bsp_path/config/i2c_swb_bus
+53
+```
+
+Example `cpld_swb_cartridge_dump` (from `/tmp/hw-mgmt-dump.tar.gz`):
+```text
+i2c_swb_bus=53 addr=0x31
+rack_id: 0x31 0x38 0x32 0x34 0x32 0x32 0x35 0x34 0x31 0x30 0x30 0x31 0x33
+rack_id_ascii: 1824225410013
+topology_id: 0x00
+tray_id: 0x00
+slot_id: 0x01
+```
+
 ### LM Sensors Configuration
 
 **Node name:** `$bsp_path/config/lm_sensors_config`

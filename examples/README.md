@@ -123,3 +123,22 @@ optional COMEx named-bus offsets. Use **`base_tables`**, **`dynamic_tables`**, o
 inline **`base_connect`** / **`dynamic_connect`** only when devtree is absent.
 **`named_busses_table`** (shell-array reference) and inline **`named_busses`**
 are mutually exclusive. Mistyped values abort boot.
+
+In **`variables`**, optional **`i2c_swb_bus`** is the absolute I2C adapter for
+the switch-board (SWB) CPLD (cartridge identity @ **`0x31`**). When set, it is
+written to **`/var/run/hw-management/config/i2c_swb_bus`**. Host
+**`hw-management-generate-dump.sh`** uses that node (when present) to collect
+**`cpld_swb_cartridge_dump`** inside **`/tmp/hw-mgmt-dump.tar.gz`**. Legacy
+platforms may set the same config file from **`*_specific()`** (for example
+HI176 CPU **`18`**, HI180 CPU **`53`**).
+
+Example **`cpld_swb_cartridge_dump`** contents (HI180 CPU, bus 53):
+
+```text
+i2c_swb_bus=53 addr=0x31
+rack_id: 0x31 0x38 0x32 0x34 0x32 0x32 0x35 0x34 0x31 0x30 0x30 0x31 0x33
+rack_id_ascii: 1824225410013
+topology_id: 0x00
+tray_id: 0x00
+slot_id: 0x01
+```

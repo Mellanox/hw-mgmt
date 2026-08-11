@@ -2621,6 +2621,7 @@ n51xxld_specific()
 		HI176)	# gb300
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
+			echo 18 > $config_path/i2c_swb_bus
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			lm_sensors_config="$lm_sensors_configs_path/n5500ld_sensors.conf"
 			leakage_count=2
@@ -2692,6 +2693,7 @@ n61xxld_specific()
 		echo 1 > $config_path/global_wp_wait_step
 		echo 20 > $config_path/global_wp_timeout
 		echo 0 > $config_path/i2c_bus_offset
+		echo 53 > $config_path/i2c_swb_bus
 		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
