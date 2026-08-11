@@ -16,5 +16,10 @@ TimeoutStopSec=10
 Restart=on-failure
 RestartSec=60s
 
+# Save/clear TC run state for hw-management-start-post.sh.
+# Path must match tc_state_file in hw-management-helpers.sh.
+ExecStartPost=-/bin/rm -f /var/run/.hw-management-tc-state
+ExecStop=-/bin/sh -c 'f=/var/run/.hw-management-tc-state; [ -L "$f" ] && rm -f "$f"; umask 077; printf started > "$f"'
+
 [Install]
 WantedBy=multi-user.target

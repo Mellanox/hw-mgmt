@@ -61,7 +61,10 @@ from hw_management_lib import ObjectSnapshot, compare_snapshots, print_compariso
 import json
 import re
 import threading
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 #############################
 # Global const
@@ -614,6 +617,10 @@ def g_get_dmin(thermal_table, temp, path):
         return CONST.PWM_MIN
     # get current range
     dmin, _, _ = g_get_range_val(line, round(temp))
+    try:
+        dmin = float(dmin)
+    except (ValueError, TypeError):
+        dmin = CONST.PWM_MIN
     return float(dmin)
 
 # ----------------------------------------------------------------------
@@ -4715,7 +4722,8 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Init Nvidia thermal control v.{}".format(VERSION))
         self.log.notice("*" * 40)
 
-        self.process = psutil.Process(os.getpid())
+        if psutil is not None:
+            self.process = psutil.Process(os.getpid())
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
         # Set initial PWM to maximum
@@ -4999,6 +5007,8 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: Show full thread report
         """
+        if psutil is None:
+            return
         try:
             process = psutil.Process(pid)
         except psutil.NoSuchProcess:

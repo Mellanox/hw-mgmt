@@ -60,8 +60,11 @@ from hw_management_lib import RepeatedTimer as RepeatedTimer
 from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
 import json
 import re
-import psutil
 import threading
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 #############################
 # Global const
@@ -4261,7 +4264,8 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Init Nvidia thermal control v.{}".format(VERSION))
         self.log.notice("*" * 40)
 
-        self.process = psutil.Process(os.getpid())
+        if psutil is not None:
+            self.process = psutil.Process(os.getpid())
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
         # Set initial PWM to maximum
@@ -4543,6 +4547,8 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: Show full thread report
         """
+        if psutil is None:
+            return
         try:
             process = psutil.Process(pid)
         except psutil.NoSuchProcess:
