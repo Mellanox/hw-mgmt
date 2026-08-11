@@ -168,7 +168,12 @@ ifeq ($(with_bmc),1)
 		hw-management-bmc-health-monitor.service \
 		hw-management-bmc-reset-cause-logger.service \
 		hw-management-bmc-i2c-slave-setup.service \
-		hw-management-bmc-recovery-handler.service \
+		hw-management-bmc-recovery-handler.service
+	# ABR watchdog heartbeat: installed but disabled by default (same
+	# pattern as host hw-management-sync). Enable manually when OTP is
+	# fused / ABR must be serviced: systemctl enable --now ...
+	# Positional arg keeps this call from walking every BMC unit.
+	dh_systemd_enable --no-enable -phw-management-bmc \
 		hw-management-bmc-wd-heartbeat.service
 endif
 
