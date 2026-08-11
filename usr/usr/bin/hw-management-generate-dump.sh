@@ -59,6 +59,52 @@ dump_cmd () {
 	fi
 }
 
+# SWB CPLD cartridge identity (CPU). Gated by config/i2c_swb_bus.
+# Registers match BMC Swb* offsets: MSB 0x10, rack/topo/tray/slot.
+# Mux ownership is assumed already set (CPU); do not touch bmc_to_cpu_ctrl.
+dump_cpld_swb_cartridge () {
+	i2c_swb_bus_file="${HW_MGMT_FOLDER}/config/i2c_swb_bus"
+	out="${DUMP_FOLDER}/cpld_swb_cartridge_dump"
+
+	[ -f "$i2c_swb_bus_file" ] || return 0
+	[ -x "$(command -v i2ctransfer)" ] || return 0
+
+	swb_bus=$(cat "$i2c_swb_bus_file")
+	case "$swb_bus" in
+	''|*[!0-9]*)
+		echo "invalid i2c_swb_bus='${swb_bus}'" > "$out"
+		return 0
+		;;
+	esac
+
+	timeout 10 sh -c '
+		bus="$1"
+		out="$2"
+		{
+			echo "i2c_swb_bus=${bus} addr=0x31"
+			rack_hex=$(i2ctransfer -f -y "$bus" w2@0x31 0x10 0x00 r13)
+			echo "rack_id: $rack_hex"
+			printf "rack_id_ascii: "
+			for tok in $rack_hex; do
+				h=${tok#0x}
+				c=$(printf "%d" "0x$h" 2>/dev/null) || c=0
+				if [ "$c" -ge 32 ] && [ "$c" -le 126 ]; then
+					printf "%b" "\\$(printf "%03o" "$c")"
+				else
+					printf "."
+				fi
+			done
+			printf "\n"
+			printf "topology_id: "
+			i2ctransfer -f -y "$bus" w2@0x31 0x10 0x10 r1
+			printf "tray_id: "
+			i2ctransfer -f -y "$bus" w2@0x31 0x10 0x11 r1
+			printf "slot_id: "
+			i2ctransfer -f -y "$bus" w2@0x31 0x10 0x12 r1
+		} > "$out" 2>&1
+	' sh "$swb_bus" "$out"
+}
+
 rm -rf "$DUMP_FOLDER"
 mkdir -p "$DUMP_FOLDER"
 
@@ -134,6 +180,7 @@ dump_cmd "cat ${REGMAP_FILE} 2>/dev/null" "cpld_dump" "5"
 dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
 dump_cmd "systemctl status hw-management* --no-pager" "hw-management_svc_status" "5"
 dump_cmd "ip addr" "ip_addr" "5"
+dump_cpld_swb_cartridge
 
 # Kill all the leftout child processes before creating the dump archive
 pkill -P "$dump_process_pid" 2>/dev/null || true

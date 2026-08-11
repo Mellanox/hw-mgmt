@@ -39,6 +39,7 @@ PLATFORM_JSON_NUMERIC_VARS=(
 	hotplug_pwrs
 	i2c_bus_def_off_eeprom_cpu
 	i2c_comex_mon_bus_default
+	i2c_swb_bus
 	leakage_count
 	leakage_rope_count
 	max_tachos
@@ -651,6 +652,9 @@ platform_json_apply_variables()
 			fi
 			if [ "$key" = "cpld_num" ]; then
 				platform_json_write_config_key "cpld_num" "$val" || return 1
+			fi
+			if [ "$key" = "i2c_swb_bus" ]; then
+				platform_json_write_config_key "i2c_swb_bus" "$val" || return 1
 			fi
 		fi
 	done
