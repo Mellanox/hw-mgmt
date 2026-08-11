@@ -3296,7 +3296,7 @@ set_config_data()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
-	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
+	if [ -f $thermal_control_configs_path/tc_config_user.json ]; then
 		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
 	fi
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
@@ -4070,11 +4070,6 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
-	fi
-	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		cp $thermal_control_config $config_path/tc_config.json
-	else
-		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	/usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
