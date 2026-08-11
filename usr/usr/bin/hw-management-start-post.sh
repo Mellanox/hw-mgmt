@@ -132,14 +132,17 @@ if systemctl is-enabled --quiet hw-management-tc.service 2>/dev/null; then
 fi
 # Check if TC service is running.
 tc_should_start=0
+tc_is_active=0
 if systemctl is-active --quiet hw-management-tc.service; then
 	tc_should_start=1
+	tc_is_active=1
 fi
 
 # Initialize TC service control variables.
 tc_should_enable=0
 tc_should_disable=0
 tc_should_reload=0
+tc_should_restart=0
 
 ## Checking if system doesn't support TC and disable it if it doesn't.
 if check_tc_is_supported; then
@@ -172,11 +175,10 @@ else
 	fi
 fi
 
-# Align hw-management-tc.service on disk with this platform's TC script and version label.
-# The unit is rewritten only when those strings would actually change (avoid needless reload).
-service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
+# Align TC unit with tc_config.json version; rewrite only when needed.
+service_file_path=$(systemctl show -p FragmentPath hw-management-tc.service 2>/dev/null | cut -d= -f2-)
 if [ -f "$service_file_path" ]; then
-	# TC application (v2.0 vs v2.5) is selected from tc_config.json (tc_version), not SKU.
+	# Select TC app from tc_version in tc_config.json.
 	tc_cfg_json="$config_path/tc_config.json"
 	tc_version="2.0"
 	tc_executable="hw_management_thermal_control.py"
@@ -194,19 +196,16 @@ if [ -f "$service_file_path" ]; then
 		esac
 	fi
 
-	# 1) Substitutions we would apply to the unit (TC executable basename and "ver X.Y" marker).
 	sed_edit_executable="s/hw_management_thermal_control_2_5\.py/$tc_executable/g;s/hw_management_thermal_control\.py/$tc_executable/g"
 	sed_edit_version="s/ver [0-9][0-9.]*/ver $tc_version/g"
 
-	# 2) Rewrite only if disk and "sed output" differ. cmp compares the file to stdin (-);
-	#    stdin is the unit text after the two sed rules (no temp file).
+	# Rewrite only if content would change.
 	tc_unit_needs_update=1
 	if sed -e "$sed_edit_executable" -e "$sed_edit_version" -- "$service_file_path" |
 		cmp -s -- "$service_file_path" -; then
 		tc_unit_needs_update=0
 	fi
 
-	# 3) Apply the same two edits in place only when needed.
 	if [ "$tc_unit_needs_update" -eq 1 ]; then
 		sed -i -e "$sed_edit_executable" -e "$sed_edit_version" "$service_file_path"
 		log_info "Thermal Control service updated. Reload it in 10 seconds"
@@ -214,10 +213,35 @@ if [ -f "$service_file_path" ]; then
 	fi
 fi
 
+# Restore TC state saved on hw-management stop. Missing/invalid => leave as-is.
+tc_saved_state=$(consume_tc_saved_state)
+if [ "$tc_saved_state" = "started" ] && [ $tc_is_enabled -eq 1 ]; then
+	tc_should_start=1
+	# Direct hw-management.sh run: TC stayed up on a torn-down tree.
+	if [ $tc_is_active -eq 1 ]; then
+		tc_should_restart=1
+	fi
+fi
+# Unit rewrite requires restart; with no saved state, fall back to enabled.
+if [ $tc_should_reload -eq 1 ]; then
+	tc_should_restart=1
+	if [ -z "$tc_saved_state" ] && [ $tc_is_enabled -eq 1 ]; then
+		tc_should_start=1
+	fi
+fi
+
 # Build and execute the command line for TC service control only when there is something to do.
-if [ $tc_should_reload -eq 1 ] || 
-   [ $tc_should_disable -eq 1 ] || 
-   [ $tc_should_enable -eq 1 ]; then
+tc_action_needed=0
+if [ $tc_should_reload -eq 1 ] ||
+   [ $tc_should_disable -eq 1 ] ||
+   [ $tc_should_enable -eq 1 ] ||
+   [ $tc_should_restart -eq 1 ]; then
+	tc_action_needed=1
+elif [ $tc_should_start -eq 1 ] && [ $tc_is_active -eq 0 ]; then
+	tc_action_needed=1
+fi
+
+if [ $tc_action_needed -eq 1 ]; then
 	cmd_line="sleep 10 &&"
 
 	# Reload the systemd daemon if needed.
@@ -230,6 +254,7 @@ if [ $tc_should_reload -eq 1 ] ||
 		cmd_line="$cmd_line systemctl stop hw-management-tc && systemctl disable hw-management-tc &&"
 		# TC service should not be started.
 		tc_should_start=0
+		tc_should_restart=0
 	elif [ $tc_should_enable -eq 1 ]; then
 		# TC service should be enabled.
 		cmd_line="$cmd_line systemctl enable hw-management-tc &&"
@@ -237,7 +262,7 @@ if [ $tc_should_reload -eq 1 ] ||
 
 	# Start TC service if needed.
 	if [ $tc_should_start -ne 0 ]; then
-		if [ $tc_should_reload -eq 1 ]; then
+		if [ $tc_should_restart -eq 1 ]; then
 			# TC service should be restarted in case of reload.
 			cmd_line="$cmd_line systemctl restart hw-management-tc &&"
 		else

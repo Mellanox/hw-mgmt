@@ -83,6 +83,9 @@ vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
 fixup_hook_script=/usr/local/bin/hw-management-fixup.sh
 asic_chipup_status=/run/.asic_chipup_completed
+# TC run state across hw-management stop/start. Outside $hw_management_path
+# (removed on stop). Keep in sync with hw-management-tc.service.
+tc_state_file="/var/run/.hw-management-tc-state"
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -361,6 +364,36 @@ check_tc_is_supported()
 	else
 		return 1
 	fi
+}
+
+# Write "started" (mode 600). Reject symlink.
+save_tc_state_started()
+{
+	if [ -L "$tc_state_file" ]; then
+		rm -f "$tc_state_file"
+	fi
+	( umask 077; printf 'started\n' > "$tc_state_file" )
+}
+
+# Read once and remove. Prints "started" or nothing if missing/invalid.
+consume_tc_saved_state()
+{
+	local state=""
+
+	if [ -L "$tc_state_file" ]; then
+		rm -f "$tc_state_file"
+		return
+	fi
+	if [ ! -f "$tc_state_file" ]; then
+		return
+	fi
+	state=$(tr -d '[:space:]' < "$tc_state_file" 2>/dev/null)
+	rm -f "$tc_state_file"
+	case $state in
+		started)
+			printf '%s\n' "$state"
+			;;
+	esac
 }
 
 # This function checks if BMC is supported for current platform
