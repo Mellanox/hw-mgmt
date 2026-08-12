@@ -437,16 +437,18 @@ class HW_Mgmt_Logger:
         handler_list = self.logger.handlers[:]
         for handler in handler_list:
             if isinstance(handler, RotatingFileHandler):
-                prev_bytes = handler.maxBytes
-                prev_count = handler.backupCount
                 handler.maxBytes = file_size
                 handler.backupCount = file_count
-                # Rollover only when limits change. Unconditional doRollover() at
-                # startup rotated a fresh log and wasted a backup slot. When limits
-                # do change, rollover still applies so a log oversized vs the new cap
-                # from a prior config is split correctly.
-                if handler.maxBytes != prev_bytes or handler.backupCount != prev_count:
-                    handler.doRollover()
+                # Apply new limits only. Do not rollover on startup just because
+                # defaults (e.g. 10MB) differ from the service cap (e.g. 1MB) —
+                # that created empty .log.1 files. Rotate only if the active log
+                # already exceeds the new size limit; otherwise wait for normal
+                # size-based rotation on the next write.
+                try:
+                    if file_size > 0 and os.path.getsize(handler.baseFilename) > file_size:
+                        handler.doRollover()
+                except OSError:
+                    pass
 
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
