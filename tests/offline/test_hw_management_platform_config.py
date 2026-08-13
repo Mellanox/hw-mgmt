@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Test Suite for platform_config module and refactored architecture
 #
@@ -174,6 +174,8 @@ class TestThermalConfigFiltering(unittest.TestCase):
 
         # Mock dependencies
         sys.modules["hw_management_lib"] = MagicMock()
+        if "psutil" not in sys.modules:
+            sys.modules["psutil"] = MagicMock()
 
         spec.loader.exec_module(cls.thermal_module)
         cls.thermal_config = cls.thermal_module.thermal_config
