@@ -54,12 +54,16 @@ def _ensure_peripheral_dependency_mocks():
     lib_mock.HW_Mgmt_Logger = MagicMock()
     lib_mock.exit_wait = MagicMock()
     lib_mock.current_milli_time = MagicMock(return_value=0)
+    lib_mock.RepeatedTimer = MagicMock()
     sys.modules["hw_management_lib"] = lib_mock
 
     rf_mock = MagicMock()
     rf_mock.RedfishClient = MagicMock()
     rf_mock.BMCAccessor = MagicMock()
     sys.modules["hw_management_redfish_client"] = rf_mock
+
+    if "psutil" not in sys.modules:
+        sys.modules["psutil"] = MagicMock()
 
 
 def _load_peripheral_updater_module(module_suffix, sonic_check_available):
