@@ -672,8 +672,82 @@ declare -A n63xxld_swb_alternatives=( \
 	["mp29502_1"]="mp29502 0x2e 23 pwr_conv2" \
 )
 
+declare -A n64xxld_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x66 7 voltmon1" \
+	["mp29816_1"]="mp29816 0x68 7 voltmon2" \
+	["mp29816_2"]="mp29816 0x6c 7 voltmon3" \
+	["mp29816_3"]="mp29816 0x6e 7 voltmon4" \
+	["mp29816_4"]="mp29816 0x66 23 voltmon5" \
+	["mp29816_5"]="mp29816 0x68 23 voltmon6" \
+	["mp29816_6"]="mp29816 0x6c 23 voltmon7" \
+	["mp29816_7"]="mp29816 0x6e 23 voltmon8" \
+	["mp29816_8"]="mp29816 0x66 39 voltmon9" \
+	["mp29816_9"]="mp29816 0x68 39 voltmon10" \
+	["mp29816_10"]="mp29816 0x6c 39 voltmon11" \
+	["mp29816_11"]="mp29816 0x6e 39 voltmon12" \
+	["mp29816_12"]="mp29816 0x66 55 voltmon13" \
+	["mp29816_13"]="mp29816 0x68 55 voltmon14" \
+	["mp29816_14"]="mp29816 0x6c 55 voltmon15" \
+	["mp29816_15"]="mp29816 0x6e 55 voltmon16" \
+	["mp29816-6x_0"]="mp29816 0x66 7 voltmon1" \
+	["mp29816-6x_1"]="mp29816 0x68 7 voltmon2" \
+	["mp29816-6x_2"]="mp29816 0x6c 7 voltmon3" \
+	["mp29816-6x_3"]="mp29816 0x69 7 voltmon4" \
+	["mp29816-6x_4"]="mp29816 0x66 23 voltmon5" \
+	["mp29816-6x_5"]="mp29816 0x68 23 voltmon6" \
+	["mp29816-6x_6"]="mp29816 0x6c 23 voltmon7" \
+	["mp29816-6x_7"]="mp29816 0x69 23 voltmon8" \
+	["mp29816-6x_8"]="mp29816 0x66 39 voltmon9" \
+	["mp29816-6x_9"]="mp29816 0x68 39 voltmon10" \
+	["mp29816-6x_10"]="mp29816 0x6c 39 voltmon11" \
+	["mp29816-6x_11"]="mp29816 0x69 39 voltmon12" \
+	["mp29816-6x_12"]="mp29816 0x66 55 voltmon13" \
+	["mp29816-6x_13"]="mp29816 0x68 55 voltmon14" \
+	["mp29816-6x_14"]="mp29816 0x6c 55 voltmon15" \
+	["mp29816-6x_15"]="mp29816 0x69 55 voltmon16" \
+	["raa228943_0"]="raa228943 0x66 7 voltmon1" \
+	["raa228943_1"]="raa228943 0x68 7 voltmon2" \
+	["raa228943_2"]="raa228943 0x6c 7 voltmon3" \
+	["raa228943_3"]="raa228943 0x6e 7 voltmon4" \
+	["raa228943_4"]="raa228943 0x66 23 voltmon5" \
+	["raa228943_5"]="raa228943 0x68 23 voltmon6" \
+	["raa228943_6"]="raa228943 0x6c 23 voltmon7" \
+	["raa228943_7"]="raa228943 0x6e 23 voltmon8" \
+	["raa228943_8"]="raa228943 0x66 39 voltmon9" \
+	["raa228943_9"]="raa228943 0x68 39 voltmon10" \
+	["raa228943_10"]="raa228943 0x6c 39 voltmon11" \
+	["raa228943_11"]="raa228943 0x6e 39 voltmon12" \
+	["raa228943_12"]="raa228943 0x66 55 voltmon13" \
+	["raa228943_13"]="raa228943 0x68 55 voltmon14" \
+	["raa228943_14"]="raa228943 0x6c 55 voltmon15" \
+	["raa228943_15"]="raa228943 0x6e 55 voltmon16" \
+	["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 7 voltmon1" \
+	["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 7 voltmon2" \
+	["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 7 voltmon3" \
+	["xdpe1a2g7_3"]="xdpe1a2g7b 0x6e 7 voltmon4" \
+	["xdpe1a2g7_4"]="xdpe1a2g7b 0x66 23 voltmon5" \
+	["xdpe1a2g7_5"]="xdpe1a2g7b 0x68 23 voltmon6" \
+	["xdpe1a2g7_6"]="xdpe1a2g7b 0x6c 23 voltmon7" \
+	["xdpe1a2g7_7"]="xdpe1a2g7b 0x6e 23 voltmon8" \
+	["xdpe1a2g7_8"]="xdpe1a2g7b 0x66 39 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7b 0x68 39 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7b 0x6c 39 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7b 0x6e 39 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7b 0x66 55 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7b 0x68 55 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7b 0x6c 55 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7b 0x6e 55 voltmon16" \
+	["24c512_0"]="24c512 0x51 13 swb_info" \
+	["lm5066i_0"]="lm5066i 0x12 6 pdb_hotswap1" \
+	["mp5926_0"]="mp5926 0x12 6 pdb_hotswap1" \
+	["raa228004_0"]="raa228004 0x60 6 pwr_conv1" \
+	["raa228004_1"]="raa228004 0x61 6 pwr_conv2" \
+	["mp29502_0"]="mp29502 0x2e 6 pwr_conv1" \
+	["mp29502_1"]="mp29502 0x2c 6 pwr_conv2" \
+)
+
 declare -A n64xxld_platform_alternatives=( \
-	["24c512_0"]="24c512 0x51 1 vpd_info" \
+	["24c512_1"]="24c512 0x51 1 vpd_info" \
 	["spd5118_0"]="spd5118 0x52 10 somdimm_temp1" \
 	["spd5118_1"]="spd5118 0x53 10 somdimm_temp2" \
 	["mp2845_0"]="mp2845 0x69 5 comex_voltmon1" \
@@ -1405,7 +1479,7 @@ devtr_check_supported_system_init_alternatives()
 				;;
 			HI197)
 				for key in "${!n64xxld_swb_alternatives[@]}"; do
-					swb_alternatives["$key"]="${n61xxld_swb_alternatives["$key"]}"
+					swb_alternatives["$key"]="${n64xxld_swb_alternatives["$key"]}"
 				done
 
 				for key in "${!n64xxld_platform_alternatives[@]}"; do
