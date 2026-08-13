@@ -209,7 +209,7 @@ PLATFORM_CONFIG = {
                 "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
                 "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
                 "_path_prefix": "/",
-                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
             },
         },
         {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
@@ -223,7 +223,7 @@ PLATFORM_CONFIG = {
                 "_src_path_1": "/tmp/psu_sim/",
                 "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
                 "_path_prefix": "/",
-                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
             },
         },
         {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
@@ -236,7 +236,7 @@ PLATFORM_CONFIG = {
                 "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
                 "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
                 "_path_prefix": "/",
-                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
             },
         },
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
