@@ -59,6 +59,8 @@ class TestThermalConfigValidation(unittest.TestCase):
         # Mock dependencies
         from unittest.mock import MagicMock
         sys.modules["hw_management_lib"] = MagicMock()
+        if "psutil" not in sys.modules:
+            sys.modules["psutil"] = MagicMock()
 
         spec.loader.exec_module(cls.thermal_module)
         cls.thermal_config = cls.thermal_module.thermal_config
@@ -461,6 +463,8 @@ class TestModuleTempPopulate(unittest.TestCase):
         )
         cls.thermal_module = importlib.util.module_from_spec(spec)
         sys.modules["hw_management_lib"] = MagicMock()
+        if "psutil" not in sys.modules:
+            sys.modules["psutil"] = MagicMock()
         spec.loader.exec_module(cls.thermal_module)
 
     def setUp(self):

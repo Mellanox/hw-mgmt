@@ -53,6 +53,7 @@ try:
     import traceback
     import signal
     import threading
+    import psutil
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
         atomic_file_write,
@@ -105,6 +106,12 @@ class CONST(object):
     # Log rotation size
     LOG_ROTATION_SIZE = 1 * 1024 * 1024  # 1MB
     LOG_ROTATION_COUNT = 3
+
+    # Memory usage debugging
+    DBG_MEMORY_INFO = True
+    DBG_MEMORY_USAGE_ALERT = 30000    # KB
+    DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
+    PERIODIC_MEMORY_REPORT_TIME = 5 * 60  # 5 min
 
 
 # ----------------------------------------------------------------------
@@ -160,6 +167,8 @@ thermal_config = _build_thermal_config()
 
 # Module-level singleton for logging
 LOGGER = None
+PROCESS = None
+_memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
 
 EXIT = threading.Event()
 _sig_condition_name = ""
@@ -524,6 +533,86 @@ def update_thermal_attr(attr_prop):
 # ----------------------------------------------------------------------
 
 
+def show_full_thread_report(pid=None):
+    """
+    @summary: Show full thread report
+    @param pid: Process ID to inspect (defaults to current process)
+    """
+    try:
+        process = psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        LOGGER.info("No process with PID {}".format(pid))
+        return
+
+    LOGGER.info("Process PID {}: {} [status={}]".format(pid, process.name(), process.status()))
+    LOGGER.info("Memory RSS: {:.2f} MB".format(process.memory_info().rss / 1024 / 1024))
+    LOGGER.info("CPU threads (LWPs): {}".format(len(process.threads())))
+    LOGGER.info("Python threads: {}".format(threading.active_count()))
+    LOGGER.info("-" * 90)
+
+    LOGGER.info("OS-level threads (from psutil):")
+    for t in process.threads():
+        LOGGER.info("  TID {:<7} | user_time={:.3f}s | system_time={:.3f}s".format(
+            t.id, t.user_time, t.system_time))
+    LOGGER.info("-" * 90)
+
+    LOGGER.info("Python threading.Thread objects:")
+    current_tid = getattr(threading, 'get_native_id', lambda: None)()
+    for t in threading.enumerate():
+        native_id = getattr(t, "native_id", None)
+        marker = "O" if native_id == current_tid else " "
+        LOGGER.info("{} Thread name='{:<30}', ident={}, native_id={}, alive={}".format(
+            marker, t.name[:30], t.ident, native_id, t.is_alive()))
+    LOGGER.info("-" * 90)
+    LOGGER.info("Note: All Python threads share the same process memory space")
+    cpu_time = process.cpu_times()
+    LOGGER.info("Total process memory (RSS): {:.2f} MB".format(process.memory_info().rss / 1024 / 1024))
+    LOGGER.info("Total CPU time: user={:.2f}s, system={:.2f}s".format(cpu_time.user, cpu_time.system))
+
+
+def print_memory_info():
+    """
+    @summary: Print memory usage info
+    """
+    global _memory_alert_threshold
+
+    if PROCESS is None:
+        return
+
+    try:
+        memory_info = PROCESS.memory_full_info()
+        memory_usage_rss = round(memory_info.rss / 1024, 1)
+        memory_usage_pss = round(memory_info.pss / 1024, 1)
+        memory_usage_uss = round(memory_info.uss / 1024, 1)
+        LOGGER.info("Memory usage: {} KB (PSS: {} KB, USS: {} KB)".format(
+            memory_usage_rss, memory_usage_pss, memory_usage_uss))
+    except (psutil.Error, AttributeError) as e:
+        LOGGER.warning("Failed to read memory info: {}".format(e))
+        return
+
+    if memory_usage_rss > _memory_alert_threshold:
+        LOGGER.warning("!!!!!!!! Memory usage is too high: {} KB > {} KB !!!!!!!!".format(
+            memory_usage_rss, _memory_alert_threshold))
+        LOGGER.info("=" * 90)
+        show_full_thread_report(PROCESS.pid)
+        LOGGER.info("=" * 90)
+        _memory_alert_threshold = memory_usage_rss + CONST.DBG_MEMORY_USAGE_ALERT_STEP
+
+
+def print_periodic_info(_argv, _val):
+    """
+    @summary: Print periodic memory statistic info
+    """
+    LOGGER.info("Thermal updater periodic report")
+    LOGGER.info("=" * 40)
+    if CONST.DBG_MEMORY_INFO:
+        print_memory_info()
+    LOGGER.info("=" * 40)
+
+
+# ----------------------------------------------------------------------
+
+
 def handle_shutdown(sig, _frame):
     """
     @summary: Handle application signal
@@ -573,7 +662,7 @@ def main():
     CMD_PARSER.add_argument("-s", "--system_type", nargs='?', help="System type (optional) for custom system emulation.")
 
     args = vars(CMD_PARSER.parse_args())
-    global LOGGER
+    global LOGGER, PROCESS
 
     try:
         LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
@@ -603,6 +692,12 @@ def main():
             break
 
     EXIT.clear()
+
+    PROCESS = psutil.Process(os.getpid())
+    LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
+    if CONST.DBG_MEMORY_INFO:
+        thermal_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
+
     try:
         for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
             signal.signal(sig, handle_shutdown)
