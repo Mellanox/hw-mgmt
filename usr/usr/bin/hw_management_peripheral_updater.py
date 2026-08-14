@@ -112,7 +112,7 @@ class CONST(object):
 
     # Memory usage debugging
     DBG_MEMORY_INFO = True
-    DBG_MEMORY_USAGE_ALERT = 20000    # KB
+    DBG_MEMORY_USAGE_ALERT = 30000    # KB
     DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
     PERIODIC_MEMORY_REPORT_TIME = 5 * 60  # 5 min
 
@@ -645,11 +645,20 @@ def sw_hotplug_handler(arg: dict, _dummy: any):
     status_reg_name = os.path.join(src_path, status_reg)
     mask_val = int(mask, 2)
 
-    if not "devices_state" in arg:
+    first_run = arg.get("first_run", True)
+    # chech hw-management/config/.first_run_<status_reg> file not exist - set first_run to True
+    first_run_file = os.path.join(CONST.HW_MGMT_FOLDER_DEF, "config/.first_run_{}".format(status_reg))
+    if not os.path.exists(first_run_file):
+        LOGGER.info("sw_hotplug_handler: first_run_file not exists - setting first_run to True")
+        first_run |= True
+        # create hw-management/config/.first_run_<status_reg> file
+        with open(first_run_file, 'w', encoding="utf-8") as f:
+            f.write("1")
+    arg["first_run"] = False
+
+    if not "devices_state" in arg or first_run:
         arg["devices_state"] = {}
     devices_state = arg["devices_state"]
-    first_run = arg.get("first_run", True)
-    arg["first_run"] = False
 
     try:
         # ACK: clear the event bits we snapshotted.
