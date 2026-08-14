@@ -1,4 +1,41 @@
 ================================================================================
+- V.7.0070.1733
+- Fri, 14 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: patches: Force MP5926 PAGE 0 during probe, 4e1ed37
+    o #N/A, hw-mgmt: patches: Fix MP5926 linear VOUT mantissa handling, 7422622
+    o #N/A, hw-mgmt: patches: Align MP5926 driver with upstream mainline, 8643fe8
+    o #5054893, hw-mgmt: scripts: Change the location of label dictionary, 388cc10
+    o #5189244, hw-mgmt: script: Fix wall-clock dependent timeouts during BMC waits, 00cb3dc
+    o #N/A, hw-mgmt: bmc: Add boot journal to debug dump, ce8e0ed
+    o #N/A, hwmgmt: tools: fix review comments on Renesas DPC update, 9c46d2c
+    o #N/A, hw-mgmt: tools: Update Renesas VR DPC updater, a7b6d39
+    o #N/A, hw-mgmt: tools: Add Renesas VR DPC workflow support, a9e0d20
+    o #N/A, hw-mgmt: tools: Add Renesas VR DPC updater, b253cdf
+    o #N/A, hw-mgmt: tools: Extend hw-management-dpc-update.sh with Renesas support, 2cb9acf
+    o #N/A, hw-mgmt: patches: Keep RAA228943 DMA data separate from errno, efe72df
+    o #N/A, hw-mgmt: patches: Read RAA228943 OV/UV limits relative to VID, 5819fbe
+    o #N/A, hw-mgmt: sensors: Fix RAA228943 labels on N61XX_LD and N63XX_LD, 81f37d5
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1733/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1732
 - Thu, 23 Jul 2026
 --------------------------------------------------------------------------------
@@ -3283,4 +3320,3 @@
     o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
         ethtool.
 ================================================================================
-
