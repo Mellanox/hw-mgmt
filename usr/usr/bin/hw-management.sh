@@ -2691,6 +2691,7 @@ n61xxld_specific()
 		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
+		i2c_comex_mon_bus_default=6
 		cpld_num=2
 		leakage_count=2
 		erot_count=1
@@ -2709,6 +2710,7 @@ n61xxld_specific()
 		lm_sensors_config="$lm_sensors_configs_path/n63xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
+		i2c_comex_mon_bus_default=6
 		cpld_num=3
 		leakage_count=2
 		erot_count=1
@@ -2727,6 +2729,7 @@ n61xxld_specific()
 		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
+		i2c_comex_mon_bus_default=5
 		cpld_num=2
 		leakage_count=2
 		erot_count=1
@@ -2746,7 +2749,6 @@ n61xxld_specific()
 	pwr_events_count=1
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
 	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
 	named_busses+=(${n61xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
