@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# LED control on BMC — kernel sysfs and planned virtual tree
+#
+# Common API reference: Documentation/LED_Control_API.md
+#
+# The host CPU stack populates /var/run/hw-management/led/ (see
+# examples/hw-management-led-sysfs.txt). On BMC, udev rules exist for LED
+# add/remove but hw-management-bmc-events.sh does not yet create the virtual
+# tree — use kernel sysfs directly or mirror the host handler when adding BMC
+# support.
+
+########################################################################
+# 1) Kernel LED nodes (source of truth on BMC and host)
+#
+# Driver: drivers/leds/leds-mlxreg.c (CONFIG_LEDS_MLXREG=m)
+# Platform map: nvsw-bmc-hid162.c / mlx-platform.c per HID
+
+/sys/class/leds/
+├── mlxreg:status:green/brightness       # system status LED — green channel
+├── mlxreg:status:amber/brightness       # system status — amber (may be :orange on some SKUs)
+├── mlxreg:power:amber/brightness        # power LED (platform-dependent)
+├── mlxreg:uid:blue/brightness           # UID / locator LED
+├── mlxreg:fan:green/brightness          # group FAN status (worst across trays; → led_fan)
+├── mlxreg:fan:amber/brightness
+├── mlxreg:fan1:green/brightness         # per-tray fan status (if equipped)
+├── mlxreg:fan1:orange/brightness
+└── …                                    # fan2…fanN, psu*, etc.
+
+# Each LED directory also exposes:
+#   max_brightness, trigger, delay_on, delay_off
+
+# Typical names (from bmc/tests/hw-management-bmc-led-validation.sh):
+#   mlxreg:power:amber  mlxreg:status:green  mlxreg:uid:blue …
+
+########################################################################
+# 2) Planned / host-equivalent virtual tree (not yet on BMC)
+#
+# When BMC LED handler is added, expect the same layout as host:
+#   /var/run/hw-management/led/led_<func>*
+#
+# Udev (example HI189): usr/etc/HI189/5-hw-management-bmc-events.rules
+#   SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green|amber|blue", ACTION=="add"|"remove"
+#   → hw-management-bmc-events.sh add|rm led %S %p %k
+#
+# Handler today: no "led" case in add/rm — rules are placeholders.
+
+########################################################################
+# 3) BMC-specific LED usage today
+
+# CPU reset — turn off host status green LED (direct kernel write):
+#   bmc/usr/etc/HI189/hw-management-bmc-events.sh: turn_off_host_reset_leds()
+#   writes 0 → /sys/class/leds/mlxreg:status:green/brightness
+#   on hotplug-event CPU_RESET.
+
+# Management PHY LED (network bring-up, not chassis status LED API):
+#   hw-management-bmc-helpers-common.sh — eth1 PHY LED config when carrier up.
+
+########################################################################
+# 4) CPLD hardware LED behaviour (PSU / FAN status)
+#
+# See Documentation/LED_Control_API.md §4:
+#   • After boot, CPLD drives PSU/FAN status LEDs.
+#   • First software write to any LED register → HW control off until reboot.
+#   • While under HW control, group status = worst colour across group
+#     (any amber → amber; any red → red; all green → green).
+
+# Notes
+#
+# • Validate kernel LEDs on live system: bmc/tests/hw-management-bmc-led-validation.sh
+#   (set LED_STRICT=1 to fail when no mlxreg LEDs present).
+#
+# • Kernel patches: recipes-kernel/linux/linux-6.12/0021, 0060 (HW/SW hand-off),
+#   0017 (capability gating), 0018 (amber/orange/red unification).
+#
+# • Cross-reference sysfs layout style: hw-management-bmc-thermal-sysfs.txt,
+#   hw-management-bmc-system-sysfs.txt, hw-management-bmc-eeprom-sysfs.txt.
