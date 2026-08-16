@@ -430,6 +430,7 @@ collect_journalctl_boot()
 {
 	local d=$1
 	local rc_j rc_g
+	local -a rc_pipe
 	mkdir -p "$d"
 	if ! command -v journalctl >/dev/null 2>&1; then
 		log_message warning "journalctl not found — skipping boot journal"
@@ -447,9 +448,13 @@ collect_journalctl_boot()
 	# Use bash PIPESTATUS (not pipefail alone): without pipefail, gzip's 0
 	# exit would hide a timeout that kills journalctl and leave a truncated
 	# .gz with no warning.
+	# Copy PIPESTATUS in one command: any later command (including a plain
+	# assignment) resets it, so reading [0] and [1] separately leaves the
+	# second read empty and flags every successful capture as failed.
 	timeout 60 journalctl -b0 --no-pager 2>&1 | gzip -5 >"${d}/journalctl-b0.txt.gz"
-	rc_j=${PIPESTATUS[0]}
-	rc_g=${PIPESTATUS[1]}
+	rc_pipe=("${PIPESTATUS[@]}")
+	rc_j=${rc_pipe[0]}
+	rc_g=${rc_pipe[1]}
 	if [ "$rc_j" -eq 0 ] && [ "$rc_g" -eq 0 ]; then
 		return 0
 	fi
