@@ -1,4 +1,4 @@
-From e6aa23553803feda72cba04a14b9b00d897d000f Mon Sep 17 00:00:00 2001
+From b98a0950be311c7e10be8f41ae7a59c910903616 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -24,15 +24,15 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2832 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  736 +++++
- drivers/platform/mellanox/nvsw-host-nvl7.c    |  821 +++++
+ drivers/platform/mellanox/nvsw-host-nvl6-ng.c |  764 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  944 ++++++
  drivers/platform/mellanox/nvsw-host-spc6.c    |  853 +++++
  drivers/platform/mellanox/nvsw.h              |  299 ++
- 10 files changed, 7236 insertions(+), 4 deletions(-)
+ 10 files changed, 7179 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
- create mode 100644 drivers/platform/mellanox/nvsw-host-nvl7.c
+ create mode 100644 drivers/platform/mellanox/nvsw-host-nvl6-ng.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-spc5.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-spc6.c
  create mode 100644 drivers/platform/mellanox/nvsw.h
@@ -57,7 +57,7 @@ index 74d30c8f3..1e1d5c81c 100644
            - nuvoton,w83773g
              # OKI ML86V7667 video decoder
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 14c14c9c2..d0660f704 100644
+index 14c14c9c2..803b001da 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
 @@ -113,6 +113,55 @@ config MLXBF_PMC
@@ -103,21 +103,21 @@ index 14c14c9c2..d0660f704 100644
 +	 This driver can also be built as a module. If so the module
 +	 will be called nvsw-host-spc6.
 +
-+config NVSW_HOST_NVL7
-+	tristate "Nvidia NVLink7 host CPLD/FPGA Hardware Control and Monitoring"
++config NVSW_HOST_NVL6_NG
++	tristate "Nvidia NVLink6 NG host CPLD/FPGA Hardware Control and Monitoring"
 +	depends on HWMON
 +	select REGMAP_I2C
 +	help
 +	 Say Y here to include support for the FPGA/CPLD logic by host CPU
-+	 equipped on Nvidia NVLink7 switches.
++	 equipped on Nvidia NVLink6 NG switches.
 +	 This driver can also be built as a module. If so the module
-+	 will be called nvsw-host-nvl7.
++	 will be called nvsw-host-nvl6-ng.
 +
  config NVSW_SN2201
  	tristate "Nvidia SN2201 platform driver support"
  	depends on HWMON && I2C
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 2b774cdf4..f9f8b9c10 100644
+index 2b774cdf4..73d6987d0 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
 @@ -11,5 +11,10 @@ obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
@@ -128,7 +128,7 @@ index 2b774cdf4..f9f8b9c10 100644
 +obj-$(CONFIG_NVSW_HOST_L1) += nvsw-host-l1.o nvsw-core.o
 +obj-$(CONFIG_NVSW_HOST_SPC5) += nvsw-host-spc5.o nvsw-core.o
 +obj-$(CONFIG_NVSW_HOST_SPC6) += nvsw-host-spc6.o nvsw-core.o
-+obj-$(CONFIG_NVSW_HOST_NVL7) += nvsw-host-nvl7.o nvsw-core.o
++obj-$(CONFIG_NVSW_HOST_NVL6_NG) += nvsw-host-nvl6-ng.o nvsw-core.o
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
  obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mellanox/nvsw-bmc-hid162.c
@@ -4410,15 +4410,15 @@ index 000000000..3706787b5
 +MODULE_DESCRIPTION("Nvidia platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
 +
-diff --git a/drivers/platform/mellanox/nvsw-host-nvl7.c b/drivers/platform/mellanox/nvsw-host-nvl7.c
+diff --git a/drivers/platform/mellanox/nvsw-host-nvl6-ng.c b/drivers/platform/mellanox/nvsw-host-nvl6-ng.c
 new file mode 100644
-index 000000000..12fabb685
+index 000000000..f93c8c791
 --- /dev/null
-+++ b/drivers/platform/mellanox/nvsw-host-nvl7.c
-@@ -0,0 +1,821 @@
++++ b/drivers/platform/mellanox/nvsw-host-nvl6-ng.c
+@@ -0,0 +1,764 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
-+ * Nvidia NVL7 host platform driver
++ * Nvidia NVL6_NG host platform driver
 + *
 + * Copyright (C) 2025-2026 Nvidia Technologies Ltd.
 + */
@@ -4445,7 +4445,7 @@ index 000000000..12fabb685
 +#define NVSW_I2C_LAST_HOST_BUS_NR	3
 +
 +/* Platform mux channels */
-+static int nvsw_host_nvl7_mux_channels[] = {
++static int nvsw_host_nvl6_ng_mux_channels[] = {
 +	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 +	18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
 +	33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
@@ -4454,17 +4454,17 @@ index 000000000..12fabb685
 +};
 +
 +/* Platform mux data */
-+static struct mlxcpld_mux_plat_data nvsw_host_nvl7_mux_data[] = {
++static struct mlxcpld_mux_plat_data nvsw_host_nvl6_ng_mux_data[] = {
 +	{
-+		.chan_ids = nvsw_host_nvl7_mux_channels,
-+		.num_adaps = ARRAY_SIZE(nvsw_host_nvl7_mux_channels),
++		.chan_ids = nvsw_host_nvl6_ng_mux_channels,
++		.num_adaps = ARRAY_SIZE(nvsw_host_nvl6_ng_mux_channels),
 +		.sel_reg_addr = NVSW_REG_MUX1_OFFSET,
 +		.reg_size = 2,
 +	},
 +};
 +
 +/* Platform mux board info */
-+static struct i2c_board_info nvsw_host_nvl7_mux_brdinfo = {
++static struct i2c_board_info nvsw_host_nvl6_ng_mux_brdinfo = {
 +	I2C_BOARD_INFO("i2c-mux-mlxcpld", 0x33),
 +};
 +
@@ -4480,7 +4480,7 @@ index 000000000..12fabb685
 +static struct platform_device *nvsw_host_pdev;
 +
 +/* Platform register access data */
-+static struct mlxreg_core_data nvsw_host_nvl7_regs_io_data[] = {
++static struct mlxreg_core_data nvsw_host_nvl6_ng_regs_io_data[] = {
 +	{
 +		.label = "cpld1_version",
 +		.reg = NVSW_REG_CPLD1_VER_OFFSET,
@@ -4496,48 +4496,6 @@ index 000000000..12fabb685
 +	{
 +		.label = "cpld3_version",
 +		.reg = NVSW_REG_CPLD3_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld4_version",
-+		.reg = NVSW_REG_CPLD4_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld5_version",
-+		.reg = NVSW_REG_CPLD5_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld6_version",
-+		.reg = NVSW_REG_CPLD6_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld7_version",
-+		.reg = NVSW_REG_CPLD7_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld8_version",
-+		.reg = NVSW_REG_CPLD8_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld9_version",
-+		.reg = NVSW_REG_CPLD9_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld10_version",
-+		.reg = NVSW_REG_CPLD10_VER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
 +	},
@@ -4563,55 +4521,6 @@ index 000000000..12fabb685
 +		.regnum = 2,
 +	},
 +	{
-+		.label = "cpld4_pn",
-+		.reg = NVSW_REG_CPLD4_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
-+		.label = "cpld5_pn",
-+		.reg = NVSW_REG_CPLD5_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
-+		.label = "cpld6_pn",
-+		.reg = NVSW_REG_CPLD6_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
-+		.label = "cpld7_pn",
-+		.reg = NVSW_REG_CPLD7_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
-+		.label = "cpld8_pn",
-+		.reg = NVSW_REG_CPLD8_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
-+		.label = "cpld9_pn",
-+		.reg = NVSW_REG_CPLD9_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
-+		.label = "cpld10_pn",
-+		.reg = NVSW_REG_CPLD10_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
-+		.mode = 0444,
-+		.regnum = 2,
-+	},
-+	{
 +		.label = "cpld1_version_min",
 +		.reg = NVSW_REG_CPLD1_MVER_OFFSET,
 +		.bit = GENMASK(7, 0),
@@ -4630,45 +4539,22 @@ index 000000000..12fabb685
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "cpld4_version_min",
-+		.reg = NVSW_REG_CPLD4_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
++		.label = "bios_status",
++		.reg = NVSW_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(3, 1),
++		.bit = 3,
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "cpld5_version_min",
-+		.reg = NVSW_REG_CPLD5_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
++		.label = "bios_start_retry",
++		.reg = NVSW_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "cpld6_version_min",
-+		.reg = NVSW_REG_CPLD6_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld7_version_min",
-+		.reg = NVSW_REG_CPLD7_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld8_version_min",
-+		.reg = NVSW_REG_CPLD8_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld9_version_min",
-+		.reg = NVSW_REG_CPLD9_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "cpld10_version_min",
-+		.reg = NVSW_REG_CPLD10_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
++		.label = "bios_active_image",
++		.reg = NVSW_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
 +	},
 +	{
@@ -4752,6 +4638,36 @@ index 000000000..12fabb685
 +		.mode = 0644,
 +	},
 +	{
++		.label = "hotswap_alert",
++		.reg = NVSW_REG_BRD4_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "cartridge1",
++		.reg = NVSW_REG_FRU1_OFFSET,
++		.mask = BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "cartridge2",
++		.reg = NVSW_REG_FRU1_OFFSET,
++		.mask = BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "cartridge3",
++		.reg = NVSW_REG_FRU1_OFFSET,
++		.mask = BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "cartridge4",
++		.reg = NVSW_REG_FRU1_OFFSET,
++		.mask = BIT(3),
++		.mode = 0444,
++	},
++	{
 +		.label = "leakage1",
 +		.reg = NVSW_REG_LEAK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -4764,27 +4680,33 @@ index 000000000..12fabb685
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "leakage3",
-+		.reg = NVSW_REG_LEAK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(2),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "leakage4",
-+		.reg = NVSW_REG_LEAK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "leakage5",
-+		.reg = NVSW_REG_LEAK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(4),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "asic_reset",
 +		.reg = NVSW_REG_RESET_GP2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
++	},
++	{
++		.label = "sgmii_phy_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0644,
++	},
++	{
++		.label = "cpu_erot_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
++		.label = "mcu1_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0644,
++	},
++	{
++		.label = "mcu2_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0644,
 +	},
 +	{
@@ -4818,6 +4740,12 @@ index 000000000..12fabb685
 +		.mode = 0444,
 +	},
 +	{
++		.label = "reset_pwr_button",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
 +		.label = "reset_swb_wd",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
@@ -4833,6 +4761,18 @@ index 000000000..12fabb685
 +		.label = "reset_soc",
 +		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_cpu_erot",
++		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_leak_con",
++		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
 +	{
@@ -4872,6 +4812,12 @@ index 000000000..12fabb685
 +		.mode = 0444,
 +	},
 +	{
++		.label = "port80",
++		.reg = NVSW_REG_GP1_RO_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
 +		.label = "jtag_cap",
 +		.reg = NVSW_REG_FU_CAP_OFFSET,
 +		.mask = NVSW_FU_CAP_MASK,
@@ -4893,6 +4839,27 @@ index 000000000..12fabb685
 +		.mode = 0444,
 +	},
 +	{
++		.label = "asic2_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC2_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
++		.label = "asic3_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC3_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
++		.label = "asic4_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC4_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
 +		.label = "asic_pg_fail",
 +		.reg = NVSW_REG_GP4_RO_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
@@ -4905,39 +4872,15 @@ index 000000000..12fabb685
 +		.bit = 1,
 +		.mode = 0644,
 +	},
-+	{
-+		.label = "pdb1_pwr_status",
-+		.reg = NVSW_REG_PS_DC_OK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(0),
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "pdb2_pwr_status",
-+		.reg = NVSW_REG_PS_DC_OK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(1),
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "pdb3_pwr_status",
-+		.reg = NVSW_REG_PS_DC_OK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(2),
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "pdb4_pwr_status",
-+		.reg = NVSW_REG_PS_DC_OK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0644,
-+	},
 +};
 +
-+static struct mlxreg_core_platform_data nvsw_host_nvl7_regs_io = {
-+	.data = nvsw_host_nvl7_regs_io_data,
-+	.counter = ARRAY_SIZE(nvsw_host_nvl7_regs_io_data),
++static struct mlxreg_core_platform_data nvsw_host_nvl6_ng_regs_io = {
++	.data = nvsw_host_nvl6_ng_regs_io_data,
++	.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_regs_io_data),
 +};
 +
 +/* Platform led data */
-+static struct mlxreg_core_data nvsw_host_nvl7_led_data[] = {
++static struct mlxreg_core_data nvsw_host_nvl6_ng_led_data[] = {
 +	{
 +		.label = "status:green",
 +		.reg = NVSW_REG_LED1_OFFSET,
@@ -4966,13 +4909,13 @@ index 000000000..12fabb685
 +	},
 +};
 +
-+static struct mlxreg_core_platform_data nvsw_host_nvl7_led = {
-+		.data = nvsw_host_nvl7_led_data,
-+		.counter = ARRAY_SIZE(nvsw_host_nvl7_led_data),
++static struct mlxreg_core_platform_data nvsw_host_nvl6_ng_led = {
++		.data = nvsw_host_nvl6_ng_led_data,
++		.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_led_data),
 +};
 +
 +/* Watchdog type3 platform data */
-+static struct mlxreg_core_data nvsw_host_nvl7_wd_data[] = {
++static struct mlxreg_core_data nvsw_host_nvl6_ng_wd_data[] = {
 +	{
 +		.label = "action",
 +		.reg = NVSW_REG_WD2_ACT_OFFSET,
@@ -5004,10 +4947,10 @@ index 000000000..12fabb685
 +	},
 +};
 +
-+static struct mlxreg_core_platform_data nvsw_host_nvl7_wd[] = {
++static struct mlxreg_core_platform_data nvsw_host_nvl6_ng_wd[] = {
 +	{
-+		.data = nvsw_host_nvl7_wd_data,
-+		.counter = ARRAY_SIZE(nvsw_host_nvl7_wd_data),
++		.data = nvsw_host_nvl6_ng_wd_data,
++		.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_wd_data),
 +		.version = MLX_WDT_TYPE3,
 +		.identity = "mlx-wdt",
 +	},
@@ -5015,14 +4958,14 @@ index 000000000..12fabb685
 +
 +/* Callback is used to indicate that all adapter devices have been created. */
 +static int
-+nvsw_host_nvl7_completion_notify(void *handle, struct i2c_adapter *parent,
++nvsw_host_nvl6_ng_completion_notify(void *handle, struct i2c_adapter *parent,
 +				  struct i2c_adapter *adapters[])
 +{
 +	return 0;
 +}
 +
 +/* Mux init/exit callbacks. */
-+static int nvsw_host_nvl7_mux_topology_init(struct nvsw_core *nvsw_core)
++static int nvsw_host_nvl6_ng_mux_topology_init(struct nvsw_core *nvsw_core)
 +{
 +	int i, err;
 +
@@ -5030,7 +4973,7 @@ index 000000000..12fabb685
 +	for (i = 0; i < nvsw_core->mux_num; i++) {
 +		nvsw_host_mux_data[i]->handle = nvsw_core;
 +		nvsw_host_mux_data[i]->completion_notify =
-+			nvsw_host_nvl7_completion_notify;
++			nvsw_host_nvl6_ng_completion_notify;
 +		nvsw_core->mux[i] =
 +			platform_device_register_resndata(&nvsw_host_mux_i2c_client->dev,
 +							  "i2c-mux-mlxcpld", i, NULL,
@@ -5054,7 +4997,7 @@ index 000000000..12fabb685
 +	return err;
 +}
 +
-+static void nvsw_host_nvl7_mux_topology_exit(struct nvsw_core *nvsw_core)
++static void nvsw_host_nvl6_ng_mux_topology_exit(struct nvsw_core *nvsw_core)
 +{
 +	int i;
 +
@@ -5071,7 +5014,7 @@ index 000000000..12fabb685
 +	}
 +}
 +
-+static int __init nvsw_host_dmi_nvl7_switch_matched(const struct dmi_system_id *dmi)
++static int __init nvsw_host_dmi_nvl6_ng_switch_matched(const struct dmi_system_id *dmi)
 +{
 +	int i, err;
 +
@@ -5090,21 +5033,21 @@ index 000000000..12fabb685
 +
 +	/* Set system configuration. */
 +	nvsw_host_hid = HID197;
-+	mux_num = ARRAY_SIZE(nvsw_host_nvl7_mux_data);
++	mux_num = ARRAY_SIZE(nvsw_host_nvl6_ng_mux_data);
 +	for (i = 0; i < mux_num; i++)
-+		nvsw_host_mux_data[i] = &nvsw_host_nvl7_mux_data[i];
-+	nvsw_host_mux_brdinfo = &nvsw_host_nvl7_mux_brdinfo;
-+	nvsw_led_data = &nvsw_host_nvl7_led;
-+	nvsw_regs_io_data = &nvsw_host_nvl7_regs_io;
-+	for (i = 0; i < ARRAY_SIZE(nvsw_host_nvl7_wd); i++)
-+		nvsw_wd_data[i] = &nvsw_host_nvl7_wd[i];
++		nvsw_host_mux_data[i] = &nvsw_host_nvl6_ng_mux_data[i];
++	nvsw_host_mux_brdinfo = &nvsw_host_nvl6_ng_mux_brdinfo;
++	nvsw_led_data = &nvsw_host_nvl6_ng_led;
++	nvsw_regs_io_data = &nvsw_host_nvl6_ng_regs_io;
++	for (i = 0; i < ARRAY_SIZE(nvsw_host_nvl6_ng_wd); i++)
++		nvsw_wd_data[i] = &nvsw_host_nvl6_ng_wd[i];
 +
 +	return 0;
 +}
 +
 +static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
 +	{
-+		.callback = nvsw_host_dmi_nvl7_switch_matched,
++		.callback = nvsw_host_dmi_nvl6_ng_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0023"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI197"),
@@ -5171,8 +5114,8 @@ index 000000000..12fabb685
 +		nvsw_core->wd_data[i] = nvsw_wd_data[i];
 +	nvsw_core->regio_data = nvsw_regs_io_data;
 +	nvsw_core->led_data = nvsw_led_data;
-+	nvsw_core->mux_init = nvsw_host_nvl7_mux_topology_init;
-+	nvsw_core->mux_exit = nvsw_host_nvl7_mux_topology_exit;
++	nvsw_core->mux_init = nvsw_host_nvl6_ng_mux_topology_init;
++	nvsw_core->mux_exit = nvsw_host_nvl6_ng_mux_topology_exit;
 +	platform_set_drvdata(pdev, nvsw_core);
 +
 +	err = nvsw_core_init(nvsw_core);
