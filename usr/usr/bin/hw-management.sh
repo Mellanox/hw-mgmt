@@ -645,6 +645,12 @@ n61xxld_cartridge_eeprom_connect_table=( \
 	24c02 0x50 70 cable_cartridge3_eeprom \
 	24c02 0x50 71 cable_cartridge4_eeprom)
 
+n64xxld_cartridge_eeprom_connect_table=( \
+	24c02 0x50 67 cable_cartridge1_eeprom \
+	24c02 0x50 68 cable_cartridge2_eeprom \
+	24c02 0x50 69 cable_cartridge3_eeprom \
+	24c02 0x50 70 cable_cartridge4_eeprom)
+
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
@@ -2673,7 +2679,7 @@ n61xxld_specific()
 {
 	case $sku in
 	# N6100_LD
-	HI180|HI197)
+	HI180)
 		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
 		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 		echo 4 > $config_path/cartridge_counter
@@ -2707,6 +2713,24 @@ n61xxld_specific()
 		leakage_count=2
 		erot_count=1
 		hotplug_pdbs=2
+		;;
+	# N6400_LD
+	HI197)
+		add_i2c_dynamic_bus_dev_connection_table "${n64xxld_cartridge_eeprom_connect_table[@]}"
+		echo -n "${n64xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		echo 4 > $config_path/cartridge_counter
+
+		asic_i2c_buses=(4 20 36 52)
+		echo 1 > $config_path/global_wp_wait_step
+		echo 20 > $config_path/global_wp_timeout
+		echo 0 > $config_path/i2c_bus_offset
+		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+		cpld_num=2
+		leakage_count=2
+		erot_count=1
+		hotplug_pdbs=1
 		;;
 	esac
 
