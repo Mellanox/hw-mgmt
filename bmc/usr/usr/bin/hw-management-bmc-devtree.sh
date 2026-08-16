@@ -143,7 +143,7 @@ devtr_bom_fill_alternatives_from_json()
 # Load optional SMBIOS BOM alternate component maps from ${devtr_bom_json}.
 devtr_check_supported_system_init_alternatives()
 {
-	# Optional swb / platform / pwr tables: ${devtr_bom_json} (deployed from usr/etc/<HID>/).
+	# Optional swb / platform / pwr / port tables: ${devtr_bom_json} (deployed from usr/etc/<HID>/).
 	if [ -f "$devtr_bom_json" ] && [ -f /usr/bin/hw-management-bmc-json-parser.sh ]; then
 		# shellcheck source=/dev/null
 		source /usr/bin/hw-management-bmc-json-parser.sh
@@ -151,6 +151,7 @@ devtr_check_supported_system_init_alternatives()
 			devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "swb" swb_alternatives
 			devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "platform" platform_alternatives
 			devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "pwr" pwr_alternatives
+			devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "port" port_alternatives
 		elif [ "$devtr_verb_display" -eq 1 ]; then
 			log_info "DBG SMBIOS BOM: skip, invalid JSON: ${devtr_bom_json}"
 		fi
