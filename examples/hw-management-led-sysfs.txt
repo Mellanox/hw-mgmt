@@ -35,17 +35,17 @@
 ├── led_fan_amber_trigger
 ├── led_fan1                           # per-tray aggregate state for fan1 (if equipped)
 ├── led_fan1_state
-├── led_fan1_capability                # e.g. "none orange orange_blink green green_blink"
+├── led_fan1_capability                # e.g. "none amber amber_blink green green_blink"
 ├── led_fan1_green                     # symlink → …/mlxreg:fan1:green/brightness
 ├── led_fan1_green_trigger
-├── led_fan1_orange                    # userspace name; kernel may be :orange → renamed amber in newer platforms
-├── led_fan1_orange_trigger
+├── led_fan1_amber                     # symlink → …/mlxreg:fan1:amber/brightness (kernel :orange is renamed amber)
+├── led_fan1_amber_trigger
 ├── led_fan2/ … / led_fan7             # same pattern per equipped fan (capability-gated in driver)
 ├── led_psu                            # PSU status LED group (platform-specific label)
 ├── led_psu_state
 ├── led_psu_capability
 ├── led_psu_green
-├── led_psu_orange
+├── led_psu_amber
 ├── led_uid                            # UID / locator LED (typically blue)
 ├── led_uid_state
 ├── led_uid_capability
@@ -64,7 +64,8 @@
 #   <function>_status_led (e.g. fan1_status_led ↔ led_fan1).
 #   Group FAN status (no index): led_fan ↔ mlxreg:fan:* (not in user manual §3.16).
 #
-# • Orange kernel colour is exposed as amber in symlink names (chassis-events.sh).
+# • Orange kernel colour is unconditionally exposed as amber in symlink names and
+#   in led_<func>_capability (chassis-events.sh) — no led_*_orange node is created.
 #
 # • Write LED colour via led_<func>_<color> brightness symlinks (0 / max_brightness).
 #   Run led_<func>_state to refresh the aggregate led_<func> file.
