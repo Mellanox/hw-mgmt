@@ -1871,7 +1871,7 @@ configure_device()
 	local chnames="$4"
 	local hw_channel_id="${5:-0}"
 
-	local device_type bus address need_rebind
+	local device_type bus address need_rebind pre_bound
 
 	device_type=$(echo "$device_json" | json_get_string "DeviceType")
 	bus=$(echo "$device_json" | json_get_number "Bus")
@@ -1894,6 +1894,10 @@ configure_device()
 	if json_probe_true "$device_json"; then
 		case "$device_type" in
 		ADS7924|MAX1363|ADS1015)
+			# bind_kernel_driver also returns success when a driver is already
+			# attached, so record whether this attempt is the one that binds it.
+			pre_bound=0
+			i2c_client_has_bound_driver "$bus" "$address" && pre_bound=1
 			if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
 				log_message "info" "$device_type $device_name: driver bind failed — try next Device alternative"
 				return 1
@@ -1901,6 +1905,13 @@ configure_device()
 			if ! configure_a2d_registers_raw "$device_json" "$device_name" "$bus" "$address" \
 				"$device_type" "$num_channels" "$hw_channel_id" post_driver; then
 				log_message "info" "$device_type $device_name: post-probe register programming failed — try next Device alternative"
+				# Drop only a driver this attempt bound: a same-address alternative
+				# (HI189 has ADS1015 and ADS7924 on one address) would otherwise be
+				# accepted by bind_kernel_driver as "already bound". A pre-existing
+				# binding is left alone so its IIO input does not disappear.
+				if [ "$pre_bound" -eq 0 ]; then
+					unbind_kernel_driver "$bus" "$address" || true
+				fi
 				return 1
 			fi
 			# MAX1363: force the Vdd ADC reference while the driver is bound and the IIO
