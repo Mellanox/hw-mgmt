@@ -105,12 +105,15 @@ POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1\$" "pout2\$")
 # $1 - path to sensor in sysfs
 # $2 - sensor type ('in', 'curr', 'power'...)
 # $3 - mask to matching  label
-# return sensor index if match is found or 0 if match not found
+# Prints sensor index on stdout if match is found.
+# Exit status: 0 if match found, 1 if not found.
+# Index can be 0 (e.g. in0/vin), so callers must use stdout, not $?.
 find_sensor_by_label()
 {
 	path=$1
 	sens_type=$2
 	label_mask=$3
+	local FILES label_file curr_label
 	FILES=$(find "$path"/"$sens_type"*label)
 	sensor_id_regex="$path"/"$sens_type""([0-9]+)_label"
 	for label_file in $FILES
@@ -120,15 +123,13 @@ find_sensor_by_label()
 			# Extracting sensor number from label name like "curr7_label"
 			[[ $label_file =~ $sensor_id_regex ]]
 			if [ "${#BASH_REMATCH[@]}" != 2 ]; then
-			    # not matched
-			    return 0
-			else
-			    return "${BASH_REMATCH[1]}"
+				return 1
 			fi
+			echo "${BASH_REMATCH[1]}"
+			return 0
 		fi
 	done
-	# 0 means label by 'pattern' not found.
-    return 0
+	return 1
 }
 
 linecard_i2c_parent_bus_offset=( \
@@ -936,10 +937,22 @@ if [ "$1" == "add" ]; then
 			check_n_link "$3""$4"/temp1_max_alarm $alarm_path/"$prefix"_temp1_max_alarm
 			check_n_link "$3""$4"/temp1_crit_alarm $alarm_path/"$prefix"_temp1_crit_alarm
 
+			# Default label map: in1=vin, in2=vout1, in3=vout2 (same for curr/power).
+			voltmon_label_map=("${VOLTMON_SENS_LABEL[@]}")
+			curr_label_map=("${CURR_SENS_LABEL[@]}")
+			power_label_map=("${POWER_SENS_LABEL[@]}")
+			dev_name=$(< "$3""$4"/name)
+			# MP2845 exposes 4 pages. Relevant platforms wire page0 (vout1/iout1) and
+			# page2 (vout3/iout3); page1 (vout2/iout2) is not connected. Map the
+			# second output slot to vout3/iout3 instead of default vout2/iout2.
+			if [ "$dev_name" == "mp2845" ]; then
+				voltmon_label_map[3]="vout3"
+				curr_label_map[3]="iout3\$"
+			fi
+
 			for i in {1..3}; do
-				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
+				sensor_id=$(find_sensor_by_label "$3""$4" "in" "${voltmon_label_map[$i]}")
+				if [ $? -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
 					if [ -f "$3""$4"/in"$sensor_id"_crit ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
@@ -976,9 +989,8 @@ if [ "$1" == "add" ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_max
 				fi
 
-				find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
+				sensor_id=$(find_sensor_by_label "$3""$4" "curr" "${curr_label_map[$i]}")
+				if [ $? -eq 0 ]; then
 					check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
 					if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
@@ -993,9 +1005,8 @@ if [ "$1" == "add" ]; then
 					check_n_link "$3""$4"/curr"$sensor_id"_crit $environment_path/"$prefix"_curr"$i"_crit
 				fi
 
-				find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
+				sensor_id=$(find_sensor_by_label "$3""$4" "power" "${power_label_map[$i]}")
+				if [ $? -eq 0 ]; then
 					check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
 					check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path/"$prefix"_power"$i"_alarm
 					check_n_link "$3""$4"/power"$sensor_id"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
