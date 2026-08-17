@@ -95,9 +95,17 @@ def atomic_file_write(file_name, value):
         with os.fdopen(fd, 'w', encoding="utf-8") as f:
             f.write("{}".format(value))
         os.replace(f_path_tmp, file_name)  # Atomic on POSIX
-    except Exception as e:
-        os.unlink(f_path_tmp)  # Cleanup on failure
-        raise Exception(f"Error writing {file_name}: {e}")
+    except BaseException as e:
+        try:
+            os.unlink(f_path_tmp)
+        except OSError:
+            pass
+        msg = f"Error writing {file_name}: {e}"
+        if isinstance(e, Exception):
+            raise Exception(msg)
+        # Keep ShutdownRequested/SystemExit/KeyboardInterrupt type so
+        # caller except Exception cannot swallow SIGTERM.
+        raise type(e)(msg) from e
 
 # ----------------------------------------------------------------------
 
