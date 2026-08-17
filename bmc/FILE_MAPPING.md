@@ -81,7 +81,7 @@ On the target system the **hw-management-bmc** Debian package installs this tree
 | .../bmc-post-boot-cfg/files/bmc-early-i2c-init.sh | usr/usr/bin/ |
 | .../bmc-post-boot-cfg/files/bmc-i2c-slave-setup.sh | usr/usr/bin/ |
 | .../bmc-post-boot-cfg/files/bmc-recovery-handler.sh | usr/usr/bin/ |
-| .../bmc-post-boot-cfg/files/**bios-recovery-flash.sh** | usr/usr/bin/**hw-management-bmc-bios-recovery-flash.sh** |
+| .../meta-ast2700/.../bmc-post-boot-cfg/files/**bios-recovery-flash.sh** (GPIO + **flashrom**; not meta-switch **flashcp**) | usr/usr/bin/**hw-management-bmc-bios-recovery-flash.sh** |
 | .../meta-ast2700/.../bmc-plat-specific-preps.service (script: bmc-plat-specific-preps.sh from spc6) | usr/usr/bin/ |
 | .../spc6-ast2700-a1/.../bmc_ready_common.sh | usr/usr/bin/**hw-management-bmc-ready-common.sh** |
 | .../spc6-ast2700-a1/.../spc6-ast2700-a1-bmc_ready.sh | usr/usr/bin/**hw-management-bmc-ready.sh** (common; not per-HID) |
@@ -140,7 +140,8 @@ cp "$OPENBMC/$S/$A/spc6-ast2700-a1-bmc_ready.sh" bmc/usr/usr/bin/hw-management-b
 # Scripts (expand as needed)
 cp "$OPENBMC/$S/recipes-nvidia/health-monitor/files/"*.sh bmc/usr/usr/bin/
 cp "$OPENBMC/$S/recipes-nvidia/bmc-post-boot-cfg/files/bmc-early-i2c-init.sh" bmc/usr/usr/bin/
-cp "$OPENBMC/$S/recipes-nvidia/bmc-post-boot-cfg/files/bios-recovery-flash.sh" bmc/usr/usr/bin/hw-management-bmc-bios-recovery-flash.sh
+cp "$OPENBMC/$S/meta-ast2700/recipes-nvidia/bmc-post-boot-cfg/files/bios-recovery-flash.sh" \
+  bmc/usr/usr/bin/hw-management-bmc-bios-recovery-flash.sh
 cp "$OPENBMC/$S/recipes-nvidia/bmc-post-boot-cfg/files/hw-management-helpers-common.sh" bmc/usr/usr/bin/hw-management-bmc-helpers-common.sh
 # ... etc.
 ```
