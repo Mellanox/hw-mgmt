@@ -2872,7 +2872,7 @@ sn66xxld_specific()
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
+	i2c_comex_mon_bus_default=5
 	named_busses+=(${sn66xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
