@@ -34,12 +34,12 @@
       "Ads7924SlpConfig": "string, optional. Hex byte SLPCONFIG (0x13), default 0x00.",
       "Ads7924AcqConfig": "string, optional. Hex byte ACQCONFIG (0x14), default 0x00.",
       "Ads7924PwrConfig": "string, optional. Hex byte PWRCONFIG (0x15), default 0x00.",
-      "Ads7924Mode": "string, optional. MODECNTRL final mode byte (reg 0x00), default 0x33 (auto-scan).",
-      "Ads7924AwakeMode": "string, optional. MODECNTRL awake step before Ads7924Mode, default 0x20.",
+      "Ads7924Mode": "string, optional. MODECNTRL final mode byte (reg 0x00), default 0xcc (auto-scan). MODE[5:0] occupies bits[7:2], SEL[1:0] bits[1:0]: 0xcc=auto-scan ch0, 0xec=auto-scan with sleep.",
+      "Ads7924AwakeMode": "string, optional. MODECNTRL awake step before Ads7924Mode, default 0x80 (awake).",
       "Ads7924AlarmEnable": "string, optional. INTCNTRL AEN[3:0] (reg 0x01), default 0x0f.",
       "Ads7924UlChN": "string, optional. Per-channel ULR override, N=1..4, hex byte.",
       "Ads7924LlChN": "string, optional. Per-channel LLR override, N=1..4, hex byte.",
-      "Ads7924_configuration_note": "All Ads7924* keys are optional. When omitted, hw-management-bmc-a2d-leakage-config.sh uses defaults: soft reset on (0xaa @ RESET), INT/SLP/ACQ/PWR = 0xe0 0x00 0x00 0x00, INTCNTRL AEN = 0x0f, AWAKE 0x20 then MODE 0x33 (auto-scan). For ULR/LLR and comparator-driven INT you need Scale plus NormalMin/NormalMax (or if those are absent, WarningMin/WarningMax) on raw I2C (Probe false). Per-channel ULR/LLR overrides use Ads7924UlCh1..4 / Ads7924LlCh1..4 only when you need registers to differ from that voltage-derived window."
+      "Ads7924_configuration_note": "All Ads7924* keys are optional. When omitted, hw-management-bmc-a2d-leakage-config.sh uses defaults: soft reset on (0xaa @ RESET), INT/SLP/ACQ/PWR = 0xe0 0x00 0x00 0x00, INTCNTRL AEN = 0x0f, AWAKE 0x80 then MODE 0xcc (auto-scan). For ULR/LLR and comparator-driven INT you need Scale plus NormalMin/NormalMax (or if those are absent, WarningMin/WarningMax) on raw I2C (Probe false). Per-channel ULR/LLR overrides use Ads7924UlCh1..4 / Ads7924LlCh1..4 only when you need registers to differ from that voltage-derived window."
     },
     "runtime_paths": {
       "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel number = the mapped hardware input from Channels[].Id (non-contiguous, e.g. 1 and 4). Legacy: 1..NumChnl for a scalar/absent ChannelId, or the 1-based Device[] position in per-channel device-map mode.",
