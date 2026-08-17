@@ -2832,7 +2832,6 @@ sn66xx_specific()
 		echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
 		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-		i2c_comex_mon_bus_default=6
 		;;
 	# SN6600 (Air cooled)
 	HI186)
@@ -2895,7 +2894,6 @@ sn66xx_specific()
 		echo "$sn6600_reset_attr_num" > $config_path/reset_attr_num
 		lm_sensors_config="$lm_sensors_configs_path/sn66xx_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_sn6600.json"
-		i2c_comex_mon_bus_default=255
 		led_control_type=(fan "$LED_CONTROL_SW" psu "$LED_CONTROL_SW" status "$LED_CONTROL_SW")
 		;;
 	esac
@@ -2908,6 +2906,7 @@ sn66xx_specific()
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=255
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
