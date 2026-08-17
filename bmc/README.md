@@ -245,20 +245,20 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-ads7924-read-status.sh`** | Debug — reads ADS7924 **MODECNTRL**, **INTCNTRL** (alarm status/enable), and all four channel data registers (**`i2ctransfer`**, optional **scale**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-force-alarm.sh`** | From OpenBMC **`max1363_force_alarm.sh`**: debug — programs tight/safe per-channel thresholds so selected channels hit alarm (**`i2ctransfer`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-read-status.sh`** | From OpenBMC **`max1363_read_status.sh`**: debug — prints first read bytes / decoded status flags (**`i2ctransfer`**, **`awk`**). **`#!/bin/sh`**. |
-| **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — writes CPLD **`spi_chnl_select`** then **`flashcp`** to **`spidev`** (default **`/dev/spidev1.0`**). Requires **`mtd-utils`**, hw-management runtime (**`/var/run/hw-management/system/spi_chnl_select`**). **`#!/bin/bash`**. |
+| **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **meta-ast2700** **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — power off host if needed, GPIO bank select (**`GP_BMC_REC_SPI_MUX1_SEL`**, **`GP_PROD_CS_FLASH*_EN`**), then **`flashrom`** via **`linux_spi`** (default **`/dev/spidev0.0`**, chip **`MX25U25643G`**). Requires **`flashrom`**, hw-management GPIO/sysfs under **`/var/run/hw-management/system/`**. **`#!/bin/bash`**. |
 | **`hw-management-bmc-get-reset-cause.sh`** | Reset-cause exporter. **Primary (SONiC):** exactly one of **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`** at **`bmc/`** root (**v3**: SRST/EXTRST + WDT + ABR; W1C-clear primary bits). Hardware **`reset_*`** under **`bmc/domains/`** (incl. **`reset_abr`**). Source: U-Boot env → **`/proc/cmdline`** → **`devmem`**. |
 | **`hw-management-bmc-show-reset-cause.sh`** | Operator view of reset causes: **`bmc`** (BMC root **`reset_*`** with value 1), **`host`** (**`/var/run/hw-management/system/reset_*`**, same idea as host **`hw-management.sh reset-cause`**), **`bmc-domain`** (**`.../bmc/domains/reset_*`**), **`bmc-raw`** (**`raw_scu*_reset_event_log*`** under the BMC dir). With no arguments, prints all four sections. Overrides: **`BMC_DIR`**, **`BMC_DOMAINS_DIR`**, **`HOST_SYSTEM_DIR`**. **`#!/bin/sh`**. |
 
 ### BIOS recovery flash (`hw-management-bmc-bios-recovery-flash.sh`)
 
-Stand-alone operator tool — **no** **`systemd`** unit; invoke from the shell when you need to program the host BIOS from the BMC while the CPU is unavailable.
+Stand-alone operator tool — **no** **`systemd`** unit; invoke from the shell when you need to program the host BIOS from the BMC while the host CPU is powered off.
 
 | Topic | Notes |
 |-------|--------|
-| **Purpose** | Select the host BIOS SPI path via CPLD (**`spi_chnl_select`**) and copy an image to the **`spidev`** that muxes to that flash (same idea as manual **`echo … > spi_chnl_select`** then **`flashcp`**). |
-| **Prerequisites** | **`mtd-utils`** (**`flashcp`** on **`PATH`**); **`/var/run/hw-management/system/spi_chnl_select`** writable (hw-management / udev has created the **`mlxreg-io`** / sysfs link); **`spidev`** device matches your board (default **`/dev/spidev1.0`** is only valid if the DTS exposes that node for the recovery path). |
-| **Usage** | **`hw-management-bmc-bios-recovery-flash.sh <bios_image> [spidev] [channel]`** — **`channel`** is **`0`** or **`1`** for CPLD mux (default **`1`**). Run with no arguments to print a short usage summary. |
-| **Safety** | Use a verified image and the correct **`spidev`** / channel for your SKU; flashing the wrong device or a bad image can brick the host flash path. |
+| **Purpose** | Select inactive host BIOS SPI bank via GPIO (**`GP_BMC_REC_SPI_MUX1_SEL`**, **`GP_PROD_CS_FLASH0_EN`**, **`GP_PROD_CS_FLASH1_EN`**), write/verify image with **`flashrom`** (`linux_spi`), then restore REC mux default. |
+| **Prerequisites** | **`flashrom`** on **`PATH`**; GPIO/sysfs links under **`/var/run/hw-management/system/`** (incl. **`pwr_down`**); SPI device (default **`/dev/spidev0.0`**). |
+| **Usage** | **`hw-management-bmc-bios-recovery-flash.sh [options] <bios_image>`** — options: **`-d`** spidev, **`-c`** chip name, **`-s`** SPI Hz, **`-m`** mux settle sec, **`-t`** host power-off timeout. **`-h`** for help. |
+| **Safety** | Host must be off (script requests **`pwr_down=1`** if needed). Use a verified image and the correct **`spidev`** / chip for your SKU; flashing the wrong bank or a bad image can brick the host flash path. |
 
 ### Reset-cause policy (`hw-management-bmc-get-reset-cause.sh`)
 
@@ -364,7 +364,7 @@ SONiC BMC images often ship **BusyBox** (`/bin/sh` → **ash**) and may also inc
 | **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: parallel **`run_collect_bg`** collectors, **`MAX_PARALLEL`**, **`-v`** for **`systemd-analyze`**, **`source`** **`hw-management-bmc-cpld-dump.sh`**, single-pass **`find`** + stride workers for **`/var/run/hw-management`**. **`tar cf - \| gzip -9`**; BusyBox-friendly **`find`** / **`readlink_canonical`**. Needs **`gzip`**, **`bash`**. |
 | **`hw-management-bmc-show-reset-cause.sh`** | Yes | **`#!/bin/sh`**: lists active **`reset_*`** (value 1) or raw SCU lines; no bashisms. |
 | **`hw-management-bmc-get-reset-cause.sh`** | Yes | **`#!/bin/sh`**: SCU read / semantic export. |
-| **`hw-management-bmc-bios-recovery-flash.sh`** | **bash** | **`#!/bin/bash`**, **`set -e`**: **`flashcp`** (**`mtd-utils`**), **`spi_chnl_select`** sysfs. |
+| **`hw-management-bmc-bios-recovery-flash.sh`** | **bash** | **`#!/bin/bash`**, **`set -euo pipefail`**: **`flashrom`** (**`linux_spi`**), GPIO bank select under **`/var/run/hw-management/system/`**. |
 
 If **`/usr/bin/hw-management-bmc-helpers.sh`** is sourced, it is written for bash but parses under BusyBox ash; some code paths use bash-style arithmetic — prefer **`bash`** where the full helper API is used.
 
@@ -633,7 +633,7 @@ CLI tool for host and board power transitions on SONiC BMC. It drives **mlxreg-i
 | meta-nvidia/.../bmc-post-boot-cfg/files/**a2d_leakage_read.sh** | usr/usr/bin/**hw-management-bmc-a2d-leakage-read.sh** |
 | meta-nvidia/.../bmc-post-boot-cfg/files/**max1363_force_alarm.sh** | usr/usr/bin/**hw-management-bmc-max1363-force-alarm.sh** |
 | meta-nvidia/.../bmc-post-boot-cfg/files/**max1363_read_status.sh** | usr/usr/bin/**hw-management-bmc-max1363-read-status.sh** |
-| meta-nvidia/.../bmc-post-boot-cfg/files/**bios-recovery-flash.sh** | usr/usr/bin/**hw-management-bmc-bios-recovery-flash.sh** |
+| meta-nvidia/.../meta-ast2700/.../bmc-post-boot-cfg/files/**bios-recovery-flash.sh** (GPIO + **flashrom**) | usr/usr/bin/**hw-management-bmc-bios-recovery-flash.sh** |
 | meta-nvidia/.../bmc-post-boot-cfg/files/*.sh, spc6-ast2700-a1/.../*.sh, hw-management*.sh, etc. | usr/usr/bin/ |
 | meta-nvidia/meta-switch/recipes-phosphor/**dump**/files/**cpld_dump.sh** + **dump_utils.sh** (partial; see **FILE_MAPPING.md**) | usr/usr/bin/**hw-management-bmc-cpld-dump.sh** |
 | *(SONiC BMC; see **FILE_MAPPING.md** — host analog **`hw-management-generate-dump.sh`**)* | usr/usr/bin/**hw-management-bmc-generate-dump.sh** |
