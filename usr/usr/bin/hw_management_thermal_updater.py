@@ -164,6 +164,16 @@ LOGGER = None
 EXIT = threading.Event()
 _sig_condition_name = ""
 
+
+class ShutdownRequested(BaseException):
+    """
+    @summary: Abort the daemon on SIGTERM/SIGINT/SIGHUP.
+
+    Must not subclass Exception: the main-loop safety net would swallow it.
+    Raising from the signal handler prevents CPython PEP 475 from restarting
+    a blocking sysfs read, which can exceed systemd TimeoutStopSec.
+    """
+
 # ----------------------------------------------------------------------
 
 
@@ -501,6 +511,11 @@ def update_thermal_attr(attr_prop):
 
         try:
             globals()[fn_name](argv, None)
+        except ShutdownRequested:
+            raise
+        except InterruptedError:
+            # SIGTERM during sysfs I/O: do not treat as a normal read error
+            raise ShutdownRequested()
         except (OSError, ValueError, KeyError, TypeError):
             # Catch common errors from dynamically called functions
             # to prevent daemon crash
@@ -514,6 +529,9 @@ def handle_shutdown(sig, _frame):
     @summary: Handle application signal
     @param sig: Signal
     @param _frame: Unused frame
+
+    Raise ShutdownRequested so a blocking sx_core sysfs read is not restarted
+    (PEP 475) and the process can exit before systemd TimeoutStopSec.
     """
     global _sig_condition_name
     try:
@@ -521,6 +539,7 @@ def handle_shutdown(sig, _frame):
     except (ValueError, AttributeError):
         _sig_condition_name = str(sig)
     EXIT.set()
+    raise ShutdownRequested()
 
 # ----------------------------------------------------------------------
 
@@ -584,38 +603,58 @@ def main():
             break
 
     EXIT.clear()
-    signal.signal(signal.SIGTERM, handle_shutdown)
-    signal.signal(signal.SIGINT, handle_shutdown)
-    signal.signal(signal.SIGHUP, handle_shutdown)
+    try:
+        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(sig, handle_shutdown)
+            # Disable SA_RESTART so EINTR is not retried on sx_core sysfs reads
+            signal.siginterrupt(sig, True)
 
-    LOGGER.notice("hw-management-thermal-updater: start main loop")
-    while not EXIT.is_set():
-        try:
-            for attr in thermal_attr:
-                if EXIT.is_set():
-                    break
-                update_thermal_attr(attr)
+        LOGGER.notice("hw-management-thermal-updater: start main loop")
+        while not EXIT.is_set():
             try:
-                log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
-                if os.path.isfile(log_level_filename):
-                    with open(log_level_filename, 'r', encoding="utf-8") as f:
-                        log_level = f.read().rstrip('\n')
-                        log_level = int(log_level)
-                        LOGGER.set_loglevel(log_level)
-            except (OSError, ValueError):
-                # Expected errors when reading/parsing log level file
-                # These are non-critical, just skip and continue
-                pass
-        except Exception as e:
-            # Safety net: catch any unexpected exceptions to keep daemon alive
-            LOGGER.error("Unexpected error in main loop: {}".format(e))
-            LOGGER.notice(traceback.format_exc())
-            # Continue running despite error
+                for attr in thermal_attr:
+                    if EXIT.is_set():
+                        break
+                    update_thermal_attr(attr)
+                try:
+                    log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
+                    if os.path.isfile(log_level_filename):
+                        with open(log_level_filename, 'r', encoding="utf-8") as f:
+                            log_level = f.read().rstrip('\n')
+                            log_level = int(log_level)
+                            LOGGER.set_loglevel(log_level)
+                except InterruptedError:
+                    raise ShutdownRequested()
+                except (OSError, ValueError):
+                    # Expected errors when reading/parsing log level file
+                    # These are non-critical, just skip and continue
+                    pass
+            except ShutdownRequested:
+                raise
+            except Exception as e:
+                # Safety net: catch any unexpected exceptions to keep daemon alive
+                LOGGER.error("Unexpected error in main loop: {}".format(e))
+                LOGGER.notice(traceback.format_exc())
+                # Continue running despite error
 
-        exit_wait(EXIT, 1)
+            exit_wait(EXIT, 1)
+    except ShutdownRequested:
+        pass
 
-    LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
+    try:
+        LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
+    except ShutdownRequested:
+        pass
+    finally:
+        try:
+            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+                signal.signal(sig, signal.SIG_DFL)
+        except ShutdownRequested:
+            pass
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except ShutdownRequested:
+        pass
