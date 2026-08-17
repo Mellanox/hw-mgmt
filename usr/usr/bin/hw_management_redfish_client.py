@@ -30,6 +30,7 @@ import json
 import time
 import re
 import os
+import sys
 
 # TBD:
 # Support token persistency later on and remove RedfishClient.__password

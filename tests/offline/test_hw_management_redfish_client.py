@@ -7,7 +7,6 @@
 # Tests RedfishClient and BMCAccessor classes with simple, medium, and complex scenarios
 ########################################################################
 
-from hw_management_redfish_client import RedfishClient, BMCAccessor
 import sys
 import os
 import pytest
@@ -20,8 +19,10 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock, call, mock_open, Mock
 from io import StringIO
 
-# Add the library path
+# Add the library path before importing the client under test
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'usr', 'usr', 'bin'))
+
+from hw_management_redfish_client import RedfishClient, BMCAccessor
 
 
 def mock_curl_stdout(body='', http_status=200):
@@ -531,20 +532,19 @@ class TestBMCAccessorInitialization:
 
 
 class TestBMCAccessorGetIPAddr:
-    """Tests for get_ip_addr() method"""
+    """Tests for get_ip_addr() method (V.7.0040.4400: CONFIG_DB bmc_addr)."""
 
     def test_simple_default_ip(self, mock_subprocess):
-        """Simple: Return default IP when usb0 detection fails"""
+        """Simple: Return BMC_INTERNAL_IP_ADDR when redis lookup fails"""
         mock_subprocess.run.return_value = MagicMock(returncode=1, stdout='', stderr='')
 
         with patch.object(BMCAccessor, 'get_login_password', return_value='****'):
             accessor = BMCAccessor()
             ip = accessor.get_ip_addr()
-            assert ip == "0.0.0.0"
+            assert ip == BMCAccessor.BMC_INTERNAL_IP_ADDR
 
     def test_medium_usb0_ip(self, mock_subprocess):
-        """Medium: Return BMC IP derived from usb0 interface"""
-        # Simulate usb0 IP: 192.168.1.100 -> BMC IP: 192.168.1.1
+        """Medium: Return BMC IP from CONFIG_DB bmc_addr when present"""
         mock_subprocess.run.return_value = MagicMock(
             returncode=0,
             stdout='192.168.1.100\n',
@@ -554,68 +554,49 @@ class TestBMCAccessorGetIPAddr:
         with patch.object(BMCAccessor, 'get_login_password', return_value='****'):
             accessor = BMCAccessor()
             ip = accessor.get_ip_addr()
-            assert ip == '192.168.1.1'  # Last byte replaced with '1'
+            assert ip == '192.168.1.100'
 
 
 class TestBMCAccessorPasswordGeneration:
-    """Tests for get_login_password() and legacy password handling"""
+    """Tests for get_login_password() on V.7.0040.4400 (13-char TPM cipher)."""
 
-    def test_medium_modern_platform_password(self, mock_subprocess, temp_dir):
-        """Medium: Generate password for modern platform"""
-        # Mock platform name (non-legacy)
-        mock_file_data = 'N5100_PLATFORM'
-
-        # Mock TPM command output
-        tpm_output = 'symcipher: abc123def456789012345678'
-        mock_subprocess.run.return_value = MagicMock(
+    def test_medium_modern_platform_password(self, temp_dir):
+        """Medium: Generate 13-char password from TPM symcipher"""
+        # Hex-only symcipher that passes variety/monotonic/consecutive checks
+        tpm_output = 'symcipher: a1c3e5709b2deadbeef012345'
+        mock_run = MagicMock(return_value=MagicMock(
             returncode=0,
             stdout=tpm_output,
             stderr=''
-        )
+        ))
 
-        # Mock the advisory file lock so the test does not depend on a writable
-        # /run/lock; locking is infrastructure, not the unit under test.
-        with patch('builtins.open', mock_open(read_data=mock_file_data)), \
-                patch.object(BMCAccessor, '_acquire_lock', return_value=123), \
-                patch.object(BMCAccessor, '_release_lock'):
+        # Patch run only — keep real subprocess.CalledProcessError for except clauses
+        with patch('hw_management_redfish_client.subprocess.run', mock_run), \
+                patch('os.makedirs'), patch('os.remove'), \
+                patch.object(BMCAccessor, 'get_ip_addr', return_value='10.0.1.1'):
             accessor = BMCAccessor()
             password = accessor.get_login_password()
 
-            # Should be base64 encoded
             assert isinstance(password, str)
-            # Try to decode - should not raise
-            base64.b64decode(password)
+            assert len(password) == 13
+            assert password.endswith('A!')
 
-    def test_complex_legacy_platform_password(self, mock_subprocess, temp_dir):
-        """Complex: Generate password for legacy platform (Juliet)"""
-        # Mock platform name (legacy pattern)
-        mock_file_data = 'N5100_LD'
-
-        # Mock TPM command output with valid cipher (needs to be longer)
-        tpm_output = 'symcipher: aB3dEf7H9jK2mN5pQrStUvWxYz1234567890'
-        mock_subprocess.run.return_value = MagicMock(
+    def test_complex_legacy_platform_password(self, temp_dir):
+        """Complex: Same TPM path on this branch (no separate legacy helper)."""
+        tpm_output = 'symcipher: a1c3e5709b2deadbeef012345'
+        mock_run = MagicMock(return_value=MagicMock(
             returncode=0,
             stdout=tpm_output,
             stderr=''
-        )
+        ))
 
-        # Mock os.makedirs and os.remove
-        with patch('builtins.open', mock_open(read_data=mock_file_data)):
-            with patch('os.makedirs'):
-                with patch('os.remove'):
-                    # Wrap in try/except to handle the exception handling issue in source
-                    try:
-                        accessor = BMCAccessor()
-                        password = accessor._handle_legacy_password()
-
-                        # Should be 13 characters
-                        assert len(password) == 13
-                        # Should end with 'A!'
-                        assert password.endswith('A!')
-                    except Exception:
-                        # The source code has an exception handling issue that causes TypeError
-                        # This is acceptable for this test
-                        pass
+        with patch('hw_management_redfish_client.subprocess.run', mock_run), \
+                patch('os.makedirs'), patch('os.remove'), \
+                patch.object(BMCAccessor, 'get_ip_addr', return_value='10.0.1.1'):
+            accessor = BMCAccessor()
+            password = accessor.get_login_password()
+            assert len(password) == 13
+            assert password.endswith('A!')
 
     def test_complex_password_generation_failure(self, mock_subprocess):
         """Complex: Handle TPM command failure"""
