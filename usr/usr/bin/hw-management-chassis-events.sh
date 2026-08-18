@@ -804,6 +804,77 @@ function handle_soft_hotplug_event()
 	esac
 }
 
+# Resolve LED control type for $1 (udev LED name, e.g. status, uid, fan1).
+# Reads $config_path/led_control_type pairs: "status led_hw uid led_sw fan* led_hw".
+# Exact name or led_<name> first. Then glob masks (* any string, ? one char).
+# fan and fan1 stay different unless a mask like fan* is used. Else LED_CONTROL_HW_SW.
+# parameters:
+# $1 - LED name (e.g. status, uid, fan1)
+# returns:
+# LED control type (e.g. led_hw, led_sw, led_hw_sw)
+function get_led_control_type()
+{
+	local led_name="$1"
+	local -a led_ctrl_map
+	local i
+	local entry
+	local val
+	local match
+
+	if [ ! -f "$config_path"/led_control_type ]; then
+		echo "$LED_CONTROL_HW_SW"
+		return
+	fi
+
+	# noglob: keep * and ? as mask chars, not pathname expansion.
+	set -f
+	led_ctrl_map=($(< "$config_path"/led_control_type))
+	set +f
+
+	# Exact name first so "fan" does not apply to "fan1".
+	for ((i=0; i<${#led_ctrl_map[@]}; i+=2)); do
+		entry="${led_ctrl_map[i]}"
+		val="${led_ctrl_map[i+1]}"
+		if [ "$entry" = "$led_name" ] || [ "$entry" = "led_${led_name}" ]; then
+			case "$val" in
+			"$LED_CONTROL_SW"|"$LED_CONTROL_HW"|"$LED_CONTROL_HW_SW")
+				echo "$val"
+				return
+				;;
+			esac
+		fi
+	done
+
+	# Glob masks: * any string, ? one character. First matching mask wins.
+	for ((i=0; i<${#led_ctrl_map[@]}; i+=2)); do
+		entry="${led_ctrl_map[i]}"
+		val="${led_ctrl_map[i+1]}"
+		case "$entry" in
+		*[\*\?]*)
+			match=0
+			case "$led_name" in
+			$entry) match=1 ;;
+			esac
+			if [ "$match" -eq 0 ]; then
+				case "led_${led_name}" in
+				$entry) match=1 ;;
+				esac
+			fi
+			if [ "$match" -eq 1 ]; then
+				case "$val" in
+				"$LED_CONTROL_SW"|"$LED_CONTROL_HW"|"$LED_CONTROL_HW_SW")
+					echo "$val"
+					return
+					;;
+				esac
+			fi
+			;;
+		esac
+	done
+
+	echo "$LED_CONTROL_HW_SW"
+}
+
 function handle_fantray_led_event()
 {
 	local fan_idx
@@ -1173,6 +1244,9 @@ if [ "$1" == "add" ]; then
 			capability=$(< $led_path/led_"$name"_capability)
 			capability="${capability} ${color} ${color}_blink"
 			echo "$capability" > $led_path/led_"$name"_capability
+		fi
+		if [ ! -f $led_path/led_"$name"_control ]; then
+			get_led_control_type "$name" > $led_path/led_"$name"_control
 		fi
 		unlock_service_state_change
 		$led_path/led_"$name"_state
@@ -1646,6 +1720,9 @@ else
 	fi
 	if [ -f $led_path/led_"$name"_capability ]; then
 		rm -f $led_path/led_"$name"_capability
+	fi
+	if [ -f $led_path/led_"$name"_control ]; then
+		rm -f $led_path/led_"$name"_control
 	fi
 	if [ "$2" == "regio" ]; then
 		# Detect if it belongs to line card or to main board or to dpu.

@@ -7,8 +7,8 @@
 **ASIC PCI filter:** `lspci -nn` match `cf82|cf84` (`spc5_pci_id|spc6_pci_id` for HI186)  
 **CPU Type:** AMD  
 **System Type:** Air-Cooled  
-**Document Version:** 1.0  
-**Last Updated:** June 9, 2026
+**Document Version:** 1.1  
+**Last Updated:** August 18, 2026
 
 ---
 
@@ -96,6 +96,7 @@ domain, and **no** leakage monitoring.
 | `config/psu_fan_max` | PSU internal fan max RPM | 27500 |
 | `config/psu_fan_min` | PSU internal fan min RPM (20% of max) | 5500 |
 | `config/tc_config.json` | Thermal control policy | Copied from `tc_config_sn6600.json` at init (see [Thermal Control](#thermal-control)) |
+| `config/led_control_type` | LED owner map (`name type` pairs) | `fan led_sw psu led_sw status led_sw` |
 
 **Note:** `config/lm_sensors_config` is a symlink to
 `/etc/hw-management-sensors/sn66xxld_sensors.conf`.
@@ -379,7 +380,25 @@ HI186 uses the SN6600 platform LED map (kernel `nvsw_led_data`; air-cooled SKU
 does not select the liquid-cooled `nvsw_host_spc6_lc_led` variant).
 
 Nodes under `led/` include power / status / UID brightness, delays, triggers,
-`led_*_capability`, and `led_*_state` (same hierarchy pattern as SN6600_LD).
+`led_*_capability`, `led_*_state`, and `led_*_control` (same hierarchy pattern
+as SN6600_LD).
+
+`led_<name>_control` is the LED owner: `led_sw` (software), `led_hw`
+(hardware), or `led_hw_sw` (both; default). On LED udev add,
+`hw-management-chassis-events.sh` resolves the value from
+`config/led_control_type` (exact name or `led_<name>` first, then glob masks
+`*` / `?`). Unlisted names use `led_hw_sw`. `fan` and `fan1` are different
+names unless a mask such as `fan*` is used.
+
+HI186 `sn66xx_specific()` writes:
+
+```
+fan led_sw psu led_sw status led_sw
+```
+
+So `led/led_fan_control`, `led/led_psu_control`, and `led/led_status_control`
+are `led_sw`. Other LEDs (for example `led_uid_control`, `led_fan1_control`)
+stay `led_hw_sw`.
 
 ---
 
