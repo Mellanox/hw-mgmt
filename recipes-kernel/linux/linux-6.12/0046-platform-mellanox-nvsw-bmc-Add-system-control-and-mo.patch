@@ -5599,7 +5599,7 @@ index 000000000..9f4c94f5d
 +	},
 +	{
 +		.label = "cpld9_pn",
-+		.reg = NVSW_REG_CPLD9B_PN_OFFSET,
++		.reg = NVSW_REG_CPLD9_PN_OFFSET,
 +		.bit = GENMASK(15, 0),
 +		.mode = 0444,
 +		.regnum = 2,
