@@ -13,8 +13,11 @@
                 "Address": "0x34",
                 "Probe": true,
                 "Scale": 0.0008,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the HI189 platform Excel MAX1363 column (0.8 mV).",
-                "Severity_comment": "Severity bounds are contiguous (WarningMax=NormalMin, CriticalMax=WarningMin) so no reading falls between bands. The leakage handler (hw-management-bmc-leakage-handler.sh) triggers on the Normal band only (min/max = NormalMin/NormalMax); warn/crit/lwarn/lcrit are informational severity bounds.",
+                "Scale_comment": "V/LSB, Vdd(~3.28V)/4096 reference.",
+                "CfgReg": "0x00",
+                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
+                "CfgRegVal_comment": "Monitor-mode burst (reg 0x00); scans the Channels inputs.",
+                "Types_comment": "Per-type threshold sets in volts. Severity bands are contiguous (WarningMax = NormalMin, CriticalMax = WarningMin); the handler triggers on the Normal band, warn/crit are informational.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -35,13 +38,11 @@
                         "CriticalMax": 1.1
                     }
                 ],
+                "Channels_comment": "Maps each logical channel to a hardware input (AINx = Id-1) and to a Types[] entry.",
                 "Channels": [
                     { "Id": 1, "Type": "flex" },
                     { "Id": 2, "Type": "embedded" }
-                ],
-                "CfgReg": "0x00",
-                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
-                "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
+                ]
             },
             {
                 "DeviceType": "ADS1015",
@@ -49,7 +50,16 @@
                 "Address": "0x49",
                 "Probe": true,
                 "Scale": 0.002,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max).",
+                "Scale_comment": "V/LSB, PGA full scale 4.096V / 2048.",
+                "CfgReg": "0x01",
+                "CfgRegVal": "0xf2 0x83",
+                "CfgRegVal_comment": "Config (reg 0x01): 0x83 = continuous, DR 1600SPS, COMP_QUE disabled (polling). First byte is a placeholder MUX, recomputed per channel from Id.",
+                "LoThreshReg": "0x02",
+                "LoThreshRegVal": "0x44 0xc0",
+                "HiThreshReg": "0x03",
+                "HiThreshRegVal": "0x60 0xa0",
+                "ThreshReg_comment": "Documentation only while the comparator is disabled.",
+                "Types_comment": "Per-type threshold sets in volts. Severity bands are contiguous (WarningMax = NormalMin, CriticalMax = WarningMin); the handler triggers on the Normal band, warn/crit are informational.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -70,27 +80,21 @@
                         "CriticalMax": 2.2
                     }
                 ],
+                "Channels_comment": "Maps each logical channel to a hardware input (AINx = Id-1) and to a Types[] entry.",
                 "Channels": [
                     { "Id": 1, "Type": "flex" },
                     { "Id": 2, "Type": "embedded" }
-                ],
-                "CfgReg": "0x01",
-                "CfgRegVal": "0xf2 0x83",
-                "CfgRegVal_comment": "ADS1015 config (reg 0x01): second byte 0x83 = continuous, DR=1600SPS, COMP_QUE=11 (comparator disabled, polling). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types; the script programs the per-channel MUX from Id and the kernel ti-ads1015 driver exposes in_voltage<Id-1>_raw. First byte (0xf2) is a placeholder MUX, recomputed per channel. Lo/Hi keys are documentation only while COMP_QUE=11; for ALERT use cfg_lo 0x94.",
-                "LoThreshReg": "0x02",
-                "LoThreshRegVal": "0x44 0xc0",
-                "HiThreshReg": "0x03",
-                "HiThreshRegVal": "0x60 0xa0"
+                ]
             },
             {
                 "DeviceType": "ADS7924",
                 "Bus": 27,
                 "Address": "0x49",
-                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for HI189 platform.",
+                "Address_comment": "Provisional: BOM alternative sharing the ADS1015 socket; confirm the populated address.",
                 "Probe": true,
                 "Scale": 0.002,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max and used to derive the ADS7924 window comparator ULR/LLR codes (volts/Scale, 12-bit, >>4 to 8-bit).",
-                "Types_comment": "PLACEHOLDER thresholds copied from the HI189 platform ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
+                "Scale_comment": "V/LSB. Provisional: carried over from the ADS1015; confirm against Vref/4096.",
+                "Types_comment": "Per-type threshold sets in volts. Severity bands are contiguous (WarningMax = NormalMin, CriticalMax = WarningMin); the handler triggers on the Normal band, warn/crit are informational. Provisional: copied from the ADS1015, replace once the ADS7924 is characterized.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -111,11 +115,11 @@
                         "CriticalMax": 2.2
                     }
                 ],
+                "Channels_comment": "Maps each logical channel to a hardware input (AINx = Id-1) and to a Types[] entry. NormalMin/NormalMax of that type drive the per-input ULR/LLR window comparator.",
                 "Channels": [
-                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x43 0x3c" },
-                    { "Id": 2, "Type": "embedded", "CfgReg": "0x0c", "CfgRegVal": "0x60 0x54" }
-                ],
-                "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
+                    { "Id": 1, "Type": "flex" },
+                    { "Id": 2, "Type": "embedded" }
+                ]
             }
         ]
     },
@@ -133,8 +137,11 @@
                 "Address": "0x35",
                 "Probe": true,
                 "Scale": 0.0008,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the HI189 platform Excel MAX1363 column (0.8 mV).",
-                "Severity_comment": "Severity bounds are contiguous (WarningMax=NormalMin, CriticalMax=WarningMin) so no reading falls between bands. The leakage handler (hw-management-bmc-leakage-handler.sh) triggers on the Normal band only (min/max = NormalMin/NormalMax); warn/crit/lwarn/lcrit are informational severity bounds.",
+                "Scale_comment": "V/LSB, Vdd(~3.28V)/4096 reference.",
+                "CfgReg": "0x00",
+                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
+                "CfgRegVal_comment": "Monitor-mode burst (reg 0x00); scans the Channels inputs.",
+                "Types_comment": "Per-type threshold sets in volts. Severity bands are contiguous (WarningMax = NormalMin, CriticalMax = WarningMin); the handler triggers on the Normal band, warn/crit are informational.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -155,13 +162,11 @@
                         "CriticalMax": 1.1
                     }
                 ],
+                "Channels_comment": "Maps each logical channel to a hardware input (AINx = Id-1) and to a Types[] entry.",
                 "Channels": [
                     { "Id": 1, "Type": "flex" },
                     { "Id": 4, "Type": "embedded" }
-                ],
-                "CfgReg": "0x00",
-                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
-                "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
+                ]
             },
             {
                 "DeviceType": "ADS1015",
@@ -169,7 +174,16 @@
                 "Address": "0x48",
                 "Probe": true,
                 "Scale": 0.002,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max).",
+                "Scale_comment": "V/LSB, PGA full scale 4.096V / 2048.",
+                "CfgReg": "0x01",
+                "CfgRegVal": "0xf2 0x83",
+                "CfgRegVal_comment": "Config (reg 0x01): 0x83 = continuous, DR 1600SPS, COMP_QUE disabled (polling). First byte is a placeholder MUX, recomputed per channel from Id.",
+                "LoThreshReg": "0x02",
+                "LoThreshRegVal": "0x44 0xc0",
+                "HiThreshReg": "0x03",
+                "HiThreshRegVal": "0x60 0xa0",
+                "ThreshReg_comment": "Documentation only while the comparator is disabled.",
+                "Types_comment": "Per-type threshold sets in volts. Severity bands are contiguous (WarningMax = NormalMin, CriticalMax = WarningMin); the handler triggers on the Normal band, warn/crit are informational.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -190,27 +204,21 @@
                         "CriticalMax": 2.2
                     }
                 ],
+                "Channels_comment": "Maps each logical channel to a hardware input (AINx = Id-1) and to a Types[] entry.",
                 "Channels": [
                     { "Id": 1, "Type": "flex" },
                     { "Id": 4, "Type": "embedded" }
-                ],
-                "CfgReg": "0x01",
-                "CfgRegVal": "0xf2 0x83",
-                "CfgRegVal_comment": "ADS1015 config (reg 0x01): second byte 0x83 = continuous, DR=1600SPS, COMP_QUE=11 (comparator disabled, polling). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types; the script programs the per-channel MUX from Id and the kernel ti-ads1015 driver exposes in_voltage<Id-1>_raw. First byte (0xf2) is a placeholder MUX, recomputed per channel. Lo/Hi keys are documentation only while COMP_QUE=11; for ALERT use cfg_lo 0x94.",
-                "LoThreshReg": "0x02",
-                "LoThreshRegVal": "0x44 0xc0",
-                "HiThreshReg": "0x03",
-                "HiThreshRegVal": "0x60 0xa0"
+                ]
             },
             {
                 "DeviceType": "ADS7924",
                 "Bus": 28,
                 "Address": "0x48",
-                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for HI189 platform.",
+                "Address_comment": "Provisional: BOM alternative sharing the ADS1015 socket; confirm the populated address.",
                 "Probe": true,
                 "Scale": 0.002,
-                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max and used to derive the ADS7924 window comparator ULR/LLR codes (volts/Scale, 12-bit, >>4 to 8-bit).",
-                "Types_comment": "PLACEHOLDER thresholds copied from the HI189 platform ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
+                "Scale_comment": "V/LSB. Provisional: carried over from the ADS1015; confirm against Vref/4096.",
+                "Types_comment": "Per-type threshold sets in volts. Severity bands are contiguous (WarningMax = NormalMin, CriticalMax = WarningMin); the handler triggers on the Normal band, warn/crit are informational. Provisional: copied from the ADS1015, replace once the ADS7924 is characterized.",
                 "Types": [
                     {
                         "Type": "flex",
@@ -231,11 +239,11 @@
                         "CriticalMax": 2.2
                     }
                 ],
+                "Channels_comment": "Maps each logical channel to a hardware input (AINx = Id-1) and to a Types[] entry. NormalMin/NormalMax of that type drive the per-input ULR/LLR window comparator.",
                 "Channels": [
-                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x43 0x3c" },
-                    { "Id": 4, "Type": "embedded", "CfgReg": "0x10", "CfgRegVal": "0x60 0x54" }
-                ],
-                "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
+                    { "Id": 1, "Type": "flex" },
+                    { "Id": 4, "Type": "embedded" }
+                ]
             }
         ]
     }
