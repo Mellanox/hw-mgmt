@@ -68,7 +68,7 @@ check_led_blink()
 
 for CURR_FILE in "${FNAMES[@]}"
 do
-	if echo "$CURR_FILE" | (grep -q '_state\|_capability') ; then
+	if echo "$CURR_FILE" | (grep -q '_state\|_capability\|_control') ; then
 		continue
 	fi
 	COLOR=$(echo "$CURR_FILE" | cut -d_ -f3)
