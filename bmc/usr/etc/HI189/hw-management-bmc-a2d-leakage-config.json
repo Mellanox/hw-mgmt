@@ -39,6 +39,8 @@
                     { "Id": 1, "Type": "flex" },
                     { "Id": 2, "Type": "embedded" }
                 ],
+                "SetupRegVal": "0x82",
+                "SetupRegVal_comment": "Setup byte (bit7=1): Vdd reference, internal clock, unipolar, no reset.",
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
                 "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
@@ -159,6 +161,8 @@
                     { "Id": 1, "Type": "flex" },
                     { "Id": 4, "Type": "embedded" }
                 ],
+                "SetupRegVal": "0x82",
+                "SetupRegVal_comment": "Setup byte (bit7=1): Vdd reference, internal clock, unipolar, no reset.",
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
                 "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
