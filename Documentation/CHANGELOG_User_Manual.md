@@ -1,11 +1,30 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** June 30, 2026
+**Last Updated:** August 18, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.7 - August 18, 2026
+
+#### Added: LED software/hardware control owner
+
+**Affected platforms:** All host platforms (default `led_hw_sw`); SN6600 (HI186) sets `fan`, `psu`, and `status` to `led_sw`.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.1.60 | **`config/led_control_type`**: optional space-separated `name type` pairs from platform `*_specific()`; exact name or `led_<name>`; glob masks `*` / `?` |
+| §3.16.28 | **`led/led_<name>_control`**: `led_sw`, `led_hw`, or `led_hw_sw` (default if map missing or name unmatched). `fan` and `fan1` are distinct names |
+
+**Validation source:** `usr/usr/bin/hw-management.sh` (`set_config_data()`, HI186 `sn66xx_specific()`),
+`usr/usr/bin/hw-management-chassis-events.sh` (`get_led_control_type()`),
+`usr/usr/bin/hw-management-helpers.sh` (`LED_CONTROL_*`).
+
+---
 
 ### Rev. 3.2.6 - June 30, 2026
 

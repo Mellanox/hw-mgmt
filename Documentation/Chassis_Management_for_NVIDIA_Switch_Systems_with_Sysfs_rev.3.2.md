@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.6
+Rev. 3.2.7
 
 ## Table of Contents
 
@@ -75,6 +75,7 @@ Rev. 3.2.6
 | 3.1.57 | Core 0 Temperature ID | 37 |
 | 3.1.58 | Core 1 Temperature ID | 37 |
 | 3.1.59 | Read PDB Hotswap Scale Factor | 37 |
+| 3.1.60 | Read LED Control Type Map | 38 |
 | 3.2 | BIOS Control | 38 |
 | 3.2.1 | BIOS Status | 38 |
 | 3.2.2 | BIOS Start Retry | 38 |
@@ -221,6 +222,7 @@ Rev. 3.2.6
 | 3.16.25 | UID LED Blue Trigger | 83 |
 | 3.16.26 | UID LED Capability | 83 |
 | 3.16.27 | UID LED State | 83 |
+| 3.16.28 | Get LED Control Owner | 83 |
 | 3.17 | Power Control | 84 |
 | 3.17.1 | Get Power Consumption | 84 |
 | 3.17.2 | Get PSU sensor Current + thresholds | 85 |
@@ -407,6 +409,7 @@ Rev. 3.2.6
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.7 | August 2026 | §3.1.60 `config/led_control_type` platform LED owner map; §3.16.28 `led/led_<name>_control` (`led_sw` / `led_hw` / `led_hw_sw`); glob masks `*` and `?`; HI186 (`fan`, `psu`, `status` = SW) |
 | 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; §3.25 BMC A2D leakage runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
 | 3.2.5 | June 2026 | §2.2 HI189 BMC peripheral table; §3.3.7–§3.3.8 BMC EEPROM bodies; §3.20 BMC stack tags and CPU-on-BMC thermal cross-refs; §3.23 BMC status bodies (present, bmc_to_cpu_ctrl, MCTP) |
 | 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
@@ -1907,6 +1910,48 @@ symlinked under each lm5066i PDB hotswap environment node as `*_power1_scale` an
 **Example:**
 ```bash
 cat $bsp_path/config/pdb_hotswap_scale
+```
+
+### Read LED Control Type Map
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/config/led_control_type`
+
+**Description:** Optional platform map of LED name (or glob mask) to control
+owner. Written by `set_config_data()` in `hw-management.sh` when a
+`*_specific()` function sets the `led_control_type` array. Space-separated
+pairs: `name type [name type ...]`.
+
+If the node is absent, or a given LED name is not listed, LED add uses the
+default owner `led_hw_sw` (see §3.16.28).
+
+Name matching (in `hw-management-chassis-events.sh` `get_led_control_type()`):
+
+1. Exact match of the udev LED name (`status`, `fan`, `fan1`) or `led_<name>`.
+   `fan` and `fan1` are different names.
+2. Glob mask: `*` matches any string, `?` matches one character. First matching
+   mask wins. Masks must be quoted in the platform array (`"fan*"`, `"led?"`)
+   so the shell does not expand them.
+3. Otherwise `led_hw_sw`.
+
+**Access:** Read only
+
+**Release version:** 3.2.7
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| name | String | LED name (`fan`, `status`) or mask (`fan*`, `led_psu?`, `led*`) |
+| type | String | `led_sw`, `led_hw`, `led_hw_sw` |
+
+**Platform notes:** SN6600 (SKU HI186) writes `fan led_sw psu led_sw status led_sw`.
+
+**Example:**
+```bash
+cat $bsp_path/config/led_control_type
+# HI186:
+# fan led_sw psu led_sw status led_sw
 ```
 
 ## BIOS Control
@@ -4623,6 +4668,43 @@ echo 1000 > $bsp_path/led/status_led_delay_off
 **Example:** Set system status LED delay on to 500ms:
 ```bash
 echo 500 > $bsp_path/led/status_led_delay_on
+```
+
+### Get LED Control Owner
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/led/led_<name>_control`
+
+**Description:** Control owner of LED `<name>` (`status`, `fan`, `fan1`, `psu`,
+`uid`, …). Created on LED udev add next to `led_<name>_capability` and
+`led_<name>_state`. Value is resolved from `$bsp_path/config/led_control_type`
+(§3.1.60). Missing map or unmatched name uses `led_hw_sw`.
+
+| Value | Meaning |
+|-------|---------|
+| `led_sw` | Software controlled |
+| `led_hw` | Hardware controlled |
+| `led_hw_sw` | Hardware and software controlled (default) |
+
+**Access:** Read only
+
+**Release version:** 3.2.7
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| name | String | LED type from the udev LED class name |
+| control | String | `led_sw`, `led_hw`, `led_hw_sw` |
+
+**Example:** Get status and fan LED control owner:
+```bash
+cat $bsp_path/led/led_status_control
+led_sw
+cat $bsp_path/led/led_fan_control
+led_sw
+cat $bsp_path/led/led_uid_control
+led_hw_sw
 ```
 
 ## Power Control

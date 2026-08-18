@@ -155,6 +155,20 @@ amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 n5110_mctp_bus="0"
 n5110_mctp_addr="1040"
 
+
+# Optional per-LED-type control map, saved as space-separated pairs in
+# $config_path/led_control_type: "name type [name type ...]".
+# Name may be exact (fan, led_status) or a glob mask (fan*, led_psu?).
+# Example in *_specific(): led_control_type=(status "$LED_CONTROL_HW" "fan*" "$LED_CONTROL_SW")
+# Quote masks ("fan*", "led?") so the shell does not expand them.
+# Unset map or missing LED name uses LED_CONTROL_HW_SW.
+
+# LED control owner. Written to led/led_<name>_control.
+# Platform *_specific() may set led_control_type=(name type ...) pairs.
+LED_CONTROL_SW="led_sw"
+LED_CONTROL_HW="led_hw"
+LED_CONTROL_HW_SW="led_hw_sw"
+
 # hw-mngmt-sysfs-monitor GLOBALS
 SYSFS_MONITOR_TIMEOUT=20 # Total Sysfs T/O.
 SYSFS_MONITOR_DELAY=1 # Internal delay for Sysfs monitor loop to free CPU.

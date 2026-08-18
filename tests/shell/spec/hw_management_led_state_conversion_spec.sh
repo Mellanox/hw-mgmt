@@ -105,7 +105,7 @@ check_led_blink()
 
 for CURR_FILE in "${FNAMES[@]}"
 do
-    if echo "$CURR_FILE" | (grep -q '_state\|_capability') ; then
+    if echo "$CURR_FILE" | (grep -q '_state\|_capability\|_control') ; then
         continue
     fi
     COLOR=$(echo "$CURR_FILE" | cut -d_ -f3)
@@ -293,6 +293,7 @@ WRAPPER_EOF
         It 'ignores _state and _capability files'
             create_led_file "${LED_NAME}_state" "some_state"
             create_led_file "${LED_NAME}_capability" "capability_info"
+            create_led_file "${LED_NAME}_control" "led_hw_sw"
             create_led_file "${LED_NAME}_red" "255"
             
             When call run_led_conversion
