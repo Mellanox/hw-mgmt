@@ -7,6 +7,25 @@
 
 ## Change History
 
+### Rev. 3.2.8 - August 25, 2026
+
+#### Added: LED software/hardware control owner
+
+**Affected platforms:** All host platforms (default `led_hw_sw`).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.1.60 | **`config/led_control_type`**: optional space-separated `name type` pairs from platform `*_specific()`; exact name or `led_<name>`; glob masks `*` / `?` |
+| §3.16.28 | **`led/led_<name>_control`**: `led_sw`, `led_hw`, or `led_hw_sw` (default if map missing or name unmatched). `fan` and `fan1` are distinct names |
+
+**Validation source:** `usr/usr/bin/hw-management.sh` (`set_config_data()`),
+`usr/usr/bin/hw-management-chassis-events.sh` (`get_led_control_type()`),
+`usr/usr/bin/hw-management-helpers.sh` (`LED_CONTROL_*`).
+
+---
+
 ### Rev. 3.2.7 - August 17, 2026
 
 #### Clarified: `system/asic_pg_fail` platform exception

@@ -3310,6 +3310,9 @@ set_config_data()
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
 	echo $leakage_count > $config_path/leakage_counter
+	if [ "${#led_control_type[@]}" -gt 0 ]; then
+		echo "${led_control_type[@]}" > "$config_path"/led_control_type
+	fi
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
