@@ -644,8 +644,10 @@ class TestUtilityFunctions(unittest.TestCase):
         with patch('hw_management_peripheral_updater.os.system') as mock_system:
             peripheral_module.run_power_button_event(None, "1")
 
-            # Should call os.system 3 times (2 hotplug events + logger)
-            self.assertEqual(mock_system.call_count, 3)
+            # 2 hotplug events + logger + BMC NVMe ready script
+            self.assertEqual(mock_system.call_count, 4)
+            calls = [str(c) for c in mock_system.call_args_list]
+            self.assertTrue(any("hw-management-bmc-nvme-ready.sh" in c for c in calls))
 
     def test_run_power_button_event_released(self):
         """Test run_power_button_event when released (value=0)"""
@@ -654,7 +656,7 @@ class TestUtilityFunctions(unittest.TestCase):
         with patch('hw_management_peripheral_updater.os.system') as mock_system:
             peripheral_module.run_power_button_event(None, "0")
 
-            # Should call os.system 2 times (no logger for release)
+            # Should call os.system 2 times (no logger / ready script for release)
             self.assertEqual(mock_system.call_count, 2)
 
     def test_run_cmd_with_command_list(self):
