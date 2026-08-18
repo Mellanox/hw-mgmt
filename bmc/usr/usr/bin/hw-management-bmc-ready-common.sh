@@ -446,10 +446,9 @@ bmc_init_bootargs()
 }
 
 #######################################
-# USB gadget Ethernet (usb0): load g_ether if needed, then either rely on
-# systemd-networkd (00-hw-management-bmc-usb0.network) or apply static
-# USB0_ADDRESS when networkd is not active.
-# When USB0_MANAGED_BY_NOS=1, only bring up the link; addressing is NOS-owned.
+# USB gadget Ethernet (usb0): load g_ether if needed, then apply USB0_MODE
+# (none | dhcp | static). systemd-networkd owns addressing when active.
+# When USB0_MANAGED_BY_NOS=1 or USB0_MODE=none, only bring up the link.
 # Reads /etc/hw-management-bmc-usb0.conf and/or /etc/systemd/network/00-hw-management-bmc-usb0.network.
 # Never fails the caller; logs and returns 0.
 #######################################
@@ -461,17 +460,21 @@ usb_net_config()
 	local conf="$HW_MANAGEMENT_BMC_USB0_CONF"
 	local addr=""
 	local nos_managed=0
+	local mode=""
 	local logtag="${LOG_TAG:-${_HW_MANAGEMENT_BMC_READY_COMMON_LOG_TAG}}"
 
 	if hw_management_bmc_usb0_managed_by_nos; then
 		nos_managed=1
 	else
-		addr=$(_hw_management_bmc_usb0_conf_value USB0_ADDRESS "$conf")
-		if [ -z "$addr" ] && [ -f "$net_unit" ]; then
-			addr=$(sed -n 's/^[[:space:]]*Address=//p' "$net_unit" | head -1 | tr -d " '\"")
-		fi
-		if [ -z "$addr" ] || ! printf '%s' "$addr" | grep -qE '^[0-9a-fA-F.:/]+/[0-9]+$'; then
-			return 0
+		mode=$(hw_management_bmc_usb0_resolve_mode "$conf")
+		if [ "$mode" = "static" ]; then
+			addr=$(_hw_management_bmc_usb0_conf_value USB0_ADDRESS "$conf")
+			if [ -z "$addr" ] && [ -f "$net_unit" ]; then
+				addr=$(sed -n 's/^[[:space:]]*Address=//p' "$net_unit" | head -1 | tr -d " '\"")
+			fi
+			if [ -z "$addr" ] || ! printf '%s' "$addr" | grep -qE '^[0-9a-fA-F.:/]+/[0-9]+$'; then
+				return 0
+			fi
 		fi
 	fi
 
@@ -497,6 +500,23 @@ usb_net_config()
 	if [ "$nos_managed" -eq 1 ]; then
 		ip link set usb0 up 2>/dev/null || true
 		logger -t "$logtag" -p daemon.info "usb_net_config: USB0_MANAGED_BY_NOS; link up, NOS owns addressing"
+		return 0
+	fi
+
+	if [ "$mode" = "none" ]; then
+		ip link set usb0 up 2>/dev/null || true
+		logger -t "$logtag" -p daemon.info "usb_net_config: USB0_MODE=none; link up, no addressing"
+		return 0
+	fi
+
+	if [ "$mode" = "dhcp" ]; then
+		if systemctl -q is-active systemd-networkd 2>/dev/null; then
+			networkctl reload 2>/dev/null || systemctl restart systemd-networkd 2>/dev/null || true
+			logger -t "$logtag" -p daemon.info "usb_net_config: systemd-networkd active; reloaded (usb0 dhcp)"
+		else
+			ip link set usb0 up 2>/dev/null || true
+			logger -t "$logtag" -p daemon.info "usb_net_config: usb0 dhcp (link up; systemd-networkd not active)"
+		fi
 		return 0
 	fi
 

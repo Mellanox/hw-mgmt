@@ -55,6 +55,19 @@ if [ "${INTERFACE}" = "usb0" ] && [ -x /usr/bin/hw-management-usb0-config.sh ]; 
 	if /usr/bin/hw-management-usb0-config.sh usb0; then
 		exit 0
 	fi
+	# usb0-config did not take ownership. If the platform requires a DHCP
+	# server, ifup cannot provide one — do not replace that policy with
+	# address-only ifup (OpenBMC default is a DHCP client).
+	usb0_conf=$(host_usb0_conf_path)
+	if [ -f "$usb0_conf" ]; then
+		dhcp_srv=$(sed -n 's/^[[:space:]]*USB0_DHCP_SERVER=//p' "$usb0_conf" | head -1 | sed 's/[[:space:]]*#.*//' | tr -d " '\"" | tr '[:upper:]' '[:lower:]')
+		case "$dhcp_srv" in
+		1|yes|true)
+			log_err "usb0-config failed and USB0_DHCP_SERVER is set; skip ifup (cannot offer a BMC lease)"
+			exit 1
+			;;
+		esac
+	fi
 fi
 
 if [ ! -e "/sys/class/net/${INTERFACE}" ]; then

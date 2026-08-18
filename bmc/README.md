@@ -456,15 +456,15 @@ Static addressing for the BMC↔host **`usb0`** gadget interface (out-of-band li
 
 **Boot order:** **`hw-management-bmc-plat-specific-preps.service`** has **`Before=systemd-networkd.service`**, so the **`/etc/systemd/network/`** file exists before networkd loads configuration. No race on first boot for this unit.
 
-**Still no `usb0` address:** Confirm **`systemd-networkd`** is **enabled** and running (**`networkctl status usb0`**). This path does not use **`dhclient`**; masking **`sonic-usb-network-init`** alone is not enough if networkd is off.
+**Still no `usb0` address:** Confirm **`systemd-networkd`** is **enabled** and running (**`networkctl status usb0`**). When **`USB0_MODE=dhcp`**, the **systemd-networkd** DHCP client is used (not **`dhclient`**); masking **`sonic-usb-network-init`** alone is not enough if networkd is off.
 
 **`00-` prefix:** Lexicographic ordering under **`/etc/systemd/network/`** only affects which **`.network`** file wins when several match the same interface; it does not control systemd start order. Ordering vs networkd is entirely the unit **`Before=`** dependency above.
 
 **Defaults and overrides**
 
 - **`USB0_MANAGED_BY_NOS=1`** (values **`1`**, **`yes`**, **`true`**, case-insensitive): hw-management-bmc does **not** write **`00-hw-management-bmc-usb0.network`**, does **not** apply a static **`ip addr`**, and **`usb_net_config`** only loads **`g_ether`** and sets the link up. On **SONiC BMC** images, SONiC installs **`/etc/bmc-network-sonic.conf`** (or **`/etc/bmc-usb-network.conf`**) so **`sonic-usb-network-init`** can configure **`usb0`**. See **`bmc/SONIC_USB0_INTEGRATION.md`**.
-- If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`** without **`USB0_MANAGED_BY_NOS`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`** and **`USB0_ADDRESS`** is read from there. If **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), **`.network`** generation is **skipped** for that boot (fix the platform file).
-- If the packaged **`hw-management-bmc-network.conf`** is **absent**: use a valid **`USB0_ADDRESS`** from existing **`/etc/hw-management-bmc-usb0.conf`** if present; otherwise apply default **`169.254.100.1/16`** and write **`/etc/hw-management-bmc-usb0.conf`** with a comment so the active value is visible.
+- If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`** without **`USB0_MANAGED_BY_NOS`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`**. **`USB0_MODE`** (`dhcp` | `static` | `none`) and optional **`USB0_ADDRESS`** are read from there. Default mode is **`USB0_MODE=dhcp`**. If **`USB0_MODE=static`** and **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), the static default **`169.254.100.1/16`** is used.
+- If the packaged **`hw-management-bmc-network.conf`** is **absent**: default **`USB0_MODE=dhcp`** and write **`/etc/hw-management-bmc-usb0.conf`** with a comment so the active value is visible. Static addressing still uses **`USB0_ADDRESS`**, defaulting to **`169.254.100.1/16`** when that key is unset.
 
 **Host CPU (hw-management package):** On SONiC hosts (**`/etc/sonic/sonic_version.yml`**), **`hw-management-ifupdown.sh`** skips **`ifup usb0`** so the host NOS owns addressing (same pattern as BMC Redfish sync).
 

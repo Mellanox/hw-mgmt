@@ -56,12 +56,16 @@ done
 
 # systemd-networkd: common template under usr/etc/systemd/network (Address filled at boot from platform conf)
 mkdir -p "$BD/usr/etc/systemd/network"
-if [ -f "$NIC/00-bmc-usb0.network" ]; then
-	sed 's/^Address=.*/Address=__USB0_ADDRESS__/' "$NIC/00-bmc-usb0.network" \
-		>"$BD/usr/etc/systemd/network/00-hw-management-bmc-usb0.network"
-else
-	echo "copy-from-openbmc: skip usb0 network (missing $NIC/00-bmc-usb0.network)" >&2
-fi
+	if [ -f "$NIC/00-bmc-usb0.network" ]; then
+		if grep -q '^Address=' "$NIC/00-bmc-usb0.network"; then
+			sed 's/^Address=.*/Address=__USB0_ADDRESS__/' "$NIC/00-bmc-usb0.network" \
+				>"$BD/usr/etc/systemd/network/00-hw-management-bmc-usb0.network"
+		else
+			echo "copy-from-openbmc: OpenBMC usb0 has no Address= (DHCP); keep hw-mgmt static template" >&2
+		fi
+	else
+		echo "copy-from-openbmc: skip usb0 network (missing $NIC/00-bmc-usb0.network)" >&2
+	fi
 
 # udev rules: ship with platform under usr/etc/HI189 (copied to /lib/udev/rules.d at boot)
 cp "$A/71-hw-management-events.rules" "$BD/usr/etc/HI189/5-hw-management-bmc-events.rules"

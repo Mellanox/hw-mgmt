@@ -180,10 +180,9 @@ deploy_hw_management_bmc_platform_files()
 	done
 	shopt -u nullglob
 
-	# USB0 (CPU ↔ BMC): copy platform network params and render systemd-networkd unit.
+	# USB0 (CPU ↔ BMC): copy platform/NOS params, then render systemd-networkd unit.
 	# shellcheck source=/usr/bin/hw-management-bmc-usb0-common.sh
 	. /usr/bin/hw-management-bmc-usb0-common.sh
-	default_usb0_addr="169.254.100.1/16"
 	usb0_nos_managed=0
 	nos_conf=""
 	nos_conf=$(hw_management_bmc_usb0_nos_conf_path 2>/dev/null) || nos_conf=""
@@ -202,7 +201,7 @@ deploy_hw_management_bmc_platform_files()
 			usb0_nos_managed=1
 		fi
 	elif [ -n "$nos_conf" ]; then
-		echo "plat-specific: ${nos_conf} ignored (USB0_MANAGED_BY_NOS not set); using default/static usb0 config"
+		echo "plat-specific: ${nos_conf} ignored (USB0_MANAGED_BY_NOS not set); using default usb0 config"
 	fi
 
 	if [ "$usb0_nos_managed" -eq 0 ] && [ -f /etc/hw-management-bmc-usb0.conf ] && \
@@ -211,42 +210,19 @@ deploy_hw_management_bmc_platform_files()
 		rm -f /etc/hw-management-bmc-usb0.conf
 	fi
 
-	# Only NOS mode when a live conf source set the flag this boot (not stale runtime).
+	if [ "$usb0_nos_managed" -eq 0 ] && [ ! -f /etc/hw-management-bmc-usb0.conf ]; then
+		printf '%s\n' \
+			"# Default USB0 (no packaged ${HID_SRC}/hw-management-bmc-network.conf)" \
+			"USB0_MODE=dhcp" >/etc/hw-management-bmc-usb0.conf
+		chmod 0644 /etc/hw-management-bmc-usb0.conf
+		echo "plat-specific: default USB0_MODE=dhcp (no packaged hw-management-bmc-network.conf)"
+	fi
+
 	if [ "$usb0_nos_managed" -eq 1 ]; then
 		rm -f "$HW_MANAGEMENT_BMC_USB0_NETWORK_UNIT"
-		echo "plat-specific: USB0_MANAGED_BY_NOS set; NOS owns usb0 (no static .network)"
-	elif [ ! -f /usr/etc/systemd/network/00-hw-management-bmc-usb0.network ]; then
-		:
+		echo "plat-specific: USB0_MANAGED_BY_NOS set; NOS owns usb0 (no .network)"
 	else
-		local usb0_addr
-		usb0_addr=""
-		if [ -f "$HID_SRC/hw-management-bmc-network.conf" ]; then
-			usb0_addr=$(sed -n 's/^[[:space:]]*USB0_ADDRESS=//p' "$HID_SRC/hw-management-bmc-network.conf" | head -1 | tr -d " '\"")
-		else
-			# No packaged hw-management-bmc-network.conf: use /etc if valid, else default.
-			if [ -f /etc/hw-management-bmc-usb0.conf ]; then
-				usb0_addr=$(sed -n 's/^[[:space:]]*USB0_ADDRESS=//p' /etc/hw-management-bmc-usb0.conf | head -1 | tr -d " '\"")
-			fi
-			if [ -z "$usb0_addr" ] || ! printf '%s' "$usb0_addr" | grep -qE '^[0-9a-fA-F.:/]+/[0-9]+$'; then
-				usb0_addr="$default_usb0_addr"
-				printf '%s\n' \
-					"# Default USB0 (no packaged ${HID_SRC}/hw-management-bmc-network.conf)" \
-					"USB0_ADDRESS=${usb0_addr}" >/etc/hw-management-bmc-usb0.conf
-				chmod 0644 /etc/hw-management-bmc-usb0.conf
-				echo "plat-specific: default USB0_ADDRESS=${usb0_addr} (no packaged hw-management-bmc-network.conf)"
-			fi
-		fi
-
-		# Validate CIDR without bash [[ =~ ]] (BusyBox ash / POSIX sh friendly).
-		if [ -z "$usb0_addr" ] || ! printf '%s' "$usb0_addr" | grep -qE '^[0-9a-fA-F.:/]+/[0-9]+$'; then
-			echo "plat-specific: invalid or empty USB0_ADDRESS in /etc/hw-management-bmc-usb0.conf, skip usb0 .network"
-		else
-			mkdir -p /etc/systemd/network
-			sed "s|__USB0_ADDRESS__|${usb0_addr}|g" /usr/etc/systemd/network/00-hw-management-bmc-usb0.network \
-				>/etc/systemd/network/00-hw-management-bmc-usb0.network
-			chmod 0644 /etc/systemd/network/00-hw-management-bmc-usb0.network
-			echo "plat-specific: wrote /etc/systemd/network/00-hw-management-bmc-usb0.network (usb0 ${usb0_addr})"
-		fi
+		hw_management_bmc_usb0_render_network
 	fi
 }
 
