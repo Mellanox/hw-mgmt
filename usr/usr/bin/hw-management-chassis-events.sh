@@ -684,6 +684,22 @@ function handle_hotplug_event()
 	psu*)
 		handle_hotplug_psu_event "$attribute" "$event"
 		;;
+	power_button|graceful_pwr_off)
+		# udev POWER_BUTTON starts nvme-ready in the background only
+		# when cpu_shutdown_req is not already 1. Updater-originated
+		# hotplug is owned by peripheral-updater (HW_MGMT_NVME_READY=0
+		# on its chassis-events calls).
+		if [ "$event" = "1" ] && [ "${HW_MGMT_NVME_READY:-1}" != "0" ]; then
+			req=""
+			[ -r /var/run/hw-management/system/cpu_shutdown_req ] && \
+				req=$(tr -d '[:space:]' </var/run/hw-management/system/cpu_shutdown_req)
+			if [ "$req" = "1" ]; then
+				:
+			elif [ -x /usr/bin/hw-management-bmc-nvme-ready.sh ]; then
+				/usr/bin/hw-management-bmc-nvme-ready.sh &
+			fi
+		fi
+		;;
 	*)
 		;;
 	esac

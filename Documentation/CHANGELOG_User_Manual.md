@@ -20,7 +20,7 @@
 | §2.2 | BMC peripheral table: `leakage/<N>/<j>/…` tree, `$bsp_path/bmc/` reset-cause subtree; example `hw-management-bmc-leakage-sysfs.txt` |
 | §3.1.59 | **`config/pdb_hotswap_scale`** (SN6600_LD, value 5.333) |
 | §3.4 | **`environment/pdb_hotswap<N>_power1_scale`** and **`_curr1_scale`** (lm5066i only) |
-| §3.18 | **`cpu_shutdown_req`**: hw-mgmt polls this node via `hw_management_platform_config.py` (HI176–HI185, …) |
+| §3.18 | **`cpu_shutdown_req`**: hw-mgmt polls this node via `hw_management_platform_config.py` (HI176–HI185, HI187, HI188, HI193, …) |
 | §3.24 | **BMC reset cause** (AST2700): primary `reset_pwr_cycle` / `reset_soft_reboot` / `reset_unknown`; `bmc/domains/reset_*`; raw SCU logs |
 | §3.25 | **BMC leakage A2D tree** under `$bsp_path/leakage/` (ADS1015, ADS7924, MAX1363 per JSON) |
 | N61XX_LD notes | Extended cartridge / PDB / leakage applicability to **N6300_LD** (HI185): `cartridge_counter`=4, `hotplug_pdbs`=2, `cpld_num`=3 |
