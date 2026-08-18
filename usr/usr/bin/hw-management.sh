@@ -3262,6 +3262,23 @@ load_modules()
 	esac
 }
 
+# Run depmod only when modules.dep/modules.alias are missing or older
+# than any .ko* module. Avoids multi-second cost on weak CPUs when
+# depmod outputs are already current.
+run_depmod_if_needed()
+{
+	local modules_dir="/lib/modules/$(uname -r)"
+	local modules_dep="${modules_dir}/modules.dep"
+	local modules_alias="${modules_dir}/modules.alias"
+
+	if [ ! -f "$modules_dep" ] || [ ! -f "$modules_alias" ] || \
+	   find "$modules_dir" \( -name '*.ko' -o -name '*.ko.*' \) \
+		\( -newer "$modules_dep" -o -newer "$modules_alias" \) \
+		-print -quit 2>/dev/null | grep -q .; then
+		depmod -a 2>/dev/null
+	fi
+}
+
 set_config_data()
 {
 	local asic_num=0
@@ -4045,8 +4062,8 @@ do_start()
 		set_asic_i2c_bus
 	fi
 	touch $udev_ready
-	depmod -a 2>/dev/null
-	
+	run_depmod_if_needed
+
 	udevadm trigger --action=add
 	udevadm settle
 	set_sodimm_temp_limits
