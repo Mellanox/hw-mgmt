@@ -702,7 +702,7 @@ configure_max1363_raw_i2c()
 	local hw_channel_id="${5:-0}"
 	local post_driver="${6:-}"
 
-	local cfg_reg cfg_reg_val patched hw_ch scan_ch k cid
+	local cfg_reg cfg_reg_val setup_val patched hw_ch scan_ch k cid nbytes failed
 
 	if [ "$post_driver" = "post_driver" ]; then
 		log_message "info" "MAX1363 $device_name: post-driver I2C programming"
@@ -710,12 +710,25 @@ configure_max1363_raw_i2c()
 
 	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
 	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
+	setup_val=$(echo "$device_json" | json_get_string "SetupRegVal")
 	cfg_reg_val=$(echo "$cfg_reg_val" | tr -d '"')
 	cfg_reg=$(echo "$cfg_reg" | tr -d '"')
+	setup_val=$(echo "$setup_val" | tr -d '"')
+
+	failed=0
+
+	# Setup byte (bit7=1) selects the chip reference and polarity.
+	if [ -n "$setup_val" ] && [ "$setup_val" != "null" ]; then
+		log_message "info" "MAX1363 $device_name: setup register: $setup_val"
+		if ! i2ctransfer -f -y "$bus" w1@"$address" "$setup_val" 2>&1; then
+			log_message "warning" "MAX1363 $device_name: setup register write failed"
+			failed=1
+		fi
+	fi
 
 	if [ -z "$cfg_reg" ] || [ -z "$cfg_reg_val" ] || [ "$cfg_reg" = "null" ] || [ "$cfg_reg_val" = "null" ]; then
-		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping raw init"
-		return 1
+		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping monitor burst"
+		return "$failed"
 	fi
 
 	hw_ch="$hw_channel_id"
@@ -741,10 +754,18 @@ configure_max1363_raw_i2c()
 		log_message "info" "MAX1363 $device_name: CfgRegVal adjusted (monitor ch $hw_ch, scan to ch $scan_ch): $cfg_reg_val -> $patched"
 	fi
 
-	if write_and_verify_register "$bus" "$address" "$cfg_reg" "$patched" "Configuration Register" "$device_name"; then
-		return 0
+	# No readback verify: the MAX1363 has no register address space. Reads return
+	# conversion data, and the pointer byte a readback sends first would clobber
+	# the config just written.
+	set -- $patched
+	nbytes="$#"
+	log_message "info" "MAX1363 $device_name: setup/monitor stream: Bus $bus, Addr $address, Reg $cfg_reg, Val: $patched"
+	if ! i2ctransfer -f -y "$bus" w$((nbytes + 1))@"$address" "$cfg_reg" $patched 2>&1; then
+		log_message "warning" "MAX1363 $device_name: setup/monitor stream write failed (Bus $bus, Addr $address)"
+		failed=1
 	fi
-	return 1
+
+	return "$failed"
 }
 
 # All MAX1363 leak sensors on this platform are wired with Vdd as the ADC reference
@@ -1826,8 +1847,12 @@ configure_a2d_registers_raw()
 		return $?
 	fi
 	if [ "$device_type" = "MAX1363" ]; then
-		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"
-		return $?
+		# Tolerant: reads come from kernel IIO, which the driver serves regardless of
+		# this burst. Failing here would skip the detector and never set the Vdd reference.
+		if ! configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"; then
+			log_message "warning" "MAX1363 $device_name: raw programming incomplete — continuing (IIO reads served by the kernel driver)"
+		fi
+		return 0
 	fi
 
 	success=0
