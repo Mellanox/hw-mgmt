@@ -474,6 +474,11 @@ def run_power_button_event(argv, val):
     if str(val) == "1":
         cmd = """logger -t hw-management-peripheral-updater -p daemon.info "Graceful CPU power off request " """
         os.system(cmd)
+        # BMC systems: flush NVMe and assert cpu_power_off_ready so BMC
+        # wait_for_cpu_shutdown() can complete before removing host power.
+        # No-op when the ready handshake sysfs node is unavailable.
+        cmd = "/usr/bin/hw-management-bmc-nvme-ready.sh"
+        os.system(cmd)
 
 # ----------------------------------------------------------------------
 
