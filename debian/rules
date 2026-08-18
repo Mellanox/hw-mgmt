@@ -38,6 +38,8 @@ ifeq ($(with_host),1)
 # --- Package: hw-management (host CPU) ---
 	dh_installdirs -p$(pname) etc/modprobe.d
 	cp usr/etc/modprobe.d/hw-management.conf debian/$(pname)/etc/modprobe.d
+	dh_installdirs -p$(pname) etc
+	cp usr/etc/hw-management-usb0.conf debian/$(pname)/etc/
 	dh_installdirs -p$(pname) etc/modules-load.d
 	cp usr/etc/modules-load.d/05-hw-management-modules.conf debian/$(pname)/etc/modules-load.d
 	dh_installdirs -p$(pname) usr/bin

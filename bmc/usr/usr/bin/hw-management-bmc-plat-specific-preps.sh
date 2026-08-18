@@ -183,7 +183,7 @@ deploy_hw_management_bmc_platform_files()
 	# USB0 (CPU ↔ BMC): copy platform network params and render systemd-networkd unit.
 	# shellcheck source=/usr/bin/hw-management-bmc-usb0-common.sh
 	. /usr/bin/hw-management-bmc-usb0-common.sh
-	default_usb0_addr="169.254.0.1/16"
+	default_usb0_addr="169.254.100.1/16"
 	usb0_nos_managed=0
 	nos_conf=""
 	nos_conf=$(hw_management_bmc_usb0_nos_conf_path 2>/dev/null) || nos_conf=""

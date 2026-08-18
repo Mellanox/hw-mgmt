@@ -51,6 +51,12 @@ if [ "${INTERFACE}" = "usb0" ] && check_host_usb0_managed_by_nos; then
 	exit 0
 fi
 
+if [ "${INTERFACE}" = "usb0" ] && [ -x /usr/bin/hw-management-usb0-config.sh ]; then
+	if /usr/bin/hw-management-usb0-config.sh usb0; then
+		exit 0
+	fi
+fi
+
 if [ ! -e "/sys/class/net/${INTERFACE}" ]; then
 	log_info "Interface ${INTERFACE} is missing"
 	exit 0
