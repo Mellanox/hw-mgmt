@@ -1862,12 +1862,12 @@ configure_a2d_registers_raw()
 		return $?
 	fi
 	if [ "$device_type" = "MAX1363" ]; then
-		# Tolerant: reads come from kernel IIO, which the driver serves regardless of
-		# this burst. Failing here would skip the detector and never set the Vdd reference.
-		if ! configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"; then
-			log_message "warning" "MAX1363 $device_name: raw programming incomplete — continuing (IIO reads served by the kernel driver)"
-		fi
-		return 0
+		# Only a real i2ctransfer failure gets here (the part has no readback to verify),
+		# so propagate it and let the caller try the next Device alternative. Reporting
+		# success would go on to set voltage_reference, which writes the driver's cached
+		# setup byte only and would claim a Vdd reference the chip never received.
+		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"
+		return $?
 	fi
 
 	success=0
