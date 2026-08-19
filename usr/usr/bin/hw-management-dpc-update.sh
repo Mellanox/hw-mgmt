@@ -195,6 +195,58 @@ realpath_fallback() {
   esac
 }
 
+# Reject tar members that can escape the extraction directory:
+# absolute paths, ".." components, and symlink/hardlink members (link-then-write escapes).
+# Call before tar -x.
+assert_safe_tar_members() {
+  local pkg_path="$1"
+  local member rest comp line
+
+  while IFS= read -r member; do
+    [[ -z "$member" ]] && continue
+    case "$member" in
+      /*|~*)
+        die "Unsafe archive member (absolute path): $member"
+        ;;
+    esac
+    rest="$member"
+    while [[ -n "$rest" ]]; do
+      if [[ "$rest" == */* ]]; then
+        comp="${rest%%/*}"
+        rest="${rest#*/}"
+      else
+        comp="$rest"
+        rest=""
+      fi
+      if [[ "$comp" == ".." ]]; then
+        die "Unsafe archive member (parent-directory path): $member"
+      fi
+    done
+  done < <(tar -tf "$pkg_path")
+
+  # Name-only checks miss "safe name -> outside" then "safe_name/file" write-through.
+  # DPC packages are plain files/dirs only; refuse any symlink or hardlink members.
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "${line:0:1}" in
+      l|h)
+        die "Unsafe archive member (symlink/hardlink not allowed): $line"
+        ;;
+    esac
+  done < <(tar -tvf "$pkg_path" 2>/dev/null)
+}
+
+extract_tar_to_dir() {
+  local pkg_path="$1"
+  local dest="$2"
+  assert_safe_tar_members "$pkg_path"
+  if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
+    tar -xvf "$pkg_path" -C "$dest"
+  else
+    tar -xf "$pkg_path" -C "$dest" >/dev/null 2>&1
+  fi
+}
+
 # Read simple VAR=VALUE assignment from a config file without executing it.
 conf_get() {
   local file="$1"
@@ -623,18 +675,17 @@ apply_cmd() {
       return 0
     }
 
-    # Verify tar can be listed and top dir detected
+    # Verify tar can be listed and top dir detected; reject path escapes before extract
     tar -tf "$pkg_path" >/dev/null 2>&1 || die "Cannot read tar contents: $pkg_path"
     local top_dir
     top_dir="$(tar -tf "$pkg_path" | awk -F/ 'NR==1{print $1}')"
     [[ -n "$top_dir" ]] || die "Could not detect top-level directory inside tar"
+    case "$top_dir" in
+      /*|..|*/..|*/../*|../*) die "Unsafe top-level directory in archive: $top_dir" ;;
+    esac
 
     # Extract for deeper validation
-    if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
-      tar -xvf "$pkg_path" -C "$tmp"
-    else
-      tar -xf "$pkg_path" -C "$tmp" >/dev/null 2>&1
-    fi
+    extract_tar_to_dir "$pkg_path" "$tmp"
     local pkg_dir="${tmp}/${top_dir}"
     [[ -d "$pkg_dir" ]] || die "Extracted top-level directory not found: $pkg_dir"
     debug "verify extracted pkg_dir=$pkg_dir"
@@ -844,15 +895,14 @@ apply_cmd() {
   fi
 
   info "Extracting package: $pkg_path"
-  if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
-    tar -xvf "$pkg_path" -C "$tmp"
-  else
-    tar -xf "$pkg_path" -C "$tmp" >/dev/null 2>&1
-  fi
+  extract_tar_to_dir "$pkg_path" "$tmp"
 
   local top_dir
   top_dir="$(tar -tf "$pkg_path" | awk -F/ 'NR==1{print $1}')"
   [[ -n "$top_dir" ]] || die "Could not detect top-level directory inside tar"
+  case "$top_dir" in
+    /*|..|*/..|*/../*|../*) die "Unsafe top-level directory in archive: $top_dir" ;;
+  esac
 
   local pkg_dir="${tmp}/${top_dir}"
   [[ -d "$pkg_dir" ]] || die "Extracted top-level directory not found: $pkg_dir"
@@ -868,65 +918,64 @@ apply_cmd() {
   [[ -n "$json_cfg" && -f "${pkg_dir}/${json_cfg}" ]] || die "JSON configuration file not found in package dir"
   debug "apply json_cfg=$json_cfg"
 
-  if [[ $skip_identical -eq 1 ]]; then
-    info "Checking current vs package targets..."
-    local current_json
-    current_json="$(read_vr_json_or_die)"
+  # Always validate every manifest target has a matching live VR (and parseable package
+  # model/rev). --force only bypasses the identical-version early skip, not this check.
+  info "Checking current vs package targets..."
+  local current_json
+  current_json="$(read_vr_json_or_die)"
 
-      local targets
-      targets="$(build_targets_tsv "$pkg_dir" "$json_cfg")"
+  local targets
+  targets="$(build_targets_tsv "$pkg_dir" "$json_cfg")"
 
-      local mismatch=0
-      while IFS=$'\t' read -r bus devtype addr exp_model exp_rev; do
-        [[ -n "$bus" && -n "$devtype" ]] || continue
+  local mismatch=0
+  while IFS=$'\t' read -r bus devtype addr exp_model exp_rev; do
+    [[ -n "$bus" && -n "$devtype" ]] || continue
 
-        local cur_model cur_rev
-        cur_model="$(echo "$current_json" | jq -r --arg bus "$bus" --arg dev "$devtype" --arg addr "${addr:-}" '
-          def norm(x): (x|tostring|ascii_downcase);
-          if ($addr|length)>0 then
-            (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev and norm(.address)==norm($addr)) | .model) // empty)
-          else
-            (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev) | .model) // empty)
-          end
-        ')"
-        cur_rev="$(echo "$current_json" | jq -r --arg bus "$bus" --arg dev "$devtype" --arg addr "${addr:-}" '
-          def norm(x): (x|tostring|ascii_downcase);
-          if ($addr|length)>0 then
-            (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev and norm(.address)==norm($addr)) | .revision_id) // empty)
-          else
-            (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev) | .revision_id) // empty)
-          end
-        ')"
+    local cur_model cur_rev
+    cur_model="$(echo "$current_json" | jq -r --arg bus "$bus" --arg dev "$devtype" --arg addr "${addr:-}" '
+      def norm(x): (x|tostring|ascii_downcase);
+      if ($addr|length)>0 then
+        (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev and norm(.address)==norm($addr)) | .model) // empty)
+      else
+        (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev) | .model) // empty)
+      end
+    ')"
+    cur_rev="$(echo "$current_json" | jq -r --arg bus "$bus" --arg dev "$devtype" --arg addr "${addr:-}" '
+      def norm(x): (x|tostring|ascii_downcase);
+      if ($addr|length)>0 then
+        (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev and norm(.address)==norm($addr)) | .revision_id) // empty)
+      else
+        (first(.[] | select(.bus==($bus|tostring) and .device_name==$dev) | .revision_id) // empty)
+      end
+    ')"
 
-        if [[ -z "$cur_model" || -z "$cur_rev" ]]; then
-          info "WARN: Could not find current entry for DeviceType=$devtype Bus=$bus Addr=${addr:-} (will NOT skip)"
-          mismatch=1
-          continue
-        fi
-
-        cur_model="$(echo "$cur_model" | tr '[:upper:]' '[:lower:]')"
-        cur_rev="$(echo "$cur_rev" | tr '[:upper:]' '[:lower:]')"
-        exp_model="$(echo "${exp_model:-}" | tr '[:upper:]' '[:lower:]')"
-        exp_rev="$(echo "${exp_rev:-}" | tr '[:upper:]' '[:lower:]')"
-
-        if [[ -z "$exp_model" || -z "$exp_rev" ]]; then
-          info "WARN: Could not parse expected model/revision from package for DeviceType=$devtype Bus=$bus (will NOT skip)"
-          mismatch=1
-          continue
-        fi
-
-        if [[ "$cur_model" != "$exp_model" || "$cur_rev" != "$exp_rev" ]]; then
-          info "Needs update: DeviceType=$devtype Bus=$bus current(model=$cur_model rev=$cur_rev) target(model=$exp_model rev=$exp_rev)"
-          mismatch=1
-        else
-          info "Up-to-date: DeviceType=$devtype Bus=$bus model=$cur_model rev=$cur_rev"
-        fi
-      done <<< "$targets"
-
-    if [[ $mismatch -eq 0 ]]; then
-      info "No changes needed. Skipping update."
-      exit 0
+    if [[ -z "$cur_model" || -z "$cur_rev" ]]; then
+      die "No current VR entry for DeviceType=$devtype Bus=$bus Addr=${addr:-}; refusing update (absent or unmatched target)"
     fi
+
+    cur_model="$(echo "$cur_model" | tr '[:upper:]' '[:lower:]')"
+    cur_rev="$(echo "$cur_rev" | tr '[:upper:]' '[:lower:]')"
+    exp_model="$(echo "${exp_model:-}" | tr '[:upper:]' '[:lower:]')"
+    exp_rev="$(echo "${exp_rev:-}" | tr '[:upper:]' '[:lower:]')"
+
+    if [[ -z "$exp_model" || -z "$exp_rev" ]]; then
+      die "Could not parse expected model/revision from package for DeviceType=$devtype Bus=$bus Addr=${addr:-}; refusing update"
+    fi
+
+    if [[ "$cur_model" != "$exp_model" || "$cur_rev" != "$exp_rev" ]]; then
+      info "Needs update: DeviceType=$devtype Bus=$bus current(model=$cur_model rev=$cur_rev) target(model=$exp_model rev=$exp_rev)"
+      mismatch=1
+    else
+      info "Up-to-date: DeviceType=$devtype Bus=$bus model=$cur_model rev=$cur_rev"
+    fi
+  done <<< "$targets"
+
+  if [[ $skip_identical -eq 1 && $mismatch -eq 0 ]]; then
+    info "No changes needed. Skipping update."
+    exit 0
+  fi
+  if [[ $skip_identical -eq 0 ]]; then
+    info "Force: proceeding with update (identical-version skip disabled)."
   fi
 
   # Show versions before update and stop services (best-effort) before flashing.
