@@ -195,6 +195,58 @@ realpath_fallback() {
   esac
 }
 
+# Reject tar members that can escape the extraction directory:
+# absolute paths, ".." components, and symlink/hardlink members (link-then-write escapes).
+# Call before tar -x.
+assert_safe_tar_members() {
+  local pkg_path="$1"
+  local member rest comp line
+
+  while IFS= read -r member; do
+    [[ -z "$member" ]] && continue
+    case "$member" in
+      /*|~*)
+        die "Unsafe archive member (absolute path): $member"
+        ;;
+    esac
+    rest="$member"
+    while [[ -n "$rest" ]]; do
+      if [[ "$rest" == */* ]]; then
+        comp="${rest%%/*}"
+        rest="${rest#*/}"
+      else
+        comp="$rest"
+        rest=""
+      fi
+      if [[ "$comp" == ".." ]]; then
+        die "Unsafe archive member (parent-directory path): $member"
+      fi
+    done
+  done < <(tar -tf "$pkg_path")
+
+  # Name-only checks miss "safe name -> outside" then "safe_name/file" write-through.
+  # DPC packages are plain files/dirs only; refuse any symlink or hardlink members.
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "${line:0:1}" in
+      l|h)
+        die "Unsafe archive member (symlink/hardlink not allowed): $line"
+        ;;
+    esac
+  done < <(tar -tvf "$pkg_path" 2>/dev/null)
+}
+
+extract_tar_to_dir() {
+  local pkg_path="$1"
+  local dest="$2"
+  assert_safe_tar_members "$pkg_path"
+  if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
+    tar -xvf "$pkg_path" -C "$dest"
+  else
+    tar -xf "$pkg_path" -C "$dest" >/dev/null 2>&1
+  fi
+}
+
 # Read simple VAR=VALUE assignment from a config file without executing it.
 conf_get() {
   local file="$1"
@@ -773,18 +825,17 @@ apply_cmd() {
       return 0
     }
 
-    # Verify tar can be listed and top dir detected
+    # Verify tar can be listed and top dir detected; reject path escapes before extract
     tar -tf "$pkg_path" >/dev/null 2>&1 || die "Cannot read tar contents: $pkg_path"
     local top_dir
     top_dir="$(tar -tf "$pkg_path" | awk -F/ 'NR==1{print $1}')"
     [[ -n "$top_dir" ]] || die "Could not detect top-level directory inside tar"
+    case "$top_dir" in
+      /*|..|*/..|*/../*|../*) die "Unsafe top-level directory in archive: $top_dir" ;;
+    esac
 
     # Extract for deeper validation
-    if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
-      tar -xvf "$pkg_path" -C "$tmp"
-    else
-      tar -xf "$pkg_path" -C "$tmp" >/dev/null 2>&1
-    fi
+    extract_tar_to_dir "$pkg_path" "$tmp"
     local pkg_dir="${tmp}/${top_dir}"
     [[ -d "$pkg_dir" ]] || die "Extracted top-level directory not found: $pkg_dir"
     debug "verify extracted pkg_dir=$pkg_dir"
@@ -940,7 +991,7 @@ apply_cmd() {
           info "Forcing update for device[$i] (already up-to-date): Type=$device_type Bus=$bus Addr=${lookup_addr:-} model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
           ;;
         NO_TARGET)
-          info "WARN: device[$i] could not parse target model/revision; attempting update"
+          die "Could not parse expected model/revision from package for device[$i] Type=$device_type Bus=$bus Addr=${lookup_addr:-}; refusing update"
           ;;
       esac
 
@@ -1050,15 +1101,14 @@ apply_cmd() {
   fi
 
   info "Extracting package: $pkg_path"
-  if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
-    tar -xvf "$pkg_path" -C "$tmp"
-  else
-    tar -xf "$pkg_path" -C "$tmp" >/dev/null 2>&1
-  fi
+  extract_tar_to_dir "$pkg_path" "$tmp"
 
   local top_dir
   top_dir="$(tar -tf "$pkg_path" | awk -F/ 'NR==1{print $1}')"
   [[ -n "$top_dir" ]] || die "Could not detect top-level directory inside tar"
+  case "$top_dir" in
+    /*|..|*/..|*/../*|../*) die "Unsafe top-level directory in archive: $top_dir" ;;
+  esac
 
   local pkg_dir="${tmp}/${top_dir}"
   [[ -d "$pkg_dir" ]] || die "Extracted top-level directory not found: $pkg_dir"
@@ -1074,49 +1124,50 @@ apply_cmd() {
   [[ -n "$json_cfg" && -f "${pkg_dir}/${json_cfg}" ]] || die "JSON configuration file not found in package dir"
   debug "apply json_cfg=$json_cfg"
 
-  if [[ $skip_identical -eq 1 ]]; then
-    info "Checking current vs package targets..."
-    local current_json
-    current_json="$(read_vr_json_or_die)"
+  # Always evaluate targets. --force only bypasses identical-version early skip;
+  # NO_HW/VENDOR_SKIP remain skips in run_update_from_json; NO_TARGET refuses.
+  info "Checking current vs package targets..."
+  local current_json
+  current_json="$(read_vr_json_or_die)"
 
-      local targets
-      targets="$(build_targets_tsv "$pkg_dir" "$json_cfg")"
+  local targets
+  targets="$(build_targets_tsv "$pkg_dir" "$json_cfg")"
 
-      local mismatch=0
-      while IFS=$'\t' read -r bus devtype addr exp_model exp_rev; do
-        [[ -n "$bus" && -n "$devtype" ]] || continue
+  local mismatch=0
+  while IFS=$'\t' read -r bus devtype addr exp_model exp_rev; do
+    [[ -n "$bus" && -n "$devtype" ]] || continue
 
-        dpc_eval_target_entry "$current_json" "$bus" "$devtype" "${addr:-}" "${exp_model:-}" "${exp_rev:-}"
+    dpc_eval_target_entry "$current_json" "$bus" "$devtype" "${addr:-}" "${exp_model:-}" "${exp_rev:-}"
 
-        case "$DPC_ENTRY_STATUS" in
-          VENDOR_SKIP)
-            info "Skipping (vendor mismatch): package DeviceType=$devtype Bus=$bus Addr=${addr:-} hardware=$DPC_ENTRY_HW_DEV"
-            ;;
-          NO_HW)
-            info "Skipping (no device): DeviceType=$devtype Bus=$bus Addr=${addr:-}"
-            ;;
-          UP_TO_DATE)
-            info "Up-to-date: DeviceType=$devtype Bus=$bus model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
-            ;;
-          NEEDS_UPDATE)
-            info "Needs update: DeviceType=$devtype Bus=$bus current(model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV) target(model=$exp_model rev=$exp_rev)"
-            mismatch=1
-            ;;
-          NO_TARGET)
-            info "WARN: Could not parse expected model/revision from package for DeviceType=$devtype Bus=$bus (will NOT skip)"
-            mismatch=1
-            ;;
-          *)
-            info "WARN: Unexpected entry status for DeviceType=$devtype Bus=$bus (will NOT skip)"
-            mismatch=1
-            ;;
-        esac
-      done <<< "$targets"
+    case "$DPC_ENTRY_STATUS" in
+      VENDOR_SKIP)
+        info "Skipping (vendor mismatch): package DeviceType=$devtype Bus=$bus Addr=${addr:-} hardware=$DPC_ENTRY_HW_DEV"
+        ;;
+      NO_HW)
+        info "Skipping (no device): DeviceType=$devtype Bus=$bus Addr=${addr:-}"
+        ;;
+      UP_TO_DATE)
+        info "Up-to-date: DeviceType=$devtype Bus=$bus model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
+        ;;
+      NEEDS_UPDATE)
+        info "Needs update: DeviceType=$devtype Bus=$bus current(model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV) target(model=$exp_model rev=$exp_rev)"
+        mismatch=1
+        ;;
+      NO_TARGET)
+        die "Could not parse expected model/revision from package for DeviceType=$devtype Bus=$bus Addr=${addr:-}; refusing update"
+        ;;
+      *)
+        die "Unexpected entry status '$DPC_ENTRY_STATUS' for DeviceType=$devtype Bus=$bus Addr=${addr:-}; refusing update"
+        ;;
+    esac
+  done <<< "$targets"
 
-    if [[ $mismatch -eq 0 ]]; then
-      info "No changes needed. Skipping update."
-      exit 0
-    fi
+  if [[ $skip_identical -eq 1 && $mismatch -eq 0 ]]; then
+    info "No changes needed. Skipping update."
+    exit 0
+  fi
+  if [[ $skip_identical -eq 0 ]]; then
+    info "Force: proceeding with update (identical-version skip disabled)."
   fi
 
   # Show versions before update and stop services (best-effort) before flashing.
