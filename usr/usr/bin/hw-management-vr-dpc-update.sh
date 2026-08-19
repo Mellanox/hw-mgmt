@@ -257,6 +257,28 @@ _validate_i2c_page_num()
 	[[ "$1" =~ ^[0-2]$ ]]
 }
 
+# CSV pN_byte must be exactly 1 (byte) or 2 (word); anything else is an error.
+_validate_i2c_byte_width()
+{
+	[[ "$1" == "1" || "$1" == "2" ]]
+}
+
+# Trim/lowercase a CSV hex cell; succeed only if the entire cell is 0x + 1..4
+# hex digits (do not silently truncate trailing junk like 0x1234junk).
+# Prints the normalized value on stdout.
+_csv_hex_val_normalize()
+{
+	local raw="$1"
+	raw="${raw//$'\r'/}"
+	raw="${raw#"${raw%%[![:space:]]*}"}"
+	raw="${raw%"${raw##*[![:space:]]}"}"
+	raw="${raw,,}"
+	if [[ ! "$raw" =~ ^0x[0-9a-f]{1,4}$ ]]; then
+		return 1
+	fi
+	printf '%s' "$raw"
+}
+
 # Input validation function.
 validate_inputs()
 {
@@ -485,12 +507,14 @@ validate_revisions()
 				continue
 			fi
 
-			# Remove trailing symbols and convert to lowercase.
-			val=$(echo "$val" | cut -c1-6 | tr '[:upper:]' '[:lower:]')
 			cmd_code=$(echo "$cmd_code" | tr '[:upper:]' '[:lower:]')
 
 			if [[ "$page" == "$DPC_REVISION_ID_PAGE" ]] && [[ "$cmd_code" == "$DPC_REVISION_ID" ]]; then
 				local rev_n val_n
+				val="$(_csv_hex_val_normalize "$val")" || {
+					log_info "Invalid package revision CSV value (must be 0x + 1..4 hex digits): '$val'"
+					return 1
+				}
 				rev_n="$(hex_word_to_int "$revision")" || return 1
 				val_n="$(hex_word_to_int "$val")" || return 1
 				if (( rev_n < val_n )); then
@@ -554,7 +578,17 @@ compare_and_flash_device()
 	log_info "Starting device comparison and flashing..."
 
 	local fix_count=0
-	local temp_file=$(mktemp)
+	local temp_file
+	local err_file
+	temp_file=$(mktemp) || {
+		log_info "Failed to create temp file for fix ledger (mktemp)"
+		return 1
+	}
+	err_file=$(mktemp) || {
+		log_info "Failed to create temp file for error ledger (mktemp)"
+		rm -f "$temp_file"
+		return 1
+	}
 
 	# Skip header, process each line.
 	tail -n +2 "$CSV_FILE" | while IFS=, read -r dev_addr cmd_code wr \
@@ -575,59 +609,103 @@ compare_and_flash_device()
 				continue
 			fi
 
-			# Remove trailing symbols and convert to lowercase.
-			val=$(echo "$val" | cut -c1-6 | tr '[:upper:]' '[:lower:]')
+			# Require exact 0x + 1..4 hex digits (no cut of trailing junk).
+			local raw_val="$val"
+			if ! val="$(_csv_hex_val_normalize "$val")"; then
+				log_info "Invalid CSV value '$raw_val' for $dev_addr $cmd_code page $page name $name (must be 0x + 1..4 hex digits)"
+				echo "1" >> "$err_file"
+				continue
+			fi
+			if ! _validate_i2c_byte_width "$byte"; then
+				log_info "Invalid CSV byte width '$byte' for $dev_addr $cmd_code page $page name $name (must be 1 or 2)"
+				echo "1" >> "$err_file"
+				continue
+			fi
 
 			# Set page.
 			if ! _validate_i2c_page_num "$page"; then
 				log_info "Skipping invalid page number '$page' for $dev_addr $cmd_code name $name"
+				echo "1" >> "$err_file"
 				continue
 			fi
 			if ! _validate_i2c_hex_addr "$dev_addr"; then
 				log_info "Skipping invalid I2C addr '$dev_addr' cmd $cmd_code page $page name $name"
+				echo "1" >> "$err_file"
 				continue
 			fi
 			if ! _validate_i2c_hex_reg "$cmd_code"; then
 				log_info "Skipping invalid cmd_code '$cmd_code' at $dev_addr page $page name $name"
+				echo "1" >> "$err_file"
 				continue
 			fi
-			i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page" || continue
+			if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page"; then
+				log_info "Failed to select page $page before read at $dev_addr $cmd_code name $name"
+				echo "1" >> "$err_file"
+				continue
+			fi
 
 			# Read value.
 			local read_val
-			if [[ "$byte" == 2 ]]; then
-				read_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" w 2>/dev/null)
+			local read_rc=0
+			if [[ "$byte" == "2" ]]; then
+				read_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" w 2>/dev/null) || read_rc=$?
+			elif [[ "$byte" == "1" ]]; then
+				read_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" 2>/dev/null) || read_rc=$?
 			else
-				read_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" 2>/dev/null)
+				# Unreachable after _validate_i2c_byte_width; keep as safety net.
+				log_info "Invalid CSV byte width '$byte' for $dev_addr $cmd_code page $page name $name (must be 1 or 2)"
+				echo "1" >> "$err_file"
+				continue
+			fi
+			if [[ $read_rc -ne 0 || -z "$read_val" ]]; then
+				log_info "Failed to read $dev_addr $cmd_code page $page name $name (i2cget rc=$read_rc)"
+				echo "1" >> "$err_file"
+				continue
 			fi
 
 			# Compare values.
 			if [[ "$read_val" != "$val" ]]; then
-				# Skip certain registers. Use arithmetic hex compare — [[ > ]] is
-				# lexicographic and wrongly skips page-2 regs like 0x9 / 0xf.
+				# Do not attempt to fix WRITE_PROTECT or page-2 regs above PAGE2_MAX_REG.
+				# (Read already succeeded above; a failed read is never treated as a skip.)
 				if { (( 16#${cmd_code#0x} > 16#${PAGE2_MAX_REG#0x} )) && [[ "$page" == 2 ]]; } ||
 					[[ "$cmd_code" = 0x10 ]]; then
+					log_info "Mismatch on exempt register $cmd_code page $page name $name: read $read_val, expected $val (not fixing)"
 					continue
 				fi
 
 				log_info "Mismatch at bus $I2C_BUS $dev_addr $cmd_code page $page name $name: read $read_val, expected $val"
 
 				# Set page and fix mismatch.
-				i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page" || continue
+				if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page"; then
+					log_info "Failed to select page $page for $dev_addr $cmd_code name $name"
+					echo "1" >> "$err_file"
+					continue
+				fi
 
 				local new_val
-				if [[ "$byte" == 2 ]]; then
-					_validate_i2c_hex_reg "$val" || continue
-					i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val" w || continue
+				if [[ "$byte" == "2" ]]; then
+					if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val" w; then
+						log_info "Failed to write $val (word) to $dev_addr $cmd_code page $page name $name"
+						echo "1" >> "$err_file"
+						continue
+					fi
 					new_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" w 2>/dev/null)
-				else
-					_validate_i2c_hex_reg "$val" || continue
-					i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val" || continue
+				elif [[ "$byte" == "1" ]]; then
+					if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val"; then
+						log_info "Failed to write $val to $dev_addr $cmd_code page $page name $name"
+						echo "1" >> "$err_file"
+						continue
+					fi
 					new_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" 2>/dev/null)
+				else
+					log_info "Invalid CSV byte width '$byte' for $dev_addr $cmd_code page $page name $name (must be 1 or 2)"
+					echo "1" >> "$err_file"
+					continue
 				fi
 
 				if [[ "$new_val" != "$val" ]]; then
 					log_info "Failed to fix at bus $I2C_BUS $dev_addr $cmd_code page $page name $name: read $new_val, expected $val"
+					echo "1" >> "$err_file"
 				else
 					echo "1" >> "$temp_file"
 					log_info "Successfully fixed register $cmd_code on page $page"
@@ -636,9 +714,16 @@ compare_and_flash_device()
 		done
 	done
 
-	# Count fixes.
+	# Count fixes / value errors (pipe loop runs in a subshell).
 	fix_count=$(wc -l < "$temp_file" 2>/dev/null || echo "0")
-	rm -f "$temp_file"
+	local err_count
+	err_count=$(wc -l < "$err_file" 2>/dev/null || echo "0")
+	rm -f "$temp_file" "$err_file"
+
+	if [[ "$err_count" -gt 0 ]]; then
+		log_info "Device flashing incomplete: $err_count register I2C/value error(s); fixed $fix_count"
+		return 1
+	fi
 
 	log_info "Device flashing completed. Fixed $fix_count registers"
 	echo "$fix_count"
@@ -682,7 +767,7 @@ main()
 	fi
 
 	# Compare and flash device.
-	fix_count=$(compare_and_flash_device)
+	fix_count=$(compare_and_flash_device) || error_exit "Device flashing failed (invalid CSV values or register write errors)"
 
 	# Store to RAM if fixes were made.
 	if [[ "$fix_count" -gt 0 ]]; then
