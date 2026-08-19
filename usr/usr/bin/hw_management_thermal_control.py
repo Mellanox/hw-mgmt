@@ -58,6 +58,7 @@ from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
 from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
+from hw_management_pwm_control import MlxregClient, PwmControl, find_mst_device
 import json
 import re
 import psutil
@@ -730,6 +731,79 @@ class hw_management_file_op:
             return 0
 
     # ----------------------------------------------------------------------
+    def _pwm_userspace_active(self):
+        """
+        SN2700 (and similar): thermal/pwm1 is a regular file published by
+        hw-management-pwm-control.service, not an mlxsw_minimal hwmon symlink.
+        """
+        pwm1 = os.path.join(self.root_folder, "thermal/pwm1")
+        return os.path.isfile(pwm1) and not os.path.islink(pwm1)
+
+    # ----------------------------------------------------------------------
+    def _get_pwm_control(self):
+        """Lazy PwmControl helper for userspace MFSC access."""
+        ctrl = getattr(self, "_pwm_control", None)
+        if ctrl is not None:
+            return ctrl
+        device = getattr(self, "asic_pcidev", None) or find_mst_device()
+        if not device or not os.path.exists(device):
+            return None
+        logger = getattr(self, "log", None)
+        if logger is None:
+            return None
+        try:
+            client = MlxregClient(device, logger)
+            ctrl = PwmControl(client, logger)
+            ctrl.fans_init()
+        except Exception:
+            return None
+        self._pwm_control = ctrl
+        return ctrl
+
+    # ----------------------------------------------------------------------
+    def write_pwm_userspace(self, pwm, validate=False):
+        """
+        @summary:
+            Write PWM via hw_management_pwm_control (MFSC) for SN2700 path.
+            Also sync thermal/pwm1 so the publisher/sensors stay consistent.
+        @param pwm: PWM value in percent 0..100
+        @param validate: Make read-after-write validation
+        """
+        ctrl = self._get_pwm_control()
+        if not ctrl:
+            return False
+        ret = True
+        try:
+            duty = int(pwm * 255 / 100)
+            if not ctrl.fan_pwm_set(duty):
+                ret = False
+            else:
+                self.write_file("thermal/pwm1", duty)
+        except (IOError, ValueError, TypeError, OSError):
+            ret = False
+
+        if validate:
+            pwm_get = self.read_pwm_userspace()
+            ret = pwm == pwm_get
+        return ret
+
+    # ----------------------------------------------------------------------
+    def read_pwm_userspace(self, default_val=None):
+        """
+        @summary:
+            Read PWM via hw_management_pwm_control (MFSC) for SN2700 path.
+        @param default_val: return value in case of read error
+        @return: PWM percent or default_val
+        """
+        ctrl = self._get_pwm_control()
+        if not ctrl:
+            return default_val
+        duty = ctrl.fan_pwm_get()
+        if duty is None:
+            return default_val
+        return int(duty / 2.55 + 0.5)
+
+    # ----------------------------------------------------------------------
     def write_pwm(self, pwm, validate=False):
         """
         @summary:
@@ -737,6 +811,9 @@ class hw_management_file_op:
         @param pwm: PWM value in percent 0..100
         @param validate: Make read-after-write validation. Return True in case no error
         """
+        if self._pwm_userspace_active():
+            return self.write_pwm_userspace(pwm, validate)
+
         ret = True
         try:
             pwm_out = int(pwm * 255 / 100)
@@ -823,6 +900,9 @@ class hw_management_file_op:
         @param default_val: return value in case of read error
         @return: int value from file
         """
+        if self._pwm_userspace_active():
+            return self.read_pwm_userspace(default_val)
+
         pwm_out = default_val
         try:
             pwm = int(self.read_file("thermal/pwm1"))
