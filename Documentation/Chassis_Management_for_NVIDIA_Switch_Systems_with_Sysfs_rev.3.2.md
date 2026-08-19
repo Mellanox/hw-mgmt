@@ -5625,8 +5625,9 @@ cat $bsp_path/system/cartridge1
 
 **Description:** Get ASIC power good failure status. Indicates power sequencing failure on the ASIC.
 
-Note: This attribute is for multi-ASIC systems (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
+Note: This attribute is for multi-ASIC systems (SN58XX_LD family, N61XX_LD family).
 N6100_LD has 4 ASICs with individual failure tracking.
+Exception: This API does not exist on SN6600_LD, SN6800_LD, and SN6810_LD systems.
 
 **Access:** Read only
 
