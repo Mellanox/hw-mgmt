@@ -46,6 +46,8 @@ ifeq ($(with_host),1)
 	cp usr/usr/local/bin/* debian/$(pname)/usr/local/bin
 	dh_installdirs -p$(pname) etc/logrotate.d
 	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
+	dh_installdirs -p$(pname) etc/bash_completion.d
+	cp usr/etc/bash_completion.d/* debian/$(pname)/etc/bash_completion.d
 ifeq ($(DEB_HOST_ARCH),arm64)
 	rm -f  debian/$(pname)/usr/bin/iorw_lpc
 	mv debian/$(pname)/usr/bin/iorw_bf3.sh debian/$(pname)/usr/bin/iorw
