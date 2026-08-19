@@ -1,0 +1,613 @@
+#!/bin/bash
+################################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Voltage Regulator DPC Update - Batch Processor
+################################################################################
+
+LOG_TAG="vr_dpc_update_all"
+DPC_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-update.sh"
+DPC_INFINEON_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-infineon-update.sh"
+
+# Function to log messages
+log_message()
+{
+    local level="$1"
+    local message="$2"
+    logger -t "$LOG_TAG" -p "daemon.$level" "$message"
+    echo "[$level] $message"
+}
+
+# MPS updater expects hid### (see hw-management-vr-dpc-update.sh); JSON may use HI### or HID###.
+normalize_system_hid_for_mps()
+{
+    echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/'
+}
+
+# Function to display usage
+usage()
+{
+    echo "Usage: $0 [OPTIONS] <json_config_file>"
+    echo ""
+    echo "Batch Voltage Regulator DPC Update from JSON configuration"
+    echo ""
+    echo "OPTIONS:"
+    echo "  --validate-json    Validate JSON configuration file and exit"
+    echo "  --help             Display this help message"
+    echo ""
+    echo "Arguments:"
+    echo "  json_config_file   Path to JSON configuration file"
+    echo ""
+    echo "JSON Format:"
+    echo "  {"
+    echo "    \"System HID\": \"HI180\","
+    echo "    \"Devices\": ["
+    echo "      {"
+    echo "        \"DeviceType\": \"mp2975\","
+    echo "        \"Bus\": 12,"
+    echo "        \"ConfigFile\": \"path/to/config.csv\","
+    echo "        \"CrcFile\": \"path/to/crc.txt\","
+    echo "        \"DeviceConfigFile\": \"path/to/device_config.conf\""
+    echo "      },"
+    echo "      {"
+    echo "        \"DeviceType\": \"xdpe12284\","
+    echo "        \"Bus\": 2,"
+    echo "        \"Addr\": \"0x40\","
+    echo "        \"ConfigFile\": \"path/to/config.bin\""
+    echo "      }"
+    echo "    ]"
+    echo "  }"
+    echo ""
+    echo "  Infineon (DeviceType xdpe*): CrcFile and DeviceConfigFile are not used; Addr is required."
+    echo ""
+}
+
+# Return 0 if JSON Devices[] contains at least one entry for vendor (mps|infineon).
+json_config_needs_vendor()
+{
+    local json_file="$1"
+    local vendor="$2"
+    local num_devices dev_idx device_type
+
+    num_devices=$(jq '.Devices | length // 0' "$json_file" 2>/dev/null)
+    if [[ -z "$num_devices" ]] || ! echo "$num_devices" | grep -qE '^[0-9]+$'; then
+        return 1
+    fi
+
+    dev_idx=0
+    while [ $dev_idx -lt $num_devices ]; do
+        device_type=$(jq -r ".Devices[$dev_idx].DeviceType // empty" "$json_file" 2>/dev/null)
+        case "$vendor" in
+            infineon)
+                if [[ "${device_type,,}" =~ ^xdpe ]]; then
+                    return 0
+                fi
+                ;;
+            mps)
+                if [[ "${device_type,,}" =~ ^mp ]]; then
+                    return 0
+                fi
+                ;;
+        esac
+        dev_idx=$((dev_idx + 1))
+    done
+
+    return 1
+}
+
+# Function to check dependencies
+check_dependencies()
+{
+    local skip_dpc_check="$1"
+    local json_file="${2:-}"
+
+    # Check for jq (JSON parser)
+    if ! command -v jq >/dev/null 2>&1; then
+        log_message "err" "jq is not installed. Please install jq to parse JSON files."
+        return 1
+    fi
+
+    # Check vendor DPC scripts only when JSON needs them (skip if only validating)
+    if [[ "$skip_dpc_check" != "skip" ]]; then
+        if [[ -n "$json_file" ]] && [[ -f "$json_file" ]]; then
+            if json_config_needs_vendor "$json_file" mps; then
+                if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
+                    log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+                    return 1
+                fi
+            fi
+            if json_config_needs_vendor "$json_file" infineon; then
+                if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
+                    log_message "err" "Infineon DPC update script not found or not executable: $DPC_INFINEON_UPDATE_SCRIPT"
+                    return 1
+                fi
+            fi
+        elif [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
+            log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+# Function to validate JSON configuration
+validate_json_config()
+{
+    local json_file="$1"
+    local validation_errors=0
+
+    echo "Validating JSON configuration: $json_file"
+    echo "=========================================="
+
+    if [[ ! -f "$json_file" ]]; then
+        echo "[ERROR] JSON configuration file not found: $json_file"
+        return 1
+    fi
+
+    # Validate JSON syntax
+    echo -n "Checking JSON syntax... "
+    if ! jq empty "$json_file" >/dev/null 2>&1; then
+        echo "FAILED"
+        echo "[ERROR] Invalid JSON syntax in file: $json_file"
+        jq empty "$json_file" 2>&1
+        return 1
+    fi
+    echo "OK"
+
+    # Check System HID
+    echo -n "Checking System HID... "
+    local system_hid
+    system_hid=$(jq -r '."System HID"' "$json_file" 2>/dev/null)
+
+    if [[ -z "$system_hid" ]] || [[ "$system_hid" == "null" ]]; then
+        echo "FAILED"
+        echo "[ERROR] Missing 'System HID' field"
+        validation_errors=$((validation_errors + 1))
+    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii]([Dd])?[0-9]{3}$'; then
+        echo "FAILED"
+        echo "[ERROR] Invalid 'System HID' format. Expected HI###, HID###, or hid###"
+        validation_errors=$((validation_errors + 1))
+    else
+        echo "OK (System HID: $system_hid)"
+    fi
+
+    # Check Devices array
+    echo -n "Checking Devices array... "
+    local devices_check
+    devices_check=$(jq -e '.Devices | type' "$json_file" 2>/dev/null)
+
+    if [[ "$devices_check" != '"array"' ]]; then
+        echo "FAILED"
+        echo "[ERROR] 'Devices' field is missing or not an array"
+        validation_errors=$((validation_errors + 1))
+        return 1
+    fi
+
+    local num_devices
+    num_devices=$(jq '.Devices | length' "$json_file")
+
+    # Validate num_devices is numeric
+    if [[ -z "$num_devices" ]] || ! echo "$num_devices" | grep -qE '^[0-9]+$'; then
+        echo "WARNING (Invalid device count, defaulting to 0)"
+        num_devices=0
+    fi
+
+    if [[ "$num_devices" -eq 0 ]]; then
+        echo "WARNING (No devices defined)"
+    else
+        echo "OK ($num_devices device(s) found)"
+    fi
+
+    # Validate each device
+    echo ""
+    echo "Validating devices:"
+    echo "-------------------"
+
+    dev_idx=0
+    while [ $dev_idx -lt $num_devices ]; do
+        echo "Device $((dev_idx+1)):"
+
+        # Extract device information
+        local device_type
+        local bus
+        local addr
+        local config_file
+        local crc_file
+        local device_config_file
+
+        device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file" 2>/dev/null)
+        bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file" 2>/dev/null)
+        addr=$(jq -r ".Devices[$dev_idx].Addr // empty" "$json_file" 2>/dev/null)
+        config_file=$(jq -r ".Devices[$dev_idx].ConfigFile" "$json_file" 2>/dev/null)
+        crc_file=$(jq -r ".Devices[$dev_idx].CrcFile // empty" "$json_file" 2>/dev/null)
+        device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile // empty" "$json_file" 2>/dev/null)
+
+        # Validate DeviceType
+        if [[ -z "$device_type" ]] || [[ "$device_type" == "null" ]]; then
+            echo "  [ERROR] Missing 'DeviceType'"
+            validation_errors=$((validation_errors + 1))
+        else
+            echo "  DeviceType: $device_type"
+        fi
+
+        # Determine device vendor based on prefix (case-insensitive)
+        local is_infineon=0
+        if [[ "${device_type,,}" =~ ^xdpe ]]; then
+            is_infineon=1
+            echo "  Vendor: Infineon"
+        elif [[ "${device_type,,}" =~ ^mp ]]; then
+            echo "  Vendor: MPS"
+        else
+            echo "  [WARNING] Unknown device type prefix (expected 'mp' or 'xdpe')"
+        fi
+
+        # Validate Bus
+        if [[ -z "$bus" ]] || [[ "$bus" == "null" ]]; then
+            echo "  [ERROR] Missing 'Bus'"
+            validation_errors=$((validation_errors + 1))
+        elif ! echo "$bus" | grep -qE '^[0-9]+$'; then
+            echo "  [ERROR] Invalid 'Bus' value (must be a number): $bus"
+            validation_errors=$((validation_errors + 1))
+        else
+            echo "  Bus: $bus"
+        fi
+
+        # Validate Addr (required for Infineon, optional for MPS)
+        if [[ $is_infineon -eq 1 ]]; then
+            if [[ -z "$addr" ]]; then
+                echo "  [ERROR] Missing 'Addr' (required for Infineon devices)"
+                validation_errors=$((validation_errors + 1))
+            else
+                echo "  Addr: $addr"
+            fi
+        else
+            if [[ -n "$addr" ]]; then
+                echo "  Addr: $addr (optional for MPS)"
+            fi
+        fi
+
+        # Validate ConfigFile
+        if [[ -z "$config_file" ]] || [[ "$config_file" == "null" ]]; then
+            echo "  [ERROR] Missing 'ConfigFile'"
+            validation_errors=$((validation_errors + 1))
+        else
+            echo "  ConfigFile: $config_file"
+            if [[ ! -f "$config_file" ]]; then
+                echo "    [WARNING] File does not exist"
+            fi
+        fi
+
+        # Validate CrcFile (required for MPS, not used for Infineon)
+        if [[ $is_infineon -eq 0 ]]; then
+            if [[ -z "$crc_file" ]]; then
+                echo "  [ERROR] Missing 'CrcFile' (required for MPS devices)"
+                validation_errors=$((validation_errors + 1))
+            else
+                echo "  CrcFile: $crc_file"
+                if [[ ! -f "$crc_file" ]]; then
+                    echo "    [WARNING] File does not exist"
+                fi
+            fi
+        fi
+
+        # Validate DeviceConfigFile (required for MPS, not used for Infineon)
+        if [[ $is_infineon -eq 0 ]]; then
+            if [[ -z "$device_config_file" ]]; then
+                echo "  [ERROR] Missing 'DeviceConfigFile' (required for MPS devices)"
+                validation_errors=$((validation_errors + 1))
+            else
+                echo "  DeviceConfigFile: $device_config_file"
+                if [[ ! -f "$device_config_file" ]]; then
+                    echo "    [WARNING] File does not exist"
+                fi
+            fi
+        fi
+
+        echo ""
+        dev_idx=$((dev_idx + 1))
+    done
+
+    # Summary
+    echo "=========================================="
+    if [[ $validation_errors -eq 0 ]]; then
+        echo "Validation: PASSED"
+        echo "JSON configuration is valid and ready to use."
+        return 0
+    else
+        echo "Validation: FAILED"
+        echo "Found $validation_errors error(s) in JSON configuration."
+        return 1
+    fi
+}
+
+# Function to process JSON configuration
+process_json_config()
+{
+    local json_file="$1"
+
+    if [[ ! -f "$json_file" ]]; then
+        log_message "err" "JSON configuration file not found: $json_file"
+        return 1
+    fi
+
+    log_message "info" "Processing JSON configuration: $json_file"
+
+    # Validate JSON syntax
+    if ! jq empty "$json_file" >/dev/null 2>&1; then
+        log_message "err" "Invalid JSON syntax in file: $json_file"
+        return 1
+    fi
+
+    local total_devices=0
+    local successful_updates=0
+    local failed_updates=0
+
+    # Extract system information
+    local system_hid
+    local num_devices
+
+    system_hid=$(jq -r '."System HID"' "$json_file")
+
+    if [[ -z "$system_hid" ]] || [[ "$system_hid" == "null" ]]; then
+        log_message "err" "Missing System HID in configuration"
+        return 1
+    fi
+
+    num_devices=$(jq '.Devices | length // 0' "$json_file")
+
+    # Validate num_devices is numeric
+    if [[ -z "$num_devices" ]] || ! echo "$num_devices" | grep -qE '^[0-9]+$'; then
+        log_message "warning" "Invalid device count from JSON, defaulting to 0"
+        num_devices=0
+    fi
+
+    log_message "info" "Processing System HID: $system_hid with $num_devices device(s)"
+
+    # Iterate through each device
+    dev_idx=0
+    while [ $dev_idx -lt $num_devices ]; do
+        total_devices=$((total_devices + 1))
+
+        # Extract device information
+        local device_type
+        local bus
+        local addr
+        local config_file
+        local crc_file
+        local device_config_file
+
+        device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file")
+        bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file")
+        addr=$(jq -r ".Devices[$dev_idx].Addr // empty" "$json_file")
+        config_file=$(jq -r ".Devices[$dev_idx].ConfigFile" "$json_file")
+        crc_file=$(jq -r ".Devices[$dev_idx].CrcFile // empty" "$json_file")
+        device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile // empty" "$json_file")
+
+        log_message "info" "Device $total_devices: Type=$device_type, Bus=$bus"
+
+        # Validate extracted fields
+        if [[ -z "$device_type" ]] || [[ "$device_type" == "null" ]]; then
+            log_message "err" "Missing DeviceType for device $dev_idx"
+            failed_updates=$((failed_updates + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        if [[ -z "$bus" ]] || [[ "$bus" == "null" ]]; then
+            log_message "err" "Missing Bus for device $dev_idx"
+            failed_updates=$((failed_updates + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        if [[ -z "$config_file" ]] || [[ "$config_file" == "null" ]]; then
+            log_message "err" "Missing ConfigFile for device $dev_idx"
+            failed_updates=$((failed_updates + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        # Determine device vendor and build appropriate command (case-insensitive)
+        local is_infineon=0
+        if [[ "${device_type,,}" =~ ^xdpe ]]; then
+            is_infineon=1
+        fi
+
+        local cmd=()
+
+        if [[ $is_infineon -eq 1 ]]; then
+            # Infineon device - use hw-management-vr-dpc-infineon-update.sh
+            log_message "info" "Detected Infineon device: $device_type"
+
+            if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
+                log_message "err" "Infineon DPC update script not found or not executable: $DPC_INFINEON_UPDATE_SCRIPT"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            # Validate Addr field (required for Infineon)
+            if [[ -z "$addr" ]]; then
+                log_message "err" "Missing Addr field for Infineon device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            # Build Infineon flash command
+            cmd=("$DPC_INFINEON_UPDATE_SCRIPT" "flash" "-y" "-b" "$bus" "-a" "$addr" "-f" "$config_file")
+            log_message "info" "Infineon device at address $addr"
+
+        else
+            # MPS device - use hw-management-vr-dpc-update.sh
+            log_message "info" "Detected MPS device: $device_type"
+
+            if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
+                log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            # Validate MPS-specific fields
+            if [[ -z "$crc_file" ]]; then
+                log_message "err" "Missing CrcFile for MPS device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            if [[ -z "$device_config_file" ]]; then
+                log_message "err" "Missing DeviceConfigFile for MPS device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            # Normalize System HID for MPS updater (HI180 / HID180 -> hid180)
+            local system_hid_lower
+            system_hid_lower="$(normalize_system_hid_for_mps "$system_hid")"
+
+            # Build MPS command
+            cmd=("$DPC_UPDATE_SCRIPT" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
+        fi
+
+        log_message "info" "Executing: ${cmd[*]}"
+
+        # Execute DPC update script
+        if "${cmd[@]}"; then
+            log_message "info" "Successfully updated device: $device_type on bus $bus"
+            successful_updates=$((successful_updates + 1))
+        else
+            log_message "err" "Failed to update device: $device_type on bus $bus"
+            failed_updates=$((failed_updates + 1))
+        fi
+
+        dev_idx=$((dev_idx + 1))
+    done
+
+    # Summary
+    log_message "info" "======================================"
+    log_message "info" "Batch Update Summary:"
+    log_message "info" "  System HID:        $system_hid"
+    log_message "info" "  Total Devices:     $total_devices"
+    log_message "info" "  Successful:        $successful_updates"
+    log_message "info" "  Failed:            $failed_updates"
+    log_message "info" "======================================"
+
+    if [[ $failed_updates -gt 0 ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Main execution
+main()
+{
+    local validate_only=0
+    local json_file=""
+
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --validate-json)
+                validate_only=1
+                shift
+                ;;
+            --help)
+                usage
+                exit 0
+                ;;
+            -*)
+                echo "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+            *)
+                if [[ -n "$json_file" ]]; then
+                    echo "Error: Multiple JSON files specified. Only one configuration file allowed."
+                    usage
+                    exit 1
+                fi
+                json_file="$1"
+                shift
+                ;;
+        esac
+    done
+
+    # Check if JSON file is provided
+    if [[ -z "$json_file" ]]; then
+        echo "Error: JSON configuration file not specified"
+        usage
+        exit 1
+    fi
+
+    # If validation mode, validate and exit
+    if [[ $validate_only -eq 1 ]]; then
+        # Check dependencies (skip DPC script check for validation)
+        if ! check_dependencies "skip"; then
+            echo "Error: Dependency check failed - jq is required"
+            exit 1
+        fi
+
+        # Validate JSON
+        if validate_json_config "$json_file"; then
+            exit 0
+        else
+            exit 1
+        fi
+    fi
+
+    # Normal operation: batch update
+    log_message "info" "Voltage Regulator DPC Batch Update Started"
+
+    # Check dependencies (vendor scripts only if JSON lists those device types)
+    if ! check_dependencies "" "$json_file"; then
+        log_message "err" "Dependency check failed - exiting"
+        exit 1
+    fi
+
+    # Process JSON configuration
+    if process_json_config "$json_file"; then
+        log_message "info" "Voltage Regulator DPC Batch Update Completed Successfully"
+        exit 0
+    else
+        log_message "err" "Voltage Regulator DPC Batch Update Completed with Errors"
+        exit 1
+    fi
+}
+
+# Execute main function
+main "$@"
+
