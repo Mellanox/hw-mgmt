@@ -150,6 +150,22 @@ find_tool() {
   return 1
 }
 
+# Infineon VRs use DeviceType xdpe* and omit MPS-only CrcFile / DeviceConfigFile.
+is_infineon_device_type() {
+  [[ "${1,,}" =~ ^xdpe ]]
+}
+
+json_config_has_infineon_devices() {
+  local json_file="$1"
+  local dt
+  while IFS= read -r dt; do
+    if is_infineon_device_type "$dt"; then
+      return 0
+    fi
+  done < <(jq -r '.Devices[]?.DeviceType // empty' "$json_file" 2>/dev/null)
+  return 1
+}
+
 find_tool_candidates() {
   # find_tool_candidates <filename>
   # Prints matching full paths, one per line, in preference order.
@@ -387,6 +403,64 @@ renesas_hex_expected_rev() {
   [[ -n "$v" ]] && echo "$v"
 }
 
+# Infineon GUI .txt/.mic export metadata before [Configuration Data].
+# Header lines use "Field : value"; [User Data] uses "Loop A USER_DATA_XX = value".
+infineon_txt_field_get() {
+  local txt_file="$1"
+  local field="$2"
+  local line val
+  [[ -f "$txt_file" ]] || { echo ""; return 0; }
+  line="$(grep -iE "^[[:space:]]*${field}[[:space:]]*[:=]" "$txt_file" 2>/dev/null | head -n 1 || true)"
+  [[ -z "$line" ]] && { echo ""; return 0; }
+  if [[ "$line" == *"="* ]]; then
+    val="${line#*=}"
+  else
+    val="${line#*:}"
+  fi
+  val="$(echo "$val" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/#.*//')"
+  echo "$val"
+}
+
+# Expected model/revision for xdpe*: Infineon GUI [User Data] Loop A USER_DATA_*.
+# read-vr-model-version.sh reports the post-flash PMBUS MFR model/revision word values;
+# USER_DATA_01/00 in the package are the package-declared targets for skip-identical / --verify.
+infineon_txt_expected_mfr() {
+  local txt_file="$1"
+  local which="$2" # model | rev
+  local raw
+  case "$which" in
+    model) raw="$(infineon_txt_field_get "$txt_file" "Loop A USER_DATA_01")" ;;
+    rev)   raw="$(infineon_txt_field_get "$txt_file" "Loop A USER_DATA_00")" ;;
+    *) echo ""; return 1 ;;
+  esac
+  [[ -z "$raw" ]] && { echo ""; return 0; }
+  raw="$(echo "$raw" | tr '[:upper:]' '[:lower:]')"
+  if [[ "$raw" =~ ^0x[0-9a-f]{1,4}$ ]]; then
+    printf '0x%04x\n' "$((raw))"
+    return 0
+  fi
+  if [[ "$raw" =~ ^[0-9a-f]{1,4}$ ]]; then
+    printf '0x%04x\n' "$((16#$raw))"
+    return 0
+  fi
+  echo ""
+}
+
+normalize_i2c_addr() {
+  local addr="$1"
+  addr="$(echo "${addr:-}" | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+  [[ -z "$addr" ]] && { echo ""; return 0; }
+  if [[ "$addr" =~ ^0x[0-9a-f]+$ ]]; then
+    echo "$addr"
+    return 0
+  fi
+  if [[ "$addr" =~ ^[0-9a-f]+$ ]]; then
+    printf '0x%02x\n' "$((16#$addr))"
+    return 0
+  fi
+  echo ""
+}
+
 show_cmd() {
   local json=0
   while [[ $# -gt 0 ]]; do
@@ -446,27 +520,35 @@ apply_cmd() {
     local json_cfg="$2" # filename inside pkg_dir
 
     jq -r '.Devices[] | [.Bus, .DeviceType, (.Addr // "-"), .ConfigFile, (.DeviceConfigFile // "-")] | @tsv' "${pkg_dir}/${json_cfg}" | \
-    while IFS=$'\t' read -r bus devtype addr cfg cfgconf; do
+    while IFS=$'\t' read -r bus devtype json_addr cfg cfgconf; do
       [[ -n "$bus" && -n "$devtype" ]] || continue
-      dpc_json_tsv_empty "$addr" && addr=""
+      dpc_json_tsv_empty "$json_addr" && json_addr=""
       dpc_json_tsv_empty "$cfgconf" && cfgconf=""
 
       if [[ "$cfg" != /* ]]; then cfg="${pkg_dir}/${cfg}"; fi
+      if [[ -n "$cfgconf" && "$cfgconf" != /* ]]; then cfgconf="${pkg_dir}/${cfgconf}"; fi
+
+      local addr exp_model exp_rev
 
       if [[ "${devtype,,}" =~ ^(raa|rrv) ]]; then
-        local exp_model exp_rev
+        addr="$(normalize_i2c_addr "$json_addr")"
+        [[ -z "$addr" && -n "$json_addr" ]] && addr="$json_addr"
         exp_model="$(renesas_hex_expected_model "$cfg")"
         exp_rev="$(renesas_hex_expected_rev "$cfg")"
         echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
         continue
       fi
 
-      if [[ "${devtype,,}" =~ ^xdpe ]]; then
-        echo -e "${bus}\t${devtype}\t${addr}\t\t"
+      if is_infineon_device_type "$devtype"; then
+        addr="$(normalize_i2c_addr "$json_addr")"
+        if [[ -z "$addr" ]]; then
+          addr="$(normalize_i2c_addr "$(infineon_txt_field_get "$cfg" "PMBus Address")")"
+        fi
+        exp_model="$(infineon_txt_expected_mfr "$cfg" model)"
+        exp_rev="$(infineon_txt_expected_mfr "$cfg" rev)"
+        echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
         continue
       fi
-
-      if [[ "$cfgconf" != /* ]]; then cfgconf="${pkg_dir}/${cfgconf}"; fi
 
       local model_reg rev_reg model_page rev_page
       model_reg="$(conf_get "$cfgconf" DPC_MODEL_ID 0xba)"
@@ -475,14 +557,11 @@ apply_cmd() {
       rev_page="$(conf_get "$cfgconf" DPC_REVISION_ID_PAGE 1)"
 
       # Device I2C address comes from the CSV (first column of first data row).
-      local csv_addr
-      csv_addr="$(dpc_mps_csv_addr_from_cfg "$cfg")"
-
-      local exp_model exp_rev
+      addr="$(dpc_mps_csv_addr_from_cfg "$cfg")"
       exp_model="$(csv_expected_for_page_cmd "$cfg" "$model_page" "$model_reg")"
       exp_rev="$(csv_expected_for_page_cmd "$cfg" "$rev_page" "$rev_reg")"
 
-      echo -e "${bus}\t${devtype}\t${csv_addr}\t${exp_model}\t${exp_rev}"
+      echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
     done
   }
 
@@ -492,7 +571,7 @@ apply_cmd() {
 
     info "Reading current VR versions..."
     local current_json
-    current_json="$(read_vr_json_or_die "$pkg_dir")"
+    current_json="$(read_vr_json_or_die)"
 
     info "Deriving target VR versions from package..."
     local targets
@@ -659,11 +738,11 @@ apply_cmd() {
           fi
         else
           if [[ -z "$crc_file" ]]; then
-            info "ERROR: Devices[$i] missing CrcFile"
+            info "ERROR: Devices[$i] missing CrcFile (required for MPS)"
             errors=$((errors + 1))
           fi
           if [[ -z "$device_config_file" ]]; then
-            info "ERROR: Devices[$i] missing DeviceConfigFile"
+            info "ERROR: Devices[$i] missing DeviceConfigFile (required for MPS)"
             errors=$((errors + 1))
           fi
         fi
@@ -721,6 +800,21 @@ apply_cmd() {
     debug "verify json_cfg=$json_cfg"
     validate_json_config_pkg "$pkg_dir" "$json_cfg" || die "JSON validation failed"
 
+    # Ensure per-device updater scripts exist (/usr/bin preferred, then $DPC_TOOLS_PATHS)
+    if ! find_tool hw-management-vr-dpc-update.sh >/dev/null 2>&1; then
+      die "Missing hw-management-vr-dpc-update.sh (searched /usr/bin and \$DPC_TOOLS_PATHS)"
+    fi
+    if json_config_has_infineon_devices "${pkg_dir}/${json_cfg}"; then
+      if ! find_tool hw-management-vr-dpc-infineon-update.sh >/dev/null 2>&1; then
+        die "Missing hw-management-vr-dpc-infineon-update.sh (JSON has Infineon xdpe* devices)"
+      fi
+    fi
+    if jq -e '.Devices[]? | select((.DeviceType // "") | test("^(raa|rrv)"; "i"))' "${pkg_dir}/${json_cfg}" >/dev/null 2>&1; then
+      if ! find_tool hw-management-vr-dpc-renesas-update.sh >/dev/null 2>&1; then
+        die "Missing hw-management-vr-dpc-renesas-update.sh (JSON has Renesas raa*/rrv* devices)"
+      fi
+    fi
+
     VERIFIED_PKG_DIR="$pkg_dir"
     VERIFIED_JSON_CFG="$json_cfg"
     info "Package verify OK (top_dir=$top_dir, json=$json_cfg)."
@@ -745,6 +839,20 @@ apply_cmd() {
     [[ "$system_hid" =~ ^[Hh][Ii]([Dd])?[0-9]{3}$ ]] || die "Invalid 'System HID' format (expected HI### or HID###): $system_hid"
     local system_hid_lower
     system_hid_lower="$(echo "$system_hid" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/')"
+
+    local updater infineon_updater renesas_updater
+    updater="$(find_tool hw-management-vr-dpc-update.sh)" || die "Per-device updater not found (searched /usr/bin and \$DPC_TOOLS_PATHS): hw-management-vr-dpc-update.sh"
+    debug "updater selected: $updater"
+    infineon_updater=""
+    if json_config_has_infineon_devices "$json_file"; then
+      infineon_updater="$(find_tool hw-management-vr-dpc-infineon-update.sh)" || die "Infineon updater not found: hw-management-vr-dpc-infineon-update.sh"
+      debug "infineon updater selected: $infineon_updater"
+    fi
+    renesas_updater=""
+    if jq -e '.Devices[]? | select((.DeviceType // "") | test("^(raa|rrv)"; "i"))' "$json_file" >/dev/null 2>&1; then
+      renesas_updater="$(find_tool hw-management-vr-dpc-renesas-update.sh)" || die "Renesas updater not found: hw-management-vr-dpc-renesas-update.sh"
+      debug "renesas updater selected: $renesas_updater"
+    fi
 
     local num_devices
     num_devices="$(jq -r '.Devices | length // 0' "$json_file")"
@@ -773,7 +881,7 @@ apply_cmd() {
       device_config_file="$(jq -r ".Devices[$i].DeviceConfigFile // empty" "$json_file")"
 
       if [[ -z "$device_type" || -z "$bus" || -z "$config_file" ]]; then
-        info "ERROR: JSON device[$i] is missing required fields (DeviceType/Bus/ConfigFile)"
+        info "ERROR: JSON device[$i] missing DeviceType, Bus, or ConfigFile"
         fail=$((fail + 1))
         i=$((i + 1))
         continue
@@ -864,6 +972,7 @@ apply_cmd() {
         info "ERROR: Update failed for device[$i]: Type=$device_type Bus=$bus"
         info "ERROR: rc=$rc (updater may log details to syslog via logger)"
         if [[ "${DPC_DEBUG:-0}" == "1" ]]; then
+          # cmd is (bash <script> <args...>); re-run with -x for a trace.
           info "DEBUG: Re-running failed device[$i] with 'bash -x' (may be verbose)..."
           ( set +e; bash -x "${cmd[@]:1}" ) || true
         fi

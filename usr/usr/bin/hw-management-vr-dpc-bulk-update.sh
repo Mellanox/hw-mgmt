@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,14 @@
 # Script directory for finding the individual update script.
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 UPDATE_SCRIPT="$SCRIPT_DIR/hw-management-vr-dpc-update.sh"
+
+# Provide fallback log_info if not available (bulk-update runs as its own process).
+if ! type log_info >/dev/null 2>&1; then
+	log_info()
+	{
+		logger -t hw-management -p user.info "$1"
+	}
+fi
 
 # Error handling function.
 error_exit()
@@ -141,12 +149,12 @@ parse_devtree()
 
 		# Check if this device has firmware files.
 		if check_firmware_files "$device_name" "$bus" "$hid"; then
-			found_devices+=("$device_name $bus")
+			found_devices+=("${device_name}"$'\t'"${bus}")
 			log_info "Found device with firmware: $device_name on bus $bus"
 		fi
 	done < "$devtree_file"
 
-	echo "${found_devices[@]}"
+	printf '%s\n' "${found_devices[@]}"
 }
 
 # Run individual device update.
@@ -197,9 +205,12 @@ main()
 
 	log_info "Starting bulk voltage regulator update for HID: $hid"
 
-	# Parse device tree and find devices with firmware.
-	local devices
-	read -ra devices <<< "$(parse_devtree "$hid")"
+	# Parse device tree and find devices with firmware (one device<TAB>bus per line).
+	local devices=()
+	local device_info
+	while IFS= read -r device_info; do
+		[[ -n "$device_info" ]] && devices+=("$device_info")
+	done < <(parse_devtree "$hid")
 
 	if [[ ${#devices[@]} -eq 0 ]]; then
 		log_info "No devices with firmware files found for HID: $hid"
@@ -213,7 +224,8 @@ main()
 	local failure_count=0
 
 	for device_info in "${devices[@]}"; do
-		read -r device_name bus <<< "$device_info"
+		local device_name bus
+		IFS=$'\t' read -r device_name bus <<< "$device_info"
 
 		if update_device "$device_name" "$bus" "$hid"; then
 			((success_count++))
