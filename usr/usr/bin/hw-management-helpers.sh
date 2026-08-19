@@ -413,12 +413,46 @@ check_host_os_is_sonic()
 	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
 }
 
-# Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
-# Requires SONiC plus a host-side contract file (same well-known paths as on the BMC).
+# Print the host usb0 conf to use:
+#   1. HW_MANAGEMENT_USB0_CONF (test / operator override)
+#   2. /etc/<SKU>/hw-management-usb0.conf (GB200 / GB300 / NBU-VR)
+#   3. /etc/hw-management-usb0.conf (switch / SONiC default)
+host_usb0_conf_path()
+{
+	if [ -n "${HW_MANAGEMENT_USB0_CONF:-}" ]; then
+		printf '%s\n' "$HW_MANAGEMENT_USB0_CONF"
+		return 0
+	fi
+	local sku=""
+	if [ -n "${sku_file:-}" ] && [ -f "$sku_file" ]; then
+		sku=$(tr -d '[:space:]' < "$sku_file")
+	fi
+	if [ -n "$sku" ] && [ -f "/etc/${sku}/hw-management-usb0.conf" ]; then
+		printf '%s\n' "/etc/${sku}/hw-management-usb0.conf"
+		return 0
+	fi
+	printf '%s\n' "/etc/hw-management-usb0.conf"
+}
+
+# Returns 0 when usb0 addressing is NOS-owned (SONiC contract file, or
+# USB0_MANAGED_BY_NOS in the resolved host usb0 conf).
 check_host_usb0_managed_by_nos()
 {
-	check_host_os_is_sonic || return 1
-	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
+	local conf v
+
+	if check_host_os_is_sonic; then
+		if [ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]; then
+			return 0
+		fi
+	fi
+	conf=$(host_usb0_conf_path)
+	if [ -f "$conf" ]; then
+		v=$(sed -n 's/^[[:space:]]*USB0_MANAGED_BY_NOS=//p' "$conf" | head -1 | sed 's/[[:space:]]*#.*//' | tr -d " '\"" | tr '[:upper:]' '[:lower:]')
+		case "$v" in
+		1|yes|true) return 0 ;;
+		esac
+	fi
+	return 1
 }
 
 # This function create or cleans sysfs monitor helper files.

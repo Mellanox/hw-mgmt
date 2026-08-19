@@ -155,11 +155,17 @@ ip -4 addr show dev usb0
 
 ---
 
-## Non-SONiC (unchanged)
+## Non-SONiC
 
 Without **`USB0_MANAGED_BY_NOS=1`** on the BMC and without SONiC on the host,
-hw-management keeps the legacy path: **`USB0_ADDRESS`** + **systemd-networkd** on the
-BMC, **`ifup`** on the host where **`/etc/network/interfaces`** defines **usb0**.
+the default is a **DHCP client** on the BMC (**`USB0_MODE=dhcp`**, systemd-networkd).
+Static **`USB0_ADDRESS`** is still supported (**`USB0_MODE=static`**).
+On the host, **hw-management** applies **`/etc/<SKU>/hw-management-usb0.conf`**
+when present (GB200 / GB300 / NBU-VR: static **`10.0.1.2/24`**, no DHCP;
+**HI162 HI166 HI167 HI168 HI169 HI170 HI175 HI176 HI177 HI180 HI185 HI197**),
+otherwise **`/etc/hw-management-usb0.conf`**, and offers
+**`USB0_BMC_ADDRESS`** to the BMC when **`USB0_DHCP_SERVER=1`**.
+Legacy **`ifup`** remains the fallback when that conf is absent or unusable.
 
 ---
 
@@ -173,6 +179,8 @@ BMC, **`ifup`** on the host where **`/etc/network/interfaces`** defines **usb0**
 | **`bmc/usr/usr/bin/hw-management-bmc-plat-specific-preps.sh`** | Renders or skips **`.network`** unit |
 | **`bmc/usr/usr/bin/hw-management-bmc-ready-common.sh`** | **`usb_net_config()`** |
 | **`usr/usr/bin/hw-management-ifupdown.sh`** | Host udev **`ifup`** (skips **usb0** when SONiC + contract file) |
-| **`usr/usr/bin/hw-management-helpers.sh`** | **`check_host_usb0_managed_by_nos()`** |
+| **`usr/etc/hw-management-usb0.conf`** | Host default **usb0** (switch / SONiC **`169.254.100.2`** + DHCP) |
+| **`usr/etc/hw-management-usb0-nvlink.conf`** | Host GB200 / GB300 / NBU-VR template (**`10.0.1.2/24`**, installed as **`/etc/<HID>/hw-management-usb0.conf`**) |
+| **`usr/usr/bin/hw-management-helpers.sh`** | **`host_usb0_conf_path()`**, **`check_host_usb0_managed_by_nos()`** |
 | **`usr/usr/bin/hw_management_sonic_check.py`** | SONiC host detection |
 | **`bmc/README.md`** | Full BMC package and **usb0** documentation |
