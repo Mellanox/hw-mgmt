@@ -229,8 +229,8 @@ PLATFORM_CONFIG = {
         {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
             "arg": {
                 "name_list": ["pwr1", "pwr2", "pwr3", "pwr4"],
-                "_event_reg": "psu_ac_event",
-                "_status_reg": "psu_ac_status",
+                "_event_reg": "psu_dc_event",
+                "_status_reg": "psu_dc_status",
                 "_inversed": False,
                 "_mask": "00001111",
                 "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
