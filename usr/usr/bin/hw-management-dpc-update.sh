@@ -150,6 +150,22 @@ find_tool() {
   return 1
 }
 
+# Infineon VRs use DeviceType xdpe* and omit MPS-only CrcFile / DeviceConfigFile.
+is_infineon_device_type() {
+  [[ "${1,,}" =~ ^xdpe ]]
+}
+
+json_config_has_infineon_devices() {
+  local json_file="$1"
+  local dt
+  while IFS= read -r dt; do
+    if is_infineon_device_type "$dt"; then
+      return 0
+    fi
+  done < <(jq -r '.Devices[]?.DeviceType // empty' "$json_file" 2>/dev/null)
+  return 1
+}
+
 find_tool_candidates() {
   # find_tool_candidates <filename>
   # Prints matching full paths, one per line, in preference order.
@@ -177,6 +193,58 @@ realpath_fallback() {
     /*) echo "$1" ;;
     *) echo "$(pwd -P)/$1" ;;
   esac
+}
+
+# Reject tar members that can escape the extraction directory:
+# absolute paths, ".." components, and symlink/hardlink members (link-then-write escapes).
+# Call before tar -x.
+assert_safe_tar_members() {
+  local pkg_path="$1"
+  local member rest comp line
+
+  while IFS= read -r member; do
+    [[ -z "$member" ]] && continue
+    case "$member" in
+      /*|~*)
+        die "Unsafe archive member (absolute path): $member"
+        ;;
+    esac
+    rest="$member"
+    while [[ -n "$rest" ]]; do
+      if [[ "$rest" == */* ]]; then
+        comp="${rest%%/*}"
+        rest="${rest#*/}"
+      else
+        comp="$rest"
+        rest=""
+      fi
+      if [[ "$comp" == ".." ]]; then
+        die "Unsafe archive member (parent-directory path): $member"
+      fi
+    done
+  done < <(tar -tf "$pkg_path")
+
+  # Name-only checks miss "safe name -> outside" then "safe_name/file" write-through.
+  # DPC packages are plain files/dirs only; refuse any symlink or hardlink members.
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "${line:0:1}" in
+      l|h)
+        die "Unsafe archive member (symlink/hardlink not allowed): $line"
+        ;;
+    esac
+  done < <(tar -tvf "$pkg_path" 2>/dev/null)
+}
+
+extract_tar_to_dir() {
+  local pkg_path="$1"
+  local dest="$2"
+  assert_safe_tar_members "$pkg_path"
+  if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
+    tar -xvf "$pkg_path" -C "$dest"
+  else
+    tar -xf "$pkg_path" -C "$dest" >/dev/null 2>&1
+  fi
 }
 
 # Read simple VAR=VALUE assignment from a config file without executing it.
@@ -387,6 +455,64 @@ renesas_hex_expected_rev() {
   [[ -n "$v" ]] && echo "$v"
 }
 
+# Infineon GUI .txt/.mic export metadata before [Configuration Data].
+# Header lines use "Field : value"; [User Data] uses "Loop A USER_DATA_XX = value".
+infineon_txt_field_get() {
+  local txt_file="$1"
+  local field="$2"
+  local line val
+  [[ -f "$txt_file" ]] || { echo ""; return 0; }
+  line="$(grep -iE "^[[:space:]]*${field}[[:space:]]*[:=]" "$txt_file" 2>/dev/null | head -n 1 || true)"
+  [[ -z "$line" ]] && { echo ""; return 0; }
+  if [[ "$line" == *"="* ]]; then
+    val="${line#*=}"
+  else
+    val="${line#*:}"
+  fi
+  val="$(echo "$val" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/#.*//')"
+  echo "$val"
+}
+
+# Expected model/revision for xdpe*: Infineon GUI [User Data] Loop A USER_DATA_*.
+# read-vr-model-version.sh reports the post-flash PMBUS MFR model/revision word values;
+# USER_DATA_01/00 in the package are the package-declared targets for skip-identical / --verify.
+infineon_txt_expected_mfr() {
+  local txt_file="$1"
+  local which="$2" # model | rev
+  local raw
+  case "$which" in
+    model) raw="$(infineon_txt_field_get "$txt_file" "Loop A USER_DATA_01")" ;;
+    rev)   raw="$(infineon_txt_field_get "$txt_file" "Loop A USER_DATA_00")" ;;
+    *) echo ""; return 1 ;;
+  esac
+  [[ -z "$raw" ]] && { echo ""; return 0; }
+  raw="$(echo "$raw" | tr '[:upper:]' '[:lower:]')"
+  if [[ "$raw" =~ ^0x[0-9a-f]{1,4}$ ]]; then
+    printf '0x%04x\n' "$((raw))"
+    return 0
+  fi
+  if [[ "$raw" =~ ^[0-9a-f]{1,4}$ ]]; then
+    printf '0x%04x\n' "$((16#$raw))"
+    return 0
+  fi
+  echo ""
+}
+
+normalize_i2c_addr() {
+  local addr="$1"
+  addr="$(echo "${addr:-}" | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+  [[ -z "$addr" ]] && { echo ""; return 0; }
+  if [[ "$addr" =~ ^0x[0-9a-f]+$ ]]; then
+    echo "$addr"
+    return 0
+  fi
+  if [[ "$addr" =~ ^[0-9a-f]+$ ]]; then
+    printf '0x%02x\n' "$((16#$addr))"
+    return 0
+  fi
+  echo ""
+}
+
 show_cmd() {
   local json=0
   while [[ $# -gt 0 ]]; do
@@ -446,27 +572,35 @@ apply_cmd() {
     local json_cfg="$2" # filename inside pkg_dir
 
     jq -r '.Devices[] | [.Bus, .DeviceType, (.Addr // "-"), .ConfigFile, (.DeviceConfigFile // "-")] | @tsv' "${pkg_dir}/${json_cfg}" | \
-    while IFS=$'\t' read -r bus devtype addr cfg cfgconf; do
+    while IFS=$'\t' read -r bus devtype json_addr cfg cfgconf; do
       [[ -n "$bus" && -n "$devtype" ]] || continue
-      dpc_json_tsv_empty "$addr" && addr=""
+      dpc_json_tsv_empty "$json_addr" && json_addr=""
       dpc_json_tsv_empty "$cfgconf" && cfgconf=""
 
       if [[ "$cfg" != /* ]]; then cfg="${pkg_dir}/${cfg}"; fi
+      if [[ -n "$cfgconf" && "$cfgconf" != /* ]]; then cfgconf="${pkg_dir}/${cfgconf}"; fi
+
+      local addr exp_model exp_rev
 
       if [[ "${devtype,,}" =~ ^(raa|rrv) ]]; then
-        local exp_model exp_rev
+        addr="$(normalize_i2c_addr "$json_addr")"
+        [[ -z "$addr" && -n "$json_addr" ]] && addr="$json_addr"
         exp_model="$(renesas_hex_expected_model "$cfg")"
         exp_rev="$(renesas_hex_expected_rev "$cfg")"
         echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
         continue
       fi
 
-      if [[ "${devtype,,}" =~ ^xdpe ]]; then
-        echo -e "${bus}\t${devtype}\t${addr}\t\t"
+      if is_infineon_device_type "$devtype"; then
+        addr="$(normalize_i2c_addr "$json_addr")"
+        if [[ -z "$addr" ]]; then
+          addr="$(normalize_i2c_addr "$(infineon_txt_field_get "$cfg" "PMBus Address")")"
+        fi
+        exp_model="$(infineon_txt_expected_mfr "$cfg" model)"
+        exp_rev="$(infineon_txt_expected_mfr "$cfg" rev)"
+        echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
         continue
       fi
-
-      if [[ "$cfgconf" != /* ]]; then cfgconf="${pkg_dir}/${cfgconf}"; fi
 
       local model_reg rev_reg model_page rev_page
       model_reg="$(conf_get "$cfgconf" DPC_MODEL_ID 0xba)"
@@ -475,14 +609,11 @@ apply_cmd() {
       rev_page="$(conf_get "$cfgconf" DPC_REVISION_ID_PAGE 1)"
 
       # Device I2C address comes from the CSV (first column of first data row).
-      local csv_addr
-      csv_addr="$(dpc_mps_csv_addr_from_cfg "$cfg")"
-
-      local exp_model exp_rev
+      addr="$(dpc_mps_csv_addr_from_cfg "$cfg")"
       exp_model="$(csv_expected_for_page_cmd "$cfg" "$model_page" "$model_reg")"
       exp_rev="$(csv_expected_for_page_cmd "$cfg" "$rev_page" "$rev_reg")"
 
-      echo -e "${bus}\t${devtype}\t${csv_addr}\t${exp_model}\t${exp_rev}"
+      echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
     done
   }
 
@@ -492,7 +623,7 @@ apply_cmd() {
 
     info "Reading current VR versions..."
     local current_json
-    current_json="$(read_vr_json_or_die "$pkg_dir")"
+    current_json="$(read_vr_json_or_die)"
 
     info "Deriving target VR versions from package..."
     local targets
@@ -659,11 +790,11 @@ apply_cmd() {
           fi
         else
           if [[ -z "$crc_file" ]]; then
-            info "ERROR: Devices[$i] missing CrcFile"
+            info "ERROR: Devices[$i] missing CrcFile (required for MPS)"
             errors=$((errors + 1))
           fi
           if [[ -z "$device_config_file" ]]; then
-            info "ERROR: Devices[$i] missing DeviceConfigFile"
+            info "ERROR: Devices[$i] missing DeviceConfigFile (required for MPS)"
             errors=$((errors + 1))
           fi
         fi
@@ -694,18 +825,17 @@ apply_cmd() {
       return 0
     }
 
-    # Verify tar can be listed and top dir detected
+    # Verify tar can be listed and top dir detected; reject path escapes before extract
     tar -tf "$pkg_path" >/dev/null 2>&1 || die "Cannot read tar contents: $pkg_path"
     local top_dir
     top_dir="$(tar -tf "$pkg_path" | awk -F/ 'NR==1{print $1}')"
     [[ -n "$top_dir" ]] || die "Could not detect top-level directory inside tar"
+    case "$top_dir" in
+      /*|..|*/..|*/../*|../*) die "Unsafe top-level directory in archive: $top_dir" ;;
+    esac
 
     # Extract for deeper validation
-    if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
-      tar -xvf "$pkg_path" -C "$tmp"
-    else
-      tar -xf "$pkg_path" -C "$tmp" >/dev/null 2>&1
-    fi
+    extract_tar_to_dir "$pkg_path" "$tmp"
     local pkg_dir="${tmp}/${top_dir}"
     [[ -d "$pkg_dir" ]] || die "Extracted top-level directory not found: $pkg_dir"
     debug "verify extracted pkg_dir=$pkg_dir"
@@ -720,6 +850,21 @@ apply_cmd() {
     [[ -n "$json_cfg" && -f "${pkg_dir}/${json_cfg}" ]] || die "JSON configuration file not found in package dir"
     debug "verify json_cfg=$json_cfg"
     validate_json_config_pkg "$pkg_dir" "$json_cfg" || die "JSON validation failed"
+
+    # Ensure per-device updater scripts exist (/usr/bin preferred, then $DPC_TOOLS_PATHS)
+    if ! find_tool hw-management-vr-dpc-update.sh >/dev/null 2>&1; then
+      die "Missing hw-management-vr-dpc-update.sh (searched /usr/bin and \$DPC_TOOLS_PATHS)"
+    fi
+    if json_config_has_infineon_devices "${pkg_dir}/${json_cfg}"; then
+      if ! find_tool hw-management-vr-dpc-infineon-update.sh >/dev/null 2>&1; then
+        die "Missing hw-management-vr-dpc-infineon-update.sh (JSON has Infineon xdpe* devices)"
+      fi
+    fi
+    if jq -e '.Devices[]? | select((.DeviceType // "") | test("^(raa|rrv)"; "i"))' "${pkg_dir}/${json_cfg}" >/dev/null 2>&1; then
+      if ! find_tool hw-management-vr-dpc-renesas-update.sh >/dev/null 2>&1; then
+        die "Missing hw-management-vr-dpc-renesas-update.sh (JSON has Renesas raa*/rrv* devices)"
+      fi
+    fi
 
     VERIFIED_PKG_DIR="$pkg_dir"
     VERIFIED_JSON_CFG="$json_cfg"
@@ -745,6 +890,20 @@ apply_cmd() {
     [[ "$system_hid" =~ ^[Hh][Ii]([Dd])?[0-9]{3}$ ]] || die "Invalid 'System HID' format (expected HI### or HID###): $system_hid"
     local system_hid_lower
     system_hid_lower="$(echo "$system_hid" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/')"
+
+    local updater infineon_updater renesas_updater
+    updater="$(find_tool hw-management-vr-dpc-update.sh)" || die "Per-device updater not found (searched /usr/bin and \$DPC_TOOLS_PATHS): hw-management-vr-dpc-update.sh"
+    debug "updater selected: $updater"
+    infineon_updater=""
+    if json_config_has_infineon_devices "$json_file"; then
+      infineon_updater="$(find_tool hw-management-vr-dpc-infineon-update.sh)" || die "Infineon updater not found: hw-management-vr-dpc-infineon-update.sh"
+      debug "infineon updater selected: $infineon_updater"
+    fi
+    renesas_updater=""
+    if jq -e '.Devices[]? | select((.DeviceType // "") | test("^(raa|rrv)"; "i"))' "$json_file" >/dev/null 2>&1; then
+      renesas_updater="$(find_tool hw-management-vr-dpc-renesas-update.sh)" || die "Renesas updater not found: hw-management-vr-dpc-renesas-update.sh"
+      debug "renesas updater selected: $renesas_updater"
+    fi
 
     local num_devices
     num_devices="$(jq -r '.Devices | length // 0' "$json_file")"
@@ -773,7 +932,7 @@ apply_cmd() {
       device_config_file="$(jq -r ".Devices[$i].DeviceConfigFile // empty" "$json_file")"
 
       if [[ -z "$device_type" || -z "$bus" || -z "$config_file" ]]; then
-        info "ERROR: JSON device[$i] is missing required fields (DeviceType/Bus/ConfigFile)"
+        info "ERROR: JSON device[$i] missing DeviceType, Bus, or ConfigFile"
         fail=$((fail + 1))
         i=$((i + 1))
         continue
@@ -832,7 +991,7 @@ apply_cmd() {
           info "Forcing update for device[$i] (already up-to-date): Type=$device_type Bus=$bus Addr=${lookup_addr:-} model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
           ;;
         NO_TARGET)
-          info "WARN: device[$i] could not parse target model/revision; attempting update"
+          die "Could not parse expected model/revision from package for device[$i] Type=$device_type Bus=$bus Addr=${lookup_addr:-}; refusing update"
           ;;
       esac
 
@@ -864,6 +1023,7 @@ apply_cmd() {
         info "ERROR: Update failed for device[$i]: Type=$device_type Bus=$bus"
         info "ERROR: rc=$rc (updater may log details to syslog via logger)"
         if [[ "${DPC_DEBUG:-0}" == "1" ]]; then
+          # cmd is (bash <script> <args...>); re-run with -x for a trace.
           info "DEBUG: Re-running failed device[$i] with 'bash -x' (may be verbose)..."
           ( set +e; bash -x "${cmd[@]:1}" ) || true
         fi
@@ -941,15 +1101,14 @@ apply_cmd() {
   fi
 
   info "Extracting package: $pkg_path"
-  if [[ "${DPC_VERBOSE:-0}" == "1" ]]; then
-    tar -xvf "$pkg_path" -C "$tmp"
-  else
-    tar -xf "$pkg_path" -C "$tmp" >/dev/null 2>&1
-  fi
+  extract_tar_to_dir "$pkg_path" "$tmp"
 
   local top_dir
   top_dir="$(tar -tf "$pkg_path" | awk -F/ 'NR==1{print $1}')"
   [[ -n "$top_dir" ]] || die "Could not detect top-level directory inside tar"
+  case "$top_dir" in
+    /*|..|*/..|*/../*|../*) die "Unsafe top-level directory in archive: $top_dir" ;;
+  esac
 
   local pkg_dir="${tmp}/${top_dir}"
   [[ -d "$pkg_dir" ]] || die "Extracted top-level directory not found: $pkg_dir"
@@ -965,49 +1124,50 @@ apply_cmd() {
   [[ -n "$json_cfg" && -f "${pkg_dir}/${json_cfg}" ]] || die "JSON configuration file not found in package dir"
   debug "apply json_cfg=$json_cfg"
 
-  if [[ $skip_identical -eq 1 ]]; then
-    info "Checking current vs package targets..."
-    local current_json
-    current_json="$(read_vr_json_or_die)"
+  # Always evaluate targets. --force only bypasses identical-version early skip;
+  # NO_HW/VENDOR_SKIP remain skips in run_update_from_json; NO_TARGET refuses.
+  info "Checking current vs package targets..."
+  local current_json
+  current_json="$(read_vr_json_or_die)"
 
-      local targets
-      targets="$(build_targets_tsv "$pkg_dir" "$json_cfg")"
+  local targets
+  targets="$(build_targets_tsv "$pkg_dir" "$json_cfg")"
 
-      local mismatch=0
-      while IFS=$'\t' read -r bus devtype addr exp_model exp_rev; do
-        [[ -n "$bus" && -n "$devtype" ]] || continue
+  local mismatch=0
+  while IFS=$'\t' read -r bus devtype addr exp_model exp_rev; do
+    [[ -n "$bus" && -n "$devtype" ]] || continue
 
-        dpc_eval_target_entry "$current_json" "$bus" "$devtype" "${addr:-}" "${exp_model:-}" "${exp_rev:-}"
+    dpc_eval_target_entry "$current_json" "$bus" "$devtype" "${addr:-}" "${exp_model:-}" "${exp_rev:-}"
 
-        case "$DPC_ENTRY_STATUS" in
-          VENDOR_SKIP)
-            info "Skipping (vendor mismatch): package DeviceType=$devtype Bus=$bus Addr=${addr:-} hardware=$DPC_ENTRY_HW_DEV"
-            ;;
-          NO_HW)
-            info "Skipping (no device): DeviceType=$devtype Bus=$bus Addr=${addr:-}"
-            ;;
-          UP_TO_DATE)
-            info "Up-to-date: DeviceType=$devtype Bus=$bus model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
-            ;;
-          NEEDS_UPDATE)
-            info "Needs update: DeviceType=$devtype Bus=$bus current(model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV) target(model=$exp_model rev=$exp_rev)"
-            mismatch=1
-            ;;
-          NO_TARGET)
-            info "WARN: Could not parse expected model/revision from package for DeviceType=$devtype Bus=$bus (will NOT skip)"
-            mismatch=1
-            ;;
-          *)
-            info "WARN: Unexpected entry status for DeviceType=$devtype Bus=$bus (will NOT skip)"
-            mismatch=1
-            ;;
-        esac
-      done <<< "$targets"
+    case "$DPC_ENTRY_STATUS" in
+      VENDOR_SKIP)
+        info "Skipping (vendor mismatch): package DeviceType=$devtype Bus=$bus Addr=${addr:-} hardware=$DPC_ENTRY_HW_DEV"
+        ;;
+      NO_HW)
+        info "Skipping (no device): DeviceType=$devtype Bus=$bus Addr=${addr:-}"
+        ;;
+      UP_TO_DATE)
+        info "Up-to-date: DeviceType=$devtype Bus=$bus model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV"
+        ;;
+      NEEDS_UPDATE)
+        info "Needs update: DeviceType=$devtype Bus=$bus current(model=$DPC_ENTRY_CUR_MODEL rev=$DPC_ENTRY_CUR_REV) target(model=$exp_model rev=$exp_rev)"
+        mismatch=1
+        ;;
+      NO_TARGET)
+        die "Could not parse expected model/revision from package for DeviceType=$devtype Bus=$bus Addr=${addr:-}; refusing update"
+        ;;
+      *)
+        die "Unexpected entry status '$DPC_ENTRY_STATUS' for DeviceType=$devtype Bus=$bus Addr=${addr:-}; refusing update"
+        ;;
+    esac
+  done <<< "$targets"
 
-    if [[ $mismatch -eq 0 ]]; then
-      info "No changes needed. Skipping update."
-      exit 0
-    fi
+  if [[ $skip_identical -eq 1 && $mismatch -eq 0 ]]; then
+    info "No changes needed. Skipping update."
+    exit 0
+  fi
+  if [[ $skip_identical -eq 0 ]]; then
+    info "Force: proceeding with update (identical-version skip disabled)."
   fi
 
   # Show versions before update and stop services (best-effort) before flashing.

@@ -22,7 +22,7 @@ The `hw-management-vr-dpc-update-all.sh` script provides batch updating for volt
 - **Update Script**: `hw-management-vr-dpc-infineon-update.sh`
 - **Required Fields**:
   - `DeviceType` - Driver/model name used in topology (e.g. `"xdpe1a2g7b"`)
-  - `Bus` - I2C bus number (logical; same convention as devtree)
+  - `Bus` - Absolute I2C bus number (same as `i2c-tools` / `read-vr --show --json`)
   - `Addr` - I2C device address (hex string, e.g. `"0x68"`)
   - `ConfigFile` - Path to **`.bin`**, **`.txt`**, or **`.mic`** Infineon config
 - **Not used for Infineon**: `CrcFile` and `DeviceConfigFile` (omit them; CRC
@@ -79,11 +79,14 @@ hw-management-vr-dpc-update-all.sh --help
 ### Field Descriptions
 
 #### System-Level Fields
-- **System HID** (required): System hardware identifier (format: HI### or hi###)
+- **System HID** (required): System hardware identifier (`HI###`, `HID###`, or
+  `hid###`). For MPS updates the batch script normalizes these to firmware
+  directory form `hid###` (same rules as `hw-management-dpc-update.sh`).
 
 #### Device-Level Fields (Common)
 - **DeviceType** (required): Device model identifier
-- **Bus** (required): I2C bus number (integer)
+- **Bus** (required): Absolute I2C bus number (integer; passed straight to
+  `i2cget`/`i2cset` / Infineon `-b`, no `i2c_bus_offset` applied here)
 - **ConfigFile** (required): Full path to configuration file
 
 #### MPS-Specific Fields
@@ -160,7 +163,7 @@ Output:
 [info] Processing System HID: HI180 with 3 device(s)
 [info] Device 1: Type=mp2975, Bus=12
 [info] Detected MPS device: mp2975
-[info] Executing: /usr/bin/hw-management-vr-dpc-update.sh 12 mp2975 hi180 ...
+[info] Executing: /usr/bin/hw-management-vr-dpc-update.sh 12 mp2975 hid180 ...
 [info] Successfully updated device: mp2975 on bus 12
 [info] Device 2: Type=xdpe1a2g7b, Bus=29
 [info] Detected Infineon device: xdpe1a2g7b
@@ -170,7 +173,7 @@ Output:
 [info] Device 3: Type=xdpe132g5c, Bus=3
 [info] Detected Infineon device: xdpe132g5c
 [info] Infineon device at address 0x44
-[info] Executing: /usr/bin/hw-management-vr-dpc-infineon-update.sh flash -b 3 -a 0x44 -f ...
+[info] Executing: /usr/bin/hw-management-vr-dpc-infineon-update.sh flash -y -b 3 -a 0x44 -f ...
 [info] Successfully updated device: xdpe132g5c on bus 3
 [info] ======================================
 [info] Batch Update Summary:
@@ -228,8 +231,13 @@ If any specified configuration file doesn't exist:
 
 ### Required Commands
 - `jq` - JSON parser (for parsing configuration file)
-- `hw-management-vr-dpc-update.sh` - MPS VR update script
-- `hw-management-vr-dpc-infineon-update.sh` - Infineon VR update script
+- `hw-management-vr-dpc-update.sh` - required when JSON contains any `mp*`
+  device
+- `hw-management-vr-dpc-infineon-update.sh` - required when JSON contains any
+  `xdpe*` device (not required for MPS-only JSON)
+
+Validation (`--validate-json` and pre-update checks) loads each vendor script
+only if the JSON actually needs that vendor.
 
 ### Installation
 ```bash
@@ -265,7 +273,7 @@ journalctl -t vr_dpc_update_all -f
    Before batch update, test each device individually:
    ```bash
    # MPS device
-   hw-management-vr-dpc-update.sh 12 mp2975 hi180 config.csv crc.txt device.conf
+   hw-management-vr-dpc-update.sh 12 mp2975 hid180 config.csv crc.txt device.conf
 
    # Infineon device (batch adds -y so OTP flow does not wait for stdin)
    hw-management-vr-dpc-infineon-update.sh flash -y -b 29 -a 0x68 -f config.txt
@@ -367,6 +375,17 @@ sudo hw-management-vr-dpc-update-all.sh config.json
 
 ## Version History
 
+### Version 2.3 (2026-08)
+- Align sample logs with script behavior (`hid###` after HID normalize; Infineon
+  always gets `flash -y`)
+- Clarify JSON `Bus` is absolute (no `i2c_bus_offset` in update-all)
+- Accept `HID###` in System HID field description (matches validator)
+
+### Version 2.2 (2026-06)
+- Document conditional vendor script dependencies (MPS-only vs mixed JSON)
+- Document System HID normalization to `hid###` for MPS firmware paths
+- Cross-reference `VR_DPC_README.md` (package entrypoint + full tool chain)
+
 ### Version 2.1 (2026-04)
 - Document Infineon JSON without `CrcFile` / `DeviceConfigFile`
 - Batch Infineon invocation uses `flash -y` (non-interactive)
@@ -385,6 +404,11 @@ sudo hw-management-vr-dpc-update-all.sh config.json
 
 ## See Also
 
+- [VR_DPC_README.md](VR_DPC_README.md) - Full VR/DPC tool chain (package tar.gz,
+  legacy bulk, read-vr)
+- `hw-management-dpc-update.sh` - DPC package entrypoint (`*.tar.gz`)
 - `hw-management-vr-dpc-update.sh` - MPS VR update tool
 - `hw-management-vr-dpc-infineon-update.sh` - Infineon VR update tool
-- `INFINEON_VR_README.md` - Infineon VR tool documentation
+- [INFINEON_VR_README.md](INFINEON_VR_README.md) - Infineon VR tool documentation
+- `examples/vr_dpc_update_example.json` - small mixed MPS + Infineon sample
+- `examples/vr_dpc_update_nn5500ld.json` - Juliet-style multi-xdpe sample

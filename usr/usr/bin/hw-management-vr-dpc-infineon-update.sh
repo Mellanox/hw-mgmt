@@ -164,7 +164,7 @@ FLASH MODE OPTIONS:
 
     After each scratchpad write, data is read back to <file>.scpad and compared; mismatch aborts flash.
     For .txt/.mic flash: section .bin live in a temp dir during the run; after the section loop (including -n dry run) they are copied to <config_basename>_flash_work/ (.bin, .params, .scpad per flashed section). Direct -f *.bin keeps *.bin.scpad next to the .bin.
-    Full .txt/.mic flash (no -s): if "Configuration Checksum : 0x........" matches device total OTP CRC (GET_CRC HC=0), skip (no prompt, no invalidate). Otherwise: invalidate HCs not in the file; for each section that will be uploaded (CRC mismatch or no section_crc_expected), invalidate that HC/XV immediately before scratchpad then upload.
+    Full .txt/.mic flash (no -s): if "Configuration Checksum : 0x........" matches device total OTP CRC (GET_CRC HC=0), skip (no prompt, no invalidate). Otherwise: invalidate HCs not in the file; for each section that will be uploaded (CRC mismatch or no section_crc_expected), write+verify scratchpad, then invalidate that HC/XV immediately before OTP upload.
     Per-section upload skipped if GET_CRC matches section_crc_expected (.params). HC 0x0B: crc32 on <section>_crc_input.bin from .txt parse; else last 4 bytes LE of section .bin. Requires crc32 in PATH for 0x0B expected CRC.
 
 SCAN MODE OPTIONS:
@@ -1827,6 +1827,7 @@ upload_scratchpad_to_otp() {
     fi
     # AN001 6.5 — STATUS_CML d0 bit[0] must be 0 for successful upload
     log_error "Upload unsuccessful: STATUS_CML d0 bit[0] is not 0, raw=$status_cml"
+    log_error "OTP section was already invalidated (AN001 6.2 non-reversible); re-run flash to recover this section."
     i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || true
     return 1
 }
@@ -1989,18 +1990,9 @@ program_device() {
             elif [ $DRY_RUN -eq 1 ]; then
                 log_info "[DRY_RUN] No section_crc_expected in $(basename "$section_params_file"); CRC pre-check skipped (section still processed)."
             fi
-            # AN001: invalidate this OTP slot immediately before scratchpad/upload
-            # (full flash used to skip HC present in file; partial -s did it here only).
-            local hd_inv sec_hc_inv sec_xv_inv
-            hd_inv=$(_od_hex_n 4 "$flash_file")
-            if [ ${#hd_inv} -ge 8 ]; then
-                sec_hc_inv=$((16#${hd_inv:0:2}))
-                sec_xv_inv=$((16#${hd_inv:2:2}))
-                log_info "Invalidating section before upload (HC=0x$(printf '%02x' $sec_hc_inv) XV=0x$(printf '%02x' $sec_xv_inv))..."
-                invalidate_otp 0 $sec_hc_inv $sec_xv_inv || {
-                    return 1
-                }
-            fi
+            # Scratchpad write+verify first so a failed transfer does not leave OTP already
+            # invalidated. Invalidate immediately before OTP upload (AN001 6.2: prior to
+            # writing new data to OTP; invalidation is non-reversible — re-run on upload fail).
             write_to_scratchpad "$flash_file" || {
                 return 1
             }
@@ -2010,8 +2002,19 @@ program_device() {
             verify_scratchpad_readback "$flash_file" || {
                 return 1
             }
+            local hd_inv sec_hc_inv sec_xv_inv
+            hd_inv=$(_od_hex_n 4 "$flash_file")
+            if [ ${#hd_inv} -ge 8 ]; then
+                sec_hc_inv=$((16#${hd_inv:0:2}))
+                sec_xv_inv=$((16#${hd_inv:2:2}))
+                log_info "Invalidating section before OTP upload (HC=0x$(printf '%02x' $sec_hc_inv) XV=0x$(printf '%02x' $sec_xv_inv))..."
+                invalidate_otp 0 $sec_hc_inv $sec_xv_inv || {
+                    return 1
+                }
+            fi
             if [ $DRY_RUN -eq 0 ]; then
                 upload_scratchpad_to_otp "$section_params_file" || {
+                    log_error "OTP upload failed after section invalidate (AN001 6.2 non-reversible); re-run flash to recover this section."
                     return 1
                 }
             fi
