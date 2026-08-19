@@ -1,27 +1,27 @@
-From 102d4beb0d3813ea47699eab05c1494520ac971a Mon Sep 17 00:00:00 2001
+From d5d7698eb76e1cd18434077d9b4d27b8c023fb43 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 14 Jan 2026 19:19:20 +0200
-Subject: [PATCH backport 6.1 1/1] hwmon:(pmbus/xdpe1a2g7b) XDPE1A2G7B Digital
- Multi-phase Controller Driver
+Subject: [PATCH] hwmon: (pmbus/xdpe1a2g7b) Add support for XDPE1A2G7B/5B
+ devices
 
-Add the pmbus driver for the Infineon XDPE1A2G7B Digital Multi-phase
-Controller.
+Add the pmbus driver for Infineon Multi-phase Digital XDPE1A2G7B
+and XDPE1A2G5B Controllers.
 
 Signed-off-by: Ashish Yadav <ashish.yadav@infineon.com>
 ---
- drivers/hwmon/pmbus/Kconfig      |   9 ++
+ drivers/hwmon/pmbus/Kconfig      |   9 +++
  drivers/hwmon/pmbus/Makefile     |   1 +
  drivers/hwmon/pmbus/pmbus.h      |   2 +-
- drivers/hwmon/pmbus/pmbus_core.c |   4 +
- drivers/hwmon/pmbus/xdpe1a2g7b.c | 109 +++++++++++++++++++++++++++++++
- 5 files changed, 124 insertions(+), 1 deletion(-)
+ drivers/hwmon/pmbus/pmbus_core.c |   4 ++
+ drivers/hwmon/pmbus/xdpe1a2g7b.c | 116 +++++++++++++++++++++++++++++++
+ 5 files changed, 131 insertions(+), 1 deletion(-)
  create mode 100644 drivers/hwmon/pmbus/xdpe1a2g7b.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
-index 571427e53..1eabc51d6 100644
+index ff6522d589d7..5a85d70e2694 100644
 --- a/drivers/hwmon/pmbus/Kconfig
 +++ b/drivers/hwmon/pmbus/Kconfig
-@@ -472,6 +472,15 @@ config SENSORS_XDPE152
+@@ -490,6 +490,15 @@ config SENSORS_XDPE152
  	  This driver can also be built as a module. If so, the module will
  	  be called xdpe152c4.
  
@@ -38,10 +38,10 @@ index 571427e53..1eabc51d6 100644
  	tristate "Infineon XDPE122 family"
  	help
 diff --git a/drivers/hwmon/pmbus/Makefile b/drivers/hwmon/pmbus/Makefile
-index 186e2ecc6..ed15ebae5 100644
+index 598043e94e72..3dc987857d5d 100644
 --- a/drivers/hwmon/pmbus/Makefile
 +++ b/drivers/hwmon/pmbus/Makefile
-@@ -50,5 +50,6 @@ obj-$(CONFIG_SENSORS_UCD9000)	+= ucd9000.o
+@@ -52,5 +52,6 @@ obj-$(CONFIG_SENSORS_UCD9000)	+= ucd9000.o
  obj-$(CONFIG_SENSORS_UCD9200)	+= ucd9200.o
  obj-$(CONFIG_SENSORS_XDPE122)	+= xdpe12284.o
  obj-$(CONFIG_SENSORS_XDPE152)	+= xdpe152c4.o
@@ -49,7 +49,7 @@ index 186e2ecc6..ed15ebae5 100644
  obj-$(CONFIG_SENSORS_ZL6100)	+= zl6100.o
  obj-$(CONFIG_SENSORS_PIM4328)	+= pim4328.o
 diff --git a/drivers/hwmon/pmbus/pmbus.h b/drivers/hwmon/pmbus/pmbus.h
-index 0bbb8ae93..62a6908d7 100644
+index 0bbb8ae9341c..62a6908d7ce4 100644
 --- a/drivers/hwmon/pmbus/pmbus.h
 +++ b/drivers/hwmon/pmbus/pmbus.h
 @@ -407,7 +407,7 @@ enum pmbus_sensor_classes {
@@ -62,7 +62,7 @@ index 0bbb8ae93..62a6908d7 100644
  /* PMBus revision identifiers */
  #define PMBUS_REV_10 0x00	/* PMBus revision 1.0 */
 diff --git a/drivers/hwmon/pmbus/pmbus_core.c b/drivers/hwmon/pmbus/pmbus_core.c
-index 4b73c7b27..43502f730 100644
+index 234077b57045..12482c13a83d 100644
 --- a/drivers/hwmon/pmbus/pmbus_core.c
 +++ b/drivers/hwmon/pmbus/pmbus_core.c
 @@ -816,6 +816,10 @@ static s64 pmbus_reg2data_vid(struct pmbus_data *data,
@@ -78,13 +78,14 @@ index 4b73c7b27..43502f730 100644
  }
 diff --git a/drivers/hwmon/pmbus/xdpe1a2g7b.c b/drivers/hwmon/pmbus/xdpe1a2g7b.c
 new file mode 100644
-index 000000000..fccca5a8a
+index 000000000000..e1b22abe0169
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/xdpe1a2g7b.c
-@@ -0,0 +1,109 @@
-+// SPDX-License-Identifier: GPL-2.0
+@@ -0,0 +1,116 @@
++// SPDX-License-Identifier: GPL-2.0+
 +/*
-+ * Hardware monitoring driver for Infineon Multi-phase Digital VR Controllers
++ * Hardware monitoring driver for Infineon Multi-phase Digital XDPE1A2G7B
++ * and XDPE1A2G5B Controllers
 + *
 + * Copyright (c) 2026 Infineon Technologies. All rights reserved.
 + */
@@ -120,7 +121,7 @@ index 000000000..fccca5a8a
 +	}
 +
 +	for (i = 0; i < info->pages; i++) {
-+		/* Read the register with VOUT for VID Code Type. */
++		/* Read the VOUT_MODE register for VID Code Type. */
 +		ret = pmbus_read_byte_data(client, i, PMBUS_VOUT_MODE);
 +		if (ret < 0)
 +			return ret;
@@ -142,6 +143,7 @@ index 000000000..fccca5a8a
 +	.pages = XDPE1A2G7B_PAGE_NUM,
 +	.identify = xdpe1a2g7b_identify,
 +	.format[PSC_VOLTAGE_IN] = linear,
++	.format[PSC_VOLTAGE_OUT] = linear,
 +	.format[PSC_TEMPERATURE] = linear,
 +	.format[PSC_CURRENT_IN] = linear,
 +	.format[PSC_CURRENT_OUT] = linear,
@@ -167,12 +169,18 @@ index 000000000..fccca5a8a
 +	return pmbus_do_probe(client, info);
 +}
 +
-+static const struct i2c_device_id xdpe1a2g7b_id[] = { { "xdpe1a2g7b" }, {} };
++static const struct i2c_device_id xdpe1a2g7b_id[] = { { "xdpe1a2g7b" },
++						      { "xdpe1a2g5b" },
++						      {} };
 +
 +MODULE_DEVICE_TABLE(i2c, xdpe1a2g7b_id);
 +
-+static const struct of_device_id __maybe_unused
-+	xdpe1a2g7b_of_match[] = { { .compatible = "infineon,xdpe1a2g7b" }, {} };
++static const struct of_device_id __maybe_unused xdpe1a2g7b_of_match[] = {
++	{ .compatible = "infineon,xdpe1a2g7b" },
++	{ .compatible = "infineon,xdpe1a2g5b" },
++	{}
++};
++
 +MODULE_DEVICE_TABLE(of, xdpe1a2g7b_of_match);
 +
 +static struct i2c_driver xdpe1a2g7b_driver = {
@@ -187,10 +195,9 @@ index 000000000..fccca5a8a
 +module_i2c_driver(xdpe1a2g7b_driver);
 +
 +MODULE_AUTHOR("Ashish Yadav <ashish.yadav@infineon.com>");
-+MODULE_DESCRIPTION("PMBus driver for Infineon XDPE1A2G7B");
++MODULE_DESCRIPTION("PMBus driver for Infineon XDPE1A2G7B/5B");
 +MODULE_LICENSE("GPL");
 +MODULE_IMPORT_NS(PMBUS);
-+
 -- 
 2.34.1
 
