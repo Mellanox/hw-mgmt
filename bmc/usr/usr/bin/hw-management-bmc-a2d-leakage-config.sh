@@ -779,7 +779,8 @@ max1363_set_iio_reference()
 {
 	local bus="$1"
 	local address="$2"
-	local a dev_id iio_dir vr d dirs
+	local scale_v="${3:-}"
+	local a dev_id iio_dir vr d dirs sc_mv
 
 	a="${address#0x}"
 	a="${a#0X}"
@@ -801,6 +802,20 @@ max1363_set_iio_reference()
 		[ -w "$vr" ] || continue
 		if echo "$MAX1363_IIO_REFERENCE" >"$vr" 2>/dev/null; then
 			log_message "info" "MAX1363 $dev_id: voltage_reference=$MAX1363_IIO_REFERENCE (now: $(cat "$vr" 2>/dev/null))"
+			# The driver only recomputes its cached vref for the internal references; for
+			# Vdd it keeps the 2.048 V value, leaving in_voltage_scale stale for generic
+			# IIO consumers. Push the JSON Scale (V/LSB -> IIO mV/LSB) so sysfs agrees
+			# with the hardware. hw-mgmt itself reads volts from the JSON Scale, so this
+			# is advisory: a failure (kernel without the scale write_raw) is not fatal.
+			if [ -n "$scale_v" ] && [ -w "$iio_dir/in_voltage_scale" ]; then
+				sc_mv=$(echo "scale=6; $scale_v * 1000" | hw_mgmt_bc)
+				case "$sc_mv" in .*) sc_mv="0$sc_mv" ;; esac
+				if [ -n "$sc_mv" ] && echo "$sc_mv" >"$iio_dir/in_voltage_scale" 2>/dev/null; then
+					log_message "info" "MAX1363 $dev_id: in_voltage_scale=$sc_mv mV/LSB (now: $(cat "$iio_dir/in_voltage_scale" 2>/dev/null))"
+				else
+					log_message "warning" "MAX1363 $dev_id: could not set in_voltage_scale=$sc_mv — in_voltage_scale stays at the internal-reference value; hw-mgmt readings are unaffected (JSON Scale)"
+				fi
+			fi
 			return 0
 		fi
 		log_message "err" "MAX1363 $dev_id: failed to set voltage_reference=$MAX1363_IIO_REFERENCE (available: $(cat "${vr}_available" 2>/dev/null)) - readings may rail to full scale (driver internal 2.048 V reference)"
@@ -1896,7 +1911,7 @@ configure_device()
 	local chnames="$4"
 	local hw_channel_id="${5:-0}"
 
-	local device_type bus address need_rebind pre_bound
+	local device_type bus address need_rebind pre_bound mx_scale
 
 	device_type=$(echo "$device_json" | json_get_string "DeviceType")
 	bus=$(echo "$device_json" | json_get_number "Bus")
@@ -1943,8 +1958,11 @@ configure_device()
 			# sysfs is up, else the ti-max1363 default 2.048 V internal reference rails
 			# inputs above it to raw 4095. Record the outcome so a railed reference is
 			# observable in the leakage tree.
-			if [ "$device_type" = "MAX1363" ] && ! max1363_set_iio_reference "$bus" "$address"; then
-				MAX1363_REF_FAILED=1
+			if [ "$device_type" = "MAX1363" ]; then
+				mx_scale=$(json_optional_scalar "$device_json" "Scale") || mx_scale=""
+				if ! max1363_set_iio_reference "$bus" "$address" "$mx_scale"; then
+					MAX1363_REF_FAILED=1
+				fi
 			fi
 			log_message "info" "Device configuration complete for $device_name"
 			return 0
