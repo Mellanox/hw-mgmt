@@ -665,10 +665,21 @@ compare_and_flash_device()
 
 			# Compare values.
 			if [[ "$read_val" != "$val" ]]; then
-				# Do not attempt to fix WRITE_PROTECT or page-2 regs above PAGE2_MAX_REG.
-				# (Read already succeeded above; a failed read is never treated as a skip.)
-				if { (( 16#${cmd_code#0x} > 16#${PAGE2_MAX_REG#0x} )) && [[ "$page" == 2 ]]; } ||
-					[[ "$cmd_code" = 0x10 ]]; then
+				# Skip WRITE_PROTECT (0x10) and page-2 regs above PAGE2_MAX_REG.
+				# MP2975: 0x10 is WP only on page 0; page 1/2 of 0x10
+				# (MFR_PROTECT_DELAY_TIME / MFR_PIN_*) must still be written.
+				# Other MPS: keep the original skip of 0x10 on every page.
+				# Failed reads are never treated as a skip.
+				local skip_wp=0 skip_p2=0
+				if (( 16#${cmd_code#0x} == 16#${WRITE_PROTECT#0x} )); then
+					if [[ "${DEVICE_NAME,,}" != "mp2975" || "$page" == "0" ]]; then
+						skip_wp=1
+					fi
+				fi
+				if [[ "$page" == "2" ]] && (( 16#${cmd_code#0x} > 16#${PAGE2_MAX_REG#0x} )); then
+					skip_p2=1
+				fi
+				if [[ $skip_wp -eq 1 || $skip_p2 -eq 1 ]]; then
 					log_info "Mismatch on exempt register $cmd_code page $page name $name: read $read_val, expected $val (not fixing)"
 					continue
 				fi
