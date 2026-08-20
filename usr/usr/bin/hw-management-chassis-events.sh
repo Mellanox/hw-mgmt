@@ -684,6 +684,16 @@ function handle_hotplug_event()
 	psu*)
 		handle_hotplug_psu_event "$attribute" "$event"
 		;;
+	power_button|graceful_pwr_off)
+		# BMC graceful request via udev/hotplug (in addition to
+		# peripheral-updater cpu_shutdown_req poll). Assert ready after
+		# NVMe quiesce so BMC powerctrl can proceed.
+		if [ "$event" = "1" ]; then
+			if [ -x /usr/bin/hw-management-bmc-nvme-ready.sh ]; then
+				/usr/bin/hw-management-bmc-nvme-ready.sh &
+			fi
+		fi
+		;;
 	*)
 		;;
 	esac
