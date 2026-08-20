@@ -3342,6 +3342,13 @@ class ThermalManagement(hw_management_file_op):
             self.max_tachos = int(self.read_file("config/max_tachos"))
             self.log.info("Fan tacho:{}".format(self.max_tachos))
         except (ValueError, TypeError, OSError, IOError):
+            if self.is_asic_chipup_degraded():
+                # Exit cleanly so systemd does not restart-loop: without the ASIC
+                # I2C driver there is no PWM/tacho interface to control and FANs
+                # keep running at the hardware default speed.
+                self.log.error("ASIC chipup degraded: no FAN tacho/PWM interface. "
+                               "Thermal control is not started, FANs stay at hardware default speed.", repeat=1)
+                sys.exit(0)
             self.log.error("Missing max tachos config.", repeat=1)
             sys.exit(1)
         # Find ASIC pci device fio
@@ -3881,6 +3888,15 @@ class ThermalManagement(hw_management_file_op):
         """
         val = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_ASIC_PARAM, "1", "fan_control"])
         return str2bool(val)
+
+    def is_asic_chipup_degraded(self):
+        """
+        @summary: checking if hw-management counted the ASIC as chipup completed
+        while the mlxsw_minimal I2C driver failed to probe. In this state the
+        ASIC-attached PWM, tacho and temperature interfaces do not exist and FANs
+        run at the hardware default speed.
+        """
+        return self.get_file_val("config/asic_chipup_degraded", 0) > 0
 
     # ----------------------------------------------------------------------
     def is_fan_tacho_init(self):
