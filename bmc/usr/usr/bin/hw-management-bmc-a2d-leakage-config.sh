@@ -702,7 +702,7 @@ configure_max1363_raw_i2c()
 	local hw_channel_id="${5:-0}"
 	local post_driver="${6:-}"
 
-	local cfg_reg cfg_reg_val patched hw_ch scan_ch k cid
+	local cfg_reg cfg_reg_val setup_val patched hw_ch scan_ch k cid nbytes failed
 
 	if [ "$post_driver" = "post_driver" ]; then
 		log_message "info" "MAX1363 $device_name: post-driver I2C programming"
@@ -710,12 +710,25 @@ configure_max1363_raw_i2c()
 
 	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
 	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
+	setup_val=$(echo "$device_json" | json_get_string "SetupRegVal")
 	cfg_reg_val=$(echo "$cfg_reg_val" | tr -d '"')
 	cfg_reg=$(echo "$cfg_reg" | tr -d '"')
+	setup_val=$(echo "$setup_val" | tr -d '"')
+
+	failed=0
+
+	# Setup byte (bit7=1) selects the chip reference and polarity.
+	if [ -n "$setup_val" ] && [ "$setup_val" != "null" ]; then
+		log_message "info" "MAX1363 $device_name: setup register: $setup_val"
+		if ! i2ctransfer -f -y "$bus" w1@"$address" "$setup_val" 2>&1; then
+			log_message "warning" "MAX1363 $device_name: setup register write failed"
+			failed=1
+		fi
+	fi
 
 	if [ -z "$cfg_reg" ] || [ -z "$cfg_reg_val" ] || [ "$cfg_reg" = "null" ] || [ "$cfg_reg_val" = "null" ]; then
-		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping raw init"
-		return 1
+		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping monitor burst"
+		return "$failed"
 	fi
 
 	hw_ch="$hw_channel_id"
@@ -741,10 +754,18 @@ configure_max1363_raw_i2c()
 		log_message "info" "MAX1363 $device_name: CfgRegVal adjusted (monitor ch $hw_ch, scan to ch $scan_ch): $cfg_reg_val -> $patched"
 	fi
 
-	if write_and_verify_register "$bus" "$address" "$cfg_reg" "$patched" "Configuration Register" "$device_name"; then
-		return 0
+	# No readback verify: the MAX1363 has no register address space. Reads return
+	# conversion data, and the pointer byte a readback sends first would clobber
+	# the config just written.
+	set -- $patched
+	nbytes="$#"
+	log_message "info" "MAX1363 $device_name: setup/monitor stream: Bus $bus, Addr $address, Reg $cfg_reg, Val: $patched"
+	if ! i2ctransfer -f -y "$bus" w$((nbytes + 1))@"$address" "$cfg_reg" $patched 2>&1; then
+		log_message "warning" "MAX1363 $device_name: setup/monitor stream write failed (Bus $bus, Addr $address)"
+		failed=1
 	fi
-	return 1
+
+	return "$failed"
 }
 
 # All MAX1363 leak sensors on this platform are wired with Vdd as the ADC reference
@@ -758,7 +779,8 @@ max1363_set_iio_reference()
 {
 	local bus="$1"
 	local address="$2"
-	local a dev_id iio_dir vr d dirs
+	local scale_v="${3:-}"
+	local a dev_id iio_dir vr d dirs sc_mv
 
 	a="${address#0x}"
 	a="${a#0X}"
@@ -780,6 +802,20 @@ max1363_set_iio_reference()
 		[ -w "$vr" ] || continue
 		if echo "$MAX1363_IIO_REFERENCE" >"$vr" 2>/dev/null; then
 			log_message "info" "MAX1363 $dev_id: voltage_reference=$MAX1363_IIO_REFERENCE (now: $(cat "$vr" 2>/dev/null))"
+			# The driver only recomputes its cached vref for the internal references; for
+			# Vdd it keeps the 2.048 V value, leaving in_voltage_scale stale for generic
+			# IIO consumers. Push the JSON Scale (V/LSB -> IIO mV/LSB) so sysfs agrees
+			# with the hardware. hw-mgmt itself reads volts from the JSON Scale, so this
+			# is advisory: a failure (kernel without the scale write_raw) is not fatal.
+			if [ -n "$scale_v" ] && [ -w "$iio_dir/in_voltage_scale" ]; then
+				sc_mv=$(echo "scale=6; $scale_v * 1000" | hw_mgmt_bc)
+				case "$sc_mv" in .*) sc_mv="0$sc_mv" ;; esac
+				if [ -n "$sc_mv" ] && echo "$sc_mv" >"$iio_dir/in_voltage_scale" 2>/dev/null; then
+					log_message "info" "MAX1363 $dev_id: in_voltage_scale=$sc_mv mV/LSB (now: $(cat "$iio_dir/in_voltage_scale" 2>/dev/null))"
+				else
+					log_message "warning" "MAX1363 $dev_id: could not set in_voltage_scale=$sc_mv — in_voltage_scale stays at the internal-reference value; hw-mgmt readings are unaffected (JSON Scale)"
+				fi
+			fi
 			return 0
 		fi
 		log_message "err" "MAX1363 $dev_id: failed to set voltage_reference=$MAX1363_IIO_REFERENCE (available: $(cat "${vr}_available" 2>/dev/null)) - readings may rail to full scale (driver internal 2.048 V reference)"
@@ -1826,6 +1862,10 @@ configure_a2d_registers_raw()
 		return $?
 	fi
 	if [ "$device_type" = "MAX1363" ]; then
+		# Only a real i2ctransfer failure gets here (the part has no readback to verify),
+		# so propagate it and let the caller try the next Device alternative. Reporting
+		# success would go on to set voltage_reference, which writes the driver's cached
+		# setup byte only and would claim a Vdd reference the chip never received.
 		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"
 		return $?
 	fi
@@ -1871,7 +1911,7 @@ configure_device()
 	local chnames="$4"
 	local hw_channel_id="${5:-0}"
 
-	local device_type bus address need_rebind
+	local device_type bus address need_rebind mx_scale
 
 	device_type=$(echo "$device_json" | json_get_string "DeviceType")
 	bus=$(echo "$device_json" | json_get_number "Bus")
@@ -1907,8 +1947,11 @@ configure_device()
 			# sysfs is up, else the ti-max1363 default 2.048 V internal reference rails
 			# inputs above it to raw 4095. Record the outcome so a railed reference is
 			# observable in the leakage tree.
-			if [ "$device_type" = "MAX1363" ] && ! max1363_set_iio_reference "$bus" "$address"; then
-				MAX1363_REF_FAILED=1
+			if [ "$device_type" = "MAX1363" ]; then
+				mx_scale=$(json_optional_scalar "$device_json" "Scale") || mx_scale=""
+				if ! max1363_set_iio_reference "$bus" "$address" "$mx_scale"; then
+					MAX1363_REF_FAILED=1
+				fi
 			fi
 			log_message "info" "Device configuration complete for $device_name"
 			return 0
