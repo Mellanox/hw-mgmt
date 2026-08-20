@@ -1,4 +1,34 @@
 ================================================================================
+- V.7.0070.1015
+- Thu, 20 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o hw-mgmt: bmc: leakage: Extend ADS7924 and MAX1363 device configuration support
+    o hw-mgmt: bmc: Add boot journal to debug dump and LED Control API documentation
+    o hw-mgmt: examples: Add CPU and BMC json BOM descriptions for HI180, HI183, HI188 and HI193
+
+- Bug fixes
+    o hw-mgmt: scripts: Fix CPU and DDR VR link creation and I2C bus mapping on SN6600_LD
+    o hw-mgmt: scripts: Fix thermal updater service stop timeout, module dependency generation
+      and empty log rollover on logger startup
+    o hw-mgmt: bmc: Fix mlxreg-io bit offset for multi-bit CPLD fields
+
+- Kernel Patches for New Features:
+    o Add max1363 voltage_reference sysfs attribute
+    o Switch SN6600_LD SODIMM temperature sensor to SPD5118 driver
+    o Add NVME SSD FLR recovery patches for kernel 6.12
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1015/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0070.1014
 - Thu, 13 Aug 2026
 --------------------------------------------------------------------------------
