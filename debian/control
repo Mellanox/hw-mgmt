@@ -20,7 +20,7 @@ Description: Thermal control and chassis management for Nvidia systems (host)
 Package: hw-management-bmc
 Architecture: any
 Build-Profiles: <!pkg.hw-mgmt.cpu-only>
-Depends: ${misc:Depends}, systemd, udev
+Depends: ${misc:Depends}, systemd, udev, flashrom
 Description: Hardware management and chassis services for Nvidia BMC (SONiC BMC)
  This package provides BMC-side scripts, systemd units, udev rules,
  and platform-specific config (e.g. HI189 / SPC6 AST2700) for use

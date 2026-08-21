@@ -10,6 +10,8 @@ S="$OPENBMC/meta-nvidia/meta-switch"
 A="$S/meta-ast2700/meta-spc6-ast2700-a1/recipes-nvidia/bmc-post-boot-cfg/files"
 HM="$S/recipes-nvidia/health-monitor/files"
 BP="$S/recipes-nvidia/bmc-post-boot-cfg/files"
+# AST2700 host BIOS recovery (GPIO mux + flashrom); overrides meta-switch flashcp script
+AST2700_BP="$S/meta-ast2700/recipes-nvidia/bmc-post-boot-cfg/files"
 BD="$(dirname "$0")"   # bmc/
 NIC="$S/meta-ast2700/recipes-nvidia/nvidia-internal-network-config/files"
 
@@ -101,11 +103,19 @@ chmod +x "$BD/usr/usr/bin/hw-management-bmc-json-parser.sh"
 cp "$A/hw-management-helpers-common.sh" "$BD/usr/usr/bin/hw-management-bmc-helpers-common.sh"
 chmod +x "$BD/usr/usr/bin/hw-management-bmc-helpers-common.sh"
 # A2D leakage reader + MAX1363 debug (meta-switch bmc-post-boot-cfg/files; not spc6-only tree)
-for f in "$BP/a2d_leakage_read.sh" "$BP/bios-recovery-flash.sh" "$BP/max1363_force_alarm.sh" "$BP/max1363_read_status.sh"; do
+for f in "$BP/a2d_leakage_read.sh" "$BP/max1363_force_alarm.sh" "$BP/max1363_read_status.sh"; do
 	dest=$(openbmc_script_dest "$(basename "$f")")
 	cp "$f" "$BD/usr/usr/bin/$dest"
 	chmod +x "$BD/usr/usr/bin/$dest"
 done
+# BIOS recovery: AST2700 GPIO bank select + flashrom (meta-ast2700), not meta-switch flashcp
+if [ -f "$AST2700_BP/bios-recovery-flash.sh" ]; then
+	dest=$(openbmc_script_dest "bios-recovery-flash.sh")
+	cp "$AST2700_BP/bios-recovery-flash.sh" "$BD/usr/usr/bin/$dest"
+	chmod +x "$BD/usr/usr/bin/$dest"
+else
+	echo "copy-from-openbmc: skip bios-recovery (missing $AST2700_BP/bios-recovery-flash.sh)" >&2
+fi
 # Scripts that already have hw-management in name
 for f in "$A/hw-management.sh" "$A/hw-management-devtree-check.sh" "$A/hw-management-devtree.sh" "$A/hw-management-helpers.sh"; do
 	dest=$(openbmc_script_dest "$(basename "$f")")
