@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.1016
+- Fri, 21 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: kernel 6.12 BMC: Set WDT_RESET_MASK1 bit 1 on AST2700 WDT restart (#2852), 20e10c6
+    o #N/A, Update changelog and release notes for V.7.0070.1015 (#2848), 3145e6a
+    o #N/A, hw-mgmt: bmc: leakage: Propagate MAX1363 raw programming failures, 29a5d37
+    o #N/A, hw-mgmt: bmc: leakage: Set MAX1363 IIO scale after Vdd reference, 9b2f6c6
+    o #N/A, hw-mgmt: bmc: leakage: Drop MAX1363 readback verify, add setup byte, 3950659
+    o #N/A, hw-mgmt: patches: Add max1363 voltage_reference sysfs attribute, 83568fe
+    o #N/A, hw-mgmt: patches: exclude FLR workaround patch for kernel 6.12, f86486a
+    o #5226174, hw-mgmt: scripts: Fix MP2845 CPU VR voltage and current link creation, 7ebd003
+    o #5224885, hw-mgmt: scripts: Fix CPU and DDR VR I2C bus for SN6600_LD system, 3520f8a
+    o #5204171, hw-mgmt: scripts: Generate kernel module dependencies only if necessary, eaf32e1
+    o #5221586, hw-mgmt: scripts: Fix updater service stop timeout, f30bf82
+    o #5215587, hw-mgmt: patches: Fix SN6600_LD SODIMM temperature sensor driver (#2825), d109ff5
+    o #5452785, hw-mgmt: bmc: fix mlxreg-io .bit for multi-bit CPLD fields in nvsw-bmc patch (#2814), 941b01d
+    o #N/A, hw-mgmt: bmc: Extend support for ADS7924 device configuration (#2808), a7e5316
+    o #N/A, hw-mgmt: patches: add NVME SSD FLR recovery patches to kernel 6.12, 0f00b7e
+    o #N/A, hw-mgmt: bmc: Add boot journal to debug dump (#2809), 099bc9c
+    o #N/A, hw-mgmt: doc: Add common LED Control API documentation (#2811), 5789fab
+    o #6743361, hw-mgmt: examples: Add json BOM descriptions for CPU and BMC (#2810), d4f9327
+    o #6557317, hw-mgmt: scripts: Avoid empty log rollover on logger startup, 194a02e
+    o #N/A, Update changelog and release notes for V.7.0070.1014, e1bca30
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1016/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1015
 - Thu, 20 Aug 2026
 --------------------------------------------------------------------------------
