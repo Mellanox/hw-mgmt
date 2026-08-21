@@ -95,7 +95,7 @@ show_help()
 	echo "PARAMETERS:"
 	echo "  i2c_bus        I2C bus number (e.g., 0, 1, 2) - MANDATORY"
 	echo "  device_name    Device name (e.g., mp2888, mp2974, xdpe152, xdpe122) - MANDATORY"
-	echo "  hid            Hardware ID (e.g., hid180) or 0 for manual files - MANDATORY"
+	echo "  hid            Hardware ID (hid180, hi180/HI180) or 0 for manual files - MANDATORY"
 	echo "  csv_file       CSV file containing register configuration data - OPTIONAL"
 	echo "                 Format: device_addr,cmd_code,wr,p0_name,p0_byte,p0_val,..."
 	echo "  crc_file       File containing expected CRC checksum values - OPTIONAL"
@@ -321,9 +321,17 @@ validate_inputs()
 		error_exit "Invalid device name format: $DEVICE_NAME"
 	fi
 
-	# Validate HID format (allow "0" for manual file specification).
-	if [[ "$HID" != "0" ]] && [[ ! "$HID" =~ ^hid[0-9]{3}$ ]]; then
-		error_exit "Invalid HID format: $HID (expected hidXXX where XXX are 3 digits, or 0 for manual files)"
+	# Normalize HID: JSON / update-all use HI180|hi180; firmware paths use hid180.
+	# Allow "0" for fully manual file specification.
+	if [[ "$HID" != "0" ]]; then
+		HID=$(echo "$HID" | tr '[:upper:]' '[:lower:]')
+		if [[ "$HID" =~ ^hid[0-9]{3}$ ]]; then
+			:
+		elif [[ "$HID" =~ ^hi[0-9]{3}$ ]]; then
+			HID="hid${HID#hi}"
+		else
+			error_exit "Invalid HID format: $3 (expected hidXXX, hiXXX/HIXXX, or 0 for manual files)"
+		fi
 	fi
 
 	# Auto-discover missing files (skip if HID is "0").
@@ -356,28 +364,14 @@ validate_inputs()
 	log_info "Input validation passed"
 }
 
-# Run i2cset without eval (argv only). Optional first arg: expected exit code.
+# Run i2c tools without eval (argv only). Callers always expect exit 0.
 i2c_cmd()
 {
-	local expected_exit=0
-	local exit_code
+	"$@"
+	local exit_code=$?
 
-	if [[ "${1:-}" =~ ^[0-9]+$ ]] && [[ $# -gt 1 ]]; then
-		expected_exit="$1"
-		shift
-	fi
-
-	if [[ "$1" != "i2cset" ]]; then
-		log_info "Warning: unsupported i2c command: $1"
-		return 1
-	fi
-	shift
-
-	i2cset "$@"
-	exit_code=$?
-
-	if [[ $exit_code -ne $expected_exit ]]; then
-		log_info "Warning: i2cset failed (exit $exit_code): i2cset $*"
+	if [[ $exit_code -ne 0 ]]; then
+		log_info "Warning: i2c command failed: $* (exit code: $exit_code)"
 		return $exit_code
 	fi
 
@@ -402,15 +396,15 @@ store_user()
 	log_info "Storing user settings..."
 
 	# Remove write protect from page 0.
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x00" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x00" || return 1
 	sleep 0.1
-	i2c_cmd 0 i2cset -f -y "$I2C_BUS" "$dev_addr" "$WRITE_PROTECT" "$WP_VAL" bp || return 1
+	i2c_cmd i2cset -f -y "$I2C_BUS" "$dev_addr" "$WRITE_PROTECT" "$WP_VAL" bp || return 1
 
 	# Clear fault and store user from page 1.
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x01" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x01" || return 1
 	sleep 1
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$CLEAR_FAULT" "0x00" || return 1
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$STORE_OFFSET" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$CLEAR_FAULT" "0x00" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$STORE_OFFSET" || return 1
 	sleep 0.1
 
 	log_info "User settings stored successfully"
@@ -421,7 +415,7 @@ read_crc_from_device()
 	log_info "Reading CRC from device..."
 
 	# Read CRC from 0xAB (MFR_CRC_NORMAL_CODE) and 0xAD (MFR_CRC_MULTI_CONFIG) from page 1.
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x01" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x01" || return 1
 
 	CRC_READ[0]=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$MFR_CRC_NORMAL_CODE" w 2>/dev/null)
 	CRC_READ[1]=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$MFR_CRC_MULTI_CONFIG" w 2>/dev/null)
@@ -431,13 +425,13 @@ read_crc_from_device()
 
 get_model()
 {
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$DPC_MODEL_ID_PAGE" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$DPC_MODEL_ID_PAGE" || return 1
 	i2cget -y -f "$I2C_BUS" "$dev_addr" "$DPC_MODEL_ID" w
 }
 
 get_revision()
 {
-	i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$DPC_REVISION_ID_PAGE" || return 1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$DPC_REVISION_ID_PAGE" || return 1
 	i2cget -y -f "$I2C_BUS" "$dev_addr" "$DPC_REVISION_ID" w
 }
 
@@ -476,20 +470,35 @@ hex_word_to_int()
 	echo $((16#$h))
 }
 
+# Config page / PAGE2_MAX_REG may be decimal or 0x-hex; do not treat decimal as hex.
+cfg_to_int()
+{
+	local v="${1,,}"
+	if [[ "$v" =~ ^0x[0-9a-f]+$ ]]; then
+		echo $((16#${v#0x}))
+	elif [[ "$v" =~ ^[0-9]+$ ]]; then
+		echo $((10#$v))
+	else
+		return 1
+	fi
+}
+
 validate_revisions()
 {
 	log_info "Validating device revisions..."
 
 	local model
 	local revision
+	local rev_page
 
 	model=$(get_model) || error_exit "Failed to get model"
 	revision=$(get_revision) || error_exit "Failed to get revision"
+	rev_page="$(cfg_to_int "$DPC_REVISION_ID_PAGE")" || error_exit "Invalid DPC_REVISION_ID_PAGE '$DPC_REVISION_ID_PAGE'"
 
 	log_info "Device model: $model, revision: $revision"
 
-	# Parse input file: skip header, process each line until revision field.
-	tail -n +2 "$CSV_FILE" | while IFS=, read -r dev_addr cmd_code wr \
+	# Process substitution (not a pipe) so return exits this function, not a subshell.
+	while IFS=, read -r dev_addr cmd_code wr \
 		p0_name p0_byte p0_val \
 		p1_name p1_byte p1_val \
 		p2_name p2_byte p2_val
@@ -509,7 +518,7 @@ validate_revisions()
 
 			cmd_code=$(echo "$cmd_code" | tr '[:upper:]' '[:lower:]')
 
-			if [[ "$page" == "$DPC_REVISION_ID_PAGE" ]] && [[ "$cmd_code" == "$DPC_REVISION_ID" ]]; then
+			if (( page == rev_page )) && [[ "$cmd_code" == "$DPC_REVISION_ID" ]]; then
 				local rev_n val_n
 				val="$(_csv_hex_val_normalize "$val")" || {
 					log_info "Invalid package revision CSV value (must be 0x + 1..4 hex digits): '$val'"
@@ -526,7 +535,7 @@ validate_revisions()
 				fi
 			fi
 		done
-	done
+	done < <(tail -n +2 "$CSV_FILE")
 
 	log_info "Revision validation completed"
 }
@@ -590,6 +599,13 @@ compare_and_flash_device()
 		return 1
 	}
 
+	local page2_max
+	page2_max="$(cfg_to_int "$PAGE2_MAX_REG")" || {
+		log_info "Invalid PAGE2_MAX_REG '$PAGE2_MAX_REG'"
+		rm -f "$temp_file" "$err_file"
+		return 1
+	}
+
 	# Skip header, process each line.
 	tail -n +2 "$CSV_FILE" | while IFS=, read -r dev_addr cmd_code wr \
 		p0_name p0_byte p0_val \
@@ -638,7 +654,7 @@ compare_and_flash_device()
 				echo "1" >> "$err_file"
 				continue
 			fi
-			if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page"; then
+			if ! i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page"; then
 				log_info "Failed to select page $page before read at $dev_addr $cmd_code name $name"
 				echo "1" >> "$err_file"
 				continue
@@ -676,7 +692,7 @@ compare_and_flash_device()
 						skip_wp=1
 					fi
 				fi
-				if [[ "$page" == "2" ]] && (( 16#${cmd_code#0x} > 16#${PAGE2_MAX_REG#0x} )); then
+				if [[ "$page" == "2" ]] && (( 16#${cmd_code#0x} > page2_max )); then
 					skip_p2=1
 				fi
 				if [[ $skip_wp -eq 1 || $skip_p2 -eq 1 ]]; then
@@ -687,7 +703,7 @@ compare_and_flash_device()
 				log_info "Mismatch at bus $I2C_BUS $dev_addr $cmd_code page $page name $name: read $read_val, expected $val"
 
 				# Set page and fix mismatch.
-				if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page"; then
+				if ! i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$page"; then
 					log_info "Failed to select page $page for $dev_addr $cmd_code name $name"
 					echo "1" >> "$err_file"
 					continue
@@ -695,14 +711,14 @@ compare_and_flash_device()
 
 				local new_val
 				if [[ "$byte" == "2" ]]; then
-					if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val" w; then
+					if ! i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val" w; then
 						log_info "Failed to write $val (word) to $dev_addr $cmd_code page $page name $name"
 						echo "1" >> "$err_file"
 						continue
 					fi
 					new_val=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" w 2>/dev/null)
 				elif [[ "$byte" == "1" ]]; then
-					if ! i2c_cmd 0 i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val"; then
+					if ! i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$cmd_code" "$val"; then
 						log_info "Failed to write $val to $dev_addr $cmd_code page $page name $name"
 						echo "1" >> "$err_file"
 						continue

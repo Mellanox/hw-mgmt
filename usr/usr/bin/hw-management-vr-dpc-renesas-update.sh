@@ -1380,6 +1380,14 @@ check_file() {
             log_error "record $reccount (line $lineno): malformed (need >=4 bytes): $s"; errs=$((errs + 1)); continue
         fi
 
+        local declared_len=$((16#${s:2:2}))
+        local actual_len=$((nbytes - 2))
+        if [ "$declared_len" -ne "$actual_len" ]; then
+            log_error "record $reccount (line $lineno): declared length $declared_len does not match payload length $actual_len: $s"
+            errs=$((errs + 1))
+            continue
+        fi
+
         # Per-line CRC8 integrity: the last byte is CRC8 (poly 0x07, init 0) over the payload
         # bytes[2..(end-1)] = the I2C bytes (addr8, cmd, data) WITHOUT the rectype/length framing.
         # A single changed byte (accidental corruption or tampering) breaks its line's CRC here.

@@ -608,6 +608,10 @@ read_otp_dword_hex() {
     line=$(i2c_rw_wrapper "$bus" "$addr" 5 0 "$MFR_REG_READ") || return 1
     line=$(echo "$line" | sed 's/0x//g')
     read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
+    if (( 16#${_d0:-0} != 4 )); then
+        log_error "read_otp_dword_hex: expected block length 0x04, got 0x${_d0:-??}"
+        return 1
+    fi
     line="$_d1 $_d2 $_d3 $_d4"
     if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
         log_debug "read DWORD: $line # PEC"
@@ -852,16 +856,17 @@ rebind_driver_if_unbound() {
     fi
     if echo "$DRIVER_UNBIND_DEVID" > "$bind_file"; then
         log_info "Driver $DRIVER_UNBIND_NAME rebound to $DRIVER_UNBIND_DEVID"
-    else
-        log_warn "Rebind of $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID failed (device may need more time or power cycle)"
-        local bus addr
-        bus="${DRIVER_UNBIND_DEVID%-*}"
-        addr="0x${DRIVER_UNBIND_DEVID##*-}"
-        diagnose_rebind_id_regs "$bus" "$addr"
+        DRIVER_UNBIND_DEVID=""
+        DRIVER_UNBIND_NAME=""
+        return 0
     fi
-    DRIVER_UNBIND_DEVID=""
-    DRIVER_UNBIND_NAME=""
-    return 0
+
+    log_warn "Rebind of $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID failed (device may need more time or power cycle)"
+    local bus addr
+    bus="${DRIVER_UNBIND_DEVID%-*}"
+    addr="0x${DRIVER_UNBIND_DEVID##*-}"
+    diagnose_rebind_id_regs "$bus" "$addr"
+    return 1
 }
 
 # Save unbound device info to state file (for 'rebind' mode in a separate run).
@@ -880,10 +885,12 @@ rebind_driver_from_state_file() {
     [ -f "$UNBIND_STATE_FILE" ] || return 1
     DRIVER_UNBIND_DEVID=$(sed -n '1p' "$UNBIND_STATE_FILE" 2>/dev/null)
     DRIVER_UNBIND_NAME=$(sed -n '2p' "$UNBIND_STATE_FILE" 2>/dev/null)
-    rm -f "$UNBIND_STATE_FILE" 2>/dev/null
     [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 1
-    rebind_driver_if_unbound
-    return 0
+    if rebind_driver_if_unbound; then
+        rm -f "$UNBIND_STATE_FILE" 2>/dev/null
+        return 0
+    fi
+    return 1
 }
 
 # Read device identification (uses block read for MFR_* so output matches 'info')
@@ -1850,15 +1857,21 @@ reset_device() {
 # Main programming sequence
 program_device() {
     local flash_file artifact_dir=""
+    local wp_cleared=0
+
+    _program_device_restore_wp() {
+        if [ "${wp_cleared:-0}" -eq 1 ]; then
+            enable_write_protect || log_warn "Failed to re-enable write protect on exit"
+            wp_cleared=0
+        fi
+    }
+    trap '_program_device_restore_wp' RETURN
 
     log_info "Starting programming sequence for $CONFIG_FILE"
     log_info "Target: I2C bus $I2C_BUS, address $DEVICE_ADDR"
 
     detect_device || return 1
     read_device_id || return 1
-    clear_faults || return 1
-    disable_write_protect || return 1
-    check_otp_space || return 1
 
     # Full .txt/.mic only (no -s): skip entire flash if GUI "Configuration Checksum" matches device total CRC (AN001 GET_CRC HC=0).
     if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]] && [ -z "$FLASH_SECTION_HC" ]; then
@@ -1909,6 +1922,12 @@ program_device() {
             fi
         fi
     fi
+
+    clear_faults || return 1
+    check_otp_space || return 1
+
+    disable_write_protect || return 1
+    wp_cleared=1
 
     # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
     # .bin: single scratchpad write + upload
@@ -2042,6 +2061,7 @@ program_device() {
     enable_write_protect || {
         return 1
     }
+    wp_cleared=0
 
     # XDPE1A2G7 family: after OTP programming the device may not ACK OPERATION reset
     # or MFR_ID/MODEL/REVISION immediately. Do not fail the script (batch JSON flashes
