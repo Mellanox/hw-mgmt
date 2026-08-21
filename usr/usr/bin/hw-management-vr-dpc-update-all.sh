@@ -403,6 +403,11 @@ process_json_config()
         return 1
     fi
 
+    if ! validate_json_config "$json_file"; then
+        log_message "err" "Aborting batch update because the JSON configuration is invalid"
+        return 1
+    fi
+
     local total_devices=0
     local successful_updates=0
     local failed_updates=0

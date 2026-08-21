@@ -104,24 +104,18 @@ log_message()
     echo "[$level] $message"
 }
 
-# Run i2cset without eval (argv only). Optional first arg: expected exit code.
+# Safe i2c command execution with error checking (argv only; no eval).
 i2c_cmd()
 {
     local expected_exit=0
-    local exit_code
 
-    if [[ "${1:-}" =~ ^[0-9]+$ ]] && [[ $# -gt 1 ]]; then
-        expected_exit="$1"
-        shift
+    if [[ "$1" == "--expect" ]]; then
+        expected_exit="$2"
+        shift 2
     fi
 
-    if [[ "$1" != "i2cset" ]]; then
-        return 1
-    fi
-    shift
-
-    i2cset "$@" >/dev/null 2>&1
-    exit_code=$?
+    "$@" >/dev/null 2>&1
+    local exit_code=$?
 
     if [[ $exit_code -ne $expected_exit ]]; then
         return $exit_code
@@ -168,7 +162,7 @@ get_model()
     local byte_offset="${5:-0}"
 
     # Set page to model ID page
-    if ! i2c_cmd 0 i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$model_page"; then
+    if ! i2c_cmd i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$model_page"; then
         return 1
     fi
 
@@ -193,7 +187,7 @@ get_revision()
     local byte_offset="${5:-0}"
 
     # Set page to revision ID page
-    if ! i2c_cmd 0 i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$rev_page"; then
+    if ! i2c_cmd i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$rev_page"; then
         return 1
     fi
 
