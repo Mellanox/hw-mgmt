@@ -1,11 +1,25 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** June 30, 2026
+**Last Updated:** August 17, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.7 - August 17, 2026
+
+#### Clarified: `system/asic_pg_fail` platform exception
+
+**Affected platforms:** SN6600_LD (HI193), SN6800_LD (HI187/HI188), SN6810_LD (HI183).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.18.54 | **`system/asic_pg_fail`**: noted that this API does not exist on SN6600_LD, SN6800_LD, and SN6810_LD; removed SN66XX_LD from the applicability note |
+
+---
 
 ### Rev. 3.2.6 - June 30, 2026
 
