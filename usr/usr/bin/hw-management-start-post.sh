@@ -35,20 +35,6 @@
 # hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
 
-# Read tc_version value from a tc_config.json path (grep-based). Prints 2.0 when missing or unreadable.
-get_tc_version()
-{
-	local json_path="$1"
-	local v
-
-	[ -f "$json_path" ] || {
-		echo "2.0"
-		return
-	}
-	v=$(grep -o '"tc_version"[[:space:]]*:[[:space:]]*"[^"]*"' "$json_path" 2>/dev/null | head -n1 | cut -d'"' -f4)
-	echo "${v:-2.0}"
-}
-
 # Local constants and paths.
 CPLD3_VER_DEF="0"
  
@@ -125,21 +111,16 @@ case $sku in
 		# Do nothing
 esac
 
-# Check if TC service is enabled (unit enabled at boot) and if it is currently running.
+# Check if TC service is enabled (unit enabled at boot).
 tc_is_enabled=0
 if systemctl is-enabled --quiet hw-management-tc.service 2>/dev/null; then
 	tc_is_enabled=1
-fi
-# Check if TC service is running.
-tc_should_start=0
-if systemctl is-active --quiet hw-management-tc.service; then
-	tc_should_start=1
 fi
 
 # Initialize TC service control variables.
 tc_should_enable=0
 tc_should_disable=0
-tc_should_reload=0
+tc_should_start=0
 
 ## Checking if system doesn't support TC and disable it if it doesn't.
 if check_tc_is_supported; then
@@ -157,7 +138,6 @@ else
 				logger -t hw-management -p daemon.notice "Stopping and disabling hw-management-tc on SimX"
 				# TC service should be stopped and disabled.
 				tc_should_disable=1
-				tc_should_start=0
 			fi
 		else
 			# If TC is supported in SimX.
@@ -170,85 +150,50 @@ else
 			fi
 		fi
 	fi
-fi
 
-# Align hw-management-tc.service on disk with this platform's TC script and version label.
-# The unit is rewritten only when those strings would actually change (avoid needless reload).
-service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
-if [ -f "$service_file_path" ]; then
-	# TC application (v2.0 vs v2.5) is selected from tc_config.json (tc_version), not SKU.
-	tc_cfg_json="$config_path/tc_config.json"
-	tc_version="2.0"
-	tc_executable="hw_management_thermal_control.py"
-	if [ -f "$tc_cfg_json" ]; then
-		tc_ver_raw=$(get_tc_version "$tc_cfg_json")
-		case $tc_ver_raw in
-			2.5|2.5.*)
-				tc_version="2.5"
-				tc_executable="hw_management_thermal_control_2_5.py"
-				;;
-			*)
-				tc_version="2.0"
-				tc_executable="hw_management_thermal_control.py"
-				;;
-		esac
-	fi
-
-	# 1) Substitutions we would apply to the unit (TC executable basename and "ver X.Y" marker).
-	sed_edit_executable="s/hw_management_thermal_control_2_5\.py/$tc_executable/g;s/hw_management_thermal_control\.py/$tc_executable/g"
-	sed_edit_version="s/ver [0-9][0-9.]*/ver $tc_version/g"
-
-	# 2) Rewrite only if disk and "sed output" differ. cmp compares the file to stdin (-);
-	#    stdin is the unit text after the two sed rules (no temp file).
-	tc_unit_needs_update=1
-	if sed -e "$sed_edit_executable" -e "$sed_edit_version" -- "$service_file_path" |
-		cmp -s -- "$service_file_path" -; then
-		tc_unit_needs_update=0
-	fi
-
-	# 3) Apply the same two edits in place only when needed.
-	if [ "$tc_unit_needs_update" -eq 1 ]; then
-		sed -i -e "$sed_edit_executable" -e "$sed_edit_version" "$service_file_path"
-		log_info "Thermal Control service updated. Reload it in 10 seconds"
-		tc_should_reload=1
+	# PartOf=hw-management.service only propagates stop/restart of hw-management-tc.service,
+	# not start. If hw-management.service was stopped and later started separately (rather
+	# than restarted), an already-enabled TC service is left inactive. Schedule a restore
+	# below, but only when hw-management-tc-stop-post.sh recorded that the prior stop was
+	# this PartOf= cascade rather than an operator directly stopping TC - see
+	# tc_pending_restart_file in hw-management-helpers.sh. The marker is re-checked (and
+	# consumed) at actual start time, not here, since the start itself runs after a 10s
+	# deferral below: consuming it this early would let an operator's stop issued during
+	# that window be silently overridden by our own stale decision.
+	if [ $tc_is_enabled -eq 1 ] && [ $tc_should_disable -eq 0 ] && [ $tc_should_start -eq 0 ]; then
+		if [ -f "$tc_pending_restart_file" ]; then
+			log_info "Thermal Control restore scheduled after hw-management restart."
+			tc_should_start=1
+		fi
 	fi
 fi
 
 # Build and execute the command line for TC service control only when there is something to do.
-if [ $tc_should_reload -eq 1 ] || 
-   [ $tc_should_disable -eq 1 ] || 
-   [ $tc_should_enable -eq 1 ]; then
+if [ $tc_should_disable -eq 1 ] || [ $tc_should_enable -eq 1 ] || [ $tc_should_start -eq 1 ]; then
 	cmd_line="sleep 10 &&"
-
-	# Reload the systemd daemon if needed.
-	if [ $tc_should_reload -eq 1 ]; then
-		cmd_line="$cmd_line systemctl daemon-reload &&"
-	fi
 
 	# Disable TC service if needed.
 	if [ $tc_should_disable -eq 1 ]; then
 		cmd_line="$cmd_line systemctl stop hw-management-tc && systemctl disable hw-management-tc &&"
-		# TC service should not be started.
-		tc_should_start=0
 	elif [ $tc_should_enable -eq 1 ]; then
 		# TC service should be enabled.
 		cmd_line="$cmd_line systemctl enable hw-management-tc &&"
-	fi
-
-	# Start TC service if needed.
-	if [ $tc_should_start -ne 0 ]; then
-		if [ $tc_should_reload -eq 1 ]; then
-			# TC service should be restarted in case of reload.
-			cmd_line="$cmd_line systemctl restart hw-management-tc &&"
-		else
+		if [ $tc_should_start -eq 1 ]; then
 			# TC service should be started.
 			cmd_line="$cmd_line systemctl start hw-management-tc &&"
 		fi
+	elif [ $tc_should_start -eq 1 ]; then
+		# TC service is already enabled and was inactive with a pending-restart marker
+		# at decision time. Re-check (and consume) the marker here, once the 10s
+		# deferral below has elapsed, so a stop issued by an operator during that
+		# window - which would remove the marker via hw-management-tc-stop-post.sh -
+		# is not silently overridden by this stale scheduling decision.
+		cmd_line="$cmd_line if [ -f $tc_pending_restart_file ]; then rm -f $tc_pending_restart_file; if ! systemctl is-active --quiet hw-management-tc.service; then systemctl start hw-management-tc; fi; fi &&"
 	fi
 
 	# Run the command line in the background and log the output to /dev/null.
 	# it is necessary because on SIMX, hw-mgmt tries to start the TC service during initialization.
-	# However, the TC service has a strong dependency: 
+	# However, the TC service has a strong dependency:
 	# Requires=hw-management.service. This means the TC service cannot start
 	# before hw-mgmt starts. But hw-mgmt attempts to start TC earlier. In this
 	# case, neither hw-mgmt nor TC will complete initialization.

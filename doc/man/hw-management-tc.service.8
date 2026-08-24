@@ -12,12 +12,47 @@ The service supports multiple thermal control versions:
 - TC v2.0: Standard thermal control implementation
 - TC v2.5: Enhanced thermal control with improved algorithms for newer systems
 
-The service selects the thermal control application from the
-\fItc_version\fR field in \fI/var/run/hw-management/tc_config.json\fR (defaults to v2.0
-when unset). \fBhw-management-start-post.sh\fR aligns the systemd unit to run the
-matching Python script:
-- /usr/bin/hw_management_thermal_control.py (TC v2.0)
+The service is started via \fBhw_management_tc_launcher.sh\fR, which reads the
+\fItc_version\fR field from \fI/var/run/hw-management/config/tc_config.json\fR and
+exec()s the matching Python binary directly as the systemd MAINPID:
+- /usr/bin/hw_management_thermal_control.py (TC v2.0, default)
 - /usr/bin/hw_management_thermal_control_2_5.py (TC v2.5)
+
+Version selection happens at each service start; no patching or daemon-reload
+of \fBExecStart\fR is required.  \fItc_config.json\fR is written by
+\fBhw-management.sh\fR (set_config_data) before \fBhw-management.service\fR
+becomes active, so the correct binary is always chosen on the first start.
+
+The launcher also keeps the unit's \fBDescription\fR in sync with the
+selected version (e.g. "... (ver 2.5) ..."), so \fBsystemctl status\fR
+reflects the running version. This edit is metadata only: it patches the
+\fBDescription\fR field in place and runs \fBsystemctl daemon-reload\fR, but
+never touches \fBExecStart\fR, so it cannot race with or affect this unit's
+own running/activating state. It is skipped when the Description already
+matches. Before the launcher's first run, the shipped unit ships a
+"(ver x.x)" placeholder rather than a specific version, since that value
+has not yet been determined for this boot.
+.SH STATE ACROSS HW-MANAGEMENT RESTARTS
+\fBPartOf=hw-management.service\fR propagates a stop or restart of
+\fBhw-management.service\fR to this service, but never a plain start. If
+\fBhw-management.service\fR is stopped and later started as two separate
+operations, an already-enabled TC service would otherwise stay down.
+\fBhw-management-tc-stop-post.sh\fR (ExecStopPost) tells this case apart from
+an operator directly stopping only the TC service by checking whether a
+stop or restart job is queued for \fBhw-management.service\fR at the moment
+TC stops: if one is, TC's stop is part of that same transaction (PartOf=
+cascade) and is marked for restore; if not, the stop is recorded as
+intentional. Because this service has After=hw-management.service, TC is
+always stopped before hw-management.service's own stop job begins, so
+\fBhw-management.service\fR's ActiveState is still "active" at that point
+even during a genuine cascade - a queued job, not ActiveState, is what
+distinguishes the two cases.
+\fBhw-management-start-post.sh\fR schedules a restore on the next
+\fBhw-management.service\fR start when that marker is present, but does not
+consume it or check TC's active state until the restore's usual 10s
+scheduling delay has elapsed. Re-checking at that later point, rather than
+when the delay is scheduled, means an operator action that clears the marker
+during the delay is not silently overridden by an already-stale decision.
 .SH OPTIONS
 .TP
 start

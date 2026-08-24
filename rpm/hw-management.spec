@@ -128,6 +128,7 @@ install -m 0755 usr/usr/bin/hw-management-power-helper.sh $RPM_BUILD_ROOT/usr/bi
 install -m 0755 usr/usr/bin/hw-management-ps-vpd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ps-vpd.sh
 install -m 0755 usr/usr/bin/hw-management-ready.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ready.sh
 install -m 0755 usr/usr/bin/hw-management-start-post.sh $RPM_BUILD_ROOT/usr/bin/hw-management-start-post.sh
+install -m 0755 usr/usr/bin/hw-management-tc-stop-post.sh $RPM_BUILD_ROOT/usr/bin/hw-management-tc-stop-post.sh
 install -m 0755 usr/usr/bin/hw-management-thermal-events.sh $RPM_BUILD_ROOT/usr/bin/hw-management-thermal-events.sh
 install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/hw-management-vpd-parser.py
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
@@ -141,6 +142,7 @@ install -m 0755 usr/usr/bin/hw_management_thermal_control_2_5.py $RPM_BUILD_ROOT
 install -m 0755 usr/usr/bin/hw_management_thermal_updater.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_updater.py
 install -m 0755 usr/usr/bin/hw_management_independent_mode_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_independent_mode_update.py
 install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_dpu_thermal_update.py
+install -m 0755 usr/usr/bin/hw_management_tc_launcher.sh $RPM_BUILD_ROOT/usr/bin/hw_management_tc_launcher.sh
 install -m 0755 usr/usr/bin/iorw $RPM_BUILD_ROOT/usr/bin/iorw
 install -m 0755 usr/usr/bin/sxd_read_cpld_ver.py $RPM_BUILD_ROOT/usr/bin/sxd_read_cpld_ver.py
 install -m 0755 usr/usr/local/bin/hw-management-process-blacklist.sh $RPM_BUILD_ROOT/usr/local/bin/hw-management-process-blacklist.sh
@@ -234,6 +236,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-ps-vpd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ready.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-start-post.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-tc-stop-post.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-thermal-events.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
@@ -253,6 +256,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_updater.py"
 %attr(0755, root, root) "/usr/bin/hw_management_independent_mode_update.py"
 %attr(0755, root, root) "/usr/bin/hw_management_dpu_thermal_update.py"
+%attr(0755, root, root) "/usr/bin/hw_management_tc_launcher.sh"
 %attr(0755, root, root) "/usr/local/bin/hw-management-process-blacklist.sh"
 %attr(0755, root, root) "/lib/systemd/system/hw-management.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-tc.service"

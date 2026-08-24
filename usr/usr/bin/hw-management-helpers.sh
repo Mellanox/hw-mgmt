@@ -48,6 +48,13 @@ fw_path=$hw_management_path/firmware
 bin_path=$hw_management_path/bin
 dynamic_boards_path=$config_path/dynamic_boards
 udev_ready=$hw_management_path/.udev_ready
+
+# Marker written by hw-management-tc.service's ExecStopPost (hw-management-tc-stop-post.sh)
+# when TC's stop was propagated from hw-management.service via PartOf=, as opposed to an
+# operator directly stopping the TC service. Consumed once by hw-management-start-post.sh
+# to decide whether to restore TC's run state. Lives outside $hw_management_path because
+# hw-management.sh's do_stop() removes that whole tree on stop.
+tc_pending_restart_file=/var/run/.hw-management-tc-pending-restart
 LOCKFILE="/var/run/hw-management-chassis.lock"
 if [ -d /sys/devices/virtual/dmi/id ]; then
 	board_type_file=/sys/devices/virtual/dmi/id/board_name
