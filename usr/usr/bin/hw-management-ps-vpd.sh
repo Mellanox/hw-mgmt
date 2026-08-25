@@ -2,7 +2,7 @@
 
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -276,8 +276,6 @@ fi
 
 function read_pmbus_ps_vpd ( )
 {
-	read_pmbus_ps_vpd_pointer
-
 	#MFR NAME
 	#read block len
 	len=$(pmbus_read "${MFR_NAME_ADDR}" 1)
@@ -292,6 +290,7 @@ function read_pmbus_ps_vpd ( )
 
 	echo -ne '\n' >> "$VPD_OUTPUT_FILE"
 
+	read_pmbus_ps_vpd_pointer
 	calc_crc16 "${VPD_POINTER[@]:1}"
 
 	i=0
