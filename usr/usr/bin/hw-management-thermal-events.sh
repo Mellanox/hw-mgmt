@@ -956,7 +956,7 @@ if [ "$1" == "add" ]; then
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
 		if [ $? -ne 0 ]; then
 			# PS EEPROM VPD.
-			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
+			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info >> $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
 				if is_virtual_machine; then
