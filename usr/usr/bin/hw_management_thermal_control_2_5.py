@@ -2595,7 +2595,7 @@ class psu_fan_sensor(system_device):
         #  UNKNOWN P2C        False
         #  UNKNOWN UNKNOWN    False
         if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
-            (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
+                (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.append_fault(CONST.DIRECTION)
 
         if self.fread_err.check_err():
@@ -2901,7 +2901,7 @@ class fan_sensor(system_device):
             False: PWM read error; or fan speed abnormal (out of range or
                    wrong vs calculated); or PWM stabilized but speed wrong.
             Previous state (cached fan_tacho_state): when PWM not yet
-            stabilized (relax time not elapsed or read PWM != set PWM) —
+            stabilized (relax time not elapsed or |read PWM - set PWM| >= 1) —
             applies only to the trend check (step 2). Out-of-range RPM (step 1)
             is an immediate fault and does not use the cache during stabilisation.
         """
@@ -2943,7 +2943,10 @@ class fan_sensor(system_device):
              # 2. Check fan trend
             if pwm_curr >= pwm_min:
                 # if FAN speed stabilized after the last change
-                if self.rpm_relax_timestamp <= current_milli_time() and pwm_curr == self.pwm_set:
+                # PWM sysfs is 0..255; percent round-trip can differ by <1%
+                # (65.0 -> 166/255 -> 65.1). Exact == never becomes true after a
+                # tacho-fault PWM bump, so the cached fault would stick forever.
+                if self.rpm_relax_timestamp <= current_milli_time() and abs(pwm_curr - self.pwm_set) < 1:
                     # calculate speed
                     slope = float(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
