@@ -1,4 +1,4 @@
-From 467b4fad13330673a3295b4a009c8c3cc98aeee3 Mon Sep 17 00:00:00 2001
+From 87123f1a19cae8d6a2a3975b531435bdb95bcb09 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jul 2024 23:50:27 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -26,11 +26,11 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 7304 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  717 ++
  drivers/platform/mellanox/nvsw-host-l1.c      |  735 ++
- drivers/platform/mellanox/nvsw-host-nvl6-ng.c |  763 ++
+ drivers/platform/mellanox/nvsw-host-nvl6-ng.c |  796 ++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  943 +++
  drivers/platform/mellanox/nvsw-host-spc6.c    |  852 ++
  drivers/platform/mellanox/nvsw.h              |  319 +
- 10 files changed, 11691 insertions(+)
+ 10 files changed, 11724 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -8904,10 +8904,10 @@ index 000000000..6fb8cf07a
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl6-ng.c b/drivers/platform/mellanox/nvsw-host-nvl6-ng.c
 new file mode 100644
-index 000000000..c1ee2d145
+index 000000000..74319f0ae
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-nvl6-ng.c
-@@ -0,0 +1,763 @@
+@@ -0,0 +1,796 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia NVL6_NG host platform driver
@@ -9298,7 +9298,7 @@ index 000000000..c1ee2d145
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_mgmt_pwr",
++		.label = "reset_mgmt_pwr_fail",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
@@ -9406,8 +9406,8 @@ index 000000000..c1ee2d145
 +		.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_led_data),
 +};
 +
-+/* Watchdog type3 platform data */
-+static struct mlxreg_core_data nvsw_host_nvl6_ng_wd_data[] = {
++/* Watchdog main platform data */
++static struct mlxreg_core_data nvsw_host_nvl6_ng_wd_main_data[] = {
 +	{
 +		.label = "action",
 +		.reg = NVSW_REG_WD2_ACT_OFFSET,
@@ -9439,12 +9439,45 @@ index 000000000..c1ee2d145
 +	},
 +};
 +
++/* Watchdog aux platform data */
++static struct mlxreg_core_data nvsw_host_nvl6_ng_wd_aux_data[] = {
++	{
++		.label = "action",
++		.reg = NVSW_REG_WD3_ACT_OFFSET,
++		.mask = NVSW_WD_FAN_ACT_MASK,
++		.bit = 4,
++	},
++	{
++		.label = "timeout",
++		.reg = NVSW_REG_WD3_TMR_OFFSET,
++		.mask = NVSW_WD_TYPE2_TO_MASK,
++		.health_cntr = NVSW_WD3_DFLT_TIMEOUT,
++	},
++	{
++		.label = "timeleft",
++		.reg = NVSW_REG_WD3_TMR_OFFSET,
++		.mask = NVSW_WD_TYPE2_TO_MASK,
++	},
++	{
++		.label = "ping",
++		.reg = NVSW_REG_WD3_ACT_OFFSET,
++		.mask = NVSW_WD_FAN_ACT_MASK,
++		.bit = 4,
++	},
++};
++
 +static struct mlxreg_core_platform_data nvsw_host_nvl6_ng_wd[] = {
 +	{
-+		.data = nvsw_host_nvl6_ng_wd_data,
-+		.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_wd_data),
++		.data = nvsw_host_nvl6_ng_wd_main_data,
++		.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_wd_main_data),
 +		.version = MLX_WDT_TYPE3,
-+		.identity = "mlx-wdt",
++		.identity = "mlx-wdt-main",
++	},
++	{
++		.data = nvsw_host_nvl6_ng_wd_aux_data,
++		.counter = ARRAY_SIZE(nvsw_host_nvl6_ng_wd_aux_data),
++		.version = MLX_WDT_TYPE3,
++		.identity = "mlx-wdt-aux",
 +	},
 +};
 +
