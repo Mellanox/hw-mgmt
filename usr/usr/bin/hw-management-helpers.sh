@@ -1672,3 +1672,184 @@ function set_fan_direction_for_all_fans()
 	done
 	print_function_call "$0" "${FUNCNAME[0]}" "Finished"
 }
+
+# Normalize PCI BDF to bus:dev.func without domain (03:00.0).
+_hw_mgmt_pci_bdf_short()
+{
+	local pci_id="$1"
+
+	pci_id=$(echo "$pci_id" | tr -d '[:space:]')
+	pci_id="${pci_id#0000:}"
+	echo "$pci_id"
+}
+
+# Chipup callers mix 0-based and 1-based indexes. sxcore uses
+# "chipup 0 <pci_path>"; autochipup/hotplug use 1..N. Config files are
+# 1-based (asic1_pci_bus_id). Map 0/empty to 1.
+_hw_mgmt_normalize_asic_index()
+{
+	local idx="${1:-1}"
+
+	if [ -z "$idx" ] || [ "$idx" -eq 0 ] 2>/dev/null; then
+		echo 1
+		return
+	fi
+	echo "$idx"
+}
+
+# Extract a PCI BDF from a chipup argument: BDF, pci-BDF, or sysfs path
+# ending in 0000:bb:dd.f (sxcore passes %S/%p).
+_hw_mgmt_extract_pci_bdf()
+{
+	local arg="$1"
+	local base
+
+	[ -n "$arg" ] || return 1
+	base=$(basename "$arg")
+	base="${base#pci-}"
+	echo "$base" | grep -E -q '^([0-9A-Fa-f]{4}:)?[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}\.[0-9A-Fa-f]$' || return 1
+	_hw_mgmt_pci_bdf_short "$base"
+}
+
+# Resolve mlxreg -d target for ASIC index $1 (0- or 1-based).
+# Optional $2: explicit /dev/mst path (tests) or PCI BDF/sysfs path from
+# chipup $3. Match /sys/class/mst to config/asicN_pci_bus_id (1-based) so a
+# multi-ASIC chipup failure programs the ASIC that failed, not the first
+# pciconf0. If no mst node matches, pass the PCI BDF to mlxreg.
+get_asic_mlxreg_dev()
+{
+	local asic_index
+	local arg2="$2"
+	local pci_id pci_short mst_sysfs mst_devdir mst_name pci_link pci_tail extracted
+	local asic_num=1
+	local match=""
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+
+	if [ -n "$arg2" ]; then
+		if extracted=$(_hw_mgmt_extract_pci_bdf "$arg2"); then
+			pci_id=$extracted
+			pci_short=$extracted
+		else
+			echo "$arg2"
+			return 0
+		fi
+	fi
+
+	[ -f "$config_path/asic_num" ] && asic_num=$(< "$config_path/asic_num")
+
+	if [ -z "$pci_short" ] && [ -f "$config_path/asic${asic_index}_pci_bus_id" ]; then
+		pci_id=$(_hw_mgmt_pci_bdf_short "$(< "$config_path/asic${asic_index}_pci_bus_id")")
+		pci_short=$pci_id
+	fi
+
+	mst_sysfs="${HW_MGMT_MST_SYSFS:-/sys/class/mst}"
+	mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+
+	if [ -n "$pci_short" ] && [ -d "$mst_sysfs" ]; then
+		for mst_name in "$mst_sysfs"/*; do
+			[ -e "$mst_name" ] || continue
+			pci_link=$(readlink -f "$mst_name/device" 2>/dev/null)
+			if [ -z "$pci_link" ] && [ -f "$mst_name/uevent" ]; then
+				pci_link=$(sed -n 's/^PCI_SLOT_NAME=//p' "$mst_name/uevent")
+			fi
+			[ -n "$pci_link" ] || continue
+			pci_tail=$(_hw_mgmt_pci_bdf_short "$(basename "$pci_link")")
+			if [ "$pci_tail" = "$pci_short" ]; then
+				match="$mst_devdir/$(basename "$mst_name")"
+				break
+			fi
+		done
+	fi
+
+	if [ -n "$match" ]; then
+		echo "$match"
+		return 0
+	fi
+
+	# mlxreg accepts a PCI BDF when the mst char device is missing.
+	if [ -n "$pci_short" ]; then
+		echo "$pci_id"
+		return 0
+	fi
+
+	# Last resort for a single-ASIC system only. Never pick the first
+	# pciconf0 when more than one ASIC is present.
+	if [ "$asic_num" -eq 1 ]; then
+		match=$(find "$mst_devdir" -maxdepth 1 -name '*_pciconf0' 2>/dev/null | head -n 1)
+		if [ -n "$match" ]; then
+			echo "$match"
+			return 0
+		fi
+	fi
+
+	return 1
+}
+
+# After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
+# typically missing, so thermal control never latches emergency and never
+# calls write_pwm_mlxreg(). Force PWM 100% here:
+# - thermal/pwm1 if it still exists (CPLD or leftover ASIC hwmon)
+# - otherwise MFSC via mlxreg for the failed ASIC when tc_config enables
+#   ASIC PWM control
+# $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
+# $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+set_asic_pwm_full_speed_on_chipup_fail()
+{
+	local asic_index
+	local explicit_dev="$2"
+	local pwm_link="$thermal_path/pwm1"
+	local tc_cfg="$config_path/tc_config.json"
+	local mt_dev=""
+	local mlxreg_rc=0
+	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+
+	if [ -e "$pwm_link" ]; then
+		echo 255 > "$pwm_link"
+		log_info "Set PWM to maximum speed via sysfs after chipup failure."
+		return 0
+	fi
+
+	if [ ! -f "$tc_cfg" ] || ! grep -q '"pwm_control"[[:space:]]*:[[:space:]]*true' "$tc_cfg"; then
+		log_info "Chipup failed and PWM sysfs is missing; ASIC PWM control is not configured."
+		return 1
+	fi
+
+	if ! command -v mlxreg >/dev/null 2>&1; then
+		log_err "mlxreg is not available; cannot set PWM after chipup failure."
+		return 1
+	fi
+
+	if [ -z "$explicit_dev" ] && [ ! -d "$mst_devdir" ] && \
+	   [ -z "${HW_MGMT_MST_DEVDIR:-}" ] && command -v mst >/dev/null 2>&1; then
+		mst start >/dev/null 2>&1
+		sleep 2
+	fi
+
+	mt_dev=$(get_asic_mlxreg_dev "$1" "$explicit_dev")
+	if [ -z "$mt_dev" ]; then
+		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM after chipup failure."
+		return 1
+	fi
+
+	# mlxreg prompts for confirmation; same pattern as thermal write_pwm_mlxreg().
+	if command -v timeout >/dev/null 2>&1; then
+		yes | timeout 3 mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+		mlxreg_rc=$?
+	else
+		yes | mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+		mlxreg_rc=$?
+	fi
+
+	if [ "$mlxreg_rc" -ne 0 ]; then
+		log_err "Failed to set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev rc=$mlxreg_rc)."
+		return 1
+	fi
+
+	log_info "Set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev)."
+	return 0
+}
