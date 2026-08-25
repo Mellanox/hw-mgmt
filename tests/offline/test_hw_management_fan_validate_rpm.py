@@ -151,6 +151,24 @@ def test_validate_rpm_read_pwm_mismatch_uses_cached_false(module_name, tc_mod, t
 
 
 @pytest.mark.parametrize("tacho_idx", [1, 2])
+def test_validate_rpm_pwm_quantization_clears_cached_fault_2_5(tacho_idx):
+    """2.5 float PWM round-trip (50 vs 50.2) is settled; trend can clear a cached tacho fault."""
+    import hw_management_thermal_control_2_5 as tc25
+
+    with patch.object(tc25, "current_milli_time", return_value=1_000_000):
+        h = _ValidateRpmHarness(
+            read_pwm_val=50.2,
+            pwm_set=50,
+            rpm_relax_ts=0,
+            fan_tacho_state=False,
+            rpm_read=_EXPECTED_RPM_AT_PWM_50,
+            tacho_idx=tacho_idx,
+        )
+        assert tc25.fan_sensor._validate_rpm(h) is True
+        assert h.fan_tacho_state is True
+
+
+@pytest.mark.parametrize("tacho_idx", [1, 2])
 @pytest.mark.parametrize("module_name,tc_mod", _modules())
 def test_validate_rpm_stabilized_speed_ok(module_name, tc_mod, tacho_idx):
     with patch.object(tc_mod, "current_milli_time", return_value=1_000_000):
