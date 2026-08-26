@@ -495,6 +495,29 @@ get_fan_direction_by_vpd()
 	return $dir
 }
 
+validate_cartridge_fru()
+{
+	local cartridge_name=$1
+	local fru_data_file="$eeprom_path/${cartridge_name}_data"
+	local valid_file="$config_path/${cartridge_name%%_eeprom*}_valid"
+	local fru_error
+
+	# ipmi-fru returns 0 even for a broken FRU, so only its output tells us.
+	# The BMC reads these two fields to program the CPLD, so both must be there.
+	fru_error=$(grep -m1 -o "FRU Error.*" "$fru_data_file" 2>/dev/null)
+	if [ -n "$fru_error" ]; then
+		echo 0 > "$valid_file"
+		log_err "$cartridge_name: $fru_error"
+	elif ! grep -q "FRU Board Serial Number" "$fru_data_file" 2>/dev/null ||
+		! grep -q "FRU Chassis Custom Info" "$fru_data_file" 2>/dev/null; then
+		echo 0 > "$valid_file"
+		log_err "$cartridge_name: FRU missing board serial or chassis custom info"
+	else
+		echo 1 > "$valid_file"
+		log_info "$cartridge_name: FRU valid"
+	fi
+}
+
 function set_fpga_combined_version()
 {
 	path="$1"
@@ -1321,6 +1344,9 @@ if [ "$1" == "add" ]; then
 			if [ "$dmi_board_name" == "VMOD0021" ] || [ "$dmi_board_name" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
+					validate_cartridge_fru "$eeprom_name"
+				else
+					log_info "$eeprom_name: ipmi-fru not found, FRU not validated"
 				fi
 			else
 				eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
@@ -1682,6 +1708,9 @@ else
 				;;
 			vpd*)
 				rm -f $eeprom_path/vpd_parsed
+				;;
+			cable_cartridge*)
+				rm -f $config_path/"${eeprom_name%%_eeprom*}"_valid
 				;;
 			*)
 				;;

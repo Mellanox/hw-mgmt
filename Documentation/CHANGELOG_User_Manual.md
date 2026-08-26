@@ -1,11 +1,28 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** August 17, 2026
+**Last Updated:** August 26, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.9 - August 26, 2026
+
+#### Added: Cable cartridge FRU validity
+
+**Affected platforms:** N51XX_LD and N61XX_LD (VMOD0021, VMOD0023). Other platforms with cable cartridge EEPROMs parse them through a different path and are unaffected.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.1.61 | **`config/cable_cartridge<n>_valid`**: `1` FRU valid, `0` FRU invalid, absent when the check did not run or the cartridge was removed |
+
+**Validation source:** `usr/usr/bin/hw-management-chassis-events.sh`
+(`validate_cartridge_fru()`).
+
+---
 
 ### Rev. 3.2.8 - August 25, 2026
 
