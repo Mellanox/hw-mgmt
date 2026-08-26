@@ -892,6 +892,11 @@ if [ "$1" == "add" ]; then
 							environment_path="$hw_management_path"/dpu"$slot_num"/environment
 							alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
 							thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+							# Make sure that dpu folders are created before adding the
+							# attributes. Some of the voltmon udev events may get
+							# processed before the DPU_READY event, there by creating
+							# a race condition. This will prevent missing attributes.
+							mkdir -p "$environment_path" "$alarm_path" "$thermal_path"
 						else
 							# Skip other voltmons events, since its not present in DPU.
 							exit 0
