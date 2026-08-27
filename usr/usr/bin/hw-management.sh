@@ -3339,7 +3339,7 @@ set_asic_pci_id()
 	HI193)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
-	HI183|HI195|HI188|HI192)
+	HI183|HI187|HI188)
 		asic_pci_id="${spc6_pci_id}"
 		;;
 	*)
