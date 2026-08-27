@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.7
+Rev. 3.2.8
 
 ## Table of Contents
 
@@ -76,6 +76,7 @@ Rev. 3.2.7
 | 3.1.58 | Core 1 Temperature ID | 37 |
 | 3.1.59 | Read PDB Hotswap Scale Factor | 37 |
 | 3.1.60 | Read LED Control Type Map | 38 |
+| 3.1.61 | Cable Cartridge FRU Validity | 38 |
 | 3.2 | BIOS Control | 38 |
 | 3.2.1 | BIOS Status | 38 |
 | 3.2.2 | BIOS Start Retry | 38 |
@@ -409,6 +410,7 @@ Rev. 3.2.7
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.8 | August 2026 | §3.1.61 `config/cable_cartridge<n>_valid`: IPMI FRU check result per cable cartridge (N51XX_LD / N61XX_LD) |
 | 3.2.7 | August 2026 | §3.1.60 `config/led_control_type` platform LED owner map; §3.16.28 `led/led_<name>_control` (`led_sw` / `led_hw` / `led_hw_sw`); glob masks `*` and `?` |
 | 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; §3.25 BMC A2D leakage runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
 | 3.2.5 | June 2026 | §2.2 HI189 BMC peripheral table; §3.3.7–§3.3.8 BMC EEPROM bodies; §3.20 BMC stack tags and CPU-on-BMC thermal cross-refs; §3.23 BMC status bodies (present, bmc_to_cpu_ctrl, MCTP) |
@@ -1990,6 +1992,48 @@ uses `led_hw_sw`.
 ```bash
 cat $bsp_path/config/led_control_type
 # fan led_sw psu led_sw status led_sw
+```
+
+### Cable Cartridge FRU Validity
+
+**Stack:** Host
+
+**Node name:** `$bsp_path/config/cable_cartridge<cartridge number>_valid`
+
+**Description:** Result of the IPMI FRU check run on the cable cartridge EEPROM
+at init. The BMC reads the same EEPROM and programs the rack id, topology id,
+switch tray id and slot id into the switch board CPLD without validating it,
+so this node reports whether that source data can be trusted.
+
+Written by `validate_cartridge_fru()` in `hw-management-chassis-events.sh` after
+`ipmi-fru` parses `eeprom/cable_cartridge<n>_eeprom`. `ipmi-fru` exits 0 even
+for a broken FRU, so the verdict comes from its output: a `FRU Error` line, or a
+missing board serial number or chassis custom info field, gives 0. Failures are
+also reported to syslog.
+
+Created on the N51XX_LD and N61XX_LD families only. Other platforms that have
+cable cartridge EEPROMs parse them through a different path and do not get this
+node. It is also absent when `ipmi-fru` is not installed.
+
+The node is created when the cartridge EEPROM appears and removed when the
+cartridge is removed, so it never reports a verdict for an empty slot.
+
+One node per cartridge, so the count follows `config/cartridge_counter`, which
+is platform dependent: 4 on N6100_LD (HI180), N6300_LD (HI185), N5110_LD (HI166)
+and N5100_LD (HI167/HI170), and 2 on N5112_LD (HI169).
+
+**Access:** Read only
+
+**Release version:** 3.2.8
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Validity | Integer | 1 - FRU valid, 0 - FRU invalid |
+
+**Example:** Check cable cartridge 1 FRU validity:
+```bash
+cat $bsp_path/config/cable_cartridge1_valid
 ```
 
 ## BIOS Control
