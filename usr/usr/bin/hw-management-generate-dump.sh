@@ -130,7 +130,6 @@ fi
 
 if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
 	dump_cmd "journalctl -o short-precise --no-pager" "journalctl" "45"
-	dump_cmd "sx_sdk --version" "sx_sdk_ver" "10"
 fi
 
 [ -f /var/log/tc_log ] && cp /var/log/tc_* "$DUMP_FOLDER/" 2>/dev/null || true
@@ -180,6 +179,7 @@ dump_cmd "cat ${REGMAP_FILE} 2>/dev/null" "cpld_dump" "5"
 dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
 dump_cmd "systemctl status hw-management* --no-pager" "hw-management_svc_status" "5"
 dump_cmd "ip addr" "ip_addr" "5"
+dump_cmd "sx_sdk --version" "sx_sdk_ver" "5"
 dump_cpld_swb_cartridge
 
 # Kill all the leftout child processes before creating the dump archive
