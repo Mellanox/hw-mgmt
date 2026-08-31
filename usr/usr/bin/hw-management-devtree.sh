@@ -78,7 +78,7 @@ declare -A thermal_arr=( \
 	["i"]="tmp411" \
 	["j"]="tmp1075" \
 	["k"]="tmp451" \
-	["l"]="jc42" \
+	["l"]="spd5118" \
 )
 
 declare -A regulator_arr=( \
@@ -733,8 +733,8 @@ declare -A sn66xxld_pwr_alternatives=( \
 # Devices located on SN66XX_LD platform board
 declare -A sn66xxld_platform_alternatives=( \
 	["24c512_1"]="24c512 0x51 1 vpd_info" \
-	["jc42_0"]="jc42 0x52 10 somdimm_temp1" \
-	["jc42_1"]="jc42 0x53 10 somdimm_temp2" \
+	["spd5118_0"]="spd5118 0x52 10 somdimm_temp1" \
+	["spd5118_1"]="spd5118 0x53 10 somdimm_temp2" \
 	["mp2845_0"]="mp2845 0x69 5 comex_voltmon1" \
 	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2" \
 )
@@ -753,12 +753,6 @@ declare -A fan_type1_alternatives=( \
 	["adt75_0"]="adt75 0x49 6 fan_amb" \
 	["stts751_0"]="stts751 0x49 6 fan_amb" \
 	["lm5066i_0"]="lm5066i 0x14 6 fan_hotswap1" \
-)
-
-# Currently system can have just multiple clock boards.
-declare -A clk_type0_alternatives=( \
-	["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
-	["24c128_1"]="24c128 0x57 5 clk_eeprom2" \
 )
 
 # Remove ICP201xx pressure sensors from SMBIOS BOM mechanism
@@ -980,8 +974,8 @@ devtr_bom_load_from_json()
 
 # Check if system has SMBIOS BOM changes mechanism support.
 # If yes, init appropriate associative arrays.
-# Jaguar, Leopard, Gorilla are added just for debug.
-# This mechanism is enabled on new systems starting from Moose.
+# MQM8700, SN4700, MQM9700 are added just for debug.
+# This mechanism is enabled on new systems starting from SN5600.
 devtr_check_supported_system_init_alternatives()
 {
 	case $cpu_type in
@@ -1093,7 +1087,7 @@ devtr_check_supported_system_init_alternatives()
 #			;;
 #		VMOD0010)
 #			case $sku in
-#				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
+#				HI122|HI123|HI124|HI125)	# SN4700, MSN4600, MSN4600C
 #					for key in "${!msn4700_msn4600_alternatives[@]}"; do
 #						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
 #					done
@@ -1194,9 +1188,6 @@ devtr_check_supported_system_init_alternatives()
 			esac
 			for key in "${!fan_type1_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
-			done
-			for key in "${!clk_type0_alternatives[@]}"; do
-				clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
 			done
 			return 0
 			;;
@@ -1363,10 +1354,6 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!fan_type1_alternatives[@]}"; do
 					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
-				done
-
-				for key in "${!clk_type0_alternatives[@]}"; do
-					clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
 				done
 				;;
 			*)

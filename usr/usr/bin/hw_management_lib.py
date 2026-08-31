@@ -92,14 +92,22 @@ def atomic_file_write(file_name, value):
         with os.fdopen(fd, 'w', encoding="utf-8") as f:
             f.write("{}".format(value))
         os.replace(f_path_tmp, file_name)  # Atomic on POSIX
-    except Exception as e:
-        os.unlink(f_path_tmp)  # Cleanup on failure
-        raise Exception(f"Error writing {file_name}: {e}")
+    except BaseException as e:
+        try:
+            os.unlink(f_path_tmp)
+        except OSError:
+            pass
+        msg = f"Error writing {file_name}: {e}"
+        if isinstance(e, Exception):
+            raise Exception(msg)
+        # Keep ShutdownRequested/SystemExit/KeyboardInterrupt type so
+        # caller except Exception cannot swallow SIGTERM.
+        raise type(e)(msg) from e
 
 # ----------------------------------------------------------------------
 
 
-def exit_wait(exit_event, timeout, chunk_sec=1.0):
+def exit_wait(exit_event, timeout, chunk_sec=0.2):
     """
     @summary:
         Wait up to timeout seconds in short chunks for graceful shutdown visibility.
@@ -408,16 +416,18 @@ class HW_Mgmt_Logger:
         handler_list = self.logger.handlers[:]
         for handler in handler_list:
             if isinstance(handler, RotatingFileHandler):
-                prev_bytes = handler.maxBytes
-                prev_count = handler.backupCount
                 handler.maxBytes = file_size
                 handler.backupCount = file_count
-                # Rollover only when limits change. Unconditional doRollover() at
-                # startup rotated a fresh log and wasted a backup slot. When limits
-                # do change, rollover still applies so a log oversized vs the new cap
-                # from a prior config is split correctly.
-                if handler.maxBytes != prev_bytes or handler.backupCount != prev_count:
-                    handler.doRollover()
+                # Apply new limits only. Do not rollover on startup just because
+                # defaults (e.g. 10MB) differ from the service cap (e.g. 1MB) —
+                # that created empty .log.1 files. Rotate only if the active log
+                # already exceeds the new size limit; otherwise wait for normal
+                # size-based rotation on the next write.
+                try:
+                    if file_size > 0 and os.path.getsize(handler.baseFilename) > file_size:
+                        handler.doRollover()
+                except OSError:
+                    pass
 
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """

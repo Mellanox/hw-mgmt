@@ -412,7 +412,7 @@ Rev. 3.2.6
 | 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
 | 3.2.3 | June 2026 | §3.20 thermal: filled missing section bodies; TOC aligned; per-HID BMC examples under `bmc/examples/<HID>/examples/` |
 | 3.2.2 | June 2026 | BMC thermal sysfs (HI189 / `lm75`): documented `bmc_temp_input` and `bmc_temp`; removed obsolete TOC entries for `bmc_crit` / `bmc_min` (not created on BMC stack) |
-| 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
+| 3.2.1 | May 2026 | Corrected N51XX_LD platform family reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for N51XX_LD/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Validation: `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`, `hw-management.sh` / event scripts<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
 | 3.0 | September 2025 | Complete document alignment with Word document source<br>• Updated title and branding to NVIDIA<br>• Complete sysfs hierarchy coverage with 300+ attributes<br>• Professional markdown formatting throughout<br>• Added comprehensive examples for all attributes<br>• Updated all 22 major sections (3.1-3.22)<br>• Added Watchdog, JTAG, and BMC sections<br>• Complete thermal monitoring documentation<br>• Enterprise-grade documentation ready for production |
@@ -596,7 +596,7 @@ NVIDIA virtual hierarchy supports the following HW control ($bsp_path below is a
 | $bsp_path/config | Internal system specific configuration data |
 | $bsp_path/eeprom | Gets raw data from EEPROM in system modules |
 | $bsp_path/environment | Gets information on environmental sensors (A2D, Volt, Curr) |
-| $bsp_path/led | Gets/sets LED color |
+| $bsp_path/led | Gets/sets LED color (see **LED_Control_API.md** for runtime `led_<func>` naming and CPLD behaviour) |
 | $bsp_path/bin |  |
 | $bsp_path/events |  |
 | $bsp_path/firmware |  |
@@ -1740,7 +1740,7 @@ C2P
 
 **Node name:** `$bsp_path/config/fan_dir_eeprom`
 
-**Description:** Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM.
+**Description:** Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM. On these systems, each fan drawer direction (`thermal/fan<index>_dir`) is taken from the fan module EEPROM VPD. When the fan is removed, the corresponding `fan<index>_dir` attribute may also be removed. See [Read Fan Direction](#read-fan-direction).
 
 **Access:** Read only
 
@@ -3932,6 +3932,9 @@ cat $bsp_path/environment/lc1_a2d_volt1_scale
 
 ## LC LED
 
+> **Common LED API reference:** [LED_Control_API.md](LED_Control_API.md) — line card
+> paths under `$bsp_path/lc<N>/led/`.
+
 ### Get LC Status LED
 
 **Node name:** `$bsp_path/led/lc<index>_status_led`
@@ -4318,6 +4321,10 @@ cat $bsp_path/thermal/lc1_module1_temp_input
 ```
 
 ## LED Control
+
+> **Common LED API reference:** [LED_Control_API.md](LED_Control_API.md) — runtime
+> `led_<func>` naming, sysfs tree, CPLD hardware ownership, worst-status aggregation,
+> kernel patches, and examples. Runtime layout: [examples/hw-management-led-sysfs.txt](../examples/hw-management-led-sysfs.txt).
 
 ### Get Fan Status LED
 
@@ -5518,9 +5525,9 @@ cat $bsp_path/system/reset_long_pb
 cat $bsp_path/system/reset_cause
 ```
 
-#### Juliet platform family (N51XX_LD)
+#### N51XX_LD platform family
 
-Per CPLD design, Juliet platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, or `reset_reload_bios`. Those attributes must not be documented or tested as available on Juliet systems.
+Per CPLD design, N51XX_LD platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, or `reset_reload_bios`. Those attributes must not be documented or tested as available on N51XX_LD systems.
 
 Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
 
@@ -6239,22 +6246,29 @@ cat $bsp_path/thermal/fan1_speed_tolerance
 
 ### Read Fan Direction
 
-**Node name:** `$bsp_path/thermal/fan<index>_direction`
+**Node name:** `$bsp_path/thermal/fan<index>_dir`
 
-**Description:** Read fan<index> direction
+**Description:** Read fan drawer `<index>` airflow direction.
 
 **Access:** Read only
 
 **Release version:** 1.0
 
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
+**Values:**
+| Value | Meaning |
+|------|---------|
+| 0 | Reverse (C2P) |
+| 1 | Forward (P2C) |
+| 2 | Direction cannot be determined (fan missing, or fan present but direction debounce failed) |
+
+**Notes:**
+- If the fan is not present (`thermal/fan<index>_status` is 0), `fan<index>_dir` is irrelevant and must be ignored by consumers.
+- On systems that report direction via CPLD (`system/fan_dir`), a remove event keeps `fan<index>_dir` present and sets it to `2`.
+- On systems with fan-module EEPROM direction detection (`config/fan_dir_eeprom`), direction is taken from EEPROM VPD data. When the fan (and its EEPROM) is removed, `fan<index>_dir` may also be removed.
 
 **Example:** Read fan1 direction:
 ```bash
-cat $bsp_path/thermal/fan1_direction
+cat $bsp_path/thermal/fan1_dir
 ```
 ### Read Fan Status
 

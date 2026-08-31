@@ -120,7 +120,8 @@ leakage_count=0
 leakage_rope_count=0
 asic_chipup_retry=2
 device_connect_retry=2
-chipup_log_size=4096
+chipup_log_size=65536
+chipup_log_archive_max=3
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
@@ -996,7 +997,7 @@ add_cpu_board_to_connection_table()
 			board=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $board in
 				MSN241*|MSN27*)
-					# Spider Panther removed A2D from SFF
+					# SN2410/SN2700 removed A2D from SFF
 					cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 					;;
 				*)
@@ -1108,8 +1109,7 @@ add_come_named_busses()
 		come_named_busses+=( ${amd_snw_named_busses[@]} )
 		;;
 	*)
-		log_err "unsupported cpu_type '${cpu_type}' for add_come_named_busses"
-		return 1
+		return
 		;;
 	esac
 
@@ -1124,21 +1124,11 @@ add_come_named_busses()
 	named_busses+=(${come_named_busses[@]})
 }
 
-start_mst_for_spc1_port_cpld()
-{
-	if [ ! -d /dev/mst ]; then
-		lsmod | grep mst_pci >/dev/null 2>&1
-		if [  $? -ne 0 ]; then
-			mst start  >/dev/null 2>&1
-		fi
-	fi
-}
-
 set_spc1_port_cpld()
 {
 	cpld=$(< $config_path/cpld_port)
 	if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ]; then
-		ver_dec=$CPLD3_VER_DEF
+		ver_dec=${CPLD3_VER_DEF:-0}
 		# check if mlxreg exists
 		if [ -x "$(command -v mlxreg)" ]; then
 			if [ ! -d /dev/mst ]; then
@@ -1200,7 +1190,6 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	case $sku in
 		HI138)
 			# SGN2410_A1
@@ -1228,18 +1217,16 @@ msn24xx_specific()
 	echo cpld3 > $config_path/cpld_port
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
-	set_spc1_port_cpld
 	cpld=$(< $config_path/cpld_port)
 	echo 8 > $config_path/reset_attr_num
 }
 
 msn27xx_msb_msx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSN27*|MSN241*)
-			# Panther Spider
+			# SN2700/SN2410
 			connect_table+=(${msn2700_base_connect_table[@]})
 			;;
 		*)
@@ -1249,11 +1236,11 @@ msn27xx_msb_msx_specific()
 	# Connect TC data table 
 	case $product in
 		MSN27*)
-			# Panther
+			# SN2700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
 			;;
 		MSN241*)
-			# Spider
+			# SN2410
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
 			;;
 		MSB78*|MSB77*)
@@ -1310,8 +1297,6 @@ msn27xx_msb_msx_specific()
 			echo cpld3 > $config_path/cpld_port
 		;;
 	esac
-
-	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
@@ -1391,7 +1376,7 @@ mqmxxx_msn37x_msn34x_specific()
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
 		HI110)
-			# Jaguar
+			# MQM8700 (HI110)
 			connect_table+=(${mqm8700_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_mqm8700.json"
@@ -2182,6 +2167,9 @@ sn5x00_specific()
 	else
 		echo 4 > $config_path/cpld_num
 	fi
+	if [ "$sku" == "HI144" ] || [ "$sku" == "HI147" ] ; then
+		echo 24c02 > $config_path/psu_eeprom_type
+	fi
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
@@ -2353,13 +2341,13 @@ qm3xxx_specific()
 		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
 		psu1_i2c_bus=4
-		psu1_i2c_addr=59
+		psu1_i2c_addr=0x59
 		psu2_i2c_bus=4
-		psu2_i2c_addr=58
+		psu2_i2c_addr=0x58
 		psu3_i2c_bus=4
-		psu3_i2c_addr=5b
+		psu3_i2c_addr=0x5b
 		psu4_i2c_bus=4
-		psu4_i2c_addr=5a
+		psu4_i2c_addr=0x5a
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI158" ]; then
 		# Set according to front fan max.
@@ -2385,21 +2373,21 @@ qm3xxx_specific()
 
 		# Map I2C bus and address to psu number
 		psu1_i2c_bus=4
-		psu1_i2c_addr=59
+		psu1_i2c_addr=0x59
 		psu2_i2c_bus=4
-		psu2_i2c_addr=58
+		psu2_i2c_addr=0x58
 		psu3_i2c_bus=3
-		psu3_i2c_addr=5b
+		psu3_i2c_addr=0x5b
 		psu4_i2c_bus=3
-		psu4_i2c_addr=5a
+		psu4_i2c_addr=0x5a
 		psu5_i2c_bus=4
-		psu5_i2c_addr=5d
+		psu5_i2c_addr=0x5d
 		psu6_i2c_bus=4
-		psu6_i2c_addr=5c
+		psu6_i2c_addr=0x5c
 		psu7_i2c_bus=3
-		psu7_i2c_addr=5e
+		psu7_i2c_addr=0x5e
 		psu8_i2c_bus=3
-		psu8_i2c_addr=5f
+		psu8_i2c_addr=0x5f
 
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
@@ -2553,17 +2541,17 @@ n51xxld_specific()
 	else
 		# Adding Cable Cartridge support which is not included to BOM string.
 		case $sku in
-		HI166)	# Juliet SO.
+		HI166)	# N5110_LD (HI166).
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
 			;;
-		HI169)	# Juliet Ariel.
+		HI169)	# N5112_LD (HI169).
 			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
 			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 2 > $config_path/cartridge_counter
 			;;
-		HI167|HI170)	# Juliet NSO
+		HI167|HI170)	# N5100_LD (HI167/HI170)
 			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
 			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
@@ -2577,7 +2565,7 @@ n51xxld_specific()
 		HI177)	# Kyber
 			echo 0 > $config_path/cartridge_counter
 			;;
-		*)	# According Juliet SO.
+		*)	# Default N5110_LD cartridge layout.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
@@ -2606,7 +2594,7 @@ n51xxld_specific()
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
-		HI166|HI169)	# TTM, ARIEL
+		HI166|HI169)	# N5110_LD TTM (HI166), N5112_LD (HI169)
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
 		;;
@@ -2773,10 +2761,10 @@ sn5640_specific()
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
 
 	case $sku in
-		HI172)	# Gaur
+		HI172)	# SN5610 (HI172)
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
 		;;
-		HI171)	# Bison
+		HI171)	# SN5640 (HI171)
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 		;;
 		*)
@@ -2866,7 +2854,7 @@ sn66xxld_specific()
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
+	i2c_comex_mon_bus_default=5
 	named_busses+=(${sn66xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
@@ -3247,13 +3235,30 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# Juliet
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# N51XX_LD
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
 		*)
 		;;
 	esac
+}
+
+# Run depmod only when modules.dep/modules.alias are missing or older
+# than any .ko* module. Avoids multi-second cost on weak CPUs when
+# depmod outputs are already current.
+run_depmod_if_needed()
+{
+	local modules_dir="/lib/modules/$(uname -r)"
+	local modules_dep="${modules_dir}/modules.dep"
+	local modules_alias="${modules_dir}/modules.alias"
+
+	if [ ! -f "$modules_dep" ] || [ ! -f "$modules_alias" ] || \
+	   find "$modules_dir" \( -name '*.ko' -o -name '*.ko.*' \) \
+		\( -newer "$modules_dep" -o -newer "$modules_alias" \) \
+		-print -quit 2>/dev/null | grep -q .; then
+		depmod -a 2>/dev/null
+	fi
 }
 
 set_config_data()
@@ -3292,7 +3297,7 @@ set_config_data()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
-	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
+	if [ -f $thermal_control_configs_path/tc_config_user.json ]; then
 		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
 	fi
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
@@ -3326,14 +3331,24 @@ connect_platform()
 	fi
 
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
+		local dev_connected=0
 		for ((j=0; j<${device_connect_retry}; j++)); do
 			connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 					"${connect_table[i+2]}"
 			if [ $? -eq 0 ]; then
+				dev_connected=1
 				break;
 			fi
 			disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 		done
+		# A device (other than the ASIC/mlxsw_minimal, which has its own chipup
+		# tracer) failed to bind after all retries. Preserve the current I2C
+		# trace so the bus activity leading to the failure is captured, not just
+		# ASIC chipup failures.
+		if [ "$dev_connected" -eq 0 ]; then
+			log_err "Failed to connect device ${connect_table[i]} ${connect_table[i+1]} on bus ${connect_table[i+2]} after ${device_connect_retry} attempts"
+			save_i2c_trace_on_failure "device connect failed: ${connect_table[i]} ${connect_table[i+1]} bus ${connect_table[i+2]}"
+		fi
 	done
 	if [ ! -z $mctp_addr ]; then
 		echo $mctp_addr > $config_path/mctp_addr
@@ -3942,6 +3957,8 @@ map_dummy_psus()
 		if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
 			continue
 		fi
+		# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming
+		psu_addr=$(printf "%02x" "$psu_addr")
 
 		psu_present=$(< $thermal_path/psu${psu_idx}_status)
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
@@ -4007,8 +4024,8 @@ do_start()
 		set_asic_i2c_bus
 	fi
 	touch $udev_ready
-	depmod -a 2>/dev/null
-	
+	run_depmod_if_needed
+
 	udevadm trigger --action=add
 	udevadm settle
 	set_sodimm_temp_limits
@@ -4034,11 +4051,6 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
-	fi
-	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		cp $thermal_control_config $config_path/tc_config.json
-	else
-		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	/usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
@@ -4198,6 +4210,10 @@ do_chip_up_down()
 				return 1
 			fi
 
+			if [ -f "$config_path/cpld_port" ]; then
+				set_spc1_port_cpld
+			fi
+
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -4321,40 +4337,53 @@ case $ACTION in
 		if [ -d /var/run/hw-management ]; then
 			asic_retry="$asic_chipup_retry"
 			asic_chipup_rc=1
+			asic_index="$2"
+			chipup_trace_attempt=1
+
+			# Rotate the trace log at invocation start so all retries within one
+			# chipup run stay in the same file (rotation at the end could split
+			# attempts across chipup_i2c_trace_log and chipup_i2c_trace_log.*).
+			if [ -f /var/log/chipup_i2c_trace_log ]; then
+				file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
+				if [ $file_size -gt $chipup_log_size ]; then
+					timestamp=`date +%s`
+					mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
+					touch /var/log/chipup_i2c_trace_log
+					# Cap the number of per-run archives so repeated chipup
+					# failures cannot fill the disk.
+					ls -1t /var/log/chipup_i2c_trace_log.* 2>/dev/null | \
+						tail -n +$((chipup_log_archive_max + 1)) | \
+						xargs -r rm -f
+				fi
+			fi
+
+			# Start the chipup I2C tracer on a dedicated ftrace instance
+			# (isolated from the boot-wide tracer). Enabled before the first
+			# attempt so every retry - including the first - is captured, and
+			# scoped to all CPLD bridge adapters so bus-wide contention is
+			# visible, not just the ASIC bus.
+			start_chipup_i2c_trace "$asic_index"
 
 			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
 				do_chip_up_down 1 "$2" "$3"
 				asic_chipup_rc=$?
-				asic_index="$2"
-				if [ "$asic_chipup_rc" -ne 0 ];then
+				if [ "$asic_chipup_rc" -ne 0 ]; then
 					do_chip_up_down 0 "$2" "$3"
+					# Save this attempt's I2C trace and clear the buffer
+					# before the next retry.
+					save_chipup_i2c_trace "$chipup_trace_attempt"
+					chipup_trace_attempt=$((chipup_trace_attempt + 1))
 				else
 					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
+					stop_chipup_i2c_trace
 					exit 0
 				fi
 
 				asic_retry=$(< $config_path/asic_chipup_counter)
-				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
-					# Start I2C tracer.
-					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
-					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
-				else
-					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_trace_log
-					echo 0>/sys/kernel/debug/tracing/trace
-				fi
-
 				change_file_counter $config_path/asic_chipup_counter -1
 			done
-			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
+			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
-
-			# Check log size in (bytes) and rotate if necessary.
-			file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
-			if [ $file_size -gt $chipup_log_size ]; then
-				timestamp=`date +%s`
-				mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
-				touch /var/log/chipup_i2c_trace_log
-			fi
 		fi
 	;;
 	chipdown)
@@ -4393,6 +4422,10 @@ case $ACTION in
 		fi
 		_hw_management_install_i2c_trace_exit_trap
 		do_start
+		# Restart does not chipdown, so do_chip_up_down below returns early.
+		if [ -f "$config_path/cpld_port" ]; then
+			set_spc1_port_cpld
+		fi
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
 		check_asic_chipup_status && do_chip_up_down 1 1

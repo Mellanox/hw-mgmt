@@ -947,7 +947,7 @@ journalctl -u hw-management-tc --since "1 hour ago"
 | `/environment/fan2_input` | Fan 2 speed | 3000 RPM | Secondary fan |
 | `/config/fan_min` | Minimum fan speed | 25% | Configuration |
 | `/config/fan_max` | Maximum fan speed | 100% | Configuration |
-| `/thermal/fan1_dir` | Fan 1 direction | 1 | 1=forward, 0=reverse |
+| `/thermal/fan1_dir` | Fan 1 direction | 1 | 0=reverse (C2P), 1=forward (P2C), 2=undetectable (missing or debounce failed). Ignore if fan not present. EEPROM-based systems may remove the attribute on fan removal. |
 
 #### Thermal Zones
 

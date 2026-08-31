@@ -157,7 +157,7 @@ class CONST:
     SENSOR_POLL_TIME_DEF = 30
     TEMP_INIT_VAL_DEF = 25.0
     TEMP_SENSOR_SCALE = 1000.0
-    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
+    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None, "val_max_clamp": 1000000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     MODULE_MAX_COOLING_LVL = 960
     TEMP_NA_VAL = 255
@@ -511,8 +511,10 @@ def str2bool(val):
     @summary:
         Convert input val value (y/n, true/false, 1/0, y/n) to bool
     @param val: input value.
-    @return: True or False
+    @return: True / False / None
     """
+    if val is None:
+        return None
     if isinstance(val, bool):
         return val
     elif isinstance(val, int):
@@ -1867,6 +1869,11 @@ class thermal_module_sensor(system_device):
         # taking default values for val_min_offset and val_max_offset
         self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
         self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+
+        # Tmax_crit should be used if module reported Tmax > Tmax_crit
+        # So Tmax should be never bigger than Tmax_crit. (Optional parameter)
+        self.val_max_clamp = self.read_val_min_max(None, "val_max_clamp", self.scale)
+
         self._validate_config()
 
         self.eeprom_data_timestamp = None
@@ -2014,6 +2021,7 @@ class thermal_module_sensor(system_device):
         val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         if val_max != 0 and self.scale != 0:
             self.val_max = val_max + self.val_max_offset / self.scale
+            self.val_max = min(self.val_max, self.val_max_clamp)
             self.val_min = self.val_max + self.val_min_offset / self.scale
         else:
             self.val_max = 0.0
@@ -2409,6 +2417,7 @@ class psu_fan_sensor(system_device):
         self.prsnt_err_pwm_min = self.get_file_val("config/pwm_min_psu_not_present")
         self.pwm_decode = sys_config.get(CONST.SYS_CONF_FAN_PWM, PSU_PWM_DECODE_DEF)
         self.fan_dir = CONST.C2P
+        self.psu_dummy = False
         self.pwm_last = CONST.PWM_MIN
         self.fault_list_old = []
 
@@ -2429,7 +2438,11 @@ class psu_fan_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
-        self.fan_dir = self._read_dir()
+        self.psu_dummy = self._get_dummy()
+        if self.psu_dummy:
+            self.fan_dir = CONST.UNKNOWN
+        else:
+            self.fan_dir = self._read_dir()
 
     # ----------------------------------------------------------------------
     def _read_dir(self):
@@ -2473,6 +2486,16 @@ class psu_fan_sensor(system_device):
         return psu_status
 
     # ----------------------------------------------------------------------
+    def _get_dummy(self):
+        """
+        @summary: Check if PSU is dummy
+        @return: Return True if PSU is dummy, False otherwise
+        """
+        if self.check_file("config/{}_is_dummy".format(self.base_file_name)):
+            return True
+        return False
+
+    # ----------------------------------------------------------------------
     def set_pwm(self, pwm):
         """
         @summary: Set PWM level for PSU FAN
@@ -2481,6 +2504,9 @@ class psu_fan_sensor(system_device):
         try:
             present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
             if present == 1:
+                self.psu_dummy = self._get_dummy()
+                if self.psu_dummy:
+                    return
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
                 psu_pwm, _, _ = g_get_range_val(self.pwm_decode, round(pwm))
                 if not psu_pwm:
@@ -2532,23 +2558,29 @@ class psu_fan_sensor(system_device):
         self.pwm = self.pwm_min
         # check if PSU present.
         # if PSU is plugged in then PSU fan missing is not an error
-        psu_status = self._get_status()
-        val_read_file = "thermal/{}".format(self.file_input)
-        if psu_status == 1:
+        if self._get_status() == 1:
+            self.psu_dummy = self._get_dummy()
+            if self.psu_dummy:
+                self.update_value(-1)
+                return
             try:
+                val_read_file = "thermal/{}".format(self.file_input)
                 value = int(self.read_file(val_read_file))
                 self.update_value(value)
                 self.log.debug("{} value {}".format(self.name, self.value))
             except (ValueError, TypeError, OSError, IOError):
                 self.update_value(-1)
+        else:
+            self.update_value(-1)
         return
 
     # ----------------------------------------------------------------------
     def collect_err(self):
         self.clear_fault_list()
+        if self.psu_dummy:
+            return
 
-        psu_status = self._get_status()
-        if psu_status == 0:
+        if self._get_status() == 0:
             self.append_fault(CONST.PRESENT)
 
         # truth table for fan direction
@@ -2563,7 +2595,7 @@ class psu_fan_sensor(system_device):
         #  UNKNOWN P2C        False
         #  UNKNOWN UNKNOWN    False
         if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
-           (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
+            (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.append_fault(CONST.DIRECTION)
 
         if self.fread_err.check_err():
@@ -2577,11 +2609,10 @@ class psu_fan_sensor(system_device):
         pwm_new = self.pwm
         fault_list = self.get_fault_list_filtered()
         self.fault_list_old = self.fault_list[:]
-        psu_status = self._get_status()
 
         if CONST.PRESENT in fault_list:
             # PSU status error. Calculating pwm based on dmin information
-            self.log.info("{} psu_status {}".format(self.name, psu_status))
+            self.log.info("{} psu_status {}".format(self.name, self._get_status()))
             # do not update pwm if error in "masked" list
             if CONST.PRESENT not in self.mask_fault_list:
                 if self.prsnt_err_pwm_min:
@@ -2623,16 +2654,22 @@ class psu_fan_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        if self.value == -1:
-            value = "N/A"
-        else:
-            value = int(self.value)
-        return "\"{}\" rpm:{}, dir:{} faults:[{}] tz_pwm: {}, {}".format(self.name,
-                                                                         value,
-                                                                         self.fan_dir,
+        if self.psu_dummy:
+            return "\"{}\" dummy psu, faults:[{}] tz_pwm: {}, {}".format(self.name,
                                                                          self.get_fault_list_str(),
                                                                          g_safe_round(self.pwm, 1),
                                                                          self.state)
+        else:
+            if self.value == -1:
+                value = "N/A"
+            else:
+                value = int(self.value)
+            return "\"{}\" rpm:{}, dir:{} faults:[{}] tz_pwm: {}, {}".format(self.name,
+                                                                             value,
+                                                                             self.fan_dir,
+                                                                             self.get_fault_list_str(),
+                                                                             g_safe_round(self.pwm, 1),
+                                                                             self.state)
 
 
 class fan_sensor(system_device):
@@ -2949,6 +2986,21 @@ class fan_sensor(system_device):
         return fan_tacho_state
 
     # ----------------------------------------------------------------------
+    def _get_asic_ready(self):
+        """
+        @summary: read ASIC ready state
+        """
+        asic_ready = False
+        try:
+            asic_ready = self.read_file("config/asic1_ready")
+            asic_ready = str2bool(asic_ready)
+        except (ValueError, TypeError, OSError, IOError):
+            asic_ready = False
+        if asic_ready is None:
+            asic_ready = True
+        return asic_ready
+
+    # ----------------------------------------------------------------------
     def set_pwm(self, pwm_val, force=False):
         """
         @summary: Set PWM level for chassis FAN
@@ -2973,6 +3025,15 @@ class fan_sensor(system_device):
             relax_time = 0
         self.rpm_relax_timestamp = max(current_milli_time() + relax_time, self.rpm_relax_timestamp)
         self.log.debug("{} pwm jump by:{} relax_time:{} timestamp {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestamp))
+
+        pwm_asic_control = self.sensors_config.get("is_pwm_asic_control", False)
+        if pwm_asic_control:
+            asic_ready = self._get_asic_ready()
+            if not asic_ready:
+                self.log.notice("PWM can't be updated. ASIC is not ready", id="{} ASIC_pwm not ready".format(self.name), repeat=1)
+                return
+            else:
+                self.log.notice(None, id="{} ASIC_pwm ready".format(self.name))
 
         self.pwm_set = pwm_val
 
@@ -4141,14 +4202,14 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: checking if PWM control is through ASIC
         """
-        val = self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"]
+        val = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_ASIC_PARAM, "1", "pwm_control"])
         return str2bool(val)
 
     def is_fan_asic_control(self):
         """
         @summary: checking if fan control is through ASIC
         """
-        val = self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"]
+        val = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_ASIC_PARAM, "1", "fan_control"])
         return str2bool(val)
 
     # ----------------------------------------------------------------------
@@ -4382,10 +4443,12 @@ class ThermalManagement(hw_management_file_op):
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.DRWR_ERR_LIST
+        is_pwm_asic_control = self.is_pwm_asic_control()
         self._sensor_add_config("fan_sensor", name, {"base_file_name": name,
                                                      "drwr_id": drwr_idx,
                                                      "tacho_cnt": self.fan_drwr_capacity,
-                                                     "dynamic_err_mask": err_mask})
+                                                     "dynamic_err_mask": err_mask,
+                                                     "is_pwm_asic_control": is_pwm_asic_control})
 
     # ----------------------------------------------------------------------
     def add_cpu_sensor(self, *_):
@@ -4718,6 +4781,8 @@ class ThermalManagement(hw_management_file_op):
             curr_timestamp = current_milli_time()
 
             for dev_obj in self.dev_obj_list:
+                if self.exit.is_set():
+                    return
                 if dev_obj.enable:
                     if curr_timestamp >= dev_obj.get_timestamp():
                         # process sensors
@@ -4731,6 +4796,8 @@ class ThermalManagement(hw_management_file_op):
                 conf["skip_err"] = False
 
             for dev_obj in self.dev_obj_list:
+                if self.exit.is_set():
+                    return
                 if dev_obj.enable:
                     if dev_obj.state != CONST.RUNNING:
                         continue
@@ -4770,6 +4837,8 @@ class ThermalManagement(hw_management_file_op):
                 continue
 
             for dev_obj in self.dev_obj_list:
+                if self.exit.is_set():
+                    return
                 if dev_obj.enable:
                     if curr_timestamp >= dev_obj.get_timestamp():
                         if dev_obj.state == CONST.RUNNING:

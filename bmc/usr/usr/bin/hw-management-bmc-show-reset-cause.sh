@@ -58,13 +58,19 @@ Usage: hw-management-bmc-show-reset-cause.sh [-h|--help] [SECTION...]
   bmc-domain, bmc-raw.
 
   SECTION is one of:
-    bmc          reset_* files directly under the BMC runtime directory
+    bmc          primary reset_* under the BMC runtime directory
+                 (exactly one of reset_pwr_cycle / reset_soft_reboot /
+                 reset_unknown should be 1; v3: SRST splits soft vs
+                 unknown when WDT/ABR warm evidence is present; EXTRST
+                 alone with no WDT/ABR is pwr_cycle, not soft_reboot)
     host         reset_* under the host system path (SONiC switch runtime)
-    bmc-domain   reset_* under bmc/domains/
+    bmc-domain   hardware detail reset_* under bmc/domains/
     bmc-raw      raw_scu*_reset_event_log* files under the BMC runtime dir
 
   Environment overrides:
     BMC_DIR, BMC_DOMAINS_DIR, HOST_SYSTEM_DIR
+
+  See bmc/README.md "Reset-cause policy" / primary fingerprint table.
 EOF
 }
 

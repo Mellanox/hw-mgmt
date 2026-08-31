@@ -397,6 +397,11 @@ _hw_mgmt_bc_resolve() {
 	return 1
 }
 
+# True (0) when the argument is a signed decimal integer (POSIX / BusyBox friendly).
+is_decimal_int() {
+	awk -v s="$1" 'BEGIN { if (s ~ /^-?[0-9]+$/) exit 0; exit 1 }'
+}
+
 # Pipe calculator expressions on stdin; prefer bc(1), else busybox bc on BMC images.
 hw_mgmt_bc() {
 	_hw_mgmt_bc_resolve || return 127

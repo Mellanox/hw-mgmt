@@ -24,7 +24,8 @@
 # hw-management-bmc-boot-complete.service with `systemctl start --no-block`
 # so dpkg returns immediately; the Requires= chain in the .service files
 # pulls plat-specific-preps -> early-config -> early-i2c-init -> init ->
-# boot-complete into one transaction in declared After= order.
+# sync-ethaddr -> init -> boot-complete into one transaction in declared
+# After= order.
 
 set -e
 
@@ -89,6 +90,11 @@ case "$1" in
                 # producing a successful-looking package configure that
                 # leaves HW-MGMT unstarted.  Suppress systemctl chatter on
                 # success (>/dev/null 2>&1); real failures hit the WARNING below.
+                #
+                # wd-heartbeat is intentionally omitted: packaged disabled
+                # (dh_systemd_enable --no-enable). Start only when explicitly
+                # enabled for ABR-fused production systems.
+                #
                 if ! systemctl start --no-block \
                         hw-management-bmc-boot-complete.service \
                         hw-management-bmc-health-monitor.service \

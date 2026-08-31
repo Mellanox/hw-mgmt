@@ -1,4 +1,425 @@
 ================================================================================
+- V.7.0070.1016
+- Fri, 21 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: kernel 6.12 BMC: Set WDT_RESET_MASK1 bit 1 on AST2700 WDT restart (#2852), 20e10c6
+    o #N/A, Update changelog and release notes for V.7.0070.1015 (#2848), 3145e6a
+    o #N/A, hw-mgmt: bmc: leakage: Propagate MAX1363 raw programming failures, 29a5d37
+    o #N/A, hw-mgmt: bmc: leakage: Set MAX1363 IIO scale after Vdd reference, 9b2f6c6
+    o #N/A, hw-mgmt: bmc: leakage: Drop MAX1363 readback verify, add setup byte, 3950659
+    o #N/A, hw-mgmt: patches: Add max1363 voltage_reference sysfs attribute, 83568fe
+    o #N/A, hw-mgmt: patches: exclude FLR workaround patch for kernel 6.12, f86486a
+    o #5226174, hw-mgmt: scripts: Fix MP2845 CPU VR voltage and current link creation, 7ebd003
+    o #5224885, hw-mgmt: scripts: Fix CPU and DDR VR I2C bus for SN6600_LD system, 3520f8a
+    o #5204171, hw-mgmt: scripts: Generate kernel module dependencies only if necessary, eaf32e1
+    o #5221586, hw-mgmt: scripts: Fix updater service stop timeout, f30bf82
+    o #5215587, hw-mgmt: patches: Fix SN6600_LD SODIMM temperature sensor driver (#2825), d109ff5
+    o #5452785, hw-mgmt: bmc: fix mlxreg-io .bit for multi-bit CPLD fields in nvsw-bmc patch (#2814), 941b01d
+    o #N/A, hw-mgmt: bmc: Extend support for ADS7924 device configuration (#2808), a7e5316
+    o #N/A, hw-mgmt: patches: add NVME SSD FLR recovery patches to kernel 6.12, 0f00b7e
+    o #N/A, hw-mgmt: bmc: Add boot journal to debug dump (#2809), 099bc9c
+    o #N/A, hw-mgmt: doc: Add common LED Control API documentation (#2811), 5789fab
+    o #6743361, hw-mgmt: examples: Add json BOM descriptions for CPU and BMC (#2810), d4f9327
+    o #6557317, hw-mgmt: scripts: Avoid empty log rollover on logger startup, 194a02e
+    o #N/A, Update changelog and release notes for V.7.0070.1014, e1bca30
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1016/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1015
+- Thu, 20 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o hw-mgmt: bmc: leakage: Extend ADS7924 and MAX1363 device configuration support
+    o hw-mgmt: bmc: Add boot journal to debug dump and LED Control API documentation
+    o hw-mgmt: examples: Add CPU and BMC json BOM descriptions for HI180, HI183, HI188 and HI193
+
+- Bug fixes
+    o hw-mgmt: scripts: Fix CPU and DDR VR link creation and I2C bus mapping on SN6600_LD
+    o hw-mgmt: scripts: Fix thermal updater service stop timeout, module dependency generation
+      and empty log rollover on logger startup
+    o hw-mgmt: bmc: Fix mlxreg-io bit offset for multi-bit CPLD fields
+
+- Kernel Patches for New Features:
+    o Add max1363 voltage_reference sysfs attribute
+    o Switch SN6600_LD SODIMM temperature sensor to SPD5118 driver
+    o Add NVME SSD FLR recovery patches for kernel 6.12
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1015/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
+- V.7.0070.1014
+- Thu, 13 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o #4964410, hw-mgmt: thermal: SN2201: Change module PWM calculation formula
+
+- Bug fixes
+    o #5203178, hw-mgmt: bmc: HI189: align leak ChnlNames with Channels type 
+    o #5200160, hw-mgmt: scripts:  Preserve TC run state across hw-management restart 
+    o #5200030, hw-mgmt: bmc: Disable ABR watchdog heartbeat service by default
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1014/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+================================================================================
+- V.7.0070.1013
+- Mon, 10 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5176781, hw-mgmt: sensors: Update sensor configuration files for SN5600 and SN5600D
+    o #5054893, hw-mgmt: scripts: Change the location of label dictionary 
+    o #5189244, hw-mgmt: scripts: Fix wall-clock dependent timeouts during BMC waits
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1013/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1012
+- Thu, 06 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5196190, hw-mgmt: scripts: Remove non-existing EEPROM devices from SN56XX i2c tables, 545df0f
+    o #5082250, hw-mgmt: scripts: Fix fan direction debounce races on hotplug, d7a2462
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1012/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1011
+- Mon, 03 Aug 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5079191, hw-mgmt: bmc: reset cause v3 use SRST/WDT and W1C-clear SCU logs, ec1fa17
+    o #5169377, hw-mgmt: Fix chipup I2C trace collection on mlxsw_minimal failure, b89381a
+    
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1011/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1010
+- Thu , 30 July 2026
+--------------------------------------------------------------------------------
+- New features
+    o hw-mgmt: bmc: Add support for BMC watchdog service (#2742)
+    o hw-mgmt: scripts: Gate fan PWM writes on ASIC readiness
+
+- Bug fixes
+    o #5100061: hw-mgmt: scripts: Fix SN2700 port CPLD read race on boot (#2746)
+    o #4931230: hw-mgmt: thermal: Add dummy PSU support to TC
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq"
+
+================================================================================
+- V.7.0070.1007
+- Sun, 26 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5170326, hw-mgmt: scripts: Fix warning in add_come_named_busses, 3a64fa1
+    o #5113179, hw-mgmt: scripts: Gate fan PWM writes on ASIC readiness, bd6f798
+ 
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1007/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1006
+- Wed, 22 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5156400, hw-mgmt: patches: Update platform driver for N6XXX_LD platforms, 4804a41
+    o #N/A, hw-mgmt: bmc: leakage: Enable MAX1363 A2D readings on HI189 (#2706), 5315e49
+    o #5146441, hw-mgmt: scripts: Fix SN5600/SN5400 PSU EEPROM size, 560313f
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1006/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1005
+- Mon, 20 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5100214, add VR Renesas support (#2702), ca13a4d
+    o #N/A, Update changelog and release notes for V.7.0070.1004, 1e0f7e7
+    o #N/A, docs: use model numbers instead of aliases (#2678), 6dbaa2f
+    o #5114977, hw-mgmt: scripts: Fix log file names in generate dump tool, a91aad4
+    o #5128938, hw-mgmt: bmc: sync ethaddr from BMC FRU fallback (#2676), fa00bec
+    o #4964651, hw-mgmt: thermal: Add module configuration for Tmax limitation, 3222541
+    o #N/A, Update changelog and release notes for V.7.0070.1003, 5376075
+    o #5107746, hw-mgmt: scripts: Fix hw-management stop timeout handling (#2692), 1f7654f
+    o #5151050, hw-mgmt: scripts: Improve robustness for fanX_dir init (#2685), 2510604
+    o #5102733, hw-mgmt: script: Fix PSU i2c_addr format for QM3200/QM3400, 009d1f8
+    o #N/A, Update changelog and release notes for V.7.0070.1002, 27ee6cf
+    o #5080289, hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012) (#2647), a8737ce
+    o #N/A, Leakage thresholds adjustments + Kconfig update (#2654), b8703ad
+    o #4542714, hw-mgmt: udev rules: set TPM power state to always-on in the sysfs physical device., a34f48e
+    o #N/A, Update changelog and release notes for V.7.0070.1000, 50f5cd6
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1005/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1004
+- Sun, 19 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, docs: use model numbers instead of aliases (#2678), 6dbaa2f
+    o #5114977, hw-mgmt: scripts: Fix log file names in generate dump tool, a91aad4
+    o #5128938, hw-mgmt: bmc: sync ethaddr from BMC FRU fallback (#2676), fa00bec
+    o #4964651, hw-mgmt: thermal: Add module configuration for Tmax limitation, 3222541
+    o #N/A, Update changelog and release notes for V.7.0070.1003, 5376075
+    o #5107746, hw-mgmt: scripts: Fix hw-management stop timeout handling (#2692), 1f7654f
+    o #5151050, hw-mgmt: scripts: Improve robustness for fanX_dir init (#2685), 2510604
+    o #5102733, hw-mgmt: script: Fix PSU i2c_addr format for QM3200/QM3400, 009d1f8
+    o #N/A, Update changelog and release notes for V.7.0070.1002, 27ee6cf
+    o #N/A, Revert spc6-bmc eMMC HS200 8-bit/200MHz changes (#2673), b9e64ca
+    o #N/A, Update changelog and release notes for V.7.0070.1001, 48c7538
+    o #5080289, hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012) (#2647), a8737ce
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (OpenBMC) (#2667), b19a62a
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (SONiC) (#2666), ef0e20d
+    o #N/A, Leakage thresholds adjustments + Kconfig update (#2654), b8703ad
+    o #4542714, hw-mgmt: udev rules: set TPM power state to always-on in the sysfs physical device., a34f48e
+    o #N/A, Update changelog and release notes for V.7.0070.1000, 50f5cd6
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1004/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1003
+- Thu, 16 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5107746, hw-mgmt: scripts: Fix hw-management stop timeout handling (#2692), 1f7654f
+    o #5151050, hw-mgmt: scripts: Improve robustness for fanX_dir init (#2685), 2510604
+    o #5102733, hw-mgmt: script: Fix PSU i2c_addr format for QM3200/QM3400, 009d1f8
+    o #N/A, Update changelog and release notes for V.7.0070.1002, 27ee6cf
+    o #N/A, Revert spc6-bmc eMMC HS200 8-bit/200MHz changes (#2673), b9e64ca
+    o #N/A, Update changelog and release notes for V.7.0070.1001, 48c7538
+    o #5080289, hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012) (#2647), a8737ce
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (OpenBMC) (#2667), b19a62a
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (SONiC) (#2666), ef0e20d
+    o #N/A, Leakage thresholds adjustments + Kconfig update (#2654), b8703ad
+    o #4542714, hw-mgmt: udev rules: set TPM power state to always-on in the sysfs physical device., a34f48e
+    o #N/A, Update changelog and release notes for V.7.0070.1000, 50f5cd6
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1003/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1002
+- Fri, 10 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, Revert spc6-bmc eMMC HS200 8-bit/200MHz changes (#2673), b9e64ca
+    o #N/A, Update changelog and release notes for V.7.0070.1001, 48c7538
+    o #5080289, hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012) (#2647), a8737ce
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (OpenBMC) (#2667), b19a62a
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (SONiC) (#2666), ef0e20d
+    o #N/A, Leakage thresholds adjustments + Kconfig update (#2654), b8703ad
+    o #4542714, hw-mgmt: udev rules: set TPM power state to always-on in the sysfs physical device., a34f48e
+    o #N/A, Update changelog and release notes for V.7.0070.1000, 50f5cd6
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1002/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0070.1001
+- Wed, 08 Jul 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5080289, hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012) (#2647), a8737ce
+    o #N/A, feat(dts): spc6-bmc bump eMMC to HS200 8-bit/200MHz (SONiC) (#2666), ef0e20d
+    o #N/A, Leakage thresholds adjustments + Kconfig update (#2654), b8703ad
+    o #4542714, hw-mgmt: udev rules: set TPM power state to always-on in the sysfs physical device., a34f48e
+    o #N/A, Update changelog and release notes for V.7.0070.1000, 50f5cd6
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1001/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1000
 - Thu, 02 Jul 2026
 --------------------------------------------------------------------------------
@@ -229,7 +650,7 @@
     o #5040812, hw-mgmt: scripts: Restrict udev event log size (#2588), c49905d
     o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 3fd3993
     o #N/A, hw-mgmt: bmc: read AST2700 reset-cause SCU words from /proc/cmdline, a9f7033
-    o #5014001, docs: Fix Juliet N51XX_LD reset-cause list in user manual (#5014001), 30282bc
+    o #5014001, docs: Fix N51XX_LD reset-cause list in user manual (#5014001), 30282bc
     o #N/A, hw-mgmt: ci: Remove obsolete ONL 4.9/4.19 CI kernel patches, cbf7f60
     o #N/A, hw-mgmt: debian: Update package maintainer to NVIDIA Switch BSP, 1671dd4
     o #N/A, hw-mgmt: bmc: leakage: Update json config file for system HI189, 3dcf115
@@ -269,7 +690,7 @@
     o #5040812, hw-mgmt: scripts: Restrict udev event log size (#2588), c49905d
     o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 3fd3993
     o #N/A, hw-mgmt: bmc: read AST2700 reset-cause SCU words from /proc/cmdline, a9f7033
-    o #5014001, docs: Fix Juliet N51XX_LD reset-cause list in user manual (#5014001), 30282bc
+    o #5014001, docs: Fix N51XX_LD reset-cause list in user manual (#5014001), 30282bc
     o #N/A, hw-mgmt: ci: Remove obsolete ONL 4.9/4.19 CI kernel patches, cbf7f60
     o #N/A, hw-mgmt: debian: Update package maintainer to NVIDIA Switch BSP, 1671dd4
     o #N/A, hw-mgmt: bmc: leakage: Update json config file for system HI189, 3dcf115
@@ -305,7 +726,7 @@
     o #5040812, hw-mgmt: scripts: Restrict udev event log size (#2588), c49905d
     o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 3fd3993
     o #N/A, hw-mgmt: bmc: read AST2700 reset-cause SCU words from /proc/cmdline, a9f7033
-    o #5014001, docs: Fix Juliet N51XX_LD reset-cause list in user manual (#5014001), 30282bc
+    o #5014001, docs: Fix N51XX_LD reset-cause list in user manual (#5014001), 30282bc
     o #N/A, hw-mgmt: ci: Remove obsolete ONL 4.9/4.19 CI kernel patches, cbf7f60
     o #N/A, hw-mgmt: debian: Update package maintainer to NVIDIA Switch BSP, 1671dd4
     o #N/A, hw-mgmt: bmc: leakage: Update json config file for system HI189, 3dcf115
@@ -361,7 +782,7 @@
     o #5020389, hw-mgmt: scripts: Update usb0 hotplug handling, f818eae
     o #N/A, hw-mgmt: thermal: drive TC version from tc_config.json, f3cbea5
     o #N/A, hw-mgmt: kernel: bmc: patches: Update patches, 39d5905
-    o #N/A, hw-mgmt: Use 0x2E for MP29502 Power Controller in Juliet system, 03df97c
+    o #N/A, hw-mgmt: Use 0x2E for MP29502 Power Controller in N51XX_LD system, 03df97c
     o #4944920, hw-mgmt: kernel 6.1: Upgrade patches to support version up to 6.1.169, 98e58bf
     o #N/A, hw-mgmt: bmc: Add script for setting cartridge info, f3bf462
     o #N/A, hw-mgmt: bmc: Extend leakage support with ADS7924 follow up, 376dc16
@@ -401,7 +822,7 @@
     o #5020389, hw-mgmt: scripts: Update usb0 hotplug handling, f818eae
     o #N/A, hw-mgmt: thermal: drive TC version from tc_config.json, f3cbea5
     o #N/A, hw-mgmt: kernel: bmc: patches: Update patches, 39d5905
-    o #N/A, hw-mgmt: Use 0x2E for MP29502 Power Controller in Juliet system, 03df97c
+    o #N/A, hw-mgmt: Use 0x2E for MP29502 Power Controller in N51XX_LD system, 03df97c
     o #4944920, hw-mgmt: kernel 6.1: Upgrade patches to support version up to 6.1.169, 98e58bf
     o #N/A, hw-mgmt: bmc: Add script for setting cartridge info, f3bf462
     o #N/A, hw-mgmt: bmc: Extend leakage support with ADS7924 follow up, 376dc16
@@ -658,7 +1079,7 @@
     o Add support for SN2201_M – ES level quality
     o Add support for Q3400 – GA level quality
     o Add support for SN4280 – GA level quality
-    o Add support for N5110_LD - GA level Quality + TTM/ NSO/ Ariel-JSO - ES level quality
+    o Add support for N5110_LD - GA level Quality + TTM/ NSO/ N5112_LD - ES level quality
     o Add support for fan_speed_tolerance sysfs attribute (in addition to mix/max)
     o Add support for SPC-4 SN5400 P2C Forward airflow
     o Add support for hw-mgmt package version to debug dump
@@ -688,13 +1109,13 @@
 --------------------------------------------------------------------------------
 
 - New features 
-    o  Add support for QM3400 Blackmamba - ES level quality
-    o  Add support for SN4280 SmartSwitch Bobcat - ES level quality
-    o  Add support for N5110_LD Juliet Scaleout PO + TTM - ES level quality
+    o  Add support for Q3400-RA - ES level quality
+    o  Add support for SN4280 SmartSwitch - ES level quality
+    o  Add support for N5110_LD Scaleout PO + TTM - ES level quality
     o  Add support in VPD parser for System VPD vendor specific SSD SED PSID block
 
 - Bug fixes
-	#3649551	SN4700 : [Independent Module] | on r-leopard-41 with IM enabled, there was a thermal overload. 
+	#3649551	SN4700 : [Independent Module] | on r-msn4700-41 with IM enabled, there was a thermal overload. 
 	#3878328	SN4700 : Switch rebooted with "Thermal Overload" because ASIC thermal is not available 
 	#3885405	TC: [Thermal Algorithm] | Blacklist is malfunctions
 	#3883147	TC: [Thermal Algorithm] | Counts errors even it was paused by black list
@@ -731,8 +1152,8 @@
 --------------------------------------------------------------------------------
 
 - New features 
-    o  Add support for QM3400 Crocodile - ES level quality
-    o  Add support for SN5400 Hippo - ES level quality
+    o  Add support for Q3200-RA - ES level quality
+    o  Add support for SN5400 - ES level quality
     o  Add support thermal algorithm configurable minimum N PSUs and M Fans for error reporting
     o  Add support different power supply redundency policies
     o  Update HW-MGMT package installation dependency list
@@ -791,7 +1212,7 @@
 
 - Bug fixes
 	Issue		Title	
-	#3613781	BF3 - Leopard BF3 missing voltmon sensor links 
+	#3613781	BF3 - SN4700 BF3 missing voltmon sensor links 
 	#3560591	[SN2010/SN2100/SN2410/SN2700/SN2740] (SPC1 -MSN2410} "sensors" - the FAN numbers not align in the right order and in accordance with "nv show platform environment fan
 	#3630148	TC - 7.0030.2000: Logging Error in TC Log writing dmesg: RuntimeError: reentrant call inside
 	#3634579	There are missing sysfs nodes in hw-management 7.0030.2000
@@ -801,7 +1222,7 @@
 	#3706219	use tc_config copy instead of soft link to /etc (pmon cannot access /etc)
 	#3450086	[CL-support] "tar: ./hw-management_val: file changed as we read it" error/warning during cl-support generation. 
 	#3696439	TC: Should dynamically start/enable or stop/disable + Support more SKUs for SimX
-	#3660884	[MSN2700-A1]: Panther Respin | FANs] | SONIC reports invalid FANs airflow direction
+	#3660884	[MSN2700-A1]: MSN2700-A1 respin | FANs] | SONIC reports invalid FANs airflow direction
 	#3650418	[SN2201]: upload process get "nvsw-sn2201 NVSN2201:00: Failed to get adapter for bus 10 /11 /12/ 13" & switch reboot all time
 	#3632299	BF3 - 'r-hw-bf3-10' : some kernel loadable modules for X86 platforms are not available on ARM platforms (created separate kernel module list for ARM)
 	#3632297	BF3 - 'r-hw-bf3-10' kern :err : [Fri Oct 13 17:34:27 2023] mlxbf3_gpio MLNXBF33:01: IRQ index 0 not found 
@@ -860,21 +1281,21 @@
 	#3534779	TC: "hw-management-tc failed to start after cold reboot and no automatic restart
 	#3517930	TC: [nv-xh3000hse] fanless system fails hw-management-tc.service at boot up and also fails to restart after boot up
 	#3541643	[SN3700/SN3700] Missing support for old MSN3700 systems in which SMBIOS SKU field is programmed as "MSN3700", instead of the new format HIXXX
-	#3559366	TC: Moose switch comes with default tc_config.json file instead of special one for MSN5600
+	#3559366	TC: SN5600 switch comes with default tc_config.json file instead of special one for MSN5600
 	#3565326	TC: Thermal Algorithm unexpected jumping to 100%
 	#3567299	TC: Thermal Algorithm doesn’t decrease under 60% fan PWM
 	#3567934	TC: json file comes with sensor_amb min value is 60 but it should be 30
-	#3505271	[SN4600]Sensors not as expected on tigon setup
+	#3505271	[SN4600]Sensors not as expected on MSN4600C setup
 	#3569409	TC: Thermal Control missing support for predefined sensors
 	#3544619	platform_tests/test_reboot.py::test_watchdog_reboot Failed, reboot cause showing unknown
 	#3586921	[SPC1] TC: ERR hw-management-tc: ERROR - Read PWM error. Possible hw-management is not running
 	#3584693	There are issues in hw-mgmt sensor conf
 	#3575228	[SN3750] TC: tc_config.json file have only single value 100 and not graded as define by spec.
-	#3556737	[Sensor|simx emulation|leopard] | some sensor alarm on psu-1 and psu-2
+	#3556737	[Sensor|simx emulation|SN4700] | some sensor alarm on psu-1 and psu-2
 	#3537920	[SN2201] Missing thermal sysfs for fans on 2201 platform 
 	#3546759	[SIMX]: unable to parse psu modle serial and hardware rev number
 	#3594368	pmon#syseepromd: Can not read File /var/run/hw-management/config/labels_ready: [Errno 2] No such file or directory: '/var/run/hw-	management/config/labels_ready'
-	#3608425	[SN2201] chipup error on alligator
+	#3608425	[SN2201] chipup error on SN2201 setup
 	NA	[SN2201] TC: missing PWM initialization causing it to be zero until TC started  
 	NA	[SN2201] hw-mgmt: scripts: supress Unsupported CPU message for Denverton CPU on
 	NA	 Missing attribute index, redundant attributes, incorrect the path for psu temperature
@@ -968,7 +1389,7 @@
     o  add support for SN5600 ASIC enabled - GA level.
     o  add support for SN5600/MQM9700 MFT’s quicker CPLD update flow
     o  add support for MQM9700 show voltage CLI labels
-    o  add support for MSN27002 Panther-Comex respin
+    o  add support for MSN27002 MSN2700-A1 respin
 
 - Bug fixes
 	Issue		Title	
@@ -979,18 +1400,18 @@
 	#3445789        TC: hw_management_thermal_control.py[11773]: error: [Errno 101] Network is unreachable']	
 	#3479181	TC: [PWM in Thermal Algorithm] | pwm doesn't increase to max value after reboot on SPC1	
 	#3482761	TC: [PWM in Thermal Algorithm | Unexpected pwm1 value 100 after clean install of OS	
-	#3491842        r-leopard-29 sh[8563]: --- Logging error -	
+	#3491842        r-msn4700-29 sh[8563]: --- Logging error -	
 	#3469070        TC:  blacklist doesn't work as expected , bad sensor after inserting to blacklist still recognizes as bad sensor by hw-management	
 	#3452101        TC: Syslog is flooded with error/warning messages (error every 6 seconds) for platforms with one PSU connected to power | Every 1h new log file is created (Degradation from previous RC)	
 	#3393287	I2C bus is stuck - Unable to probe I2C bus 2-0048, which causes /var/run/hw-management/config/sfp_counter, module_counter to be zero and pmon docker unable to start	
 	#3465854        TC:  sometimes hw-management-tc exited with Error "Missing max tachos config" on SPC1	
-	#3493132	Komodo 3750 200G post Respin - The fans are continuously running at their maximum speed	
+	#3493132	MSN3750SX 200G post Respin - The fans are continuously running at their maximum speed	
 			Relevant 5.10 patches:
 			0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch
 	#3509363	HW-MGMT service failed to start.	
 	#3481808	TC: hw-management-tc.service service failed to start after warmboot enabled on nv-xh3000hse-02 (atos) platform	
 	#3519355	TC: sensor_read_error for cpu_pack doesn't work	
-	#3516804	Moose| The CPLD4 version is not as expected after upgrade to newer version	
+	#3516804	SN5600| The CPLD4 version is not as expected after upgrade to newer version	
 			Relevant 5.10 patches:
 			0284-platform-mellanox-mlx-platform-fix-CPLD4-PN-report.patch
 	#3412851	[NVUE] Traceback in NVUE log after CL installation. /usr/cumulus/bin/decode-syseeprom : ERROR : [Errno 13] Permission denied: '/run/hw-management/eeprom/vpd_info'	
@@ -998,14 +1419,14 @@
 	#3507860	[201911] hw-management failed to initialize due to "mlxsw_minimal 2-0048: Fail to register core bus		
 	#3516754	systemd[1]: systemd-modules-load.service: Failed with result 'exit-code'		
 	#3529307	hw-mgmt documentation: System returns "amber" color when FAN/PSU has some issue , but in user manual "amber" not exists		
-	#3485095	r-tigris-18(MSN3800) during running test: test_mgmt_reset Check reset causes failed  - unnecessary 180 sec delay in case mlxplt path is not ready quick enough		
+	#3485095	r-msn3800-18 (MSN3800) during running test: test_mgmt_reset Check reset causes failed  - unnecessary 180 sec delay in case mlxplt path is not ready quick enough		
 	#3447830	I2C bus is getting stuck, recovered only by a power cycle		
 	N/A		TC: Fix TC start on SPC1 systems : On SPC1 systems FAN tacho and PWM is controlled by ASIC FW. If ASIC is not initialized we will not have pwm and fan_tacho links in hw-management folder. 
 			It can cause errors and stop TC. This fix adds a wait loop till ASIC FW will be initialized		
 	N/A		sn2100, sn2010: Thermal: Fan dir is not readable in these systems and requires 1 set of dmin values for both P2C/C2P dir.		
 	N/A		TC: Remove suspend/resume on asic down/up which is not needed for new TC		
 	N/A		TC: Fix unneeded tc suspend due PSU being pulled out scenario		
-	N/A		Fix missing fan attributes on Panther-Comex system		
+	N/A		Fix missing fan attributes on MSN2700-A1 system		
 	N/A		TC: Fix coverItly scan findings in TC python script - Fix thermal log ASCI count info message		
 	N/A		TC: Fix rare error message which can happens on TC stop		
 	N/A		TC: Add dynamic sfp module add/remove		
@@ -2190,7 +2611,7 @@
     o	Add hw-mgmt: events: Add udev rules for SODIMM temperature sensor
     o	Add hw-mgmt: system: add coffeelake cpu
     o	Add hw-mgmt: events: Add support for SDK OFFLINE event for handling flow with in service firmware upgrade (ISSU) 
-    o	For MQM9700 (Gorilla) 
+    o	For MQM9700 
         add lm-sensors config for MQM9700 system
        
 - Bug fixes
@@ -2249,8 +2670,8 @@
 - Sun, 10 Jan 2021
 --------------------------------------------------------------------------------
 - New Feature
-    o	For MSN4700 A1 (Leopard re-spin): add support 5 mp2975 instead of 7 xdpe12284 
-    o	For MQM9700 (Gorilla) 
+    o	For MSN4700 A1 (re-spin): add support 5 mp2975 instead of 7 xdpe12284 
+    o	For MQM9700 
         add support for mp2975 and mp2888, (Align driver mp2975 with upstream)
         *Kernel 4.19 - 0032-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2975-c.patch
         *Kernel 4.19 - 0037-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch
@@ -2264,7 +2685,7 @@
     o	For any non-Broadwell CPU: Initialize temperature limits critical, max, min and hysteresis of all discovered SODIMMs with temp sensor.
     o	Export appropriate GPIO pins (through sysfs) that are used for JTAG bit-bang CPLD burning. For platforms that support JTAG-GPIO FU. (Broadwell & Coffeelake)
     o	Add common fan direction attribute for SPC1/2/3 using sysfs, and replace existing thermal algorithm temperature difference mechanism for detecting fan direction with   	new fan_dir attribute 
-    o	For MSN4600 A1 (Liger re-spin like existing Leopard re-spin) add support 5 mp2975 instead of 7 xdpe12284.
+    o	For MSN4600 A1 (re-spin like existing MSN4700 re-spin) add support 5 mp2975 instead of 7 xdpe12284.
 
 - Bug fixes
     o	Fix dmesg dump
@@ -2782,7 +3203,7 @@
 - Bug fixes
     HW Mgmt core:
     o   Fix - Prevent start action for hw-mangment service while already runs.
-    o   Fix - Anaconda, Tigris reset cause for power cycle.
+    o   Fix - SN3700, MSN3800 reset cause for power cycle.
         - see backport patch kernel 4.9  #40
         - see backport patch kernel 4.19 #10
 
