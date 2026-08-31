@@ -138,6 +138,7 @@ install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
 install -m 0755 usr/usr/bin/hw_management_thermal_control.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_control.py
 install -m 0755 usr/usr/bin/hw_management_thermal_control_2_5.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_control_2_5.py
+install -m 0755 usr/usr/bin/hw_management_pwm_control.py $RPM_BUILD_ROOT/usr/bin/hw_management_pwm_control.py
 install -m 0755 usr/usr/bin/hw_management_thermal_updater.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_updater.py
 install -m 0755 usr/usr/bin/hw_management_independent_mode_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_independent_mode_update.py
 install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_dpu_thermal_update.py
@@ -147,6 +148,7 @@ install -m 0755 usr/usr/local/bin/hw-management-process-blacklist.sh $RPM_BUILD_
 
 install -m 0755 debian/hw-management.hw-management.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management.service
 install -m 0755 debian/hw-management.hw-management-tc.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-tc.service
+install -m 0755 debian/hw-management.hw-management-pwm-control.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-pwm-control.service
 install -m 0755 debian/hw-management-blacklist-generator.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-blacklist-generator.service
 
 install -m 0644 debian/copyright $RPM_BUILD_ROOT/usr/share/doc/hw-management/copyright
@@ -250,12 +252,14 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-vpd-parser.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control_2_5.py"
+%attr(0755, root, root) "/usr/bin/hw_management_pwm_control.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_updater.py"
 %attr(0755, root, root) "/usr/bin/hw_management_independent_mode_update.py"
 %attr(0755, root, root) "/usr/bin/hw_management_dpu_thermal_update.py"
 %attr(0755, root, root) "/usr/local/bin/hw-management-process-blacklist.sh"
 %attr(0755, root, root) "/lib/systemd/system/hw-management.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-tc.service"
+%attr(0755, root, root) "/lib/systemd/system/hw-management-pwm-control.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-blacklist-generator.service"
 #%dir %attr(0755, root, root) "/usr/share"
 #%dir %attr(0755, root, root) "/usr/share/doc"
