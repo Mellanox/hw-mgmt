@@ -1536,8 +1536,6 @@ function set_fan_dir_attr()
 	) 9>>"$fan_dir_lock_file"
 }
 
-# Set fan direction for a single fan
-#
 # Input parameters:
 # 1 - "$attribute" (fan1, fan2, fan3, fan4)
 # 2 - "$event" (1 - Present, 0 - Removed)
