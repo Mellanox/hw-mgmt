@@ -947,7 +947,7 @@ set_gpios()
 		$AMD_FRNG_CPU)
 			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
-			gpio_idx=(85 3 12 10)
+			gpio_idx=(89 3 12 10)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
