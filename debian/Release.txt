@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.1930
+- Tue, 01 Sep 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5066945, hw-mgmt: bmc: config: Change usb net static address, f04fbf6
+    o #5238405, hw-mgmt: scripts: Fix ASIC PCIE bus mapping for SN6800_LD platform, 45e2fd0
+    o #N/A, hw-mgmt: scripts: Add hotplug events to chassis updater., 252ed64
+    o #N/A, hw-mgmt: scripts: Collect sx_sdk version also in compact dump, f306c25
+    o #N/A, hw-mgmt: scripts: validate cable cartridge FRU on init (#2872), 9446775
+    o #N/A, hw-mgmt: examples: Add BOM record examples for HI194 system, dd79e8d
+    o #N/A, hw-mgmt: scripts: Add LED software/hardware control owner indication, b4e42ac
+    o #5183838, hw-mgmt: scripts: Create DPU paths before voltmon links, 213c169
+    o #5183998, hw-mgmt: scripts: Fix PSU EEPROM parsing on systems without PSU VPD, 7822e05
+    o #4966961, hw-mgmt: thermal: SPC1: Add fallback in case if I2C ASIC driver failure, 37a6aa5
+    o #5232793, hw-mgmt: thermal: Fix PWM stuck high after tacho error recovery, d60e4f3
+    o #N/A, hw-mgmt: scripts: Align VR DPC flash with OpenBMC shared logic, 1838c36
+    o #5225682, hw-mgmt: sensors: Fix N51XX_LD and N55XX_LD current labels, 250184a
+    o #N/A, hw-mgmt: bmc: align BIOS recovery flash with OpenBMC AST2700, aa4005d
+    o #5029697, hw-mgmt: docs: Note asic_pg_fail is absent on SN6600_LD and SN68XX_LD (#2858), 9d3225f
+    o #N/A, hw-mgmt: patches: exclude FLR workaround patch for kernel 6.12, fc9fd58
+    o #N/A, Update changelog and release notes for V.7.0070.1902, 92dbc05
+    o #5230695, hw-mgmt: scripts: Write MP2975 page-1/2 regs at WRITE_PROTECT cmd, cd56aa9
+    o #N/A, kernel 6.12 BMC: Set WDT_RESET_MASK1 bit 1 on AST2700 WDT restart (#2853), 4854c93
+    o #N/A, hw-mgmt: peripheral/thermal updater: Add memory usage tracker, fecb203
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1930/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1070
 - Tue, 09 Jun 2026
 --------------------------------------------------------------------------------
