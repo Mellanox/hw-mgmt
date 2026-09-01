@@ -821,8 +821,16 @@ set_jtag_gpio()
 			jtag_tck=132
 			jtag_tms=7
 			jtag_tdo=8
-			echo 0x20e5 > $config_path/jtag_rw_reg
-			echo 0x20e6 > $config_path/jtag_ro_reg
+			case $sku in
+			HI198)
+				echo 0x2094 > $config_path/jtag_rw_reg
+				echo 0x2095 > $config_path/jtag_ro_reg
+			;;
+			*)
+				echo 0x20e5 > $config_path/jtag_rw_reg
+				echo 0x20e6 > $config_path/jtag_ro_reg
+			;;
+			esac
 			;;
 		$AMD_FRNG_CPU)
 			jtag_tdi=40
@@ -943,6 +951,10 @@ set_gpios()
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 10 12 23)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
+			if [ "$sku" == "HI198" ]; then
+				gpio_idx+=(9)
+				gpio_names+=("v3000_lpc_support")
+			fi
 			;;
 		$AMD_FRNG_CPU)
 			set_jtag_gpio $1
@@ -1125,21 +1137,11 @@ add_come_named_busses()
 	named_busses+=(${come_named_busses[@]})
 }
 
-start_mst_for_spc1_port_cpld()
-{
-	if [ ! -d /dev/mst ]; then
-		lsmod | grep mst_pci >/dev/null 2>&1
-		if [  $? -ne 0 ]; then
-			mst start  >/dev/null 2>&1
-		fi
-	fi
-}
-
 set_spc1_port_cpld()
 {
 	cpld=$(< $config_path/cpld_port)
 	if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ]; then
-		ver_dec=$CPLD3_VER_DEF
+		ver_dec=${CPLD3_VER_DEF:-0}
 		# check if mlxreg exists
 		if [ -x "$(command -v mlxreg)" ]; then
 			if [ ! -d /dev/mst ]; then
@@ -1201,7 +1203,6 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	case $sku in
 		HI138)
 			# SGN2410_A1
@@ -1229,14 +1230,12 @@ msn24xx_specific()
 	echo cpld3 > $config_path/cpld_port
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
-	set_spc1_port_cpld
 	cpld=$(< $config_path/cpld_port)
 	echo 8 > $config_path/reset_attr_num
 }
 
 msn27xx_msb_msx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSN27*|MSN241*)
@@ -1311,8 +1310,6 @@ msn27xx_msb_msx_specific()
 			echo cpld3 > $config_path/cpld_port
 		;;
 	esac
-
-	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
@@ -1625,10 +1622,18 @@ msn47xx_specific()
 msn4700d_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
-		system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*AaEeFdGeRcRcTb-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+		if [ "$sku" == "HI184" ]; then
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb-C*AaEeFdGeRcRcTb"
+		else
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb-C*TlRkRaEe"
+		fi
 		devtr_check_smbios_device_description "$system_ver_str" "0" ""
 	fi
-	lm_sensors_config="$lm_sensors_configs_path/msn4700d_sensors.conf"
+	if [ "$sku" == "HI184" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700d_sensors.conf"
+	else
+		lm_sensors_config="$lm_sensors_configs_path/msn4700d1_sensors.conf"
+	fi
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700d.json"
 
 	max_tachos=12
@@ -2020,7 +2025,7 @@ msn_spc3_common()
 		HI142)
 			p4697_specific
 		;;
-		HI184)
+		HI184|HI198)
 			msn4700d_specific
 		;;
 		*)
@@ -3533,7 +3538,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160|HI184)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)
@@ -4264,6 +4269,10 @@ do_chip_up_down()
 				return 1
 			fi
 
+			if [ -f "$config_path/cpld_port" ]; then
+				set_spc1_port_cpld
+			fi
+
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -4481,6 +4490,10 @@ case $ACTION in
 		fi
 		_hw_management_install_i2c_trace_exit_trap
 		do_start
+		# Restart does not chipdown, so do_chip_up_down below returns early.
+		if [ -f "$config_path/cpld_port" ]; then
+			set_spc1_port_cpld
+		fi
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
 		check_asic_chipup_status && do_chip_up_down 1 1
