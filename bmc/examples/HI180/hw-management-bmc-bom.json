@@ -1,0 +1,190 @@
+{
+    "swb": [
+        {
+            "key": "24c02_0",
+            "spec": "24c02 0x50 33 cable_cartridge1_eeprom"
+        },
+        {
+            "key": "24c02_1",
+            "spec": "24c02 0x50 34 cable_cartridge2_eeprom"
+        },
+        {
+            "key": "24c02_2",
+            "spec": "24c02 0x50 35 cable_cartridge3_eeprom"
+        },
+        {
+            "key": "24c02_3",
+            "spec": "24c02 0x50 36 cable_cartridge4_eeprom"
+        },
+        {
+            "key": "24c512_0",
+            "spec": "24c512 0x51 37 swb_info"
+        },
+        {
+            "key": "lm5066i_0",
+            "spec": "lm5066i 0x12 26 pdb_hotswap1"
+        },
+        {
+            "key": "mp29502_0",
+            "spec": "mp29502 0x2e 26 pwr_conv1"
+        },
+        {
+            "key": "mp29502_1",
+            "spec": "mp29502 0x2c 26 pwr_conv2"
+        },
+        {
+            "key": "mp29816_0",
+            "spec": "mp29816 0x66 27 voltmon1"
+        },
+        {
+            "key": "mp29816_1",
+            "spec": "mp29816 0x68 27 voltmon2"
+        },
+        {
+            "key": "mp29816_10",
+            "spec": "mp29816 0x6c 29 voltmon11"
+        },
+        {
+            "key": "mp29816_11",
+            "spec": "mp29816 0x6e 29 voltmon12"
+        },
+        {
+            "key": "mp29816_12",
+            "spec": "mp29816 0x66 30 voltmon13"
+        },
+        {
+            "key": "mp29816_13",
+            "spec": "mp29816 0x68 30 voltmon14"
+        },
+        {
+            "key": "mp29816_14",
+            "spec": "mp29816 0x6c 30 voltmon15"
+        },
+        {
+            "key": "mp29816_15",
+            "spec": "mp29816 0x6e 30 voltmon16"
+        },
+        {
+            "key": "mp29816_2",
+            "spec": "mp29816 0x6c 27 voltmon3"
+        },
+        {
+            "key": "mp29816_3",
+            "spec": "mp29816 0x6e 27 voltmon4"
+        },
+        {
+            "key": "mp29816_4",
+            "spec": "mp29816 0x66 28 voltmon5"
+        },
+        {
+            "key": "mp29816_5",
+            "spec": "mp29816 0x68 28 voltmon6"
+        },
+        {
+            "key": "mp29816_6",
+            "spec": "mp29816 0x6c 28 voltmon7"
+        },
+        {
+            "key": "mp29816_7",
+            "spec": "mp29816 0x6e 28 voltmon8"
+        },
+        {
+            "key": "mp29816_8",
+            "spec": "mp29816 0x66 29 voltmon9"
+        },
+        {
+            "key": "mp29816_9",
+            "spec": "mp29816 0x68 29 voltmon10"
+        },
+        {
+            "key": "mp5926_0",
+            "spec": "mp5926 0x12 26 pdb_hotswap1"
+        },
+        {
+            "key": "raa228004_0",
+            "spec": "raa228004 0x60 26 pwr_conv1"
+        },
+        {
+            "key": "raa228004_1",
+            "spec": "raa228004 0x61 26 pwr_conv2"
+        },
+        {
+            "key": "xdpe1a2g7_0",
+            "spec": "xdpe1a2g7 0x66 27 voltmon1"
+        },
+        {
+            "key": "xdpe1a2g7_1",
+            "spec": "xdpe1a2g7 0x68 27 voltmon2"
+        },
+        {
+            "key": "xdpe1a2g7_10",
+            "spec": "xdpe1a2g7 0x6c 29 voltmon11"
+        },
+        {
+            "key": "xdpe1a2g7_11",
+            "spec": "xdpe1a2g7 0x6e 29 voltmon12"
+        },
+        {
+            "key": "xdpe1a2g7_12",
+            "spec": "xdpe1a2g7 0x66 30 voltmon13"
+        },
+        {
+            "key": "xdpe1a2g7_13",
+            "spec": "xdpe1a2g7 0x68 30 voltmon14"
+        },
+        {
+            "key": "xdpe1a2g7_14",
+            "spec": "xdpe1a2g7 0x6c 30 voltmon15"
+        },
+        {
+            "key": "xdpe1a2g7_15",
+            "spec": "xdpe1a2g7 0x6e 30 voltmon16"
+        },
+        {
+            "key": "xdpe1a2g7_2",
+            "spec": "xdpe1a2g7 0x6c 27 voltmon3"
+        },
+        {
+            "key": "xdpe1a2g7_3",
+            "spec": "xdpe1a2g7 0x6e 27 voltmon4"
+        },
+        {
+            "key": "xdpe1a2g7_4",
+            "spec": "xdpe1a2g7 0x66 28 voltmon5"
+        },
+        {
+            "key": "xdpe1a2g7_5",
+            "spec": "xdpe1a2g7 0x68 28 voltmon6"
+        },
+        {
+            "key": "xdpe1a2g7_6",
+            "spec": "xdpe1a2g7 0x6c 28 voltmon7"
+        },
+        {
+            "key": "xdpe1a2g7_7",
+            "spec": "xdpe1a2g7 0x6e 28 voltmon8"
+        },
+        {
+            "key": "xdpe1a2g7_8",
+            "spec": "xdpe1a2g7 0x66 29 voltmon9"
+        },
+        {
+            "key": "xdpe1a2g7_9",
+            "spec": "xdpe1a2g7 0x68 29 voltmon10"
+        }
+    ],
+    "platform": [
+        {
+            "key": "24c512_1",
+            "spec": "24c512 0x51 1 vpd_info"
+        },
+        {
+            "key": "mp2855_0",
+            "spec": "mp2855 0x69 25 comex_voltmon1"
+        },
+        {
+            "key": "mp2975_1",
+            "spec": "mp2975 0x6a 25 comex_voltmon2"
+        }
+    ]
+}

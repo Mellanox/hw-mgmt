@@ -46,6 +46,8 @@
         "leakage_rope_count": 0,
         "i2c_comex_mon_bus_default": 23,
         "i2c_bus_def_off_eeprom_cpu": 24,
+        "_comment_i2c_swb_bus": "SWB CPLD abs bus; HI176 CPU=18 BMC=23; HI180 CPU=53 BMC=23",
+        "i2c_swb_bus": 18,
         "lm_sensors_config": "/etc/hw-management-sensors/example_sensors.conf",
         "lm_sensors_labels": "/etc/hw-management-sensors/example_sensors_labels.json",
         "thermal_control_config": "/etc/hw-management-thermal/tc_config_not_supported.json",

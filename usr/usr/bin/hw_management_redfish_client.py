@@ -43,7 +43,6 @@ import subprocess
 import json
 import time
 import re
-import shlex
 import os
 import sys
 import base64
@@ -54,13 +53,15 @@ import fcntl
 
 
 '''
-cURL wrapper for Redfish client access
+cURL wrapper for Redfish client access (curl -K stdin; secrets off argv).
 '''
 
 
 class RedfishClient:
 
     DEFAULT_GET_TIMEOUT = 3
+    _CFG_LOGIN_PREFIX = '# hw-mgmt-redfish: login\n'
+    _CURL_HTTP_TRAILER_RE = re.compile(r'\nHTTP Status Code: (\d+)\Z')
 
     # Redfish URIs
     REDFISH_URI_FW_INVENTORY = '/redfish/v1/UpdateService/FirmwareInventory'
@@ -82,6 +83,7 @@ class RedfishClient:
     '''
     Constructor
     '''
+
     def __init__(self, curl_path, ip_addr, user, password):
         self.__curl_path = curl_path
         self.__svr_ip = ip_addr
@@ -97,184 +99,349 @@ class RedfishClient:
         self.__token = None
         self.__password = password
 
+    @staticmethod
+    def __curl_config_escape_double_quoted_value(val):
+        '''Escape content for curl -K \"...\" quoted strings (\\ and ").'''
+        if val is None:
+            return ''
+        if not isinstance(val, str):
+            val = os.fspath(val)
+        return val.replace('\\', '\\\\').replace('"', '\\"')
+
+    def __curl_redfish_url(self, path_without_scheme):
+        return f'https://{self.__svr_ip}{path_without_scheme}'
+
+    def __curl_config_auth_header_line(self):
+        return (
+            'header = "X-Auth-Token: ' +
+            self.__curl_config_escape_double_quoted_value(self.__token) + '"'
+        )
+
     '''
-    Build the POST command to get bearer token
+    Build curl stdin config for POST /login (credentials in config only, never argv).
     '''
+
     def __build_login_cmd(self, password, timeout=DEFAULT_GET_TIMEOUT):
-        cmd = f'{self.__curl_path} -m {timeout} -k ' \
-            f'-H "Content-Type: application/json" ' \
-            f'-X POST https://{self.__svr_ip}/login ' \
-            f'-d \'{{"username" : "{self.__user}", "password" : "{password}"}}\''
-        return cmd
+        body = json.dumps({'username': self.__user, 'password': password})
+        cred_escape = self.__curl_config_escape_double_quoted_value(body)
+        login_url_escape = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url('/login'))
+        return '\n'.join([
+            self._CFG_LOGIN_PREFIX.rstrip('\n'),
+            'insecure',
+            f'max-time = {timeout}',
+            'header = "Content-Type: application/json"',
+            'request = POST',
+            f'url = "{login_url_escape}"',
+            f'data-raw = "{cred_escape}"',
+        ])
 
     '''
-    Build the GET command
+    Build curl stdin config for GET (token off argv).
     '''
+
     def __build_get_cmd(self, uri, timeout=DEFAULT_GET_TIMEOUT):
-        cmd = f'{self.__curl_path} -m {timeout} -k ' \
-            f'-H "X-Auth-Token: {self.__token}" --request GET ' \
-            f'--location https://{self.__svr_ip}{uri}'
-        return cmd
+        full_url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(uri))
+        return '\n'.join([
+            '# hw-mgmt-redfish: GET',
+            'insecure',
+            f'max-time = {timeout}',
+            'location',
+            self.__curl_config_auth_header_line(),
+            'request = GET',
+            f'url = "{full_url_esc}"',
+        ])
 
     '''
-    Build the POST command to do firmware update
+    Build curl stdin config for firmware upload POST (token off argv).
     '''
+
     def __build_fw_update_cmd(self, fw_image):
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-H "Content-Type: application/octet-stream" -X POST ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE} -T {fw_image}'
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(RedfishClient.REDFISH_URI_UPDATE_SERVICE))
+        up_esc = self.__curl_config_escape_double_quoted_value(fw_image)
+        return '\n'.join([
+            '# hw-mgmt-redfish: fw-post-upload',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/octet-stream"',
+            'request = POST',
+            f'upload-file = "{up_esc}"',
+            f'url = "{url_esc}"',
+        ])
 
     '''
-    Build the PATCH command to change login password
+    Build curl stdin config for PATCH account password (token off argv).
     '''
+
     def __build_change_password_cmd(self, new_password):
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-H "Content-Type: application/json" -X PATCH ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user} ' \
-            f'-d \'{{"Password" : "{new_password}"}}\''
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user}'))
+        body = json.dumps({'Password': new_password})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH account-self',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     def _build_change_user_password_cmd(self, user, new_password):
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-H "Content-Type: application/json" -X PATCH ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user} ' \
-            f'-d \'{{"Password" : "{new_password}"}}\''  # Change password for the specific user
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user}'))
+        body = json.dumps({'Password': new_password})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH account-user',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     def _build_change_user_password_after_factory_cmd(self, user, user_pwd, new_password):
-        cmd = f'{self.__curl_path} -k -u {user}:{user_pwd} ' \
-            f'-H "Content-Type: application/json" -X PATCH ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user} ' \
-            f'-d \'{{"Password" : "{new_password}"}}\''  # Change password for the specific user
-        return cmd
+        user_esc = self.__curl_config_escape_double_quoted_value(
+            f'{user}:{user_pwd}')
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user}'))
+        body = json.dumps({'Password': new_password})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH account-factory',
+            'insecure',
+            f'user = "{user_esc}"',
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     def _build_delete_cmd(self, user_to_delete):
-        # curl -k -H "X-Auth-Token: $bmc_token" -X DELETE https://${bmc}/redfish/v1/AccountService/Accounts/admin_user
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-X DELETE ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user_to_delete} '
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user_to_delete}'))
+        return '\n'.join([
+            '# hw-mgmt-redfish: DELETE account',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'request = DELETE',
+            f'url = "{url_esc}"',
+        ])
 
     '''
-    Build the PATCH command to set 'ForceUpdate' attribute
+    Build curl stdin config for PATCH ForceUpdate (token off argv).
     '''
+
     def __build_set_force_update_cmd(self, force):
-        value = 'true' if force else 'false'
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-X PATCH -d \'{{"HttpPushUriOptions":{{"ForceUpdate":{value}}}}}\' ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE}'
-        return cmd
+        body = json.dumps({'HttpPushUriOptions': {'ForceUpdate': bool(force)}})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(RedfishClient.REDFISH_URI_UPDATE_SERVICE))
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH force-update',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     '''
-    Build generic POST command
+    Build curl stdin config for generic JSON POST (token off argv).
     '''
-    def __build_post_cmd(self, uri, data_dict, timeout=DEFAULT_GET_TIMEOUT):
-        data_str = json.dumps(data_dict)
-        cmd = f'{self.__curl_path} -m {timeout} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-H "Content-Type: application/json" ' \
-            f'-X POST https://{self.__svr_ip}{uri} ' \
-            f'-d \'{data_str}\''
-        return cmd
+
+    def __build_post_cmd(self, uri, data_dict=None, timeout=DEFAULT_GET_TIMEOUT):
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(uri))
+        lines = [
+            '# hw-mgmt-redfish: POST json',
+            'insecure',
+            f'max-time = {timeout}',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = POST',
+            f'url = "{url_esc}"',
+        ]
+        if data_dict is not None:
+            data_str = json.dumps(data_dict)
+            data_esc = self.__curl_config_escape_double_quoted_value(data_str)
+            lines.append(f'data-raw = "{data_esc}"')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def __redact_json_field_in_curl_config(cfg, field_name):
+        '''
+        Redact JSON field values in curl -K config (plain or backslash-escaped).
+        '''
+        key = re.escape(field_name)
+        escaped_comma = (
+            rf'(\\"{key}\\"\s*:\s*\\")((?:\\.[^"\\]|[^"\\])*)(\\")(?=,)'
+        )
+        escaped_end = (
+            rf'(\\"{key}\\"\s*:\s*\\")((?:\\.[^"\\]|[^"\\])*)(\\")(?=}})'
+        )
+        plain = rf'("{key}"\s*:\s*")((?:\\.[^"\\]|[^"\\])*)(")'
+        redacted, count = re.subn(
+            escaped_comma, r'\1******\3', cfg, count=1, flags=re.IGNORECASE)
+        if count:
+            return redacted
+        redacted, count = re.subn(
+            escaped_end, r'\1******\3', cfg, count=1, flags=re.IGNORECASE)
+        if count:
+            return redacted
+        return re.sub(plain, r'\1******\3', cfg, count=1, flags=re.IGNORECASE)
 
     '''
-    Obfuscate username and password while asking for bearer token
+    Redact secrets from curl --config stdin for syslog / debug logs.
     '''
-    def __obfuscate_user_password(self, cmd):
-        pattern = r'"username" : "[^"]*", "password" : "[^"]*"'
-        replacement = '"username" : "******", "password" : "******"'
-        obfuscation_cmd = re.sub(pattern, replacement, cmd)
-        return obfuscation_cmd
+
+    def __curl_config_for_logging(self, curl_config):
+
+        cfg = curl_config
+
+        for field in ('username', 'password', 'Password'):
+            cfg = self.__redact_json_field_in_curl_config(cfg, field)
+
+        cfg = re.sub(
+            r'header = "X-Auth-Token:[^"]*"',
+            'header = "X-Auth-Token: ******"',
+            cfg)
+
+        cfg = re.sub(
+            r'user = "[^"]*"',
+            'user = "******:******"',
+            cfg)
+
+        cfg = re.sub(
+            r'/AccountService/Accounts/[^"/\s]+',
+            '/AccountService/Accounts/******',
+            cfg)
+
+        return cfg
+
+    def __format_curl_command_for_logging(self, curl_config):
+        '''
+        Log argv plus redacted -K stdin config for copy-paste debugging.
+        '''
+        redacted_cfg = self.__curl_config_for_logging(curl_config)
+        return (
+            f'{self.__curl_path} -w "\\nHTTP Status Code: %{{http_code}}" -K - '
+            f'<<\'HW_MGMT_CURL_CFG\'\n{redacted_cfg}\nHW_MGMT_CURL_CFG'
+        )
 
     '''
-    Obfuscate bearer token in the response string
+    Obfuscate username and password in curl config (delegates to __curl_config_for_logging).
     '''
+
+    def __obfuscate_user_password(self, curl_config):
+        return self.__curl_config_for_logging(curl_config)
+
+    '''
+    Obfuscate bearer token in a Redfish login response string (logging helpers/tests).
+    '''
+
     def __obfuscate_token_response(self, response):
-        # Credential obfuscation
         pattern = r'"token": "[^"]*"'
         replacement = '"token": "******"'
-        obfuscation_response = re.sub(pattern,
-                                      replacement,
-                                      response)
-        return obfuscation_response
+        return re.sub(pattern, replacement, response)
 
     '''
-    Obfuscate bearer token passed to cURL
+    Obfuscate bearer token passed to cURL (stdin config or legacy argv string).
     '''
+
     def __obfuscate_auth_token(self, cmd):
-        pattern = r'X-Auth-Token: [^"]+'
-        replacement = 'X-Auth-Token: ******'
-
-        obfuscation_cmd = re.sub(pattern, replacement, cmd)
-        return obfuscation_cmd
+        obfuscated = self.__curl_config_for_logging(cmd)
+        return re.sub(
+            r'X-Auth-Token:\s*[^\s"]+',
+            'X-Auth-Token: ******',
+            obfuscated)
 
     '''
-    Obfuscate password while aksing for password change
+    Obfuscate password in curl config (delegates to __curl_config_for_logging).
     '''
+
     def __obfuscate_password(self, cmd):
-        pattern = r'"Password" : "[^"]*"'
-        replacement = '"Password" : "******"'
-        obfuscation_cmd = re.sub(pattern, replacement, cmd)
+        return self.__curl_config_for_logging(cmd)
 
-        return obfuscation_cmd
+    def __parse_curl_output(self, curl_output):
+        '''
+        Split curl -w trailer from body. Trailer must be at end of stdout only.
+        '''
+        match = RedfishClient._CURL_HTTP_TRAILER_RE.search(curl_output)
+        if match:
+            return (curl_output[:match.start()], match.group(1))
+        return (curl_output, None)
 
     '''
     Execute cURL command and return the output and error messages
     '''
-    def __exec_curl_cmd_internal(self, cmd):
 
-        # Will not print task monitor to syslog
-        task_mon = (RedfishClient.REDFISH_URI_TASKS in cmd)
-        login_cmd = ('/login ' in cmd)
-        password_change = (RedfishClient.REDFISH_URI_ACCOUNTS in cmd)
+    def __exec_curl_cmd_internal(self, curl_config):
 
-        # Credential obfuscation
-        if login_cmd:
-            obfuscation_cmd = self.__obfuscate_user_password(cmd)
-        else:
-            obfuscation_cmd = self.__obfuscate_auth_token(cmd)
+        task_mon = RedfishClient.REDFISH_URI_TASKS in curl_config
+        if not task_mon:
+            cmd_str = self.__format_curl_command_for_logging(curl_config)
+            print(f'Execute cURL command: {cmd_str}', file=sys.stderr)
 
-        if password_change:
-            obfuscation_cmd = self.__obfuscate_password(obfuscation_cmd)
-
-        process = subprocess.Popen(shlex.split(cmd),
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-        output, error = process.communicate()
-        output_str = output.decode('utf-8')
+        curl_argv = [
+            self.__curl_path,
+            '-w', '\nHTTP Status Code: %{http_code}',
+            '-K', '-',
+        ]
+        process = subprocess.Popen(
+            curl_argv,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdin_bytes = curl_config.encode('utf-8')
+        output, error = process.communicate(input=stdin_bytes)
+        output_decoded = output.decode('utf-8')
         error_str = error.decode('utf-8')
         ret = process.returncode
-        # print ("Curl send:{}\n".format(cmd))
-        # print ("Curl rcv: err:{}\nout:{}".format(error_str, output_str))
 
-        if (ret > 0):
+        if ret > 0:
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
 
-        if (ret == 0):  # cURL retuns ok
-            if login_cmd:
-                obfuscation_output_str = \
-                    self.__obfuscate_token_response(output_str)
-            else:
-                obfuscation_output_str = output_str
+        output_str, _http = self.__parse_curl_output(output_decoded)
+        output_str = output_str.rstrip('\n')
 
-        else:  # cURL returns error
-            # Extract cURL command failure reason
+        if ret != 0:
             match = re.search(r'curl: \([0-9]+\) (.*)', error_str)
             if match:
                 error_str = match.group(1)
 
         return (ret, output_str, error_str)
 
+    def __update_token_in_curl_config(self, curl_config):
+        if self.__token is None:
+            return curl_config
+        hdr = (
+            'header = "X-Auth-Token: ' +
+            self.__curl_config_escape_double_quoted_value(self.__token) + '"')
+        return re.sub(
+            r'^header = "X-Auth-Token:[^"]*"',
+            hdr,
+            curl_config,
+            count=1,
+            flags=re.MULTILINE)
+
     def __get_http_request_type(self, cmd):
+        m = re.search(r'^request = (\w+)', cmd, re.MULTILINE | re.I)
+        if m:
+            return m.group(1).upper()
 
         patterns = (r'-X[ \t]+([A-Z]+)', r'--request[ \t]+([A-Z]+)')
-
         for pattern in patterns:
             match = re.search(pattern, cmd)
             if match:
@@ -286,17 +453,18 @@ class RedfishClient:
     Wrapper function to execute the given cURL command which can deal with
     invalid bearer token case.
     '''
-    def exec_curl_cmd(self, cmd):
-        is_login_cmd = ('/login ' in cmd)
 
-        req_type = self.__get_http_request_type(cmd)
+    def exec_curl_cmd(self, curl_config):
+        is_login_cmd = curl_config.startswith(RedfishClient._CFG_LOGIN_PREFIX)
+
+        req_type = self.__get_http_request_type(curl_config)
         is_patch_req = (req_type == 'PATCH')
 
         # Not login, return
         if (not self.has_login()) and (not is_login_cmd):
             return (RedfishClient.ERR_CODE_NOT_LOGIN, 'Not login', 'Not login')
 
-        ret, output_str, error_str = self.__exec_curl_cmd_internal(cmd)
+        ret, output_str, error_str = self.__exec_curl_cmd_internal(curl_config)
 
         is_empty_response = ((ret == 0) and (len(output_str) == 0))
 
@@ -304,17 +472,16 @@ class RedfishClient:
         # GET & POST.
         # Need to re-generate token
         if (is_empty_response and (not is_login_cmd) and (not is_patch_req)):
-            # print(f'need to regenerate token..')
             self.__token = None
             ret = self.login()
             if ret == RedfishClient.ERR_CODE_OK:
-                ret, output_str, error_str = self.__exec_curl_cmd_internal(cmd)
+                curl_retry = self.__update_token_in_curl_config(curl_config)
+                ret, output_str, error_str = self.__exec_curl_cmd_internal(
+                    curl_retry)
             elif ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
-                # Login fails, invalidate token.
                 self.__token = None
                 return (ret, 'Bad credential', 'Bad credential')
             else:
-                # Login fails, invalidate token.
                 self.__token = None
                 return (ret, 'Login failure', 'Login failure')
 
@@ -323,12 +490,14 @@ class RedfishClient:
     '''
     Check if already login
     '''
+
     def has_login(self):
         return self.__token is not None
 
     '''
     Login Redfish server and get bearer token
     '''
+
     def login(self, password=None):
         if self.has_login():
             return RedfishClient.ERR_CODE_OK
@@ -336,9 +505,8 @@ class RedfishClient:
         if not password:
             password = self.__password
 
-        cmd = self.__build_login_cmd(password)
-        # print(f'cmd:{cmd}')
-        ret, response, error = self.exec_curl_cmd(cmd)
+        curl_cfg = self.__build_login_cmd(password)
+        ret, response, error = self.exec_curl_cmd(curl_cfg)
 
         if (ret != 0):  # cURL execution error
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
@@ -375,7 +543,7 @@ class RedfishClient:
     def build_get_cmd(self, uri):
         return self.__build_get_cmd(uri)
 
-    def build_post_cmd(self, uri, data_dict):
+    def build_post_cmd(self, uri, data_dict=None):
         return self.__build_post_cmd(uri, data_dict)
 
 
@@ -392,7 +560,8 @@ class BMCAccessor(object):
     BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
     BMC_NOS_ACCOUNT = 'yormnAnb'  # used for communication between NOS and BMC
-    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51"  # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51"
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
@@ -515,7 +684,8 @@ class BMCAccessor(object):
             subprocess.run(cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             raise Exception(f"Failed to write hex file: {e}")
-        tpm_command = ["tpm2_createprimary", "-C", "o", "-u", f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
+        tpm_command = ["tpm2_createprimary", "-C", "o", "-u",
+                       f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
         try:
             result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
         except subprocess.CalledProcessError as e:
@@ -530,7 +700,11 @@ class BMCAccessor(object):
                 try:
                     result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
                 except subprocess.CalledProcessError as e:
-                    print(f"[_handle_legacy_password] tpm2_createprimary (stdin, attempt={attempt}) failed: returncode={e.returncode}", file=sys.stderr)
+                    print(
+                        f"[_handle_legacy_password] tpm2_createprimary "
+                        f"(stdin, attempt={attempt}) failed: "
+                        f"returncode={e.returncode}",
+                        file=sys.stderr)
                     if e.stderr:
                         print(f"[_handle_legacy_password] stderr: {e.stderr.strip()}", file=sys.stderr)
                     raise Exception(f"Failed to create primary with stdin: {e}")
@@ -562,7 +736,8 @@ class BMCAccessor(object):
                     break
 
             variety_check = len(set(symcipher_value)) >= 5
-            repeating_pattern_check = sum(1 for i in range(pass_len - 1) if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
+            repeating_pattern_check = sum(1 for i in range(pass_len - 1)
+                                          if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
 
             # check for consecutive_pairs
             count = 0

@@ -795,7 +795,7 @@ if [ "$1" == "add" ]; then
 				sodimm3_addr='001e'
 				sodimm4_addr='001f'
 			;;
-			$AMD_V3000_CPU)
+			$AMD_V3000_CPU|$AMD_FRNG_CPU)
 				sodimm1_addr='0052'
 				sodimm2_addr='0053'
 			;;
@@ -956,7 +956,7 @@ if [ "$1" == "add" ]; then
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
 		if [ $? -ne 0 ]; then
 			# PS EEPROM VPD.
-			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
+			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info >> $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
 				if is_virtual_machine; then
@@ -1083,6 +1083,8 @@ if [ "$1" == "add" ]; then
 		if [ ${minimal_unsupported} -eq 0 ] && [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
+		# sxcore uses 0-based ASIC index; chipup maps 0 to asic1_* and
+		# uses $3 (%S/%p PCI path) to identify the failed ASIC.
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
 		set_asic_ready "$4/$5" 1
 	fi

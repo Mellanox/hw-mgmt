@@ -57,7 +57,7 @@ import signal
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
-from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
 import json
 import re
 import threading
@@ -243,6 +243,30 @@ class CONST:
     # SDK load timeout in seconds. On system start SDK load takes additional time
     # so we need to wait for SDK load timeout to avoid false error handling
     SDK_LOAD_TIMEOUT_SEC = 60
+
+    # subclass with CPLD reg definition
+    class CPLD_REG:
+        BASE_ADDR = "0x2500"
+        TACHO1 = "0xe4"
+        TACHO2 = "0xe5"
+        TACHO3 = "0xe6"
+        TACHO4 = "0xe7"
+        TACHO5 = "0xe8"
+        TACHO6 = "0xe9"
+        TACHO7 = "0xeb"
+        TACHO8 = "0xec"
+        TACHO9 = "0xed"
+        TACHO10 = "0xee"
+        TACHO11 = "0xef"
+        TACHO12 = "0xf0"
+        TACHO13 = "0xf1"
+        TACHO14 = "0xf2"
+        TACHO15 = "0xfe"
+        TACHO16 = "0xff"
+        TACHO17 = "0xba"
+        TACHO18 = "0xbb"
+        TACHO19 = "0xb4"
+        TACHO20 = "0xb5"
 
 
 """
@@ -765,7 +789,8 @@ class hw_management_file_op:
         @param data: data to write
         """
         filename = os.path.join(self.root_folder, filename)
-        os.remove(filename)
+        if os.path.isfile(filename):
+            os.remove(filename)
 
     # ----------------------------------------------------------------------
     def get_file_mtime(self, filename):
@@ -1732,9 +1757,11 @@ class system_device(hw_management_file_op):
         @param amb_tmp: Ambient temperature
         """
         if self.check_sensor_blocked():
-            self.stop()
+            if self.state == CONST.RUNNING:
+                self.stop()
         else:
-            self.start()
+            if self.state != CONST.RUNNING:
+                self.start()
 
         if self.state == CONST.RUNNING:
             # refreshing attributes
@@ -2313,6 +2340,8 @@ class thermal_asic_sensor(system_device):
             asic_ready = str2bool(asic_ready)
         except (ValueError, TypeError, OSError, IOError):
             asic_ready = False
+        # If asic*_ready file is not present - assume ASIC is ready.
+        # this is valid for old systems without asic_ready file support
         if asic_ready is None:
             asic_ready = True
         return asic_ready
@@ -2509,8 +2538,9 @@ class psu_fan_sensor(system_device):
                     return
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
                 psu_pwm, _, _ = g_get_range_val(self.pwm_decode, round(pwm))
-                if not psu_pwm:
+                if psu_pwm is None:
                     self.log.notice("{} Can't match PWM {} to PSU. PWM value will not be changed".format(self.name, pwm))
+                    return
 
                 if psu_pwm == -1:
                     self.log.debug("{} PWM value {}. It means PWM should not be changed".format(self.name, pwm))
@@ -2595,7 +2625,7 @@ class psu_fan_sensor(system_device):
         #  UNKNOWN P2C        False
         #  UNKNOWN UNKNOWN    False
         if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
-            (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
+                (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.append_fault(CONST.DIRECTION)
 
         if self.fread_err.check_err():
@@ -2890,6 +2920,73 @@ class fan_sensor(system_device):
         return fan_fault
 
     # ----------------------------------------------------------------------
+    def _get_rpm_reg_offset(self, tacho_idx):
+        """
+        @summary: Get RPM register offset for current FAN tacho
+        @return: RPM register offset (str in hex format)
+        """
+
+        fan_idx_to_reg_offset = {
+            0: CONST.CPLD_REG.TACHO1,
+            1: CONST.CPLD_REG.TACHO2,
+            2: CONST.CPLD_REG.TACHO3,
+            3: CONST.CPLD_REG.TACHO4,
+            4: CONST.CPLD_REG.TACHO5,
+            5: CONST.CPLD_REG.TACHO6,
+            6: CONST.CPLD_REG.TACHO7,
+            7: CONST.CPLD_REG.TACHO8,
+            8: CONST.CPLD_REG.TACHO9,
+            9: CONST.CPLD_REG.TACHO10,
+            10: CONST.CPLD_REG.TACHO11,
+            11: CONST.CPLD_REG.TACHO12,
+            12: CONST.CPLD_REG.TACHO13,
+            13: CONST.CPLD_REG.TACHO14,
+            14: CONST.CPLD_REG.TACHO15,
+            15: CONST.CPLD_REG.TACHO16,
+            16: CONST.CPLD_REG.TACHO17,
+            17: CONST.CPLD_REG.TACHO18,
+            18: CONST.CPLD_REG.TACHO19,
+            19: CONST.CPLD_REG.TACHO20,
+        }
+        if tacho_idx not in fan_idx_to_reg_offset:
+            self.log.warn("{} fan_idx {} not found. Use default offset {}".format(self.name, tacho_idx, CONST.CPLD_REG.TACHO1))
+            return CONST.CPLD_REG.TACHO1
+        else:
+            return fan_idx_to_reg_offset[tacho_idx]
+
+    # ----------------------------------------------------------------------
+    def _print_fan_speed_debug(self, tacho_id):
+
+        tacho_index = self.tacho_idx + tacho_id
+        # 1. Print fanX speed get properties
+        filename = self.get_hw_path("thermal/fan{}_speed_get".format(tacho_index))
+        file_type = "link" if os.path.islink(filename) else "text file"
+        if file_type == "link":
+            file_target = os.path.realpath(filename)
+        else:
+            file_target = filename
+
+        # 2. Print fanX speed get value by the direct link
+        with open(file_target, "r") as file:
+            file_value = file.read().strip()
+
+        # 3. Print tacho reg value
+        tacho_reg_val = "N/A"
+        try:
+            rpm_reg_offset = self._get_rpm_reg_offset(tacho_index - 1)
+            # read 4 bytes from cpld tacho register starting from current FAN drwr
+            retval, iorw_ret_str = run_shell_cmd("iorw", ["-b", CONST.CPLD_REG.BASE_ADDR, "-o", rpm_reg_offset, "-r", "-l4"])
+            if retval != 0:
+                tacho_reg_val = "failed"
+            else:
+                tacho_reg_val = iorw_ret_str.strip()
+        except Exception as e:
+            self.log.warn("{} get tacho register value failed: {}".format(self.name, e))
+
+        debug_str = "{}:{}, path: {}, val:{}, tacho reg: [{}]".format(filename, file_type, file_target, file_value, tacho_reg_val)
+        return debug_str
+
+    # ----------------------------------------------------------------------
     def _validate_rpm(self):
         """
         Validate FAN RPM against expected speed for current PWM.
@@ -2901,14 +2998,14 @@ class fan_sensor(system_device):
             False: PWM read error; or fan speed abnormal (out of range or
                    wrong vs calculated); or PWM stabilized but speed wrong.
             Previous state (cached fan_tacho_state): when PWM not yet
-            stabilized (relax time not elapsed or read PWM != set PWM) —
+            stabilized (relax time not elapsed or |read PWM - set PWM| >= 1) —
             applies only to the trend check (step 2). Out-of-range RPM (step 1)
             is an immediate fault and does not use the cache during stabilisation.
         """
         # FAN tacho state. True - ok, False - error
         fan_tacho_state = True
         pwm_curr = self.read_pwm()
-        if not pwm_curr:
+        if pwm_curr is None:
             self.fread_err.handle_err(self.get_hw_path("thermal/pwm1"), cause="missing")
             return False
         self.fread_err.handle_err(self.get_hw_path("thermal/pwm1"), reset=True)
@@ -2937,13 +3034,22 @@ class fan_sensor(system_device):
                                                                             rpm_curr,
                                                                             rpm_min,
                                                                             rpm_max))
+                try:
+                    fan_speed_debug_str = self._print_fan_speed_debug(tacho_idx)
+                except Exception as e:
+                    fan_speed_debug_str = "failed to print fan speed debug: {}".format(e)
+                self.log.info("fan speed debug:{}".format(fan_speed_debug_str), id="fan tacho {} speed debug".format(self.tacho_idx), log_repeat=3)
                 fan_tacho_state = False
                 break
-
+            else:
+                self.log.info(None, id="fan tacho {} speed debug".format(self.tacho_idx))
              # 2. Check fan trend
             if pwm_curr >= pwm_min:
                 # if FAN speed stabilized after the last change
-                if self.rpm_relax_timestamp <= current_milli_time() and pwm_curr == self.pwm_set:
+                # PWM sysfs is 0..255; percent round-trip can differ by <1%
+                # (65.0 -> 166/255 -> 65.1). Exact == never becomes true after a
+                # tacho-fault PWM bump, so the cached fault would stick forever.
+                if self.rpm_relax_timestamp <= current_milli_time() and abs(pwm_curr - self.pwm_set) < 1:
                     # calculate speed
                     slope = float(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
@@ -3030,10 +3136,8 @@ class fan_sensor(system_device):
         if pwm_asic_control:
             asic_ready = self._get_asic_ready()
             if not asic_ready:
-                self.log.notice("PWM can't be updated. ASIC is not ready", id="{} ASIC_pwm not ready".format(self.name), repeat=1)
+                self.log.notice(None, id="{} ASIC not ready".format(self.name))
                 return
-            else:
-                self.log.notice(None, id="{} ASIC_pwm ready".format(self.name))
 
         self.pwm_set = pwm_val
 
@@ -3088,7 +3192,8 @@ class fan_sensor(system_device):
         @return: True if shutdown successful. False If shutdown not supporting or error
         """
         ret = True
-        fan_shutdown_filename = "system/{}_shutdown"
+
+        fan_shutdown_filename = "system/fan{}_shutdown".format(self.fan_drwr_id)
         if self.check_file(fan_shutdown_filename):
             try:
                 state = CONST.FAN_SHUTDOWN_ENA if shutdown else CONST.FAN_SHUTDOWN_DIS
@@ -3457,7 +3562,7 @@ class ThermalManagement(hw_management_file_op):
                           r'dpu\d*_drivetemp': "add_DPU_drivetemp_sensor",
                           r'dpu\d*_voltmon\d+': "add_DPU_voltmon_sensor",
                           r'dpu\d*_cx_amb': "add_DPU_cx_amb_sensor",
-                          r'dpu\d *_module': "add_DPU_module"
+                          r'dpu\d*_module': "add_DPU_module"
                           }
 
     def __init__(self, cmd_arg, tc_logger):
@@ -3534,7 +3639,7 @@ class ThermalManagement(hw_management_file_op):
                 self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_DELAY_DEF
             self.fan_steady_state_pwm = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_STATE_PWM])
             if not self.fan_steady_state_pwm:
-                self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_PWM_DEF
+                self.fan_steady_state_pwm = CONST.FAN_STEADY_STATE_PWM_DEF
             self.log.info("Fan {} insertion recovery enabled: delay {}s, pwm {}%".format(self.attention_fans_lst,
                                                                                          self.fan_steady_state_delay,
                                                                                          self.fan_steady_state_pwm))
@@ -3676,7 +3781,12 @@ class ThermalManagement(hw_management_file_op):
             self.pdb_count = 0
 
         # Collect voltmon sensors
-        file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
+        try:
+            file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
+        except (OSError, IOError, FileNotFoundError):
+            self.log.error("Missing thermal directory", repeat=1)
+            sys.exit(1)
+
         for fname in file_list:
             res = re.match(r'(voltmon[0-9]+)_temp1_input', fname)
             if res:
@@ -3757,7 +3867,7 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: Get device object by it's name
         """
-        for dev_obj in self.dev_obj_list:
+        for dev_obj in list(self.dev_obj_list):
             if re.match(name_mask, dev_obj.name):
                 return dev_obj
         return None
@@ -4183,7 +4293,7 @@ class ThermalManagement(hw_management_file_op):
                 elif val == pwm_max and "total_err_cnt" in key:
                     name = key
             except (ValueError, TypeError, KeyError):
-                self.log.error("Inapplicable pwm:{} for:{}".format(val, key))
+                self.log.notice("Inapplicable pwm:{} for:{}".format(val, key))
         return pwm_max, name
 
     # ----------------------------------------------------------------------
@@ -4432,9 +4542,11 @@ class ThermalManagement(hw_management_file_op):
     # ----------------------------------------------------------------------
     def add_fan_drwr_sensor(self, name):
         res = re.match(r'drwr([0-9]+)', name)
-        if res:
-            drwr_idx = (res.group(1))
+        if not res:
+            self.log.error("Invalid fan drawer name: %s", name)
+            return False
 
+        drwr_idx = (res.group(1))
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.FAN_ERR])
         err_mask = None
         if exclusion_conf:
@@ -4832,7 +4944,7 @@ class ThermalManagement(hw_management_file_op):
                                 total_err_count -= fault_cnt
 
             if self.emergency:
-                self.stop("Emergency stop {}".format(name))
+                self.stop("Emergency stop {}".format(dev_obj.name))
                 self.write_file("config/thermal_enforced_full_speed", "1\n")
                 continue
 

@@ -1,0 +1,581 @@
+[
+  {
+    "Name": "Mngm_ADC0",
+    "_draft_note": "DRAFT from 'Leak Detection Application Notes.docx'. Fill real BMC I2C bus and ADS7924 address before deployment. Management ADC has one active sensor; channels 2-4 are marked unused with a full-scale window to suppress floating-input alarms.",
+    "NumChnl": 4,
+    "ChnlNames": [
+      "Mngm_ADC0_Ch0_Embedded_0",
+      "Mngm_ADC0_Ch1_Unused",
+      "Mngm_ADC0_Ch2_Unused",
+      "Mngm_ADC0_Ch3_Unused"
+    ],
+    "Device": [
+      {
+        "DeviceType": "MAX1363",
+        "Bus": 27,
+        "Bus_comment": "HI188 management BMC I2C bus (i2c-27).",
+        "Address": "0x36",
+        "Probe": true,
+        "Scale": 0.0005,
+        "Max1363_comment": "TODO: CfgRegVal is a generic hw-mgmt MAX1363 monitor burst placeholder. Verify the exact HI188 monitor/threshold sequence before enabling MAX1363 as a hardware-alarm source.",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          },
+          {
+            "Type": "unused",
+            "NormalMin": 0.0,
+            "NormalMax": 2.048,
+            "WarningMin": 0.0,
+            "CriticalMin": 0.0,
+            "WarningMax": 2.048,
+            "CriticalMax": 2.048
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "unused"
+          },
+          {
+            "Id": 3,
+            "Type": "unused"
+          },
+          {
+            "Id": 4,
+            "Type": "unused"
+          }
+        ],
+        "CfgReg": "0x00",
+        "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+      },
+      {
+        "DeviceType": "ADS7924",
+        "Bus": 27,
+        "Bus_comment": "HI188 management BMC I2C bus (i2c-27).",
+        "Address": "0x49",
+        "Address_comment": "HI188 ADS7924 address on management bus (A0/A1-selected).",
+        "Probe": true,
+        "Scale": 0.0006103515625,
+        "Ads7924_comment": "Vref=2.5V. Normal window is 0.8-0.9*Vref => LLR=0xcc, ULR=0xe6. Mode 0xcc = auto-scan (MODE[5:0] in bits[7:2]); use 0xec for auto-scan with sleep.",
+        "Ads7924IntConfig": "0xe0",
+        "Ads7924AlarmEnable": "0x0f",
+        "Ads7924Mode": "0xcc",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          },
+          {
+            "Type": "unused",
+            "NormalMin": 0.0,
+            "NormalMax": 2.5,
+            "WarningMin": 0.0,
+            "CriticalMin": 0.0,
+            "WarningMax": 2.5,
+            "CriticalMax": 2.5
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "unused"
+          },
+          {
+            "Id": 3,
+            "Type": "unused"
+          },
+          {
+            "Id": 4,
+            "Type": "unused"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "CSM0_ADC0",
+    "_draft_note": "DRAFT from application note. Fill real BMC I2C bus and ADS7924 address before deployment.",
+    "NumChnl": 4,
+    "ChnlNames": [
+      "CSM0_ADC0_Ch0_Embedded_0",
+      "CSM0_ADC0_Ch1_Embedded_1",
+      "CSM0_ADC0_Ch2_Flex_0",
+      "CSM0_ADC0_Ch3_Flex_1"
+    ],
+    "Device": [
+      {
+        "DeviceType": "MAX1363",
+        "Bus": 28,
+        "Bus_comment": "HI188 CSM0_ADC0 BMC I2C bus (i2c-28). Pending re-check.",
+        "Address": "0x36",
+        "Probe": true,
+        "Scale": 0.0005,
+        "Max1363_comment": "TODO: CfgRegVal is a generic hw-mgmt MAX1363 monitor burst placeholder. Verify exact HI188 MAX1363 threshold programming before deployment.",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ],
+        "CfgReg": "0x00",
+        "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+      },
+      {
+        "DeviceType": "ADS7924",
+        "Bus": 28,
+        "Bus_comment": "HI188 CSM0_ADC0 BMC I2C bus (i2c-28). Pending re-check.",
+        "Address": "0x48",
+        "Address_comment": "HI188 ADS7924 address on CSM bus (A0/A1-selected).",
+        "Probe": true,
+        "Scale": 0.0006103515625,
+        "Ads7924IntConfig": "0xe0",
+        "Ads7924AlarmEnable": "0x0f",
+        "Ads7924Mode": "0xcc",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "CSM1_ADC0",
+    "_draft_note": "DRAFT from application note. Fill real BMC I2C bus and ADS7924 address before deployment.",
+    "NumChnl": 4,
+    "ChnlNames": [
+      "CSM1_ADC0_Ch0_Embedded_0",
+      "CSM1_ADC0_Ch1_Embedded_1",
+      "CSM1_ADC0_Ch2_Flex_0",
+      "CSM1_ADC0_Ch3_Flex_1"
+    ],
+    "Device": [
+      {
+        "DeviceType": "MAX1363",
+        "Bus": 29,
+        "Bus_comment": "HI188 CSM1_ADC0 BMC I2C bus (i2c-29). Pending re-check.",
+        "Address": "0x36",
+        "Probe": true,
+        "Scale": 0.0005,
+        "Max1363_comment": "TODO: CfgRegVal is a generic hw-mgmt MAX1363 monitor burst placeholder. Verify exact HI188 MAX1363 threshold programming before deployment.",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ],
+        "CfgReg": "0x00",
+        "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+      },
+      {
+        "DeviceType": "ADS7924",
+        "Bus": 29,
+        "Bus_comment": "HI188 CSM1_ADC0 BMC I2C bus (i2c-29). Pending re-check.",
+        "Address": "0x48",
+        "Address_comment": "HI188 ADS7924 address on CSM bus (A0/A1-selected).",
+        "Probe": true,
+        "Scale": 0.0006103515625,
+        "Ads7924IntConfig": "0xe0",
+        "Ads7924AlarmEnable": "0x0f",
+        "Ads7924Mode": "0xcc",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "CSM2_ADC0",
+    "_draft_note": "DRAFT from application note. Fill real BMC I2C bus and ADS7924 address before deployment.",
+    "NumChnl": 4,
+    "ChnlNames": [
+      "CSM2_ADC0_Ch0_Embedded_0",
+      "CSM2_ADC0_Ch1_Embedded_1",
+      "CSM2_ADC0_Ch2_Flex_0",
+      "CSM2_ADC0_Ch3_Flex_1"
+    ],
+    "Device": [
+      {
+        "DeviceType": "MAX1363",
+        "Bus": 30,
+        "Bus_comment": "HI188 CSM2_ADC0 BMC I2C bus (i2c-30). Pending re-check.",
+        "Address": "0x36",
+        "Probe": true,
+        "Scale": 0.0005,
+        "Max1363_comment": "TODO: CfgRegVal is a generic hw-mgmt MAX1363 monitor burst placeholder. Verify exact HI188 MAX1363 threshold programming before deployment.",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ],
+        "CfgReg": "0x00",
+        "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+      },
+      {
+        "DeviceType": "ADS7924",
+        "Bus": 30,
+        "Bus_comment": "HI188 CSM2_ADC0 BMC I2C bus (i2c-30). Pending re-check.",
+        "Address": "0x48",
+        "Address_comment": "HI188 ADS7924 address on CSM bus (A0/A1-selected).",
+        "Probe": true,
+        "Scale": 0.0006103515625,
+        "Ads7924IntConfig": "0xe0",
+        "Ads7924AlarmEnable": "0x0f",
+        "Ads7924Mode": "0xcc",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "CSM3_ADC0",
+    "_draft_note": "DRAFT from application note. Fill real BMC I2C bus and ADS7924 address before deployment.",
+    "NumChnl": 4,
+    "ChnlNames": [
+      "CSM3_ADC0_Ch0_Embedded_0",
+      "CSM3_ADC0_Ch1_Embedded_1",
+      "CSM3_ADC0_Ch2_Flex_0",
+      "CSM3_ADC0_Ch3_Flex_1"
+    ],
+    "Device": [
+      {
+        "DeviceType": "MAX1363",
+        "Bus": 31,
+        "Bus_comment": "HI188 CSM3_ADC0 BMC I2C bus (i2c-31). Pending re-check.",
+        "Address": "0x36",
+        "Probe": true,
+        "Scale": 0.0005,
+        "Max1363_comment": "TODO: CfgRegVal is a generic hw-mgmt MAX1363 monitor burst placeholder. Verify exact HI188 MAX1363 threshold programming before deployment.",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 1.6384,
+            "NormalMax": 1.8432,
+            "WarningMin": 1.4336,
+            "CriticalMin": 0.2048,
+            "WarningMax": 1.8432,
+            "CriticalMax": 2.048
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ],
+        "CfgReg": "0x00",
+        "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+      },
+      {
+        "DeviceType": "ADS7924",
+        "Bus": 31,
+        "Bus_comment": "HI188 CSM3_ADC0 BMC I2C bus (i2c-31). Pending re-check.",
+        "Address": "0x48",
+        "Address_comment": "HI188 ADS7924 address on CSM bus (A0/A1-selected).",
+        "Probe": true,
+        "Scale": 0.0006103515625,
+        "Ads7924IntConfig": "0xe0",
+        "Ads7924AlarmEnable": "0x0f",
+        "Ads7924Mode": "0xcc",
+        "Types": [
+          {
+            "Type": "embedded",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          },
+          {
+            "Type": "flex",
+            "NormalMin": 2.0,
+            "NormalMax": 2.25,
+            "WarningMin": 1.75,
+            "CriticalMin": 0.25,
+            "WarningMax": 2.25,
+            "CriticalMax": 2.5
+          }
+        ],
+        "Channels": [
+          {
+            "Id": 1,
+            "Type": "embedded"
+          },
+          {
+            "Id": 2,
+            "Type": "embedded"
+          },
+          {
+            "Id": 3,
+            "Type": "flex"
+          },
+          {
+            "Id": 4,
+            "Type": "flex"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -74,11 +74,17 @@ get_device_registers()
             echo "0x55 0x43 1 1"
             ;;
         mp2975|mp2974)
-            echo "0xba 0xbb 0 0"
+            # DPC_MODEL_ID / DPC_REVISION_ID live on page 1 (same as
+            # hw-management-dpc-update.sh defaults DPC_*_PAGE=1).
+            echo "0xba 0xbb 1 1"
             ;;
         xdpe1a2g7b)
             # Block read exposes a leading byte before the 16-bit MFR value.
             echo "0x9a 0x9b 0 0 1"
+            ;;
+        raa228942|raa228943|rrv*)
+            # USER_DATA_02/03 (MFR_DATA0/1): DPC number and revision (page 0).
+            echo "0xB2 0xB3 0 0"
             ;;
         tps53679|xdpe12284)
             echo "unsupported"
@@ -98,17 +104,17 @@ log_message()
     echo "[$level] $message"
 }
 
-# Safe i2c command execution with error checking
+# Safe i2c command execution with error checking (argv only; no eval).
 i2c_cmd()
 {
-    local cmd="$1"
-    local expected_exit="$2"
+    local expected_exit=0
 
-    if [[ -z "$expected_exit" ]]; then
-        expected_exit=0
+    if [[ "$1" == "--expect" ]]; then
+        expected_exit="$2"
+        shift 2
     fi
 
-    eval "$cmd" >/dev/null 2>&1
+    "$@" >/dev/null 2>&1
     local exit_code=$?
 
     if [[ $exit_code -ne $expected_exit ]]; then
@@ -156,7 +162,7 @@ get_model()
     local byte_offset="${5:-0}"
 
     # Set page to model ID page
-    if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$model_page'"; then
+    if ! i2c_cmd i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$model_page"; then
         return 1
     fi
 
@@ -181,7 +187,7 @@ get_revision()
     local byte_offset="${5:-0}"
 
     # Set page to revision ID page
-    if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$rev_page'"; then
+    if ! i2c_cmd i2cset -y -f "$bus" "$dev_addr" "$PAGE_REG" "$rev_page"; then
         return 1
     fi
 
@@ -662,7 +668,7 @@ show_voltmon_info_json()
                 "$(json_escape "$internal_name")" \
                 "$(json_escape "${pmic_prefix:-}")" \
                 "$(json_escape "$device_type")" \
-                "$(json_escape "$bus")" \
+                "$(json_escape "$bus_abs")" \
                 "$(json_escape "$address")" \
                 "$(json_escape "$model_id")" \
                 "$(json_escape "$rev_id")"

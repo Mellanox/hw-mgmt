@@ -46,6 +46,8 @@ ifeq ($(with_host),1)
 	cp usr/usr/local/bin/* debian/$(pname)/usr/local/bin
 	dh_installdirs -p$(pname) etc/logrotate.d
 	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
+	dh_installdirs -p$(pname) etc/bash_completion.d
+	cp usr/etc/bash_completion.d/* debian/$(pname)/etc/bash_completion.d
 ifeq ($(DEB_HOST_ARCH),arm64)
 	rm -f  debian/$(pname)/usr/bin/iorw_lpc
 	mv debian/$(pname)/usr/bin/iorw_bf3.sh debian/$(pname)/usr/bin/iorw
@@ -168,7 +170,12 @@ ifeq ($(with_bmc),1)
 		hw-management-bmc-health-monitor.service \
 		hw-management-bmc-reset-cause-logger.service \
 		hw-management-bmc-i2c-slave-setup.service \
-		hw-management-bmc-recovery-handler.service \
+		hw-management-bmc-recovery-handler.service
+	# ABR watchdog heartbeat: installed but disabled by default (same
+	# pattern as host hw-management-sync). Enable manually when OTP is
+	# fused / ABR must be serviced: systemctl enable --now ...
+	# Positional arg keeps this call from walking every BMC unit.
+	dh_systemd_enable --no-enable -phw-management-bmc \
 		hw-management-bmc-wd-heartbeat.service
 endif
 

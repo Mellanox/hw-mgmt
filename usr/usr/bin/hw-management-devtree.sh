@@ -96,6 +96,7 @@ declare -A regulator_arr=( \
 	["k"]="mp2845" \
 	["l"]="raa228943" \
 	["m"]="mp29816-6x" \
+	["n"]="mp29816-7x" \
 )
 
 declare -A a2d_arr=( \
@@ -118,6 +119,7 @@ declare -A hotswap_arr=( \
 	["0"]="dummy" \
 	["a"]="lm5066" \
 	["c"]="lm5066i" \
+	["d"]="mp5926" \
 )
 
 declare -A eeprom_arr=( \
@@ -510,6 +512,7 @@ declare -A gb300_swb_alternatives=( \
 	["24c512_0"]="24c512 0x51 11 swb_info" \
 	["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
 	["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+	["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" \
 	["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
 	["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" \
 )
@@ -721,6 +724,52 @@ declare -A sn66xxld_swb_alternatives=( \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
+# Devices located on SN68XX_LD switch board
+declare -A sn68xxld_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x60 15 voltmon1" \
+	["mp29816_1"]="mp29816 0x61 15 voltmon2" \
+	["mp29816_2"]="mp29816 0x62 15 voltmon3" \
+	["mp29816_3"]="mp29816 0x63 15 voltmon4" \
+	["mp29816_4"]="mp29816 0x64 15 voltmon5" \
+	["mp29816_5"]="mp29816 0x65 15 voltmon6" \
+	["mp29816_6"]="mp29816 0x66 15 voltmon7" \
+	["mp29816_7"]="mp29816 0x67 15 voltmon8" \
+	["mp29816_8"]="mp29816 0x68 15 voltmon9" \
+	["mp29816_9"]="mp29816 0x69 15 voltmon10" \
+	["mp29816_10"]="mp29816 0x6a 15 voltmon11" \
+	["mp29816_11"]="mp29816 0x6b 15 voltmon12" \
+	["mp29816_12"]="mp29816 0x6c 15 voltmon13" \
+	["mp29816-7x_10"]="mp29816 0x70 15 voltmon14" \
+	["mp29816-7x_11"]="mp29816 0x71 15 voltmon15" \
+	["mp29816-7x_12"]="mp29816 0x72 15 voltmon16" \
+	["mp29816_13"]="mp29816 0x6d 15 voltmon14" \
+	["mp29816_14"]="mp29816 0x6e 15 voltmon15" \
+	["mp29816_15"]="mp29816 0x6f 15 voltmon16" \
+	["xdpe1a2g7_0"]="xdpe1a2g7 0x60 15 voltmon1" \
+	["xdpe1a2g7_1"]="xdpe1a2g7 0x61 15 voltmon2" \
+	["xdpe1a2g7_2"]="xdpe1a2g7 0x62 15 voltmon3" \
+	["xdpe1a2g7_3"]="xdpe1a2g7 0x63 15 voltmon4" \
+	["xdpe1a2g7_4"]="xdpe1a2g7 0x64 15 voltmon5" \
+	["xdpe1a2g7_5"]="xdpe1a2g7 0x65 15 voltmon6" \
+	["xdpe1a2g7_6"]="xdpe1a2g7 0x66 15 voltmon7" \
+	["xdpe1a2g7_7"]="xdpe1a2g7 0x67 15 voltmon8" \
+	["xdpe1a2g7_8"]="xdpe1a2g7 0x68 15 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7 0x69 15 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7 0x6a 15 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7 0x6b 15 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7 0x6c 15 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7 0x6d 15 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7 0x6e 15 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7 0x6f 15 voltmon16" \
+)
+
+# SN68XX_LD switch board BOM variant S*...Rj*10Rn*3Rj*3... trailing mp29816 remap
+declare -A sn68xxld_swb_mp29816_rn_remap=( \
+	["mp29816_13"]="mp29816 0x6a 15 voltmon11" \
+	["mp29816_14"]="mp29816 0x6b 15 voltmon12" \
+	["mp29816_15"]="mp29816 0x6c 15 voltmon13" \
+)
+
 # Devices located on SN66XX_LD port board
 declare -A sn66xxld_port_alternatives=( \
 	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
@@ -761,12 +810,6 @@ declare -A fan_type1_alternatives=( \
 	["adt75_0"]="adt75 0x49 6 fan_amb" \
 	["stts751_0"]="stts751 0x49 6 fan_amb" \
 	["lm5066i_0"]="lm5066i 0x14 6 fan_hotswap1" \
-)
-
-# Currently system can have just multiple clock boards.
-declare -A clk_type0_alternatives=( \
-	["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
-	["24c128_1"]="24c128 0x57 5 clk_eeprom2" \
 )
 
 # Remove ICP201xx pressure sensors from SMBIOS BOM mechanism
@@ -1213,9 +1256,6 @@ devtr_check_supported_system_init_alternatives()
 			for key in "${!fan_type1_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
 			done
-			for key in "${!clk_type0_alternatives[@]}"; do
-				clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
-			done
 			return 0
 			;;
 		VMOD0017)
@@ -1382,10 +1422,6 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!fan_type1_alternatives[@]}"; do
 					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
 				done
-
-				for key in "${!clk_type0_alternatives[@]}"; do
-					clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
-				done
 				;;
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
@@ -1457,6 +1493,45 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn66xxld_port_alternatives[@]}"; do
 					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
+		VMOD0027)
+			case $sku in
+			HI183|HI187|HI188)
+				for key in "${!sn68xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn68xxld_swb_alternatives["$key"]}"
+				done
+
+				# SN68XX_LD BOM variant S*...Rj*10Rn*3Rj*3... trailing mp29816 remap
+				local bom_str="${system_ver_str:-$(<"$system_ver_file")}"
+				IFS='-'
+				local bom_arr=($bom_str)
+				unset IFS
+				local substr
+				for substr in "${bom_arr[@]}"; do
+					case ${substr:0:1} in
+					S)
+						if [[ "$substr" == *Rn* ]]; then
+							for key in "${!sn68xxld_swb_mp29816_rn_remap[@]}"; do
+								swb_alternatives["$key"]="${sn68xxld_swb_mp29816_rn_remap["$key"]}"
+							done
+						fi
+						;;
+					esac
+				done
+
+				for key in "${!sn66xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
 				done
 				;;
 			*)

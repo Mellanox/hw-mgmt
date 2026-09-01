@@ -103,9 +103,9 @@ check_config_file()
 	return 0
 }
 
-# Optional JSON field "Probe": true — bind kernel driver (new_device) before register programming,
-# briefly unbind for raw i2ctransfer, then rebind for IIO sysfs so driver probe does not run after
-# our final register values are written.
+# Optional JSON field "Probe": true — bind kernel driver (new_device) for IIO sysfs links.
+# MAX1363/ADS1015/ADS7924: bind driver (probe runs), then program registers via i2ctransfer -f
+# while the driver stays bound so our values are the last writer after probe.
 # JSON booleans are unquoted (true/false); json_get_string only sees quoted values — use json_get_bool.
 json_probe_true()
 {
@@ -168,7 +168,7 @@ bind_kernel_driver()
 		log_message "warning" "Bind $driver to $dev_id failed (client present, driver not attached)"
 		return 1
 	fi
-	log_message "info" "Binding $driver at $address on bus $bus (new_device before register config, then unbind/program/rebind)"
+	log_message "info" "Binding $driver at $address on bus $bus (new_device)"
 	if ! echo "$driver $address" > "${adapter}/new_device" 2>/dev/null; then
 		log_message "warning" "new_device failed for $driver $address on i2c-$bus (driver missing or device conflict) — continuing with raw I2C config"
 		return 1
@@ -692,6 +692,7 @@ max1363_cfg_reg_val_for_channel()
 }
 
 # Program MAX1363 register burst from JSON CfgReg/CfgRegVal (channel-aware when ChannelId set).
+# Optional 6th arg post_driver=post_driver: driver may stay bound (i2ctransfer -f).
 configure_max1363_raw_i2c()
 {
 	local device_json="$1"
@@ -699,17 +700,35 @@ configure_max1363_raw_i2c()
 	local bus="$3"
 	local address="$4"
 	local hw_channel_id="${5:-0}"
+	local post_driver="${6:-}"
 
-	local cfg_reg cfg_reg_val patched hw_ch scan_ch k cid
+	local cfg_reg cfg_reg_val setup_val patched hw_ch scan_ch k cid nbytes failed
+
+	if [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "MAX1363 $device_name: post-driver I2C programming"
+	fi
 
 	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
 	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
+	setup_val=$(echo "$device_json" | json_get_string "SetupRegVal")
 	cfg_reg_val=$(echo "$cfg_reg_val" | tr -d '"')
 	cfg_reg=$(echo "$cfg_reg" | tr -d '"')
+	setup_val=$(echo "$setup_val" | tr -d '"')
+
+	failed=0
+
+	# Setup byte (bit7=1) selects the chip reference and polarity.
+	if [ -n "$setup_val" ] && [ "$setup_val" != "null" ]; then
+		log_message "info" "MAX1363 $device_name: setup register: $setup_val"
+		if ! i2ctransfer -f -y "$bus" w1@"$address" "$setup_val" 2>&1; then
+			log_message "warning" "MAX1363 $device_name: setup register write failed"
+			failed=1
+		fi
+	fi
 
 	if [ -z "$cfg_reg" ] || [ -z "$cfg_reg_val" ] || [ "$cfg_reg" = "null" ] || [ "$cfg_reg_val" = "null" ]; then
-		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping raw init"
-		return 1
+		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping monitor burst"
+		return "$failed"
 	fi
 
 	hw_ch="$hw_channel_id"
@@ -735,9 +754,74 @@ configure_max1363_raw_i2c()
 		log_message "info" "MAX1363 $device_name: CfgRegVal adjusted (monitor ch $hw_ch, scan to ch $scan_ch): $cfg_reg_val -> $patched"
 	fi
 
-	if write_and_verify_register "$bus" "$address" "$cfg_reg" "$patched" "Configuration Register" "$device_name"; then
-		return 0
+	# No readback verify: the MAX1363 has no register address space. Reads return
+	# conversion data, and the pointer byte a readback sends first would clobber
+	# the config just written.
+	set -- $patched
+	nbytes="$#"
+	log_message "info" "MAX1363 $device_name: setup/monitor stream: Bus $bus, Addr $address, Reg $cfg_reg, Val: $patched"
+	if ! i2ctransfer -f -y "$bus" w$((nbytes + 1))@"$address" "$cfg_reg" $patched 2>&1; then
+		log_message "warning" "MAX1363 $device_name: setup/monitor stream write failed (Bus $bus, Addr $address)"
+		failed=1
 	fi
+
+	return "$failed"
+}
+
+# All MAX1363 leak sensors on this platform are wired with Vdd as the ADC reference
+# (full-scale = Vdd ~3.28 V, i.e. Scale 0.0008 V/LSB). With no "vref" regulator in the
+# devicetree the ti-max1363 driver defaults to its internal 2.048 V reference and rails
+# inputs above it to raw 4095; forcing Vdd via sysfs restores correct conversions. Call
+# after the kernel driver is (re)bound so the IIO voltage_reference node exists.
+MAX1363_IIO_REFERENCE="Vdd"
+
+max1363_set_iio_reference()
+{
+	local bus="$1"
+	local address="$2"
+	local scale_v="${3:-}"
+	local a dev_id iio_dir vr d dirs sc_mv
+
+	a="${address#0x}"
+	a="${a#0X}"
+	dev_id=$(printf '%d-%04x' "$bus" $((16#$a)))
+
+	# IIO device dirs, same discovery order as find_iio_channel_raw: under the I2C
+	# client, then /sys/bus/iio/devices entries whose device link is this client.
+	dirs=""
+	for d in /sys/bus/i2c/devices/"$dev_id"/iio:device*; do
+		[ -e "$d" ] && dirs="$dirs $d"
+	done
+	for d in /sys/bus/iio/devices/iio:device*; do
+		[ -e "$d" ] || continue
+		[ "$(basename "$(readlink -f "$d/device" 2>/dev/null)" 2>/dev/null)" = "$dev_id" ] && dirs="$dirs $d"
+	done
+
+	for iio_dir in $dirs; do
+		vr="$iio_dir/voltage_reference"
+		[ -w "$vr" ] || continue
+		if echo "$MAX1363_IIO_REFERENCE" >"$vr" 2>/dev/null; then
+			log_message "info" "MAX1363 $dev_id: voltage_reference=$MAX1363_IIO_REFERENCE (now: $(cat "$vr" 2>/dev/null))"
+			# The driver only recomputes its cached vref for the internal references; for
+			# Vdd it keeps the 2.048 V value, leaving in_voltage_scale stale for generic
+			# IIO consumers. Push the JSON Scale (V/LSB -> IIO mV/LSB) so sysfs agrees
+			# with the hardware. hw-mgmt itself reads volts from the JSON Scale, so this
+			# is advisory: a failure (kernel without the scale write_raw) is not fatal.
+			if [ -n "$scale_v" ] && [ -w "$iio_dir/in_voltage_scale" ]; then
+				sc_mv=$(echo "scale=6; $scale_v * 1000" | hw_mgmt_bc)
+				case "$sc_mv" in .*) sc_mv="0$sc_mv" ;; esac
+				if [ -n "$sc_mv" ] && echo "$sc_mv" >"$iio_dir/in_voltage_scale" 2>/dev/null; then
+					log_message "info" "MAX1363 $dev_id: in_voltage_scale=$sc_mv mV/LSB (now: $(cat "$iio_dir/in_voltage_scale" 2>/dev/null))"
+				else
+					log_message "warning" "MAX1363 $dev_id: could not set in_voltage_scale=$sc_mv — in_voltage_scale stays at the internal-reference value; hw-mgmt readings are unaffected (JSON Scale)"
+				fi
+			fi
+			return 0
+		fi
+		log_message "err" "MAX1363 $dev_id: failed to set voltage_reference=$MAX1363_IIO_REFERENCE (available: $(cat "${vr}_available" 2>/dev/null)) - readings may rail to full scale (driver internal 2.048 V reference)"
+		return 1
+	done
+	log_message "err" "MAX1363 $dev_id: no voltage_reference sysfs node — cannot set $MAX1363_IIO_REFERENCE reference; readings may rail to full scale (driver internal 2.048 V reference)"
 	return 1
 }
 
@@ -809,6 +893,7 @@ ads1015_set_iio_scale_for_raw()
 }
 
 # Program ADS1015 config (and optional window comparator Lo/Hi) per MUX channel (TI SBAS173).
+# Optional 7th arg post_driver=post_driver: driver may stay bound (i2ctransfer -f).
 configure_ads1015_raw_i2c()
 {
 	local device_json="$1"
@@ -817,9 +902,14 @@ configure_ads1015_raw_i2c()
 	local address="$4"
 	local num_channels="$5"
 	local hw_channel_id="${6:-0}"
+	local post_driver="${7:-}"
 
 	local cfg_lo lo_val hi_val lo_reg hi_reg mux mux_handoff ch nch ch_end ch_step failed skip_thresh mode_msg
 	local t ch_label ch_list k cid
+
+	if [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "ADS1015 $device_name: post-driver I2C programming"
+	fi
 
 	cfg_lo="0x94"
 	t=$(echo "$device_json" | json_get_string "CfgRegVal" 2>/dev/null) || true
@@ -945,7 +1035,9 @@ configure_ads1015_raw_i2c()
 	return 0
 }
 
-# Program ADS7924 when no kernel driver is bound (TI SBAS482 register map).
+# Program ADS7924 over raw I2C (TI SBAS482 register map).
+# Optional 6th arg post_driver=post_driver: driver may stay bound (i2ctransfer -f); soft reset
+# is skipped so we do not undo kernel probe state.
 configure_ads7924_raw_i2c()
 {
 	local device_json="$1"
@@ -953,6 +1045,7 @@ configure_ads7924_raw_i2c()
 	local bus="$3"
 	local address="$4"
 	local num_channels="$5"
+	local post_driver="${6:-}"
 
 	local scale_s v_min v_max ll ul i b c t gtype
 	local int_b slp_b acq_b pwr_b mode_b awake_b aen_b
@@ -1083,8 +1176,8 @@ configure_ads7924_raw_i2c()
 	slp_b="0x00"
 	acq_b="0x00"
 	pwr_b="0x00"
-	mode_b="0x33"
-	awake_b="0x20"
+	mode_b="0xcc"
+	awake_b="0x80"
 	aen_b="0x0f"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924IntConfig") && int_b="$t"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924SlpConfig") && slp_b="$t"
@@ -1094,13 +1187,15 @@ configure_ads7924_raw_i2c()
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AwakeMode") && awake_b="$t"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AlarmEnable") && aen_b="$t"
 
-	if json_ads7924_soft_reset_default_true "$device_json"; then
+	if [ "$post_driver" != "post_driver" ] && json_ads7924_soft_reset_default_true "$device_json"; then
 		log_message "info" "ADS7924 $device_name: software reset (write 0xaa to RESET)"
 		if ! i2c_write_ads7924_burst "$bus" "$address" 0x16 0xaa; then
 			log_message "warning" "ADS7924 $device_name: soft reset write failed"
 			return 1
 		fi
 		sleep 0.05
+	elif [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "ADS7924 $device_name: post-driver programming (soft reset skipped)"
 	fi
 
 	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 0x00; then
@@ -1131,6 +1226,12 @@ configure_ads7924_raw_i2c()
 	fi
 	sleep 0.02
 
+	# Clear any stale alarm interrupt before starting the scan. TI SBAS482: reading
+	# INTCONFIG (0x12) clears a latched alarm-condition interrupt.
+	log_message "info" "ADS7924 $device_name: clearing stale alarm (read INTCONFIG 0x12)"
+	i2ctransfer -f -y "$bus" w1@"$address" 0x12 r1 >/dev/null 2>&1 || true
+	sleep 0.002
+
 	log_message "info" "ADS7924 $device_name: AWAKE then MODE ($awake_b then $mode_b)"
 	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 $awake_b; then
 		log_message "warning" "ADS7924 $device_name: AWAKE write failed"
@@ -1142,7 +1243,11 @@ configure_ads7924_raw_i2c()
 		return 1
 	fi
 
-	log_message "info" "ADS7924 $device_name: raw I2C configuration complete"
+	if [ "$post_driver" = "post_driver" ]; then
+		log_message "info" "ADS7924 $device_name: post-driver I2C configuration complete"
+	else
+		log_message "info" "ADS7924 $device_name: raw I2C configuration complete"
+	fi
 	return 0
 }
 
@@ -1635,6 +1740,7 @@ create_channel_infrastructure()
 		echo "$detector_name" >"$leakage_base/device_name"
 	fi
 	log_message "info" "Leakage runtime: $leakage_base (device_type=$device_type)"
+	write_reference_status_marker "$leakage_base" "$device_type"
 
 	if json_probe_true "$device_json"; then
 		sleep 0.5
@@ -1664,6 +1770,19 @@ create_channel_infrastructure()
 	return 0
 }
 
+# Record/clear a runtime marker when the MAX1363 Vdd reference could not be set, so a
+# railed configuration is observable in the leakage tree (not only the system log).
+write_reference_status_marker()
+{
+	local leakage_base="$1"
+	local device_type="$2"
+	if [ "$device_type" = "MAX1363" ] && [ "${MAX1363_REF_FAILED:-0}" = "1" ]; then
+		echo "voltage_reference not set to ${MAX1363_IIO_REFERENCE}; readings may rail to full scale (driver internal 2.048 V reference)" >"$leakage_base/reference_error"
+	else
+		rm -f "$leakage_base/reference_error"
+	fi
+}
+
 # One logical channel under leakage/<i>/<logical_ch>/ (per-channel Device[] map).
 populate_single_leakage_channel()
 {
@@ -1690,6 +1809,7 @@ populate_single_leakage_channel()
 	if [ ! -f "$leakage_base/device_type" ]; then
 		echo "$device_type" >"$leakage_base/device_type"
 	fi
+	write_reference_status_marker "$leakage_base" "$device_type"
 
 	if json_probe_true "$device_json"; then
 		sleep 0.5
@@ -1710,7 +1830,8 @@ populate_single_leakage_channel()
 	return 0
 }
 
-# Program device registers over raw I2C (caller must have unbound any kernel driver).
+# Program device registers over raw I2C (i2ctransfer -f). When post_driver is set, the
+# kernel driver may remain bound after probe.
 configure_a2d_registers_raw()
 {
 	local device_json="$1"
@@ -1720,6 +1841,7 @@ configure_a2d_registers_raw()
 	local device_type="$5"
 	local num_channels="$6"
 	local hw_channel_id="${7:-0}"
+	local post_driver="${8:-}"
 
 	local cfg_reg cfg_reg_val lo_thresh_reg lo_thresh_val hi_thresh_reg hi_thresh_val
 	local success failed
@@ -1732,15 +1854,19 @@ configure_a2d_registers_raw()
 	hi_thresh_val=$(echo "$device_json" | json_get_string "HiThreshRegVal")
 
 	if [ "$device_type" = "ADS7924" ]; then
-		configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"
+		configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$post_driver"
 		return $?
 	fi
 	if [ "$device_type" = "ADS1015" ]; then
-		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$hw_channel_id"
+		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$hw_channel_id" "$post_driver"
 		return $?
 	fi
 	if [ "$device_type" = "MAX1363" ]; then
-		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id"
+		# Only a real i2ctransfer failure gets here (the part has no readback to verify),
+		# so propagate it and let the caller try the next Device alternative. Reporting
+		# success would go on to set voltage_reference, which writes the driver's cached
+		# setup byte only and would claim a Vdd reference the chip never received.
+		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id" "$post_driver"
 		return $?
 	fi
 
@@ -1785,12 +1911,13 @@ configure_device()
 	local chnames="$4"
 	local hw_channel_id="${5:-0}"
 
-	local device_type bus address need_rebind
+	local device_type bus address need_rebind mx_scale
 
 	device_type=$(echo "$device_json" | json_get_string "DeviceType")
 	bus=$(echo "$device_json" | json_get_number "Bus")
 	address=$(echo "$device_json" | json_get_string "Address")
 	need_rebind=0
+	MAX1363_REF_FAILED=0
 
 	log_message "info" "Checking $device_type device at Bus $bus, Address $address for $device_name"
 
@@ -1803,6 +1930,35 @@ configure_device()
 
 	log_message "info" "Configuring $device_type for $device_name..."
 
+	# Probe: bind driver (probe runs), then program registers as the last writer.
+	if json_probe_true "$device_json"; then
+		case "$device_type" in
+		ADS7924|MAX1363|ADS1015)
+			if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
+				log_message "info" "$device_type $device_name: driver bind failed — try next Device alternative"
+				return 1
+			fi
+			if ! configure_a2d_registers_raw "$device_json" "$device_name" "$bus" "$address" \
+				"$device_type" "$num_channels" "$hw_channel_id" post_driver; then
+				log_message "info" "$device_type $device_name: post-probe register programming failed — try next Device alternative"
+				return 1
+			fi
+			# MAX1363: force the Vdd ADC reference while the driver is bound and the IIO
+			# sysfs is up, else the ti-max1363 default 2.048 V internal reference rails
+			# inputs above it to raw 4095. Record the outcome so a railed reference is
+			# observable in the leakage tree.
+			if [ "$device_type" = "MAX1363" ]; then
+				mx_scale=$(json_optional_scalar "$device_json" "Scale") || mx_scale=""
+				if ! max1363_set_iio_reference "$bus" "$address" "$mx_scale"; then
+					MAX1363_REF_FAILED=1
+				fi
+			fi
+			log_message "info" "Device configuration complete for $device_name"
+			return 0
+			;;
+		esac
+	fi
+
 	# 2) Bind kernel driver first when Probe is true (instantiates client; driver probe may run once).
 	if json_probe_true "$device_json"; then
 		if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
@@ -1810,7 +1966,7 @@ configure_device()
 		fi
 	fi
 
-	# 3) Unbind so i2ctransfer can program registers (MAX1363 / ADS1015 / ADS7924).
+	# 3) Unbind so i2ctransfer can program registers (MAX1363 / ADS1015).
 	if i2c_client_has_bound_driver "$bus" "$address"; then
 		if ! unbind_kernel_driver "$bus" "$address"; then
 			log_message "info" "Leak detector $device_name: driver unbind failed — try next Device alternative"

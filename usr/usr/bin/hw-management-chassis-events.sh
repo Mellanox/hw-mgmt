@@ -105,12 +105,15 @@ POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1\$" "pout2\$")
 # $1 - path to sensor in sysfs
 # $2 - sensor type ('in', 'curr', 'power'...)
 # $3 - mask to matching  label
-# return sensor index if match is found or 0 if match not found
+# Prints sensor index on stdout if match is found.
+# Exit status: 0 if match found, 1 if not found.
+# Index can be 0 (e.g. in0/vin), so callers must use stdout, not $?.
 find_sensor_by_label()
 {
 	path=$1
 	sens_type=$2
 	label_mask=$3
+	local FILES label_file curr_label
 	FILES=$(find "$path"/"$sens_type"*label)
 	sensor_id_regex="$path"/"$sens_type""([0-9]+)_label"
 	for label_file in $FILES
@@ -120,15 +123,13 @@ find_sensor_by_label()
 			# Extracting sensor number from label name like "curr7_label"
 			[[ $label_file =~ $sensor_id_regex ]]
 			if [ "${#BASH_REMATCH[@]}" != 2 ]; then
-			    # not matched
-			    return 0
-			else
-			    return "${BASH_REMATCH[1]}"
+				return 1
 			fi
+			echo "${BASH_REMATCH[1]}"
+			return 0
 		fi
 	done
-	# 0 means label by 'pattern' not found.
-    return 0
+	return 1
 }
 
 linecard_i2c_parent_bus_offset=( \
@@ -494,6 +495,29 @@ get_fan_direction_by_vpd()
 	return $dir
 }
 
+validate_cartridge_fru()
+{
+	local cartridge_name=$1
+	local fru_data_file="$eeprom_path/${cartridge_name}_data"
+	local valid_file="$config_path/${cartridge_name%%_eeprom*}_valid"
+	local fru_error
+
+	# ipmi-fru returns 0 even for a broken FRU, so only its output tells us.
+	# The BMC reads these two fields to program the CPLD, so both must be there.
+	fru_error=$(grep -m1 -o "FRU Error.*" "$fru_data_file" 2>/dev/null)
+	if [ -n "$fru_error" ]; then
+		echo 0 > "$valid_file"
+		log_err "$cartridge_name: $fru_error"
+	elif ! grep -q "FRU Board Serial Number" "$fru_data_file" 2>/dev/null ||
+		! grep -q "FRU Chassis Custom Info" "$fru_data_file" 2>/dev/null; then
+		echo 0 > "$valid_file"
+		log_err "$cartridge_name: FRU missing board serial or chassis custom info"
+	else
+		echo 1 > "$valid_file"
+		log_info "$cartridge_name: FRU valid"
+	fi
+}
+
 function set_fpga_combined_version()
 {
 	path="$1"
@@ -551,9 +575,7 @@ function handle_hotplug_fan_event()
 		;;
 	esac
 
-	if [ "$event" -eq 1 ]; then
-		set_fan_direction "$attribute" "$event"
-	fi
+	set_fan_direction "$attribute" "$event"
 }
 
 function handle_hotplug_dpu_event()
@@ -688,6 +710,77 @@ function handle_hotplug_event()
 	*)
 		;;
 	esac
+}
+
+# Resolve LED control type for $1 (udev LED name, e.g. status, uid, fan1).
+# Reads $config_path/led_control_type pairs: "status led_hw uid led_sw fan* led_hw".
+# Exact name or led_<name> first. Then glob masks (* any string, ? one char).
+# fan and fan1 stay different unless a mask like fan* is used. Else LED_CONTROL_HW_SW.
+# parameters:
+# $1 - LED name (e.g. status, uid, fan1)
+# returns:
+# LED control type (e.g. led_hw, led_sw, led_hw_sw)
+function get_led_control_type()
+{
+	local led_name="$1"
+	local -a led_ctrl_map
+	local i
+	local entry
+	local val
+	local match
+
+	if [ ! -f "$config_path"/led_control_type ]; then
+		echo "$LED_CONTROL_HW_SW"
+		return
+	fi
+
+	# noglob: keep * and ? as mask chars, not pathname expansion.
+	set -f
+	led_ctrl_map=($(< "$config_path"/led_control_type))
+	set +f
+
+	# Exact name first so "fan" does not apply to "fan1".
+	for ((i=0; i<${#led_ctrl_map[@]}; i+=2)); do
+		entry="${led_ctrl_map[i]}"
+		val="${led_ctrl_map[i+1]}"
+		if [ "$entry" = "$led_name" ] || [ "$entry" = "led_${led_name}" ]; then
+			case "$val" in
+			"$LED_CONTROL_SW"|"$LED_CONTROL_HW"|"$LED_CONTROL_HW_SW")
+				echo "$val"
+				return
+				;;
+			esac
+		fi
+	done
+
+	# Glob masks: * any string, ? one character. First matching mask wins.
+	for ((i=0; i<${#led_ctrl_map[@]}; i+=2)); do
+		entry="${led_ctrl_map[i]}"
+		val="${led_ctrl_map[i+1]}"
+		case "$entry" in
+		*[\*\?]*)
+			match=0
+			case "$led_name" in
+			$entry) match=1 ;;
+			esac
+			if [ "$match" -eq 0 ]; then
+				case "led_${led_name}" in
+				$entry) match=1 ;;
+				esac
+			fi
+			if [ "$match" -eq 1 ]; then
+				case "$val" in
+				"$LED_CONTROL_SW"|"$LED_CONTROL_HW"|"$LED_CONTROL_HW_SW")
+					echo "$val"
+					return
+					;;
+				esac
+			fi
+			;;
+		esac
+	done
+
+	echo "$LED_CONTROL_HW_SW"
 }
 
 function handle_fantray_led_event()
@@ -893,6 +986,11 @@ if [ "$1" == "add" ]; then
 							environment_path="$hw_management_path"/dpu"$slot_num"/environment
 							alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
 							thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+							# Make sure that dpu folders are created before adding the
+							# attributes. Some of the voltmon udev events may get
+							# processed before the DPU_READY event, there by creating
+							# a race condition. This will prevent missing attributes.
+							mkdir -p "$environment_path" "$alarm_path" "$thermal_path"
 						else
 							# Skip other voltmons events, since its not present in DPU.
 							exit 0
@@ -936,10 +1034,22 @@ if [ "$1" == "add" ]; then
 			check_n_link "$3""$4"/temp1_max_alarm $alarm_path/"$prefix"_temp1_max_alarm
 			check_n_link "$3""$4"/temp1_crit_alarm $alarm_path/"$prefix"_temp1_crit_alarm
 
+			# Default label map: in1=vin, in2=vout1, in3=vout2 (same for curr/power).
+			voltmon_label_map=("${VOLTMON_SENS_LABEL[@]}")
+			curr_label_map=("${CURR_SENS_LABEL[@]}")
+			power_label_map=("${POWER_SENS_LABEL[@]}")
+			dev_name=$(< "$3""$4"/name)
+			# MP2845 exposes 4 pages. Relevant platforms wire page0 (vout1/iout1) and
+			# page2 (vout3/iout3); page1 (vout2/iout2) is not connected. Map the
+			# second output slot to vout3/iout3 instead of default vout2/iout2.
+			if [ "$dev_name" == "mp2845" ]; then
+				voltmon_label_map[3]="vout3"
+				curr_label_map[3]="iout3\$"
+			fi
+
 			for i in {1..3}; do
-				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
+				sensor_id=$(find_sensor_by_label "$3""$4" "in" "${voltmon_label_map[$i]}")
+				if [ $? -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
 					if [ -f "$3""$4"/in"$sensor_id"_crit ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
@@ -976,9 +1086,8 @@ if [ "$1" == "add" ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_max
 				fi
 
-				find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
+				sensor_id=$(find_sensor_by_label "$3""$4" "curr" "${curr_label_map[$i]}")
+				if [ $? -eq 0 ]; then
 					check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
 					if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
@@ -993,9 +1102,8 @@ if [ "$1" == "add" ]; then
 					check_n_link "$3""$4"/curr"$sensor_id"_crit $environment_path/"$prefix"_curr"$i"_crit
 				fi
 
-				find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
+				sensor_id=$(find_sensor_by_label "$3""$4" "power" "${power_label_map[$i]}")
+				if [ $? -eq 0 ]; then
 					check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
 					check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path/"$prefix"_power"$i"_alarm
 					check_n_link "$3""$4"/power"$sensor_id"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
@@ -1055,6 +1163,9 @@ if [ "$1" == "add" ]; then
 			capability=$(< $led_path/led_"$name"_capability)
 			capability="${capability} ${color} ${color}_blink"
 			echo "$capability" > $led_path/led_"$name"_capability
+		fi
+		if [ ! -f $led_path/led_"$name"_control ]; then
+			get_led_control_type "$name" > $led_path/led_"$name"_control
 		fi
 		unlock_service_state_change
 		$led_path/led_"$name"_state
@@ -1233,6 +1344,9 @@ if [ "$1" == "add" ]; then
 			if [ "$dmi_board_name" == "VMOD0021" ] || [ "$dmi_board_name" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
+					validate_cartridge_fru "$eeprom_name"
+				else
+					log_info "$eeprom_name: ipmi-fru not found, FRU not validated"
 				fi
 			else
 				eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
@@ -1523,6 +1637,9 @@ else
 	if [ -f $led_path/led_"$name"_capability ]; then
 		rm -f $led_path/led_"$name"_capability
 	fi
+	if [ -f $led_path/led_"$name"_control ]; then
+		rm -f $led_path/led_"$name"_control
+	fi
 	if [ "$2" == "regio" ]; then
 		# Detect if it belongs to line card or to main board or to dpu.
 		# For main board dirname mlxreg-io, for line card - mlxreg-io.{bus_num}.
@@ -1591,6 +1708,9 @@ else
 				;;
 			vpd*)
 				rm -f $eeprom_path/vpd_parsed
+				;;
+			cable_cartridge*)
+				rm -f $config_path/"${eeprom_name%%_eeprom*}"_valid
 				;;
 			*)
 				;;

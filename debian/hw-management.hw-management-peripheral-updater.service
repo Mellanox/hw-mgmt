@@ -8,9 +8,9 @@ StartLimitIntervalSec=1200
 StartLimitBurst=5
 
 [Service]
-ExecStart=/bin/sh -c "/usr/bin/hw_management_peripheral_updater.py"
-ExecStop=/bin/kill $MAINPID
-TimeoutStopSec=5
+ExecStart=/usr/bin/hw_management_peripheral_updater.py
+# systemd Type=simple already sends SIGTERM to MAINPID on stop
+TimeoutStopSec=15
 
 Restart=on-failure
 RestartSec=10s

@@ -6,12 +6,12 @@ Reference material for SONiC BMC **hw-management-bmc** tooling: sample JSON and 
 
 **User manual:** Host vs BMC stacks are documented in **§2.2** of
 `Documentation/Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md`. Examples
-here apply to the **BMC package** only; host validated layouts are under `tests/system_tree/`.
+here apply to the **BMC package** only; host reference layouts use `usr/etc/hw-management-sensors/` and scripts under `usr/usr/bin/`.
 
 | File | Purpose |
 |------|---------|
 | [hw-management-bmc-a2d-leakage-config-example.json](hw-management-bmc-a2d-leakage-config-example.json) | A2D leakage config: field reference, example array, deploy notes → **`/etc/hw-management-bmc-a2d-leakage-config.json`**. |
-| [hw-management-bmc-bom-example.json](hw-management-bmc-bom-example.json) | SMBIOS BOM alternate maps for **`hw-management-bmc-devtree.sh`**: **`swb`** / **`platform`** / **`pwr`** arrays → deploy as **`/etc/hw-management-bmc-bom.json`** (from **`usr/etc/<HID>/hw-management-bmc-bom.json`** on the image). Schema only; I2C bus numbers are platform-specific. |
+| [hw-management-bmc-bom-example.json](hw-management-bmc-bom-example.json) | SMBIOS BOM alternate maps for **`hw-management-bmc-devtree.sh`**: **`swb`** / **`platform`** / **`pwr`** / **`port`** arrays → deploy as **`/etc/hw-management-bmc-bom.json`** (from **`usr/etc/<HID>/hw-management-bmc-bom.json`** on the image). Schema only; I2C bus numbers are platform-specific. |
 | [hw-management-bmc-gpio-config-example.json](hw-management-bmc-gpio-config-example.json) | GPIO JSON for **`bmc_init_sysfs_gpio`**: **`field_reference`**, deployable **`example_platform`** → **`/etc/hw-management-bmc-gpio-pins.json`**. |
 | [HI189/hw-management-bmc-gpio-config.txt](HI189/hw-management-bmc-gpio-config.txt) | HI189 GPIO offset/symlink reference for **`usr/etc/HI189/hw-management-bmc-gpio-pins.json`**. |
 | [hw-management-bmc-leakage-sysfs.txt](hw-management-bmc-leakage-sysfs.txt) | **`/var/run/hw-management/leakage/`** tree (detectors, channels, **`type`**, **`ChnlNames`**, non‑sequential **`ChannelId`** / per‑channel device‑map, handler artifacts). |
@@ -19,6 +19,7 @@ here apply to the **BMC package** only; host validated layouts are under `tests/
 | [hw-management-bmc-eeprom-config.txt](hw-management-bmc-eeprom-config.txt) | **`/etc/hw-management-bmc-eeprom.conf`**: VPD EEPROM variables (**`eeprom_file`**, HID/BOM offsets); defaults in **`ready-common.sh`**, override via plat-specific **usr/etc/&lt;HID&gt;/**. |
 | [hw-management-bmc-eeprom-sysfs.txt](hw-management-bmc-eeprom-sysfs.txt) | **`/var/run/hw-management/eeprom/`** symlinks (**`eeprom_system`**, **`eeprom_bmc`**). |
 | [hw-management-bmc-thermal-sysfs.txt](hw-management-bmc-thermal-sysfs.txt) | **`/var/run/hw-management/thermal/`** symlinks (CPU/BMC hwmon); **delivered** reference for HI189 |
+| [hw-management-bmc-led-sysfs.txt](hw-management-bmc-led-sysfs.txt) | Kernel **`/sys/class/leds/mlxreg:*`** layout, CPLD PSU/FAN status behaviour, BMC udev rules. Common API: **`Documentation/LED_Control_API.md`**. |
 | [HIxxx/examples/README.md](HIxxx/examples/README.md) | **Template** for the next HID under `bmc/examples/<HID>/examples/`. |
 | [hw-management-bmc-platform-config.txt](hw-management-bmc-platform-config.txt) | **`/etc/hw-management-bmc-platform.conf`**: **`POWER_ON_POLICY`**, **`POWER_POLICY_DELAY`**, **`CPLD_I2C_BUS`**, **`MGMT_IF_NUM`**; **`check_power_restore_policy()`** / **`get_power_restore_delay()`** / **`bmc_init_eth()`**. |
 | [hw-management-bmc-boot-complete-config.txt](hw-management-bmc-boot-complete-config.txt) | **`/etc/hw-management-bmc-boot-complete.conf`**: minimum entry counts for **`system`**, **`thermal`**, **`eeprom`** runtime dirs; **`hw-management-bmc-boot-complete.sh`**. |

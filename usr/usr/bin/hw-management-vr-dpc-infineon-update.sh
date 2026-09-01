@@ -164,7 +164,7 @@ FLASH MODE OPTIONS:
 
     After each scratchpad write, data is read back to <file>.scpad and compared; mismatch aborts flash.
     For .txt/.mic flash: section .bin live in a temp dir during the run; after the section loop (including -n dry run) they are copied to <config_basename>_flash_work/ (.bin, .params, .scpad per flashed section). Direct -f *.bin keeps *.bin.scpad next to the .bin.
-    Full .txt/.mic flash (no -s): if "Configuration Checksum : 0x........" matches device total OTP CRC (GET_CRC HC=0), skip (no prompt, no invalidate). Otherwise: invalidate HCs not in the file; for each section that will be uploaded (CRC mismatch or no section_crc_expected), invalidate that HC/XV immediately before scratchpad then upload.
+    Full .txt/.mic flash (no -s): if "Configuration Checksum : 0x........" matches device total OTP CRC (GET_CRC HC=0), skip (no prompt, no invalidate). Otherwise: invalidate HCs not in the file; for each section that will be uploaded (CRC mismatch or no section_crc_expected), write+verify scratchpad, then invalidate that HC/XV immediately before OTP upload.
     Per-section upload skipped if GET_CRC matches section_crc_expected (.params). HC 0x0B: crc32 on <section>_crc_input.bin from .txt parse; else last 4 bytes LE of section .bin. Requires crc32 in PATH for 0x0B expected CRC.
 
 SCAN MODE OPTIONS:
@@ -608,6 +608,10 @@ read_otp_dword_hex() {
     line=$(i2c_rw_wrapper "$bus" "$addr" 5 0 "$MFR_REG_READ") || return 1
     line=$(echo "$line" | sed 's/0x//g')
     read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
+    if (( 16#${_d0:-0} != 4 )); then
+        log_error "read_otp_dword_hex: expected block length 0x04, got 0x${_d0:-??}"
+        return 1
+    fi
     line="$_d1 $_d2 $_d3 $_d4"
     if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
         log_debug "read DWORD: $line # PEC"
@@ -852,16 +856,17 @@ rebind_driver_if_unbound() {
     fi
     if echo "$DRIVER_UNBIND_DEVID" > "$bind_file"; then
         log_info "Driver $DRIVER_UNBIND_NAME rebound to $DRIVER_UNBIND_DEVID"
-    else
-        log_warn "Rebind of $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID failed (device may need more time or power cycle)"
-        local bus addr
-        bus="${DRIVER_UNBIND_DEVID%-*}"
-        addr="0x${DRIVER_UNBIND_DEVID##*-}"
-        diagnose_rebind_id_regs "$bus" "$addr"
+        DRIVER_UNBIND_DEVID=""
+        DRIVER_UNBIND_NAME=""
+        return 0
     fi
-    DRIVER_UNBIND_DEVID=""
-    DRIVER_UNBIND_NAME=""
-    return 0
+
+    log_warn "Rebind of $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID failed (device may need more time or power cycle)"
+    local bus addr
+    bus="${DRIVER_UNBIND_DEVID%-*}"
+    addr="0x${DRIVER_UNBIND_DEVID##*-}"
+    diagnose_rebind_id_regs "$bus" "$addr"
+    return 1
 }
 
 # Save unbound device info to state file (for 'rebind' mode in a separate run).
@@ -880,10 +885,12 @@ rebind_driver_from_state_file() {
     [ -f "$UNBIND_STATE_FILE" ] || return 1
     DRIVER_UNBIND_DEVID=$(sed -n '1p' "$UNBIND_STATE_FILE" 2>/dev/null)
     DRIVER_UNBIND_NAME=$(sed -n '2p' "$UNBIND_STATE_FILE" 2>/dev/null)
-    rm -f "$UNBIND_STATE_FILE" 2>/dev/null
     [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 1
-    rebind_driver_if_unbound
-    return 0
+    if rebind_driver_if_unbound; then
+        rm -f "$UNBIND_STATE_FILE" 2>/dev/null
+        return 0
+    fi
+    return 1
 }
 
 # Read device identification (uses block read for MFR_* so output matches 'info')
@@ -1827,6 +1834,7 @@ upload_scratchpad_to_otp() {
     fi
     # AN001 6.5 — STATUS_CML d0 bit[0] must be 0 for successful upload
     log_error "Upload unsuccessful: STATUS_CML d0 bit[0] is not 0, raw=$status_cml"
+    log_error "OTP section was already invalidated (AN001 6.2 non-reversible); re-run flash to recover this section."
     i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || true
     return 1
 }
@@ -1849,15 +1857,21 @@ reset_device() {
 # Main programming sequence
 program_device() {
     local flash_file artifact_dir=""
+    local wp_cleared=0
+
+    _program_device_restore_wp() {
+        if [ "${wp_cleared:-0}" -eq 1 ]; then
+            enable_write_protect || log_warn "Failed to re-enable write protect on exit"
+            wp_cleared=0
+        fi
+    }
+    trap '_program_device_restore_wp' RETURN
 
     log_info "Starting programming sequence for $CONFIG_FILE"
     log_info "Target: I2C bus $I2C_BUS, address $DEVICE_ADDR"
 
     detect_device || return 1
     read_device_id || return 1
-    clear_faults || return 1
-    disable_write_protect || return 1
-    check_otp_space || return 1
 
     # Full .txt/.mic only (no -s): skip entire flash if GUI "Configuration Checksum" matches device total CRC (AN001 GET_CRC HC=0).
     if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]] && [ -z "$FLASH_SECTION_HC" ]; then
@@ -1908,6 +1922,12 @@ program_device() {
             fi
         fi
     fi
+
+    clear_faults || return 1
+    check_otp_space || return 1
+
+    disable_write_protect || return 1
+    wp_cleared=1
 
     # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
     # .bin: single scratchpad write + upload
@@ -1989,18 +2009,9 @@ program_device() {
             elif [ $DRY_RUN -eq 1 ]; then
                 log_info "[DRY_RUN] No section_crc_expected in $(basename "$section_params_file"); CRC pre-check skipped (section still processed)."
             fi
-            # AN001: invalidate this OTP slot immediately before scratchpad/upload
-            # (full flash used to skip HC present in file; partial -s did it here only).
-            local hd_inv sec_hc_inv sec_xv_inv
-            hd_inv=$(_od_hex_n 4 "$flash_file")
-            if [ ${#hd_inv} -ge 8 ]; then
-                sec_hc_inv=$((16#${hd_inv:0:2}))
-                sec_xv_inv=$((16#${hd_inv:2:2}))
-                log_info "Invalidating section before upload (HC=0x$(printf '%02x' $sec_hc_inv) XV=0x$(printf '%02x' $sec_xv_inv))..."
-                invalidate_otp 0 $sec_hc_inv $sec_xv_inv || {
-                    return 1
-                }
-            fi
+            # Scratchpad write+verify first so a failed transfer does not leave OTP already
+            # invalidated. Invalidate immediately before OTP upload (AN001 6.2: prior to
+            # writing new data to OTP; invalidation is non-reversible — re-run on upload fail).
             write_to_scratchpad "$flash_file" || {
                 return 1
             }
@@ -2010,8 +2021,19 @@ program_device() {
             verify_scratchpad_readback "$flash_file" || {
                 return 1
             }
+            local hd_inv sec_hc_inv sec_xv_inv
+            hd_inv=$(_od_hex_n 4 "$flash_file")
+            if [ ${#hd_inv} -ge 8 ]; then
+                sec_hc_inv=$((16#${hd_inv:0:2}))
+                sec_xv_inv=$((16#${hd_inv:2:2}))
+                log_info "Invalidating section before OTP upload (HC=0x$(printf '%02x' $sec_hc_inv) XV=0x$(printf '%02x' $sec_xv_inv))..."
+                invalidate_otp 0 $sec_hc_inv $sec_xv_inv || {
+                    return 1
+                }
+            fi
             if [ $DRY_RUN -eq 0 ]; then
                 upload_scratchpad_to_otp "$section_params_file" || {
+                    log_error "OTP upload failed after section invalidate (AN001 6.2 non-reversible); re-run flash to recover this section."
                     return 1
                 }
             fi
@@ -2039,6 +2061,7 @@ program_device() {
     enable_write_protect || {
         return 1
     }
+    wp_cleared=0
 
     # XDPE1A2G7 family: after OTP programming the device may not ACK OPERATION reset
     # or MFR_ID/MODEL/REVISION immediately. Do not fail the script (batch JSON flashes

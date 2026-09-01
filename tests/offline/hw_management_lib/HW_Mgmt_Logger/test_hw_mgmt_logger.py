@@ -446,7 +446,10 @@ class TestHWMgmtLogger(unittest.TestCase):
 
         with open(self.test_log_file, 'r') as f:
             content = f.read()
-            self.assertIn("(repeat=5, duration=", content)
+            # Finalization appends a "(repeat=N, duration=Ns)" suffix to the
+            # original message (the message was seen 5 times).
+            self.assertIn("Test message (repeat=5", content)
+            self.assertIn("duration=", content)
 
     def test_23_hash_collision_handling(self):
         """Test that different messages with same ID are handled correctly"""

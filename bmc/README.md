@@ -47,7 +47,7 @@ SONiC BMC first-boot installs **`hw-management-bmc`** from **`rc.local`** while 
 | Script | Role |
 |--------|------|
 | **`debian/hw-management-bmc.postinst`** | After **`#DEBHELPER#`**: **`systemctl daemon-reload`** on configure (fresh + upgrade); on **fresh install** only, **`systemctl start --no-block`** for **`boot-complete`**, **`health-monitor`**, **`i2c-slave-setup`**, **`recovery-handler`**, **`reset-cause-logger`**. **Upgrade** does not start/restart (operator **`systemctl restart hw-management-bmc-init.service`** or reboot). **`DPKG_ROOT`** guard skips systemd when configuring a staging rootfs. **`abort-*`** cases are explicit no-ops. |
-| **`debian/hw-management-bmc.prerm`** | On **`remove`**: one **`systemctl stop`** for all nine BMC units (parallel). On **upgrade** / **deconfigure** / **failed-upgrade**: no-op. Needed because **`--no-start --no-restart-after-upgrade`** suppresses debhelper’s **`prerm`** stop snippets. |
+| **`debian/hw-management-bmc.prerm`** | On **`remove`**: one **`systemctl stop`** for all BMC units (parallel). On **upgrade** / **deconfigure** / **failed-upgrade**: no-op. Needed because **`--no-start --no-restart-after-upgrade`** suppresses debhelper’s **`prerm`** stop snippets. |
 
 **Operator note:** **`apt install hw-management-bmc=NEW`** on a running BMC installs files and re-enables units but does **not** auto-restart the init chain.
 
@@ -145,6 +145,7 @@ bmc/
     │       ├── hw-management-bmc-a2d-leakage-config.json
     │       ├── hw-management-bmc-bom.json   # SMBIOS BOM alternates → /etc/hw-management-bmc-bom.json (hw-management-bmc-devtree.sh)
     │       ├── hw-management-bmc-boot-complete.conf   # → /etc/hw-management-bmc-boot-complete.conf (boot gate)
+    │       ├── hw-management-bmc-wd-heartbeat.conf   # → /etc/hw-management-bmc-wd-heartbeat.conf (ABR watchdog heartbeat: EID/interval/payload)
     │       ├── hw-management-bmc-gpio-pins.json   # GPIO sysfs init → /etc/hw-management-bmc-gpio-pins.json
     │       ├── hw-management-bmc.conf
     │       ├── hw-management-bmc-early-i2c-devices.json
@@ -161,7 +162,9 @@ bmc/
     │       ├── hw-management-bmc-i2c-slave-setup.service
     │       ├── hw-management-bmc-plat-specific-preps.service
     │       ├── hw-management-bmc-recovery-handler.service
-    │       └── hw-management-bmc-reset-cause-logger.service
+    │       ├── hw-management-bmc-reset-cause-logger.service
+    │       ├── hw-management-bmc-sync-ethaddr.service
+    │       └── hw-management-bmc-wd-heartbeat.service   # ABR watchdog heartbeat to Bali/Caliptra over MCTP (starts after boot-complete)
     └── usr/bin/
         ├── hw-management-bmc-a2d-leakage-config.sh
         ├── hw-management-bmc-a2d-leakage-read.sh
@@ -192,11 +195,13 @@ bmc/
         ├── hw-management-bmc-powerctrl.sh
         ├── hw-management-bmc-ready.sh
         ├── hw-management-bmc-ready-common.sh
+        ├── hw-management-bmc-sync-ethaddr.sh
         ├── hw-management-bmc-recovery-handler.sh
         ├── hw-management-bmc-get-reset-cause.sh
         ├── hw-management-bmc-show-reset-cause.sh
         ├── hw-management-bmc-reset-cause-logger.sh
         ├── hw-management-bmc-set-extra-params.sh
+        ├── hw-management-bmc-wd-heartbeat.sh   # Periodic ABR watchdog heartbeat to Bali/Caliptra via mctp-client
         └── hw-management-bmc.sh
 ```
 
@@ -211,7 +216,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | File | Contents |
 |------|----------|
 | **`hw-management-bmc-a2d-leakage-config-example.json`** | Field reference, **`example_leak_detectors`**, and **`deployment_note`** for A2D leakage JSON consumed by **`hw-management-bmc-a2d-leakage-config.sh`**. |
-| **`hw-management-bmc-bom-example.json`** | Shape-only reference for **`/etc/hw-management-bmc-bom.json`**: top-level arrays **`swb`**, **`platform`**, **`pwr`** of **`{"key","spec"}`** objects; each **`spec`** is four space-separated fields: driver name, hex I2C address, Linux I2C bus (BMC adapter #), and devtree label. Loaded by **`hw-management-bmc-devtree.sh`** (override with **`HW_MANAGEMENT_BMC_BOM_JSON`**). Shipped per platform as **`usr/etc/<HID>/hw-management-bmc-bom.json`** (e.g. HI189), copied to **`/etc/`** by plat-specific-preps; the **`examples/`** file matches the schema — bus numbers are board-specific. |
+| **`hw-management-bmc-bom-example.json`** | Shape-only reference for **`/etc/hw-management-bmc-bom.json`**: top-level arrays **`swb`**, **`platform`**, **`pwr`**, **`port`** of **`{"key","spec"}`** objects; each **`spec`** is four space-separated fields: driver name, hex I2C address, Linux I2C bus (BMC adapter #), and devtree label. Loaded by **`hw-management-bmc-devtree.sh`** (override with **`HW_MANAGEMENT_BMC_BOM_JSON`**). Shipped per platform as **`usr/etc/<HID>/hw-management-bmc-bom.json`** (e.g. HI189), copied to **`/etc/`** by plat-specific-preps; the **`examples/`** file matches the schema — bus numbers are board-specific. |
 | **`hw-management-bmc-gpio-config-example.json`** | Field reference for **`/etc/hw-management-bmc-gpio-pins.json`**: **`bmc_stby_ready`**, **`pins[]`** (**`chip`**, **`offset`**, **`direction`**, **`value`**, **`symlink`**); deployable copy under **`example_platform`**. |
 | **`hw-management-bmc-leakage-sysfs.txt`** | ASCII tree and notes for **`/var/run/hw-management/leakage/`** (per-detector dirs, per‑type thresholds via **`Types[]`**, channel **`type`** **`rop`/`flex`/`embedded`**, **`ChnlNames`**, non‑sequential **`Channels[].Id`** / per‑channel device‑map, handler **`last_sample`** / **`last_event`**). |
 | **`hw-management-bmc-system-sysfs.txt`** | **`/var/run/hw-management/system/`**: reference lists for **mlxreg-io** / **mlxreg-hotplug** attrs (HI189 / **`nvsw_bmc_hid189_*`** in kernel patch for **`nvidia,hid189`**), udev rules, and GPIO **`symlink`** names from **`hw-management-bmc-gpio-pins.json`**. |
@@ -229,7 +234,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 |--------|------|
 | **`hw-management-bmc-helpers-common.sh`** | From OpenBMC **`hw-management-helpers-common.sh`**: shared routines (**`log_event`**, **`log_cpld_dump`** — compact CPLD read for events), PHY **`mdio`** helpers, **`bmc_init_eth`**, **`get_mgmt_board_revision`**, etc.). **`hw-management-bmc-ready.sh`** sources it before **`hw-management-bmc-helpers.sh`**. Requires **bash** (uses **`[[ ]]`, `(( ))`, …). |
 | **`hw-management-bmc-cpld-dump.sh`** | **Merged** from OpenBMC **`recipes-phosphor/dump/files/cpld_dump.sh`** and **`dump_utils.sh`** (**`take_cpld_dump_internal`**, **`take_cpld_dump`** only). Full **16×16** CPLD grid via **256× `i2ctransfer … r1`** (one byte per offset), then prints the grid; optional **`.tar.xz`** CLI (**`-p`**, **`-i`**). Uses **`log_message`** and **`${HW_MANAGEMENT_BMC_PLATFORM_CONF:-/etc/hw-management-bmc-platform.conf}`** (via **`hw-management-bmc-helpers-common.sh`**); no Phosphor **`add_copy_file`**. Requires **bash**. |
-| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (host analog **`hw-management-generate-dump.sh`**). **Parallel** collectors; default **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. **`-v` / `--verbose`** adds **`systemd-analyze/`** (~1 min). Without **`-v`**, writes **`systemd-analyze/skipped.txt`**. See **BMC debug bundle** below. Requires **bash**. |
+| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (host analog **`hw-management-generate-dump.sh`**). **Parallel** collectors include the current boot journal under **`journal/`**; default **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. **`-v` / `--verbose`** adds **`systemd-analyze/`** (~1 min). Without **`-v`**, writes **`systemd-analyze/skipped.txt`**. See **BMC debug bundle** below. Requires **bash**. |
 | **`hw-management-bmc-json-parser.sh`** | From OpenBMC **`switch_json_parser.sh`**: **`json_validate`**, **`json_get_nested_array_element`**, etc. (awk/BusyBox). Sourced by **`hw-management-bmc-a2d-leakage-config.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-gpio-set.sh`** (**`bmc_init_sysfs_gpio`**). |
 | **`hw-management-bmc-copy-cartridge-data.sh`** | **Cartridge SKUs:** sources **`/usr/bin/switch_json_parser.sh`** when **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`** exists; reads cartridge FRU over I2C and programs SWB CPLD registers. See **`README-hw-management-bmc-copy-cartridge-data.md`**. |
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
@@ -240,20 +245,20 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-ads7924-read-status.sh`** | Debug — reads ADS7924 **MODECNTRL**, **INTCNTRL** (alarm status/enable), and all four channel data registers (**`i2ctransfer`**, optional **scale**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-force-alarm.sh`** | From OpenBMC **`max1363_force_alarm.sh`**: debug — programs tight/safe per-channel thresholds so selected channels hit alarm (**`i2ctransfer`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-read-status.sh`** | From OpenBMC **`max1363_read_status.sh`**: debug — prints first read bytes / decoded status flags (**`i2ctransfer`**, **`awk`**). **`#!/bin/sh`**. |
-| **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — writes CPLD **`spi_chnl_select`** then **`flashcp`** to **`spidev`** (default **`/dev/spidev1.0`**). Requires **`mtd-utils`**, hw-management runtime (**`/var/run/hw-management/system/spi_chnl_select`**). **`#!/bin/bash`**. |
-| **`hw-management-bmc-get-reset-cause.sh`** | Reset-cause exporter. **Primary (SONiC):** exactly one of **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`** at **`bmc/`** root (**v2** heuristic: WDT **0x070/0x080** + SCU0 **0x050** EXTRST# bit 1). Hardware **`reset_*`** under **`bmc/domains/`**. Source: U-Boot env → **`/proc/cmdline`** → **`devmem`**. |
+| **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **meta-ast2700** **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — power off host if needed, GPIO bank select (**`GP_BMC_REC_SPI_MUX1_SEL`**, **`GP_PROD_CS_FLASH*_EN`**), then **`flashrom`** via **`linux_spi`** (default **`/dev/spidev0.0`**, chip **`MX25U25643G`**). Requires **`flashrom`**, hw-management GPIO/sysfs under **`/var/run/hw-management/system/`**. **`#!/bin/bash`**. |
+| **`hw-management-bmc-get-reset-cause.sh`** | Reset-cause exporter. **Primary (SONiC):** exactly one of **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`** at **`bmc/`** root (**v3**: SRST/EXTRST + WDT + ABR; W1C-clear primary bits). Hardware **`reset_*`** under **`bmc/domains/`** (incl. **`reset_abr`**). Source: U-Boot env → **`/proc/cmdline`** → **`devmem`**. |
 | **`hw-management-bmc-show-reset-cause.sh`** | Operator view of reset causes: **`bmc`** (BMC root **`reset_*`** with value 1), **`host`** (**`/var/run/hw-management/system/reset_*`**, same idea as host **`hw-management.sh reset-cause`**), **`bmc-domain`** (**`.../bmc/domains/reset_*`**), **`bmc-raw`** (**`raw_scu*_reset_event_log*`** under the BMC dir). With no arguments, prints all four sections. Overrides: **`BMC_DIR`**, **`BMC_DOMAINS_DIR`**, **`HOST_SYSTEM_DIR`**. **`#!/bin/sh`**. |
 
 ### BIOS recovery flash (`hw-management-bmc-bios-recovery-flash.sh`)
 
-Stand-alone operator tool — **no** **`systemd`** unit; invoke from the shell when you need to program the host BIOS from the BMC while the CPU is unavailable.
+Stand-alone operator tool — **no** **`systemd`** unit; invoke from the shell when you need to program the host BIOS from the BMC while the host CPU is powered off.
 
 | Topic | Notes |
 |-------|--------|
-| **Purpose** | Select the host BIOS SPI path via CPLD (**`spi_chnl_select`**) and copy an image to the **`spidev`** that muxes to that flash (same idea as manual **`echo … > spi_chnl_select`** then **`flashcp`**). |
-| **Prerequisites** | **`mtd-utils`** (**`flashcp`** on **`PATH`**); **`/var/run/hw-management/system/spi_chnl_select`** writable (hw-management / udev has created the **`mlxreg-io`** / sysfs link); **`spidev`** device matches your board (default **`/dev/spidev1.0`** is only valid if the DTS exposes that node for the recovery path). |
-| **Usage** | **`hw-management-bmc-bios-recovery-flash.sh <bios_image> [spidev] [channel]`** — **`channel`** is **`0`** or **`1`** for CPLD mux (default **`1`**). Run with no arguments to print a short usage summary. |
-| **Safety** | Use a verified image and the correct **`spidev`** / channel for your SKU; flashing the wrong device or a bad image can brick the host flash path. |
+| **Purpose** | Select inactive host BIOS SPI bank via GPIO (**`GP_BMC_REC_SPI_MUX1_SEL`**, **`GP_PROD_CS_FLASH0_EN`**, **`GP_PROD_CS_FLASH1_EN`**), write/verify image with **`flashrom`** (`linux_spi`), then restore REC mux default. |
+| **Prerequisites** | **`flashrom`** on **`PATH`**; GPIO/sysfs links under **`/var/run/hw-management/system/`** (incl. **`pwr_down`**); SPI device (default **`/dev/spidev0.0`**). |
+| **Usage** | **`hw-management-bmc-bios-recovery-flash.sh [options] <bios_image>`** — options: **`-d`** spidev, **`-c`** chip name, **`-s`** SPI Hz, **`-m`** mux settle sec, **`-t`** host power-off timeout. **`-h`** for help. |
+| **Safety** | Host must be off (script requests **`pwr_down=1`** if needed). Use a verified image and the correct **`spidev`** / chip for your SKU; flashing the wrong bank or a bad image can brick the host flash path. |
 
 ### Reset-cause policy (`hw-management-bmc-get-reset-cause.sh`)
 
@@ -261,17 +266,31 @@ Policy for collecting and exporting reset cause on SONiC BMC:
 
 | Topic | Policy |
 |-------|--------|
-| **Source priority** | For each SCU log: **`fw_printenv -n`** on **`reset_cause_scu0_0`**, **`reset_cause_scu0_2`**, **`reset_cause_scu1_0`**, **`reset_cause_scu1_3`**; if missing, same names from **`/proc/cmdline`** (e.g. **`reset_cause_scu0_0=0x…`** from U-Boot bootargs); else **`devmem`** at **`0x12c02050`**, **`0x12c02070`**, **`0x14c02050`**, **`0x14c02080`**. |
+| **Source priority** | For each SCU log: **`fw_printenv -n`** on **`reset_cause_scu0_0`**, **`reset_cause_scu0_1`**, **`reset_cause_scu0_2`**, **`reset_cause_scu1_0`**, **`reset_cause_scu1_3`**; if missing, same names from **`/proc/cmdline`**; else **`devmem`** at **`0x12c02050`**, **`0x12c02060`**, **`0x12c02070`**, **`0x14c02050`**, **`0x14c02080`**. |
 | **`devmem` fallback** | Run **`devmem <addr> 32 || busybox devmem <addr> 32`** (stderr discarded; same **`32`**-bit read). |
 | **Normalization / validation** | Env, **`/proc/cmdline`**, and **`devmem`** values are normalized to `0x...` and validated as hex (`[0-9A-Fa-f]` digits only). |
-| **Published raw values** | Store all SCU words as `0x%08x`: **`raw_scu0_reset_event_log0`**, **`raw_scu0_reset_event_log2`**, **`raw_scu1_reset_event_log0`**, **`raw_scu1_reset_event_log3`**. |
-| **Published semantic files** | **`/var/run/hw-management/bmc/`** (primary, exactly one **1**): **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`**. **`/var/run/hw-management/bmc/domains/`**: **`reset_power_on`**, **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_others`**, **`reset_external`**, **`reset_soc`**, **`reset_ahb`**, **`reset_caliptra`**, **`reset_usb`**, **`reset_spi`**, **`reset_espi`**, **`reset_emmc`**, **`reset_msi`**. Raw SCU words: **`raw_scu*_reset_event_log*`** at bmc root. |
+| **Published raw values** | Store all SCU words as `0x%08x`: **`raw_scu0_reset_event_log0`**, **`raw_scu0_reset_event_log1`**, **`raw_scu0_reset_event_log2`**, **`raw_scu1_reset_event_log0`**, **`raw_scu1_reset_event_log3`**. |
+| **Published semantic files** | **`/var/run/hw-management/bmc/`** (primary, exactly one **1**): **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`**. **`/var/run/hw-management/bmc/domains/`**: **`reset_power_on`**, **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_abr`**, **`reset_others`**, **`reset_external`**, **`reset_soc`**, **`reset_ahb`**, **`reset_caliptra`**, **`reset_usb`**, **`reset_spi`**, **`reset_espi`**, **`reset_emmc`**, **`reset_msi`**. Raw SCU words: **`raw_scu*_reset_event_log*`** at bmc root. |
 | **Failure behavior** | If any required SCU word cannot be obtained from env, **`/proc/cmdline`**, or **`devmem`**, exit non-zero and print an error to stderr. **`hw-management-bmc-ready.sh`** logs a warning and continues BMC_READY if this script fails. |
-| **AST2700 event-log policy** | Primary logs are **SCU0 0x050**, **SCU0 0x070**, **SCU1 0x050**, **SCU1 0x080**. |
-| **AST2700 mapping policy** | Combine SCU0+SCU1 where applicable: **`power_on`** from PWRST (SCU0/SCU1), **`external`** from EXTRST/SRST (SCU0/SCU1), **`soc`** and **`ahb`** from both domains, **`usb`** from SCU1 USB2D/USB2C/UHCI plus SCU0 USB bus/VHUB/UHCI mask. **`watchdog`** uses SCU1 non-SW WDT bits plus SCU0 watchdog evidence; **`software`** uses SCU1 SW WDT bits; **`security_watchdog2`** is SCU1 WDT2 nibble. All of these live under **`bmc/domains/`**. |
-| **Primary cause (SONiC v2)** | Uses **`any_wdt_log`** (SCU0 **0x070** or SCU1 **0x080** non-zero) and **`scu0_extrst_bit1`** (SCU0 **0x050** bit 1, EXTRST#). **`reset_soft_reboot`**: WDT logged, or no WDT and EXTRST# clear (e.g. **`0xffffff30`**). **`reset_pwr_cycle`**: no WDT log and EXTRST# set (e.g. **`0xffffff32`**). **`reset_unknown`**: WDT log and EXTRST# both set. Heuristic - validated on HI189. |
-| **Export / cleanup** | Each boot rewrites all three v2 primaries (**temp** file + **`mv`** per flag). Writes run **before** **`remove_v1_primary_reset_files`** (drops pre-v2 root **`reset_power_on`**, **`reset_watchdog`**, … only). Fresh images ship v2 from first boot; v2 files are always overwritten, not deleted. |
+| **AST2700 event-log policy** | Primary logs are **SCU0 0x050**, **SCU0 0x060** (ABR), **SCU0 0x070**, **SCU1 0x050**, **SCU1 0x080**. |
+| **AST2700 mapping policy** | Combine SCU0+SCU1 where applicable: **`power_on`** from PWRST (SCU0/SCU1), **`external`** from EXTRST/SRST (SCU0/SCU1), **`soc`** and **`ahb`** from both domains, **`usb`** from SCU1 USB2D/USB2C/UHCI plus SCU0 USB bus/VHUB/UHCI mask. **`watchdog`** uses SCU1 non-SW WDT bits plus SCU0 watchdog evidence; **`software`** uses SCU1 SW WDT bits; **`security_watchdog2`** is SCU1 WDT2 nibble; **`abr`** is SCU0 **0x060** bit 31 (ABR/WDTA). All of these live under **`bmc/domains/`**. |
+| **Primary cause (SONiC v3)** | **`pwr_like`** = SCU0 **0x050** bit0 **SRST#** or bit1 **EXTRST#**; **`warm_evidence`** = WDT (**0x070/0x080** non-zero) **or** ABR (**0x060** bit31). **`reset_pwr_cycle`**: power-like and no warm evidence. **`reset_soft_reboot`**: warm evidence and **no SRST** (WDT and/or ABR; EXTRST alone does not force soft). **`reset_unknown`**: **SRST + warm** sticky/mixed, or neither power-like nor warm. **SRST** (not EXTRST) splits soft vs unknown when warm evidence is present. Requires firmware that does **not** clear SCU logs before Linux (see OpenBMC keep-reset-event-logs patch). |
+| **SCU clear after export** | Default **`CLEAR_SCU_RESET_LOG=1`**: W1C **only bits present in the exported snapshot** (not blanket masks) — SCU0 **0x050** ← `(log0 & 0x3)`, SCU0 **0x060** ← **`0x80000000`** only if ABR was set in the export, SCU0 **0x070** / SCU1 **0x080** ← exported WDT words. Avoids wiping newer live MMIO events when a re-run classifies from stale env/cmdline. Does **not** clear SCU1 **0x050**. Best-effort. Set **`CLEAR_SCU_RESET_LOG=0`** to skip. |
+| **Export / cleanup** | Each boot rewrites all three v3 primaries (**temp** file + **`mv`** per flag). Writes run **before** **`remove_v1_primary_reset_files`** (drops pre-v2 root **`reset_power_on`**, **`reset_watchdog`**, … only). Fresh images ship v3 from first boot; primary files are always overwritten, not deleted. |
 | **Operator tools** | **`hw-management-bmc-get-reset-cause.sh`** re-reads SCU and re-exports files. **`hw-management-bmc-show-reset-cause.sh bmc`** shows primary; **`bmc-domain`** / **`bmc-raw`** show detail. After boot, init runs **`get-reset-cause`** once — **`show`** alone is enough unless re-exporting manually. |
+
+**Primary flag fingerprints (v3 — consumer / sysfs-style files under `/var/run/hw-management/bmc/`):**
+
+| Fingerprint | SRST | EXTRST | WDT/ABR | Primary **1** |
+|-------------|------|--------|---------|-----------------|
+| AC / POR (e.g. `0xffffff31`) | 1 | 0/1 | 0 | **`reset_pwr_cycle`** |
+| EXTRST only, no WDT/ABR (e.g. old `0xffffff32`) | 0 | 1 | 0 | **`reset_pwr_cycle`** |
+| Warm WDT/ABR, no SRST (e.g. u-boot `reset`) | 0 | 0/1 | 1 | **`reset_soft_reboot`** |
+| EXTRST + WDT/ABR, no SRST | 0 | 1 | 1 | **`reset_soft_reboot`** (not unknown) |
+| SRST + WDT/ABR (sticky/mixed) | 1 | * | 1 | **`reset_unknown`** |
+| No SRST/EXTRST, no WDT/ABR (e.g. clear `…30`) | 0 | 0 | 0 | **`reset_unknown`** |
+
+Note: pre-v3 docs that keyed **`soft_reboot`** off “EXTRST clear” or **`unknown`** off “EXTRST+WDT” are obsolete.
 
 ### BMC debug bundle (`hw-management-bmc-generate-dump.sh`)
 
@@ -293,7 +312,20 @@ Collectors run **in parallel** (disjoint subdirs under **`/tmp/hw-mgmt-bmc-dump/
 | **`HW_MGMT_CAPTURE_PARALLEL_MAX`** | fallback for **`HW_MGMT_BMC_DUMP_WORKERS`** | same |
 | **`SYSTEMD_ANALYZE_PARALLEL_MAX`** | **`$MAX_PARALLEL`** | Per-unit **`systemd-analyze critical-chain`** pool (verbose only) |
 
-Archive top-level: **`dmesg.txt`**, **`uname.txt`**, **`proc/`**, **`network/`**, **`i2c/`**, **`systemctl/`**, **`cpld/`** (**`cpld_dump.log`** via **`take_cpld_dump`**), **`var_run_hw-management/`** (**`tree/`**, **`values/`**).
+Archive top-level: **`dmesg.txt`**, **`uname.txt`**, **`journal/`**, **`proc/`**,
+**`network/`**, **`i2c/`**, **`systemctl/`**, **`cpld/`** (**`cpld_dump.log`** via
+**`take_cpld_dump`**), and **`var_run_hw-management/`** (**`tree/`**, **`values/`**).
+
+**`journal/`** — **`journalctl-b0.txt.gz`** is `journalctl -b0 --no-pager`
+streamed through **`gzip -5`** (full current boot, no line cap). Mid-level
+compression keeps **`/tmp`** usage low on small tmpfs BMCs without the CPU
+cost of **`-9`** on plain text; nested **`.gz`** inside the outer **`.tar.gz`**
+is expected. Collection has a 60-second timeout. If **`journalctl`** or
+**`gzip`** is unavailable, **`skipped.txt`** records that the section was
+skipped. On non-zero **`PIPESTATUS`** from the **`journalctl | gzip`** pipe
+(timeout, kill, or other failure), **`failed.txt`** is written (**.gz** may
+still exist but be truncated). Exit codes come from bash **`PIPESTATUS`**, so a
+truncated capture is not silent even without **`pipefail`**.
 
 **`var_run_hw-management/`** — single **`find`** over **`/var/run/hw-management`**, then parallel capture of file/symlink values (EEPROM: **`hexdump -C`**). **`hw-management-bmc-show-reset-cause.sh`** runs first into live **`bmc/show-reset-cause`** (archive **`values/bmc_show-reset-cause.txt`**). For **mlxreg-io** sysfs nodes that are **write-only** (**`--w-------`**), **`[ -r file ]`** may still succeed as root; the dump runs **`cat`** and records **`cat`** errors plus **`(cat returned non-zero; likely write-only or EIO)`** when read fails.
 
@@ -326,12 +358,13 @@ SONiC BMC images often ship **BusyBox** (`/bin/sh` → **ash**) and may also inc
 | **`hw-management-bmc-early-config.sh`**, **`hw-management-bmc-plat-specific-preps.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-recovery-handler.sh`**, and most other **`usr/usr/bin/*.sh`** helpers | Parse OK under ash | Shebang may still say **`#!/bin/bash`**; runtime is fine on ash-heavy systems if invoked via **`sh`** or **`ash`**. |
 | **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-devtree-check.sh`**, **`hw-management-bmc.sh`** | **bash** | Associative arrays / bash-only syntax; require **`bash`**. |
 | **`hw-management-bmc-powerctrl.sh`** | **bash** | **`#!/bin/bash`**, **`set -euo pipefail`**, **`logger`** for journal messages; requires **`bash`**. |
+| **`hw-management-bmc-sync-ethaddr.sh`** | **bash** | **`#!/bin/bash`**: validates U-Boot **`ethaddr`**, uses a validated BMC FRU MAC as fallback, updates env with **`fw_setenv`**, applies the selected MAC to running **`eth0`**, and renews DHCP best-effort. Uses **`[[ ]]`** regex matching. |
 | **`hw-management-bmc-boot-complete.sh`** | Yes | **`#!/bin/sh`**: waits on **`/var/run/hw-management/`** entry counts vs **`/etc/hw-management-bmc-boot-complete.conf`**. |
 | **`hw-management-bmc-cpld-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`BASH_SOURCE`**, **`take_cpld_dump_internal`** (256× **`r1`**, array + grid print), sourced **`return`** guard; **`take_cpld_dump`** uses **`timeout bash -c '. …; take_cpld_dump_internal'`**. |
 | **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: parallel **`run_collect_bg`** collectors, **`MAX_PARALLEL`**, **`-v`** for **`systemd-analyze`**, **`source`** **`hw-management-bmc-cpld-dump.sh`**, single-pass **`find`** + stride workers for **`/var/run/hw-management`**. **`tar cf - \| gzip -9`**; BusyBox-friendly **`find`** / **`readlink_canonical`**. Needs **`gzip`**, **`bash`**. |
 | **`hw-management-bmc-show-reset-cause.sh`** | Yes | **`#!/bin/sh`**: lists active **`reset_*`** (value 1) or raw SCU lines; no bashisms. |
 | **`hw-management-bmc-get-reset-cause.sh`** | Yes | **`#!/bin/sh`**: SCU read / semantic export. |
-| **`hw-management-bmc-bios-recovery-flash.sh`** | **bash** | **`#!/bin/bash`**, **`set -e`**: **`flashcp`** (**`mtd-utils`**), **`spi_chnl_select`** sysfs. |
+| **`hw-management-bmc-bios-recovery-flash.sh`** | **bash** | **`#!/bin/bash`**, **`set -euo pipefail`**: **`flashrom`** (**`linux_spi`**), GPIO bank select under **`/var/run/hw-management/system/`**. |
 
 If **`/usr/bin/hw-management-bmc-helpers.sh`** is sourced, it is written for bash but parses under BusyBox ash; some code paths use bash-style arithmetic — prefer **`bash`** where the full helper API is used.
 
@@ -343,7 +376,7 @@ Units are installed to **`/lib/systemd/system/`**. Below: **`ExecStart`** / **`E
 
 1. **Before / at sysinit:** reset-cause logger runs very early (`Before=sysinit.target`).
 2. **Sysinit chain (`WantedBy=sysinit.target`):** plat-specific deploy → early-config → early I2C init (strict order via **`After=`** / **`Before=`**).
-3. **Multi-user:** BMC init (ready script) → boot-complete (ready-common + sysfs entry-count gate), plus health monitor; optional I2C recovery stack if **`/etc/hw-management-bmc-recovery.conf`** exists.
+3. **Multi-user:** validate U-Boot **`ethaddr`** and use BMC FRU fallback if needed → BMC init (ready script) → boot-complete (ready-common + sysfs entry-count gate), plus health monitor; optional I2C recovery stack if **`/etc/hw-management-bmc-recovery.conf`** exists.
 
 ```mermaid
 flowchart TB
@@ -354,10 +387,11 @@ flowchart TB
     PS --> EC --> EI
   end
   subgraph multi["multi-user.target"]
+    SE[sync-ethaddr]
     INIT[bmc-init]
     BC[boot-complete]
     HM[health-monitor]
-    EI --> INIT --> BC
+    EI --> SE --> INIT --> BC
   end
   subgraph recovery["optional: hw-management-bmc-recovery.conf"]
     SS[i2c-slave-setup]
@@ -373,12 +407,14 @@ flowchart TB
 | **hw-management-bmc-reset-cause-logger** | oneshot | `/usr/bin/hw-management-bmc-reset-cause-logger.sh` | `WantedBy=sysinit.target` | **`After=local-fs.target`**, **`Before=sysinit.target`**. **`ConditionPathExists=`** the script. |
 | **hw-management-bmc-plat-specific-preps** | oneshot | `/usr/bin/hw-management-bmc-plat-specific-preps.sh` | `WantedBy=sysinit.target` | **`After=local-fs.target systemd-udevd.service`** (avoids sysinit ordering cycles with **`local-fs` / NVMe-FC helpers / udev**). **`Before=`** `hw-management-bmc-early-config`, **`systemd-networkd`**. Script runs **`udevadm control --reload-rules`** and targeted **`udevadm trigger`** after installing udev rules. Deploys **`/etc/<HID>/`** (fallback **`/usr/etc/<HID>/`** on older images): **symlinks** **`*.sh`** → **`/usr/bin/`**, **`*.rules`** → **`/lib/udev/rules.d/`**, **`hw-management-bmc.conf`** → **`/etc/modprobe.d/hw-management-bmc.conf`**; **copies** **`*.json`**, **`hw-management-bmc-platform.conf`**, eeprom/boot-complete conf into **`/etc/`** (see **Platform deploy**). Also copies or generates **`hw-management-bmc-network.conf`** / **`/etc/hw-management-bmc-usb0.conf`** and renders **`/etc/systemd/network/00-hw-management-bmc-usb0.network`** (see **USB0 / systemd-networkd** below). |
 | **hw-management-bmc-early-config** | oneshot | `/usr/bin/hw-management-bmc-early-config.sh` | `WantedBy=sysinit.target` | **`After=`** `local-fs` **and** `hw-management-bmc-plat-specific-preps`. **`Before=`** `systemd-modules-load`, **`hw-management-bmc-early-i2c-init`**. **Copies** A2D leakage JSON; optional files under **`/etc/hw-management-bmc/`**; early I2C JSON to **`/etc/`**; **symlinks** **`/etc/<HID>/*.sh`** → **`/usr/bin/`** (same targets as plat-specific-preps). Platform **`hw-management-bmc-platform.conf`** is deployed to **`/etc/`** by plat-specific-preps only. |
-| **hw-management-bmc-early-i2c-init** | oneshot | `/usr/bin/hw-management-bmc-early-i2c-init.sh` | `WantedBy=sysinit.target` | **`After=`** `hw-management-bmc-early-config`. **`Before=`** `nvidia_update_mac.service`. Creates early I2C devices from **`/etc/hw-management-bmc-early-i2c-devices.json`**. |
-| **hw-management-bmc-init** | oneshot | `/bin/bash /usr/bin/hw-management-bmc-ready.sh` | `WantedBy=multi-user.target` | **`After=`** `local-fs`, **`hw-management-bmc-early-i2c-init`**. **`Requires=`** early-i2c-init. **`Before=`** `hw-management-bmc-boot-complete`. **`ConditionPathExists=`** `/usr/bin/hw-management-bmc-ready.sh`. |
-| **hw-management-bmc-boot-complete** | simple | **`ExecStartPre=`** `/usr/bin/env hw-management-bmc-ready-common.sh`; **`ExecStart=`** `/usr/bin/env hw-management-bmc-boot-complete.sh` | `WantedBy=multi-user.target` | **`After=`** `hw-management-bmc-early-i2c-init`, **`hw-management-bmc-init`**. **`Requires=`** early-i2c-init. **`Wants=`** bmc-init (ordering without hard-failing if init is disabled). When **`hw-management-bmc-boot-complete.service`** exits successfully, SONiC BMC may treat hw-management runtime as ready for dependent services. |
+| **hw-management-bmc-early-i2c-init** | oneshot | `/usr/bin/hw-management-bmc-early-i2c-init.sh` | `WantedBy=sysinit.target` | **`After=`** `hw-management-bmc-early-config`. **`Before=`** `hw-management-bmc-sync-ethaddr`. Creates early I2C devices from **`/etc/hw-management-bmc-early-i2c-devices.json`**. |
+| **hw-management-bmc-sync-ethaddr** | oneshot | `/bin/bash /usr/bin/hw-management-bmc-sync-ethaddr.sh` | `WantedBy=multi-user.target` | **`After=`** and **`Requires=`** `hw-management-bmc-early-i2c-init`. **`Before=`** `hw-management-bmc-init`, **`hw-management-bmc-boot-complete`**. Validates U-Boot **`ethaddr`** as the primary BMC MAC; if empty/invalid/random-like, reads and validates BMC FRU MAC from **`eeprom_bmc`** (fallback **`4-0050/eeprom`**) and writes **`ethaddr`** with **`fw_setenv`**. Best-effort short wait/warning if valid **`ethaddr`** differs from FRU. Applies the selected MAC to running **`eth0`** and renews DHCP best-effort, so current boot is corrected without reboot. If **`fw_printenv`** or **`fw_setenv`** is missing, logs a warning and exits successfully. |
+| **hw-management-bmc-init** | oneshot | `/bin/bash /usr/bin/hw-management-bmc-ready.sh` | `WantedBy=multi-user.target` | **`After=`** `local-fs`, **`hw-management-bmc-early-i2c-init`**, **`hw-management-bmc-sync-ethaddr`**. **`Requires=`** early-i2c-init and sync-ethaddr. **`Before=`** `hw-management-bmc-boot-complete`. **`ConditionPathExists=`** `/usr/bin/hw-management-bmc-ready.sh`. |
+| **hw-management-bmc-boot-complete** | simple | **`ExecStartPre=`** `/usr/bin/env hw-management-bmc-ready-common.sh`; **`ExecStart=`** `/usr/bin/env hw-management-bmc-boot-complete.sh` | `WantedBy=multi-user.target` | **`After=`** `hw-management-bmc-early-i2c-init`, **`hw-management-bmc-init`**. **`Requires=`** early-i2c-init and bmc-init. When **`hw-management-bmc-boot-complete.service`** exits successfully, SONiC BMC may treat hw-management runtime as ready for dependent services. |
 | **hw-management-bmc-health-monitor** | simple | `/usr/bin/hw-management-bmc-health-monitor.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**, **`Wants=syslog.target`**. **`Restart=always`**. |
 | **hw-management-bmc-i2c-slave-setup** | oneshot | `/usr/bin/hw-management-bmc-i2c-slave-setup.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**. **`Before=`** `hw-management-bmc-recovery-handler`. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. |
 | **hw-management-bmc-recovery-handler** | simple | `/usr/bin/hw-management-bmc-recovery-handler.sh` | `WantedBy=multi-user.target` | **`After=`** `multi-user.target`, **`hw-management-bmc-i2c-slave-setup`**. **`Requires=`** i2c-slave-setup. **`EnvironmentFile=/etc/hw-management-bmc-recovery.conf`**. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. **`Restart=always`**. |
+| **hw-management-bmc-wd-heartbeat** | simple | `/usr/bin/hw-management-bmc-wd-heartbeat.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**, **`hw-management-bmc-boot-complete.service`** and **`Wants=`** it (heartbeat only after the BMC has booted). **`EnvironmentFile=-/etc/hw-management-bmc-wd-heartbeat.conf`**. **`Restart=on-failure`**. Stop-gap ABR watchdog servicing — see **ABR watchdog heartbeat** below. |
 
 Scripts **`hw-management-bmc-powerctrl.sh`**, **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-gpio-set.sh`**, **`hw-management-bmc-leakage-handler.sh`**, **`hw-management-bmc-get-reset-cause.sh`**, **`hw-management-bmc-show-reset-cause.sh`**, etc., are invoked by other scripts, **udev**, or operators; they are not tied 1:1 to a dedicated systemd unit in this package. The logger unit uses **`hw-management-bmc-reset-cause-logger.sh`** for boot diagnostics, while **`hw-management-bmc-get-reset-cause.sh`** exports reset-cause sysfs-style files: primary **`reset_pwr_cycle`** / **`reset_soft_reboot`** / **`reset_unknown`** at **`/var/run/hw-management/bmc/`** (exactly one **1**), hardware **`reset_*`** under **`/var/run/hw-management/bmc/domains/`** (see reset-cause policy table), raw SCU words at the bmc runtime root.
 
@@ -428,7 +464,7 @@ Static addressing for the BMC↔host **`usb0`** gadget interface (out-of-band li
 
 - **`USB0_MANAGED_BY_NOS=1`** (values **`1`**, **`yes`**, **`true`**, case-insensitive): hw-management-bmc does **not** write **`00-hw-management-bmc-usb0.network`**, does **not** apply a static **`ip addr`**, and **`usb_net_config`** only loads **`g_ether`** and sets the link up. On **SONiC BMC** images, SONiC installs **`/etc/bmc-network-sonic.conf`** (or **`/etc/bmc-usb-network.conf`**) so **`sonic-usb-network-init`** can configure **`usb0`**. See **`bmc/SONIC_USB0_INTEGRATION.md`**.
 - If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`** without **`USB0_MANAGED_BY_NOS`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`** and **`USB0_ADDRESS`** is read from there. If **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), **`.network`** generation is **skipped** for that boot (fix the platform file).
-- If the packaged **`hw-management-bmc-network.conf`** is **absent**: use a valid **`USB0_ADDRESS`** from existing **`/etc/hw-management-bmc-usb0.conf`** if present; otherwise apply default **`169.254.0.1/16`** and write **`/etc/hw-management-bmc-usb0.conf`** with a comment so the active value is visible.
+- If the packaged **`hw-management-bmc-network.conf`** is **absent**: use a valid **`USB0_ADDRESS`** from existing **`/etc/hw-management-bmc-usb0.conf`** if present; otherwise apply default **`169.254.100.1/16`** and write **`/etc/hw-management-bmc-usb0.conf`** with a comment so the active value is visible.
 
 **Host CPU (hw-management package):** On SONiC hosts (**`/etc/sonic/sonic_version.yml`**), **`hw-management-ifupdown.sh`** skips **`ifup usb0`** so the host NOS owns addressing (same pattern as BMC Redfish sync).
 
@@ -526,6 +562,39 @@ Installed to **`/usr/bin/hw-management-bmc-leakage-handler.sh`**. HID-agnostic: 
 
 Platform differences are limited to which **`LEAKAGE<n>`** lines appear in **`5-hw-management-bmc-events.rules`** (or equivalent) and how many detectors/channels the JSON configures; keep the generic **`LEAKAGE<n>`** branch in each HID’s **`hw-management-bmc-events.sh`** in sync when adding platforms.
 
+### ABR watchdog heartbeat (`hw-management-bmc-wd-heartbeat.sh`)
+
+Stop-gap for the **AST2700 ABR (Alternate Boot Recovery) watchdog** on the SONiC BMC. The ABR watchdog is intended for systems that boot from **redundant SPI flashes**: on expiry the **BootMCU** performs Alternate Boot Recovery and switches the boot source to the backup SPI image. On the SONiC BMC the BMC boots from **eMMC** while the SPI flash holds the **OpenBMC** image, so an ABR expiry would switch to the undesired OpenBMC image. The ABR watchdog is armed **only once the OTP fuse is programmed** — not an issue during development, but relevant on production (fused) systems.
+
+Until SONiC selects a final approach (disable in U-Boot, disable from Linux by writing the WDTA control register, or handle it in Bali/Caliptra firmware), this service **services the ABR watchdog over MCTP** so it never expires. On start it: (1) starts the MCTP daemon (**`systemctl start mctpd`**), (2) brings the IRoT link up (**`mctp link set mctpirot0 up`**), (3) discovers the Bali (Caliptra) endpoint EID from the MCTP **bus owner** (**`busctl … SetupEndpoint ay 0`**, EID taken from the reply; falls back to a configured EID, default **8**), then (4) loops sending the service-watchdog request to that EID via **`mctp-client`**.
+
+**Unit:** **`hw-management-bmc-wd-heartbeat.service`** (`Type=simple`, `Restart=on-failure`). It is ordered **`After=hw-management-bmc-boot-complete.service`** (and **`Wants=`** it), so the heartbeat starts only once the BMC has successfully booted.
+
+**Config:** **`/etc/hw-management-bmc-wd-heartbeat.conf`** (deployed from **`/etc/<HID>/hw-management-bmc-wd-heartbeat.conf`** by plat-specific-preps; override the path with **`HW_MANAGEMENT_BMC_WD_HEARTBEAT_CONF`**):
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| **`WD_HEARTBEAT_ENABLE`** | **`1`** | Master enable. **`0`** = script exits cleanly (no heartbeat, no restart). |
+| **`WD_HEARTBEAT_INTERFACE`** | **`mctpirot0`** | MCTP-over-IRoT link brought up and used for **`SetupEndpoint`**. |
+| **`WD_HEARTBEAT_MCTPD_SERVICE`** | **`mctpd`** | systemd service started (best-effort) before the link is brought up. Empty = skip. |
+| **`WD_HEARTBEAT_SETUP_ENDPOINT`** | **`1`** | **`1`** = discover the EID via the MCTP bus owner **`SetupEndpoint`**; **`0`** = skip and use **`WD_HEARTBEAT_EID`**. |
+| **`WD_HEARTBEAT_EID`** | **`8`** | Fallback EID of the Bali (Caliptra) target, used when discovery is disabled or returns no usable EID. |
+| **`WD_HEARTBEAT_MSG_TYPE`** | **`control`** | MCTP message type keyword passed to **`mctp-client`**. |
+| **`WD_HEARTBEAT_DATA`** | **`80 03`** | Request payload bytes (hex, space separated). |
+| **`WD_HEARTBEAT_INTERVAL`** | **`30`** | Seconds to sleep after each heartbeat attempt. Not the full period alone — see timing bound below. |
+| **`WD_HEARTBEAT_CMD_TIMEOUT`** | **`10`** | Per-call **`timeout(1)`** bound (s) for each **`mctp-client`** / **`busctl`** call; auto-clamped below **`WD_HEARTBEAT_INTERVAL`**. Counts toward the worst-case heartbeat period together with **`WD_HEARTBEAT_INTERVAL`**. Ignored if **`timeout(1)`** is absent (warned). |
+| **`WD_HEARTBEAT_MCTP_CLIENT`** | *(PATH lookup)* | Optional explicit path to the **`mctp-client`** binary. |
+
+**Endpoint discovery:** **`busctl call au.com.codeconstruct.MCTP1 /au/com/codeconstruct/mctp1/interfaces/<IFACE> au.com.codeconstruct.MCTP.BusOwner1 SetupEndpoint ay 0`**; the EID is the second field of the reply (e.g. reply `yisb 8 …` → EID `8`). If **`busctl`** is unavailable, discovery fails, or the parsed EID is non-numeric, the service falls back to **`WD_HEARTBEAT_EID`**.
+
+**Effective command each interval:** **`mctp-client eid <EID> type <WD_HEARTBEAT_MSG_TYPE> data <WD_HEARTBEAT_DATA>`** (e.g. `mctp-client eid 8 type control data 80 03`).
+
+**Timing bound:** each loop iteration runs one bounded **`mctp-client`** call (up to **`WD_HEARTBEAT_CMD_TIMEOUT`** seconds) then sleeps **`WD_HEARTBEAT_INTERVAL`** seconds. The worst-case gap between consecutive heartbeats is **`WD_HEARTBEAT_CMD_TIMEOUT + WD_HEARTBEAT_INTERVAL`** (with defaults **40 s**; after clamping, at most **`2 × WD_HEARTBEAT_INTERVAL − 1`**). That sum must be **shorter than the ABR watchdog timeout** on fused production systems — configuring **`WD_HEARTBEAT_INTERVAL`** alone against the watchdog period is not sufficient.
+
+**No-op / safety behavior:** the script **exits 0** (so systemd does not restart-loop) when disabled via config or when **`mctp-client`** is not present on the image — safe to list in the package on images without MCTP tooling. The **`mctpd`** start and **`mctp link set … up`** steps are best-effort (logged, non-fatal, since they may already be done). It **exits non-zero** only when the resolved EID is invalid. Success/failure of the request is logged only on state change to avoid flooding the journal every interval. Requires **bash**, **`mctp-client`**, and (for discovery) **`busctl`** / **`mctp`**.
+
+**Timeout guard:** every external call (heartbeat **`mctp-client`** and discovery **`busctl`**) is wrapped in **`timeout WD_HEARTBEAT_CMD_TIMEOUT`** so a hung or unresponsive MCTP transport cannot block the loop indefinitely — an unbounded stall would stop heartbeats, let the ABR watchdog expire, and switch the boot source to OpenBMC (the exact failure this service prevents). A timed-out call is treated as a normal failure: the loop logs it and retries on the next interval. If **`timeout(1)`** is not on the image the script logs a warning and runs the calls unguarded.
+
 ### Power control (`hw-management-bmc-powerctrl.sh`)
 
 CLI tool for host and board power transitions on SONiC BMC. It drives **mlxreg-io** sysfs attributes under the platform **hwmon** instance (resolved at runtime under **`…/i2c-14/14-0031/mlxreg-io/hwmon/hwmon*`**). Operational messages go to the system journal via **`logger -t hw-management-bmc-powerctrl`**. There is no dedicated systemd unit; call **`/usr/bin/hw-management-bmc-powerctrl.sh`** from automation, **Redfish** handlers, or operators. OpenBMC-style host-state **D-Bus** updates are not used (stub hooks **`set_host_powerstate_*`** / **`set_requested_host_transition`** are reserved for future integration).
@@ -564,7 +633,7 @@ CLI tool for host and board power transitions on SONiC BMC. It drives **mlxreg-i
 | meta-nvidia/.../bmc-post-boot-cfg/files/**a2d_leakage_read.sh** | usr/usr/bin/**hw-management-bmc-a2d-leakage-read.sh** |
 | meta-nvidia/.../bmc-post-boot-cfg/files/**max1363_force_alarm.sh** | usr/usr/bin/**hw-management-bmc-max1363-force-alarm.sh** |
 | meta-nvidia/.../bmc-post-boot-cfg/files/**max1363_read_status.sh** | usr/usr/bin/**hw-management-bmc-max1363-read-status.sh** |
-| meta-nvidia/.../bmc-post-boot-cfg/files/**bios-recovery-flash.sh** | usr/usr/bin/**hw-management-bmc-bios-recovery-flash.sh** |
+| meta-nvidia/.../meta-ast2700/.../bmc-post-boot-cfg/files/**bios-recovery-flash.sh** (GPIO + **flashrom**) | usr/usr/bin/**hw-management-bmc-bios-recovery-flash.sh** |
 | meta-nvidia/.../bmc-post-boot-cfg/files/*.sh, spc6-ast2700-a1/.../*.sh, hw-management*.sh, etc. | usr/usr/bin/ |
 | meta-nvidia/meta-switch/recipes-phosphor/**dump**/files/**cpld_dump.sh** + **dump_utils.sh** (partial; see **FILE_MAPPING.md**) | usr/usr/bin/**hw-management-bmc-cpld-dump.sh** |
 | *(SONiC BMC; see **FILE_MAPPING.md** — host analog **`hw-management-generate-dump.sh`**)* | usr/usr/bin/**hw-management-bmc-generate-dump.sh** |

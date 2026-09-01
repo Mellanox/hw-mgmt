@@ -127,6 +127,7 @@ smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
 sn58xx_reset_attr_num=15
 sn66xx_reset_attr_num=14
+sn68xx_reset_attr_num=14
 n61xx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
@@ -668,6 +669,7 @@ n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
 sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
+sn68xxld_named_busses=(asic1 4 pwr1 6 vr1 15 vpd 1 cpu-vr 5)
 
 ACTION=$1
 
@@ -676,13 +678,6 @@ if [ "$board_type" == "VMOD0014" ]; then
 	psu1_i2c_addr=0x58
 	psu2_i2c_addr=0x58
 fi
-
-is_module()
-{
-    /sbin/lsmod | grep -w "$1" > /dev/null
-    RC=$?
-    return $RC
-}
 
 function get_i2c_bus_frequency_default()
 {
@@ -837,6 +832,14 @@ set_jtag_gpio()
 			;;
 			esac
 			;;
+		$AMD_FRNG_CPU)
+			jtag_tdi=40
+			jtag_tck=27
+			jtag_tms=7
+			jtag_tdo=6
+			echo 0x20e5 > $config_path/jtag_rw_reg
+			echo 0x20e6 > $config_path/jtag_ro_reg
+			;;
 		*)
 			return 0
 			;;
@@ -952,6 +955,12 @@ set_gpios()
 				gpio_idx+=(9)
 				gpio_names+=("v3000_lpc_support")
 			fi
+			;;
+		$AMD_FRNG_CPU)
+			set_jtag_gpio $1
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(85 3 12 10)
+			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
 			return 1
@@ -1113,8 +1122,7 @@ add_come_named_busses()
 		come_named_busses+=( ${amd_snw_named_busses[@]} )
 		;;
 	*)
-		log_err "unsupported cpu_type '${cpu_type}' for add_come_named_busses"
-		return 1
+		return
 		;;
 	esac
 
@@ -2618,6 +2626,7 @@ n51xxld_specific()
 		HI176)	# gb300
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
+			echo 18 > $config_path/i2c_swb_bus
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			lm_sensors_config="$lm_sensors_configs_path/n5500ld_sensors.conf"
 			leakage_count=2
@@ -2689,6 +2698,7 @@ n61xxld_specific()
 		echo 1 > $config_path/global_wp_wait_step
 		echo 20 > $config_path/global_wp_timeout
 		echo 0 > $config_path/i2c_bus_offset
+		echo 53 > $config_path/i2c_swb_bus
 		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
@@ -2867,10 +2877,53 @@ sn66xxld_specific()
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
+	i2c_comex_mon_bus_default=5
 	named_busses+=(${sn66xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
+sn68xxld_specific()
+{
+	case $sku in
+	# SN6810_LD
+	HI183)
+		cpld_num=4
+		leakage_count=2
+		i2c_asic_bus_default=4
+		hotplug_pdbs=1
+		;;
+	# SN6800_LD
+	HI187|HI188)
+		cpld_num=10
+		leakage_count=5
+		asic_i2c_buses=(4 20 36 52)
+		hotplug_pdbs=4
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	lm_sensors_config="$lm_sensors_configs_path/sn68xxld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	echo 5.333 > $config_path/pdb_hotswap_scale
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	named_busses+=(${sn68xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$sn68xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
@@ -2999,6 +3052,9 @@ check_system_internal()
 			;;
 		VMOD0025)
 			sn66xxld_specific
+			;;
+		VMOD0027)
+			sn68xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3185,13 +3241,13 @@ load_modules()
 	# Some modules are not present in all the kernel
 	# versions. Use this function to load those modules
 	# which need to be loaded based on their availability
-	if ! lsmod | grep -q "drivetemp"; then
+	if ! is_module "drivetemp"; then
 		if [ -f /lib/modules/`uname -r`/kernel/drivers/hwmon/drivetemp.ko ]; then
 			modprobe drivetemp
 		fi
 	fi
 	case $cpu_type in
-		$AMD_SNW_CPU|$AMD_V3000_CPU|$BF3_CPU)
+		$AMD_SNW_CPU|$AMD_V3000_CPU|$AMD_FRNG_CPU|$BF3_CPU)
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
@@ -3209,6 +3265,23 @@ load_modules()
 		*)
 		;;
 	esac
+}
+
+# Run depmod only when modules.dep/modules.alias are missing or older
+# than any .ko* module. Avoids multi-second cost on weak CPUs when
+# depmod outputs are already current.
+run_depmod_if_needed()
+{
+	local modules_dir="/lib/modules/$(uname -r)"
+	local modules_dep="${modules_dir}/modules.dep"
+	local modules_alias="${modules_dir}/modules.alias"
+
+	if [ ! -f "$modules_dep" ] || [ ! -f "$modules_alias" ] || \
+	   find "$modules_dir" \( -name '*.ko' -o -name '*.ko.*' \) \
+		\( -newer "$modules_dep" -o -newer "$modules_alias" \) \
+		-print -quit 2>/dev/null | grep -q .; then
+		depmod -a 2>/dev/null
+	fi
 }
 
 set_config_data()
@@ -3242,12 +3315,15 @@ set_config_data()
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
 	echo $leakage_count > $config_path/leakage_counter
+	if [ "${#led_control_type[@]}" -gt 0 ]; then
+		echo "${led_control_type[@]}" > "$config_path"/led_control_type
+	fi
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
-	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
+	if [ -f $thermal_control_configs_path/tc_config_user.json ]; then
 		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
 	fi
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
@@ -3499,6 +3575,9 @@ set_asic_pci_id()
 	HI193)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
+	HI183|HI187|HI188)
+		asic_pci_id="${spc6_pci_id}"
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
@@ -3607,6 +3686,19 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
+	HI187)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -3692,7 +3784,7 @@ set_sodimms()
 		return 0
 	fi
 
-	if ! lsmod | grep -q i2c_designware_platform; then
+	if ! is_module "i2c_designware_platform"; then
 		modprobe i2c_designware_platform
 		sleep 0.5
 	fi
@@ -3842,6 +3934,29 @@ pre_devtr_init()
 			;;
 		esac
 		;;
+	VMOD0027)
+		case $sku in
+		HI183)
+			echo 1 >  "$config_path"/swb_brd_num
+			echo 16 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_num
+			echo 1 >  "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		HI187|HI188)
+			echo 4 >  "$config_path"/swb_brd_num
+			echo 16 > "$config_path"/swb_brd_bus_offset
+			echo 16 > "$config_path"/swb_brd_vr_num
+			echo 4 >  "$config_path"/pwr_brd_num
+			echo 16 > "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		esac
+		;;
 	*)
 		;;
 	esac
@@ -3968,8 +4083,8 @@ do_start()
 		set_asic_i2c_bus
 	fi
 	touch $udev_ready
-	depmod -a 2>/dev/null
-	
+	run_depmod_if_needed
+
 	udevadm trigger --action=add
 	udevadm settle
 	set_sodimm_temp_limits
@@ -3995,11 +4110,6 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
-	fi
-	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		cp $thermal_control_config $config_path/tc_config.json
-	else
-		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	/usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
@@ -4250,10 +4360,11 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
-		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193/HI194 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
+		# TEMPORARY hw-management mockup values for SIMX
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
+						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
+						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
-			process_simx_links
 			log_info "Created mock hw management tree, exiting."
 			exit 0
 		fi
@@ -4333,6 +4444,12 @@ case $ACTION in
 			done
 			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
+			# thermal/pwm1 and thermal/asic are not created when
+			# mlxsw_minimal probe fails, so TC will not enforce
+			# full speed. Set PWM 100% on the ASIC that failed
+			# chipup via sysfs or mlxreg MFSC. Pass $3 (PCI path
+			# from sxcore) so index 0 still resolves a target.
+			set_asic_pwm_full_speed_on_chipup_fail "$asic_index" "$3"
 		fi
 	;;
 	chipdown)
@@ -4364,7 +4481,9 @@ case $ACTION in
 		do_stop
 		sleep 3
 		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
+						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
+						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0

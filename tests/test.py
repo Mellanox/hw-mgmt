@@ -17,6 +17,18 @@
 
 import sys
 import os
+
+if sys.version_info < (3, 7):
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
+    _venv_python = os.path.join(_script_dir, '.venv', 'bin', 'python')
+    _candidates = [_venv_python] + ['python3.11', 'python3.10', 'python3.9', 'python3.8', 'python3.7']
+    for _py in _candidates:
+        try:
+            os.execvp(_py, [_py] + sys.argv)
+        except FileNotFoundError:
+            continue
+    sys.exit("ERROR: Python 3.7+ is required. Please install it.")
+
 import argparse
 import subprocess
 from pathlib import Path
@@ -38,9 +50,10 @@ class Colors:
 class TestRunner:
     """Test runner for hw-mgmt test suite"""
 
-    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None, coverage=False, coverage_html=False, coverage_min=None, shell_coverage=False, shell_coverage_min=None):
+    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None, coverage=False, coverage_html=False, coverage_min=None, shell_coverage=False, shell_coverage_min=None, origin_branch=None):
         self.verbose = verbose
         self.enable_logs = enable_logs
+        self.origin_branch = origin_branch
         self.tests_dir = Path(__file__).parent.absolute()
         self.offline_dir = self.tests_dir / "offline"
         self.hardware_dir = self.tests_dir / "hardware"
@@ -128,7 +141,11 @@ class TestRunner:
         return missing
 
     def check_dependencies(self, auto_install=True):
-        """Check if required dependencies are installed, optionally auto-install"""
+        """Ensure ALL packages listed in requirements.txt are installed.
+
+        Checks every dependency (not just pytest) and, when auto_install is set,
+        installs the full requirements.txt if anything is missing.
+        """
         missing = self._missing_requirements()
         if not missing:
             if self.verbose:
@@ -173,10 +190,12 @@ class TestRunner:
 
         print(f"{Colors.CYAN}Installing test dependencies...{Colors.RESET}")
         try:
+            # NOTE: capture_output= requires Python 3.7+; use PIPE for 3.6 compatibility.
             result = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)],
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
                 check=False
             )
 
@@ -409,11 +428,14 @@ class TestRunner:
         self.print_test_start(test_name, cmd, cwd)
 
         try:
+            # NOTE: capture_output=/text= require Python 3.7+; use PIPE and
+            # universal_newlines for Python 3.6 compatibility.
             result = subprocess.run(
                 cmd,
                 cwd=cwd,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
                 timeout=300  # 5 minute timeout
             )
 
@@ -509,124 +531,129 @@ class TestRunner:
             # Legacy unittest tests
             {
                 'name': 'HW_Mgmt_Logger - Main Tests (unittest)',
-                'cmd': ['python3', 'test_hw_mgmt_logger.py', '--random-iterations', '5', '--verbosity', '1'],
+                'cmd': [sys.executable, 'test_hw_mgmt_logger.py', '--random-iterations', '5', '--verbosity', '1'],
                 'cwd': self.offline_dir / 'hw_management_lib' / 'HW_Mgmt_Logger'
             },
             {
                 'name': 'ASIC Temperature Populate (unittest)',
-                'cmd': ['python3', 'test_asic_temp_populate.py', '-v'],
+                'cmd': [sys.executable, 'test_asic_temp_populate.py', '-v'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'asic_populate_temperature'
             },
             {
                 'name': 'Module Populate - Simple Test (unittest)',
-                'cmd': ['python3', 'simple_test.py'],
+                'cmd': [sys.executable, 'simple_test.py'],
+                'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate'
+            },
+            {
+                'name': 'Module Temperature Populate (unittest)',
+                'cmd': [sys.executable, 'legacy_module_temp_populate.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate'
             },
             # Disabled TEC tests for V.7.0040.4000_BR - thermal_module_tec_sensor function not available in base
             # {
             #     'name': 'Thermal Control 2.0 TEC module test FR:4359937 (unittest)',
-            #     'cmd': ['python3', 'test_thermal_module_tec_sensor_2_0.py', '-i 20'],
+            #     'cmd': [sys.executable, 'test_thermal_module_tec_sensor_2_0.py', '-i 20'],
             #     'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_0' / 'module_tec_4359937'
             # },
             # {
             #     'name': 'Thermal Control 2.5 TEC module test FR:4359937 (unittest)',
-            #     'cmd': ['python3', 'test_thermal_module_tec_sensor.py', '-i 20'],
+            #     'cmd': [sys.executable, 'test_thermal_module_tec_sensor.py', '-i 20'],
             #     'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_5' / 'module_tec_4359937'
             # },
             # {
             #     'name': 'Module Temperature Populate TEC test FR:4359937 (unittest)',
-            #     'cmd': ['python3', 'test_module_temp_populate.py', '-i 20'],
+            #     'cmd': [sys.executable, 'test_module_temp_populate.py', '-i 20'],
             #     'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature_4359937'
             # },
             {
                 'name': 'Module Counter Reliability Test (unittest)',
-                'cmd': ['python3', 'test_module_counter.py'],
+                'cmd': [sys.executable, 'test_module_counter.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync'
             },
             # Pytest tests - run each file separately to avoid thread/mock conflicts
             {
                 'name': 'Pytest: Hardware Error Paths',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hardware_error_paths.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hardware_error_paths.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: HW Management Lib',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_lib.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_lib.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Peripheral Updater',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_peripheral_updater.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_peripheral_updater.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Platform Config',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_platform_config.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_platform_config.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Parse Labels',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_parse_labels.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_parse_labels.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Independent Mode Update',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_independent_mode_update.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_independent_mode_update.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: PSU FW Update Common',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_common.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_common.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: PSU FW Update Delta',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_delta.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_delta.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: PSU FW Update Murata',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_murata.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_murata.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: DPU Thermal Update',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_dpu_thermal_update.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_dpu_thermal_update.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Redfish Client',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_redfish_client.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_redfish_client.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Thermal Updater',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_updater.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_updater.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Fan _validate_rpm',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_fan_validate_rpm.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_fan_validate_rpm.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: TC 2.5 ASIC fread reset (1c294f7)',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_asic_fread_reset.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_asic_fread_reset.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: start-post TC flags (Bug 4929286)',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
-                'name': 'Pytest: TC exit_wait (stop timeout)',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
+                'name': 'Pytest: TC _exit_wait (stop timeout)',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
                 'name': 'Pytest: Python Syntax',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
         ]
@@ -812,7 +839,7 @@ class TestRunner:
         try:
             result = subprocess.run(
                 ['which', 'sshpass'],
-                capture_output=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 check=True
             )
             return result.returncode == 0
@@ -902,7 +929,7 @@ class TestRunner:
 
         try:
             print(f"{Colors.CYAN}[DEBUG] Executing SSH command...{Colors.RESET}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=10)
 
             if result.returncode == 0:
                 print(f"{Colors.GREEN}[DEBUG] Remote directory created successfully{Colors.RESET}")
@@ -933,7 +960,7 @@ class TestRunner:
             print(f"{Colors.CYAN}[DEBUG] Copying {local_path} to {remote_path}{Colors.RESET}")
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
 
             if result.returncode != 0 and result.stderr:
                 print(f"{Colors.YELLOW}[DEBUG] Copy failed: {result.stderr}{Colors.RESET}")
@@ -960,7 +987,7 @@ class TestRunner:
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=60)
 
             if result.returncode != 0 and self.verbose:
                 print(f"{Colors.YELLOW}[DEBUG] Command failed with return code {result.returncode}{Colors.RESET}")
@@ -987,8 +1014,8 @@ class TestRunner:
         try:
             result = subprocess.run(
                 cmd,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True,
                 timeout=300  # 5 minutes timeout for hardware tests
             )
 
@@ -1016,7 +1043,7 @@ class TestRunner:
         try:
             result = subprocess.run(
                 ['which', 'shellspec'],
-                capture_output=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 check=False
             )
             if result.returncode != 0:
@@ -1029,7 +1056,7 @@ class TestRunner:
             try:
                 result = subprocess.run(
                     ['which', 'kcov'],
-                    capture_output=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     check=False
                 )
                 if result.returncode != 0:
@@ -1054,8 +1081,8 @@ class TestRunner:
             result = subprocess.run(
                 [str(install_script)],
                 cwd=self.tests_dir,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True,
                 check=False
             )
 
@@ -1135,8 +1162,8 @@ class TestRunner:
             result = subprocess.run(
                 cmd,
                 cwd=self.shell_dir,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True,
                 check=False
             )
 
@@ -1197,11 +1224,15 @@ class TestRunner:
         result = None
         for ngci_path in ngci_paths:
             try:
+                ngci_env = dict(os.environ)
+                if self.origin_branch:
+                    ngci_env['NGCI_GIT_ORIGIN_BRANCH'] = self.origin_branch
                 result = subprocess.run(
                     [ngci_path, '-b'],
                     cwd=repo_root,
-                    capture_output=True,
-                    text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                    env=ngci_env,
                     check=False
                 )
                 # If we got here, the command exists
@@ -1235,8 +1266,8 @@ class TestRunner:
                     repair_result = subprocess.run(
                         [ngci_path, '-b', 'repair'],
                         cwd=repo_root,
-                        capture_output=True,
-                        text=True,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        universal_newlines=True,
                         check=False
                     )
                     break
@@ -1254,8 +1285,8 @@ class TestRunner:
                         verify_result = subprocess.run(
                             [ngci_path, '-b'],
                             cwd=repo_root,
-                            capture_output=True,
-                            text=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            universal_newlines=True,
                             check=False
                         )
                         break
@@ -1297,11 +1328,15 @@ class TestRunner:
         result = None
         for ngci_path in ngci_paths:
             try:
+                ngci_env = dict(os.environ)
+                if self.origin_branch:
+                    ngci_env['NGCI_GIT_ORIGIN_BRANCH'] = self.origin_branch
                 result = subprocess.run(
                     [ngci_path, '-s'],
                     cwd=repo_root,
-                    capture_output=True,
-                    text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                    env=ngci_env,
                     check=False
                 )
                 break
@@ -1347,11 +1382,15 @@ class TestRunner:
         result = None
         for ngci_path in ngci_paths:
             try:
+                ngci_env = dict(os.environ)
+                if self.origin_branch:
+                    ngci_env['NGCI_GIT_ORIGIN_BRANCH'] = self.origin_branch
                 result = subprocess.run(
                     [ngci_path, '-s2'],
                     cwd=repo_root,
-                    capture_output=True,
-                    text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                    env=ngci_env,
                     check=False
                 )
                 break
@@ -1394,11 +1433,15 @@ class TestRunner:
         result = None
         for ngci_path in ngci_paths:
             try:
+                ngci_env = dict(os.environ)
+                if self.origin_branch:
+                    ngci_env['NGCI_GIT_ORIGIN_BRANCH'] = self.origin_branch
                 result = subprocess.run(
                     [ngci_path, '-hc'],
                     cwd=repo_root,
-                    capture_output=True,
-                    text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                    env=ngci_env,
                     check=False
                 )
                 break
@@ -1435,8 +1478,8 @@ class TestRunner:
         try:
             version_result = subprocess.run(
                 ['shellcheck', '--version'],
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True,
                 check=False
             )
             if version_result.returncode != 0:
@@ -1471,8 +1514,8 @@ class TestRunner:
         for script in shell_scripts:
             result = subprocess.run(
                 ['shellcheck', '--color=always', '--severity=warning', str(script)],
-                capture_output=True,
-                text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True,
                 check=False
             )
 
@@ -1613,6 +1656,7 @@ Note: Python dependencies are automatically installed if missing
     parser.add_argument('--password', type=str, help='SSH password for hardware connection')
 
     # Disable flags for code quality checks (all enabled by default)
+    parser.add_argument('-o', '--origin-branch', type=str, help='Remote branch name for ngci_tool checks (e.g. my-feature-branch)')
     parser.add_argument('-sn', '--skip-ngci', action='store_true', help='Skip all ngci_tool checks (beautifier, spell, security, header)')
     parser.add_argument('--no-beautifier', action='store_true', help='Skip code beautifier check (ngci_tool -b)')
     parser.add_argument('--no-spell-check', action='store_true', help='Skip spell checker (ngci_tool -s)')
@@ -1660,7 +1704,8 @@ Note: Python dependencies are automatically installed if missing
         coverage_html=args.coverage_html,
         coverage_min=args.coverage_min,
         shell_coverage=args.shell_coverage,
-        shell_coverage_min=args.shell_coverage_min
+        shell_coverage_min=args.shell_coverage_min,
+        origin_branch=args.origin_branch
     )
 
     # Handle install command

@@ -66,8 +66,6 @@ WD_HEARTBEAT_CMD_TIMEOUT=10
 WD_HEARTBEAT_MCTP_CLIENT=""
 WD_HEARTBEAT_MCTPD_SERVICE="mctpd"
 WD_HEARTBEAT_SETUP_ENDPOINT=1
-WD_HEARTBEAT_REQUIRE_CLIENT=1
-WD_HEARTBEAT_MAX_FAILURES=3
 
 if [ -f "$CONFIG_FILE" ]; then
 	# shellcheck source=/dev/null
@@ -83,18 +81,13 @@ if [ "${WD_HEARTBEAT_ENABLE}" != "1" ]; then
 	exit 0
 fi
 
-# Resolve the mctp-client binary. Missing client: exit 0 (no restart-loop) unless
-# WD_HEARTBEAT_REQUIRE_CLIENT=1 (fused production, ABR armed), where it is fatal
-# so systemd flags the unit instead of silently letting the ABR watchdog expire.
+# Resolve the mctp-client binary. Without it there is nothing to do (e.g. an
+# image that does not ship the MCTP tooling): exit 0 so we do not restart-loop.
 MCTP_CLIENT="${WD_HEARTBEAT_MCTP_CLIENT:-}"
 if [ -z "$MCTP_CLIENT" ]; then
 	MCTP_CLIENT="$(command -v mctp-client 2>/dev/null)"
 fi
 if [ -z "$MCTP_CLIENT" ] || [ ! -x "$MCTP_CLIENT" ]; then
-	if [ "${WD_HEARTBEAT_REQUIRE_CLIENT}" = "1" ]; then
-		log_message "err" "mctp-client not found but WD_HEARTBEAT_REQUIRE_CLIENT=1; ABR watchdog heartbeat cannot run; failing"
-		exit 1
-	fi
 	log_message "warning" "mctp-client not found; ABR watchdog heartbeat cannot run; exiting"
 	exit 0
 fi
@@ -125,24 +118,10 @@ if [ "$WD_HEARTBEAT_CMD_TIMEOUT" -ge "$WD_HEARTBEAT_INTERVAL" ] 2>/dev/null; the
 	fi
 fi
 
-# Consecutive send failures after which we exit non-zero so systemd's
-# Restart=on-failure recovers the service (restart mctpd, re-raise the link,
-# rediscover the EID) instead of the loop spinning forever while the unit looks
-# healthy. 0 = never exit (retry forever).
-case "$WD_HEARTBEAT_MAX_FAILURES" in
-	''|*[!0-9]*) WD_HEARTBEAT_MAX_FAILURES=3 ;;
-esac
-
 # timeout(1) (coreutils or busybox) bounds each external call. If it is missing
-# an unresponsive transport could block a call forever and stall heartbeats. On
-# WD_HEARTBEAT_REQUIRE_CLIENT=1 (fused production) that is fatal so systemd flags
-# the unit; otherwise we run unguarded and warn.
+# we run unguarded and warn, since the time bound cannot be enforced.
 TIMEOUT_BIN="$(command -v timeout 2>/dev/null)"
 if [ -z "$TIMEOUT_BIN" ]; then
-	if [ "${WD_HEARTBEAT_REQUIRE_CLIENT}" = "1" ]; then
-		log_message "err" "timeout(1) not found but WD_HEARTBEAT_REQUIRE_CLIENT=1; cannot bound MCTP calls; failing"
-		exit 1
-	fi
 	log_message "warning" "timeout(1) not found; mctp-client/busctl calls will run without a time bound"
 fi
 
@@ -219,7 +198,6 @@ log_message "info" "Starting ABR watchdog heartbeat: eid=${EID} type=${WD_HEARTB
 # Log only on state change (ok<->fail) to avoid flooding the journal every
 # interval while the link is healthy.
 _prev_ok=-1
-_fail_count=0
 
 while true; do
 	# shellcheck disable=SC2086
@@ -227,23 +205,14 @@ while true; do
 	# separate mctp-client argument (matches "data 80 03"). run_bounded caps the
 	# call at WD_HEARTBEAT_CMD_TIMEOUT so a hung transport cannot stall the loop.
 	if run_bounded "$MCTP_CLIENT" eid "$EID" type "$WD_HEARTBEAT_MSG_TYPE" data $WD_HEARTBEAT_DATA >/dev/null 2>&1; then
-		_fail_count=0
 		if [ "$_prev_ok" != "1" ]; then
 			log_message "info" "ABR watchdog heartbeat OK (eid=${EID})"
 			_prev_ok=1
 		fi
 	else
-		_fail_count=$((_fail_count + 1))
 		if [ "$_prev_ok" != "0" ]; then
 			log_message "warning" "ABR watchdog heartbeat request failed or timed out (eid=${EID}); will keep retrying"
 			_prev_ok=0
-		fi
-		# Exit non-zero after too many consecutive failures so systemd's
-		# Restart=on-failure recovers the transport instead of the loop looking
-		# healthy while nothing reaches Bali (Caliptra).
-		if [ "$WD_HEARTBEAT_MAX_FAILURES" -gt 0 ] && [ "$_fail_count" -ge "$WD_HEARTBEAT_MAX_FAILURES" ]; then
-			log_message "err" "ABR watchdog heartbeat failed ${_fail_count} times in a row (eid=${EID}); exiting for systemd to restart"
-			exit 1
 		fi
 	fi
 	sleep "$WD_HEARTBEAT_INTERVAL"

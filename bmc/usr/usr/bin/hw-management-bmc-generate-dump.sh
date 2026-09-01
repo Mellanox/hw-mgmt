@@ -33,10 +33,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 ################################################################################
-# BMC debug bundle (SONiC BMC): dmesg, /proc/interrupts, ifconfig (or ip),
-# i2cdetect per non-mux bus, CPLD grid dump, systemctl for hw-management-bmc
-# units, systemd-analyze (time, blame, critical-chain), and /var/run/hw-management
-# tree + file contents (EEPROM via hexdump -C).
+# BMC debug bundle (SONiC BMC): dmesg, journalctl -b0, /proc/interrupts,
+# ifconfig (or ip), i2cdetect per non-mux bus, CPLD grid dump, systemctl for
+# hw-management-bmc units, systemd-analyze (time, blame, critical-chain), and
+# /var/run/hw-management tree + file contents (EEPROM via hexdump -C).
 # Output: gzip-compressed tar (default /tmp/hw-mgmt-bmc-dump.tar.gz). Pattern
 # aligned with usr/usr/bin/hw-management-generate-dump.sh (CPU).
 #
@@ -68,6 +68,20 @@ readlink_canonical()
 	readlink "$p" 2>/dev/null
 }
 
+# Monotonic seconds since boot (integer). Immune to wall-clock / NTP steps.
+# Echoes empty string if /proc/uptime is unreadable.
+_uptime_sec()
+{
+	local u
+	if ! read -r u _ </proc/uptime 2>/dev/null; then
+		echo ""
+		return 1
+	fi
+	u=${u%%.*}
+	case "$u" in ''|*[!0-9]*) echo ""; return 1 ;; esac
+	echo "$u"
+}
+
 export LOG_TAG="hw-management-bmc-generate-dump"
 # shellcheck source=/dev/null
 source /usr/bin/hw-management-bmc-helpers-common.sh
@@ -83,14 +97,17 @@ help()
 	cat <<EOF
 Usage: hw-management-bmc-generate-dump.sh [-v|--verbose] [output_tarball]
 
-  Collects dmesg, /proc/interrupts, ifconfig (fallback: ip addr), i2cdetect -y
-  for each bus from "i2cdetect -l | grep -v mux", CPLD dump (hw-management-bmc-cpld-dump),
-  systemctl status/show for all hw-management-bmc* units, and /var/run/hw-management tree
-  + values (EEPROM paths: hexdump -C).
+  Collects dmesg, journalctl -b0 (gzip'd on the fly), /proc/interrupts,
+  ifconfig (fallback: ip addr), i2cdetect -y for each bus from
+  "i2cdetect -l | grep -v mux", CPLD dump (hw-management-bmc-cpld-dump),
+  systemctl status/show for all hw-management-bmc* units, and
+  /var/run/hw-management tree + values (EEPROM paths: hexdump -C).
   Before archiving, hw-management-bmc-show-reset-cause.sh output is written to
-  /var/run/hw-management/bmc/show-reset-cause so it is included with the runtime snapshot.
+  /var/run/hw-management/bmc/show-reset-cause so it is included with the
+  runtime snapshot.
 
-  -v, --verbose   Also collect systemd-analyze (time, blame, critical-chain); slow (~1 min).
+  -v, --verbose   Also collect systemd-analyze (time, blame, critical-chain);
+                  slow (~1 min).
 
   Default output: /tmp/hw-mgmt-bmc-dump.tar.gz
 EOF
@@ -289,8 +306,9 @@ run_systemd_analyze_cmd_bg()
 	label=$(basename "$outfile" .txt)
 
 	(
-		local t0=$SECONDS rc elapsed
+		local t0 rc elapsed now
 
+		t0=$(_uptime_sec)
 		log_message info "systemd-analyze ${label}: start"
 		if timeout "$timeout_sec" systemd-analyze "$@" --no-pager >"$outfile" 2>&1; then
 			rc=0
@@ -298,7 +316,12 @@ run_systemd_analyze_cmd_bg()
 			rc=$?
 			log_message warning "systemd-analyze $* failed or timed out"
 		fi
-		elapsed=$((SECONDS - t0))
+		now=$(_uptime_sec)
+		if [ -n "$t0" ] && [ -n "$now" ]; then
+			elapsed=$((now - t0))
+		else
+			elapsed="?"
+		fi
 		if [ "$rc" -eq 0 ]; then
 			log_message info "systemd-analyze ${label}: end (${elapsed}s)"
 		else
@@ -403,6 +426,38 @@ collect_proc_interrupts()
 	fi
 }
 
+collect_journalctl_boot()
+{
+	local d=$1
+	local rc_j rc_g
+	mkdir -p "$d"
+	if ! command -v journalctl >/dev/null 2>&1; then
+		log_message warning "journalctl not found — skipping boot journal"
+		echo "journalctl not found" >"${d}/skipped.txt"
+		return 0
+	fi
+	if ! command -v gzip >/dev/null 2>&1; then
+		log_message warning "gzip not found — skipping boot journal"
+		echo "gzip not found" >"${d}/skipped.txt"
+		return 0
+	fi
+	# Stream through gzip so a long-lived / verbose boot cannot exhaust /tmp
+	# (often a small tmpfs) while still keeping the full current-boot journal.
+	# stderr is merged into the stream so failures land in the .gz too.
+	# Use bash PIPESTATUS (not pipefail alone): without pipefail, gzip's 0
+	# exit would hide a timeout that kills journalctl and leave a truncated
+	# .gz with no warning.
+	timeout 60 journalctl -b0 --no-pager 2>&1 | gzip -5 >"${d}/journalctl-b0.txt.gz"
+	rc_j=${PIPESTATUS[0]}
+	rc_g=${PIPESTATUS[1]}
+	if [ "$rc_j" -eq 0 ] && [ "$rc_g" -eq 0 ]; then
+		return 0
+	fi
+	log_message warning "journalctl -b0 | gzip failed or timed out (journalctl=${rc_j} gzip=${rc_g})"
+	printf 'journalctl -b0 | gzip failed or timed out (journalctl=%s gzip=%s); output may be truncated\n' \
+		"$rc_j" "$rc_g" >"${d}/failed.txt"
+}
+
 collect_network_ifconfig()
 {
 	local d=$1
@@ -444,19 +499,25 @@ collect_i2c_non_mux()
 	done
 }
 
-# Run a collector in a background subshell; log start/end and wall time (journal + stderr).
+# Run a collector in a background subshell; log start/end and elapsed time (journal + stderr).
 run_collect_bg()
 {
 	local name=$1
 	shift
 
 	(
-		local t0=$SECONDS rc elapsed
+		local t0 rc elapsed now
 
+		t0=$(_uptime_sec)
 		log_message info "collect ${name}: start"
 		"$@"
 		rc=$?
-		elapsed=$((SECONDS - t0))
+		now=$(_uptime_sec)
+		if [ -n "$t0" ] && [ -n "$now" ]; then
+			elapsed=$((now - t0))
+		else
+			elapsed="?"
+		fi
 		if [ "$rc" -eq 0 ]; then
 			log_message info "collect ${name}: end (${elapsed}s)"
 		else
@@ -475,6 +536,7 @@ uname -a >"${DUMP_FOLDER}/uname.txt" 2>&1
 
 timeout 20 dmesg >"${DUMP_FOLDER}/dmesg.txt" 2>&1 || log_message warning "dmesg failed or timed out"
 
+run_collect_bg journalctl_boot collect_journalctl_boot "${DUMP_FOLDER}/journal"
 run_collect_bg proc_interrupts collect_proc_interrupts "${DUMP_FOLDER}/proc"
 run_collect_bg network_ifconfig collect_network_ifconfig "${DUMP_FOLDER}/network"
 run_collect_bg i2c_non_mux collect_i2c_non_mux "${DUMP_FOLDER}/i2c"
@@ -500,7 +562,7 @@ if ! command -v gzip >/dev/null 2>&1; then
 	rm -rf "$DUMP_FOLDER"
 	exit 1
 fi
-archive_t0=$SECONDS
+archive_t0=$(_uptime_sec)
 log_message info "archive: start"
 set -o pipefail 2>/dev/null || true
 if ! tar cf - -C "$DUMP_FOLDER" . | gzip -9 >"$OUTPUT_TAR"; then
@@ -509,7 +571,12 @@ if ! tar cf - -C "$DUMP_FOLDER" . | gzip -9 >"$OUTPUT_TAR"; then
 	exit 1
 fi
 set +o pipefail 2>/dev/null || true
-log_message info "archive: end ($((SECONDS - archive_t0))s)"
+archive_now=$(_uptime_sec)
+if [ -n "$archive_t0" ] && [ -n "$archive_now" ]; then
+	log_message info "archive: end ($((archive_now - archive_t0))s)"
+else
+	log_message info "archive: end"
+fi
 
 rm -rf "$DUMP_FOLDER"
 log_message info "BMC dump created: $OUTPUT_TAR"

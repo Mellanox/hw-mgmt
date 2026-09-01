@@ -67,8 +67,20 @@ if check_simx && [ "$product_sku" == "HI181" ]; then
 fi
 
 #TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI183" ]; then
+	echo "SN6810_LD emulation, exiting"
+	exit 0
+fi
+
+#TEMPORARY hw-management mockup values for simx
 if check_simx && [ "$product_sku" == "HI185" ]; then
 	echo "N6300_LD emulation, exiting"
+	exit 0
+fi
+
+#TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI187" ]; then
+	echo "SN6800_LD emulation, exiting"
 	exit 0
 fi
 
@@ -80,7 +92,25 @@ fi
 	
 #TEMPORARY hw-management mockup values for simx
 if check_simx && [ "$product_sku" == "HI194" ]; then
-	echo "SN7170_LD emulation, exiting"
+	echo "N7200_LD emulation, exiting"
+	exit 0
+fi
+
+#TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI199" ]; then
+	echo "N7300_LD emulation, exiting"
+	exit 0
+fi
+
+#TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI200" ]; then
+	echo "N7400_LD emulation, exiting"
+	exit 0
+fi
+
+#TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI201" ]; then
+	echo "N8100_LD emulation, exiting"
 	exit 0
 fi
 

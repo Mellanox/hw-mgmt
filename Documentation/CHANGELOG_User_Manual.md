@@ -1,11 +1,86 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** June 3, 2026
+**Last Updated:** August 26, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.9 - August 26, 2026
+
+#### Added: Cable cartridge FRU validity
+
+**Affected platforms:** N51XX_LD and N61XX_LD (VMOD0021, VMOD0023). Other platforms with cable cartridge EEPROMs parse them through a different path and are unaffected.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.1.61 | **`config/cable_cartridge<n>_valid`**: `1` FRU valid, `0` FRU invalid, absent when the check did not run or the cartridge was removed |
+
+**Validation source:** `usr/usr/bin/hw-management-chassis-events.sh`
+(`validate_cartridge_fru()`).
+
+---
+
+### Rev. 3.2.8 - August 25, 2026
+
+#### Added: LED software/hardware control owner
+
+**Affected platforms:** All host platforms (default `led_hw_sw`).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.1.60 | **`config/led_control_type`**: optional space-separated `name type` pairs from platform `*_specific()`; exact name or `led_<name>`; glob masks `*` / `?` |
+| §3.16.28 | **`led/led_<name>_control`**: `led_sw`, `led_hw`, or `led_hw_sw` (default if map missing or name unmatched). `fan` and `fan1` are distinct names |
+
+**Validation source:** `usr/usr/bin/hw-management.sh` (`set_config_data()`),
+`usr/usr/bin/hw-management-chassis-events.sh` (`get_led_control_type()`),
+`usr/usr/bin/hw-management-helpers.sh` (`LED_CONTROL_*`).
+
+---
+
+### Rev. 3.2.7 - August 17, 2026
+
+#### Clarified: `system/asic_pg_fail` platform exception
+
+**Affected platforms:** SN6600_LD (HI193), SN6800_LD (HI187/HI188), SN6810_LD (HI183).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.18.54 | **`system/asic_pg_fail`**: noted that this API does not exist on SN6600_LD, SN6800_LD, and SN6810_LD; removed SN66XX_LD from the applicability note |
+
+---
+
+### Rev. 3.2.6 - June 30, 2026
+
+#### Added: V.7.0070.1000 sysfs and platform documentation
+
+**Affected platforms:** SN6600_LD (HI193); N6300_LD (HI185); AST2700 BMC stack (HI189); N7200_LD virtual (HI194, SimX only); N7300_LD virtual (HI199, SimX only); N7400_LD virtual (HI200, SimX only).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §2.2 | BMC peripheral table: `leakage/<N>/<j>/…` tree, `$bsp_path/bmc/` reset-cause subtree; example `hw-management-bmc-leakage-sysfs.txt` |
+| §3.1.59 | **`config/pdb_hotswap_scale`** (SN6600_LD, value 5.333) |
+| §3.4 | **`environment/pdb_hotswap<N>_power1_scale`** and **`_curr1_scale`** (lm5066i only) |
+| §3.18 | **`cpu_shutdown_req`**: hw-mgmt polls this node via `hw_management_platform_config.py` (HI176–HI185, …) |
+| §3.24 | **BMC reset cause** (AST2700): primary `reset_pwr_cycle` / `reset_soft_reboot` / `reset_unknown`; `bmc/domains/reset_*`; raw SCU logs |
+| §3.25 | **BMC leakage A2D tree** under `$bsp_path/leakage/` (ADS1015, ADS7924, MAX1363 per JSON) |
+| N61XX_LD notes | Extended cartridge / PDB / leakage applicability to **N6300_LD** (HI185): `cartridge_counter`=4, `hotplug_pdbs`=2, `cpld_num`=3 |
+
+**Validation source:** `bmc/usr/usr/bin/hw-management-bmc-get-reset-cause.sh`,
+`bmc/examples/hw-management-bmc-leakage-sysfs.txt`, `usr/usr/bin/hw-management.sh` (HI185, HI193),
+`usr/usr/bin/hw-management-chassis-events.sh`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`,
+`usr/usr/bin/hw_management_platform_config.py`.
+
+---
 
 ### Rev. 3.2.5 - June 3, 2026
 
@@ -20,7 +95,7 @@
 | §3.20 | **Stack: BMC** tags on BMC ambient/crit/min; host CPU thermal on BMC stack cross-refs |
 | §3.23.1–§3.23.5 | BMC status section bodies: `bmc_present`, `bmc_to_cpu_ctrl`, MCTP config/ready |
 
-**Validation source:** `bmc/usr/etc/HI189/5-hw-management-bmc-events.rules`, `tests/system_tree/hw-management-tree-SN6600_LD.txt`.
+**Validation source:** `bmc/usr/etc/HI189/5-hw-management-bmc-events.rules`, `bmc/examples/hw-management-bmc-system-sysfs.txt`.
 
 ---
 
@@ -68,7 +143,7 @@
 | `bmc/examples/HIxxx/examples/` | Template for per-HID example layout on new platforms |
 | `bmc/examples/HIxxx/examples/` | Template for next HID |
 
-**Validation source:** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`, `tests/system_tree/` thermal nodes.
+**Validation source:** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`, `bmc/examples/hw-management-bmc-thermal-sysfs.txt`.
 
 ---
 
@@ -94,19 +169,19 @@ SN6600 BMC ambient sensor on I2C `4-0048`, `lm75` driver).
 
 ### Rev. 3.2.1 - May 31, 2026
 
-#### Fixed: Juliet (N51XX_LD) reset-cause documentation (#5014001)
+#### Fixed: N51XX_LD reset-cause documentation (#5014001)
 
-**Affected platforms:** Juliet platform family (N51XX_LD), including GB200 systems such as N5110_LD and N5500_LD.
+**Affected platforms:** N51XX_LD platform family, including GB200 systems such as N5110_LD and N5500_LD.
 
 **Overview:**  
-Aligned the user manual with Juliet CPLD-supported reset causes. The following are not supported by the Juliet CPLD and must not be documented as available sysfs attributes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios`.
+Aligned the user manual with N51XX_LD CPLD-supported reset causes. The following are not supported by the N51XX_LD CPLD and must not be documented as available sysfs attributes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios`.
 
 **User manual updates:**
 
 | Area | Change |
 |------|--------|
-| Get Reset Cause (3.18.39) | Added Juliet platform family table with 22 supported reset causes |
-| Get Reset Cause (3.18.39) | Documented unsupported legacy causes for Juliet |
+| Get Reset Cause (3.18.39) | Added N51XX_LD platform family table with 22 supported reset causes |
+| Get Reset Cause (3.18.39) | Documented unsupported legacy causes for N51XX_LD |
 | Config | Referenced `reset_attr_num` = 22 for N51XX_LD |
 
 **Validation source:**
@@ -134,12 +209,6 @@ SODIMM JC42 sensors at **0x52** and **0x53** on I2C bus **10**, PDB events
 how `config/leakage_counter` (**2**) relates to optional extra `system/leakage*`
 symlinks in the validated tree.
 
-**New file:**
-
-| File | Description |
-|------|-------------|
-| `Documentation/SN6600_LD_Hardware_Interfaces.md` | Hardware sysfs and sensors reference |
-
 **User manual updates (cross-cutting):**
 
 | Area | Change |
@@ -153,8 +222,8 @@ symlinks in the validated tree.
 
 **Validation source:**
 
-- `tests/system_tree/hw-management-tree-SN6600_LD.txt`
 - `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`
+- `usr/usr/bin/hw-management.sh` (`sn66xxld_specific`)
 
 ---
 
