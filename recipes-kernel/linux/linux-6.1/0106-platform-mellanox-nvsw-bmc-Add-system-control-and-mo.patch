@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+From 31fee0781e6497a0d15fb628282ecf2369ae4f20 Mon Sep 17 00:00:00 2001
+=======
 From 7445eb5c1db30f58ab76d2ed1e3c9b5ca44807fc Mon Sep 17 00:00:00 2001
+>>>>>>> master
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +29,15 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  736 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  944 ++++++
+<<<<<<< HEAD
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  853 +++++
+ drivers/platform/mellanox/nvsw.h              |  298 ++
+ 9 files changed, 6403 insertions(+), 4 deletions(-)
+=======
  drivers/platform/mellanox/nvsw-host-spc6.c    |  913 ++++++
  drivers/platform/mellanox/nvsw.h              |  301 ++
  9 files changed, 6466 insertions(+), 4 deletions(-)
+>>>>>>> master
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
