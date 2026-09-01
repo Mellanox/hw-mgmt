@@ -5160,7 +5160,8 @@ echo 1 > $bsp_path/system/power_down
 On liquid-cooled platforms where `hw_management_platform_config.py` defines a monitor entry,
 hw-mgmt polls this node (not `events/graceful_pwr_off`) and invokes `run_power_button_event` when
 the value changes. Platforms with this entry in the current tree include HI162, HI166–HI170, HI176,
-HI177, HI180, HI185 (N6300_LD), and others listed in `PLATFORM_CONFIG`.
+HI177, HI180, HI181, HI182, HI183, HI185 (N6300_LD), HI187, HI188, HI193 (SN6600_LD),
+and others listed in `PLATFORM_CONFIG`.
 
 **Access:** Read/Write
 

@@ -608,15 +608,16 @@ CLI tool for host and board power transitions on SONiC BMC. It drives **mlxreg-i
 | Command | Effect |
 |---------|--------|
 | **`power_on`** | Clears **`pwr_down`**, optional **`pwr_button_halt`**, clears **`bmc_to_cpu_ctrl`**; intended host on path. |
-| **`power_off`** | Sets **`pwr_down`**, clears **`uart_sel`**, sets **`bmc_to_cpu_ctrl`**; immediate host off. |
-| **`reset`** | Sets **`pwr_cycle`**; immediate host power cycle. |
+| **`power_off`** | **`wait_for_cpu_shutdown`** with **`REBOOT_TO`** (default **5**; **`HW_MGMT_BMC_REBOOT_TO=0`** skips), then sets **`pwr_down`**, clears **`uart_sel`**, sets **`bmc_to_cpu_ctrl`**. |
+| **`reset`** | Same **`REBOOT_TO`** wait, then sets **`pwr_cycle`**. |
 | **`reset_board`** | Runs **`wait_for_cpu_shutdown`** (see below), then sets **`aux_pwr_cycle`** (board-level cycle after host shutdown handshake). If **`/var/reset_bypass`** exists, logs “Power Cycle Bypass Board” semantics; otherwise “Power Cycle Board”. |
 | **`grace_off`** | If **`/var/grace_reset_bypass`** exists, removes it and skips graceful off (calls **`set_requested_host_transition`** stub). Otherwise **`wait_for_cpu_shutdown`**, then **`pwr_down`**, **`uart_sel`** clear, host off. |
 | **`grace_reset`** | **`wait_for_cpu_shutdown`**, then **`pwr_cycle`**. |
 
 **Shared behavior**
 
-- **`wait_for_cpu_shutdown`**: writes **`graceful_power_off`**, then polls **`cpu_power_off_ready`** once per second, up to **`RETRIES`** (20). Proceeds when the attribute reads **`1`** or the retry limit is hit.
+- **`wait_for_cpu_shutdown`**: pulses **`graceful_power_off`** (clear, 1 s, assert) so the host 1 Hz **`cpu_shutdown_req`** poll sees a new 0->1 edge, clears **`cpu_power_off_ready`**, then polls ready once per second. After ready or timeout, clears request and ready again. Graceful commands use **`RETRIES`** (20); forced **`power_off`/`reset`** use **`REBOOT_TO`** (default 5). Proceeds when the attribute reads **`1`** or the retry limit is hit.
+- **Host handshake**: the host package runs **`hw-management-bmc-nvme-ready.sh`** on **`cpu_shutdown_req`** (peripheral-updater / chassis-events). Peripheral-updater polls that node when **`hw_management_platform_config.py`** lists it (including HI180, HI181, HI182/HI187/HI188, HI185, HI193/HI183). It flushes NVMe namespaces and then asserts **`cpu_power_off_ready`**. **`sync`** / **`blockdev --flushbufs`** are wrapped in **`timeout`** (default **3** seconds, **`HW_MGMT_BMC_NVME_FLUSH_TIMEOUT_SECS`**). Flush or timeout failure does **not** assert ready; this BMC wait then expires and power proceeds. A per-run generation plus a timed **`flock`** prevents a background helper from acking a later BMC wait with an earlier flush.
 - **Sysfs paths** are always under the resolved **`hwmon`** directory; attribute names include **`pwr_down`**, **`pwr_button_halt`**, **`bmc_to_cpu_ctrl`**, **`uart_sel`**, **`pwr_cycle`**, **`aux_pwr_cycle`**, **`graceful_power_off`**, **`cpu_power_off_ready`**.
 
 ## Source mapping (OpenBMC → bmc/)
