@@ -74,6 +74,7 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
 			 "vdd_cpu_alert" "vddq_alert")
 l1_power_events=("power_button graceful_pwr_off")
+n7xxx_power_events=("graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
@@ -336,7 +337,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI178" ] ||
         [ "$ui_tree_sku" = "HI179" ] ||
         [ "$ui_tree_sku" = "HI180" ] ||
-        [ "$ui_tree_sku" = "HI185" ]; then
+        [ "$ui_tree_sku" = "HI185" ] ||
+        [ "$ui_tree_sku" = "HI194" ]; then
         ui_tree_archive_file="$(get_ui_tree_archive_file)"
         if [ ! -e "$ui_tree_archive_file" ]; then
             return 0
@@ -406,7 +408,7 @@ consume_tc_saved_state()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193|HI194)
 			return 0
 			;;
 

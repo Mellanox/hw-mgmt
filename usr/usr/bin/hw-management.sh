@@ -109,6 +109,7 @@ spc6_pci_id=cf84
 quantum2_pci_id=d2f2
 quantum3_pci_id=d2f4
 quantum4_pci_id=d2f8
+quantum5_pci_id=d2fa
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
@@ -129,6 +130,7 @@ sn58xx_reset_attr_num=15
 sn66xx_reset_attr_num=14
 sn68xx_reset_attr_num=14
 n61xx_reset_attr_num=17
+n7xxx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
 
@@ -2743,6 +2745,42 @@ n61xxld_specific()
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
+n7xxxld_specific()
+{
+	case $sku in
+	# N7200_LD
+	HI194)
+		asic_i2c_buses=(4 20 36 52)
+		cpld_num=3
+		;;
+	esac
+
+	psu_count=0
+	erot_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	hotplug_pdbs=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	pwr_events_count=1
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	lm_sensors_labels="$lm_sensors_configs_path/n7xxxld_sensors_labels.json"
+	lm_sensors_config="$lm_sensors_configs_path/n7xxxld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	echo 0 > $config_path/cartridge_counter
+	echo 0 > $config_path/i2c_bus_offset
+	echo -n "${n7xxx_power_events[@]}" > "$power_events_file"
+	echo "$n7xxx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
 sn5640_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
@@ -3047,6 +3085,9 @@ check_system_internal()
 			;;
 		VMOD0025)
 			sn66xxld_specific
+			;;
+		VMOD0026)
+			n7xxxld_specific
 			;;
 		VMOD0027)
 			sn68xxld_specific
@@ -3572,6 +3613,9 @@ set_asic_pci_id()
 		;;
 	HI183|HI187|HI188)
 		asic_pci_id="${spc6_pci_id}"
+		;;
+	HI194)
+		asic_pci_id="${quantum3_pci_id}|${quantum5_pci_id}"
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num

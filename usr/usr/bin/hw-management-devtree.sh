@@ -113,6 +113,7 @@ declare -A pwr_conv_arr=( \
 	["d"]="raa228000" \
 	["e"]="mp29502" \
 	["f"]="raa228004" \
+	["g"]="xdpe1a2g7" \
 )
 
 declare -A hotswap_arr=( \
