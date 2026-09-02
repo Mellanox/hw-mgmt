@@ -1,0 +1,20 @@
+{
+  "defaults": {
+    "timeout_sec": 120,
+    "gzip": true,
+    "gzip_level": 5,
+    "min_free_mb": 64
+  },
+  "vendors": {
+    "Virtium": {
+      "models": {
+        "VTPM24CEXI080-BM110006": {
+          "tool": "vtFA_RTK_5766_v2",
+          "args": ["{device}"],
+          "device_form": "controller",
+          "timeout_sec": 90
+        }
+      }
+    }
+  }
+}
