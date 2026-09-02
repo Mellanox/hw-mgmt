@@ -1,11 +1,25 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** August 26, 2026
+**Last Updated:** September 1, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.10 - September 1, 2026
+
+#### Clarified: N51XX_LD unsupported reset causes (#5231641)
+
+**Affected platforms:** N51XX_LD platform family, including N5500_LD (GB300).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.18.39 | **N51XX_LD platform family**: added `reset_comex_wd` and `reset_from_comex` to the unsupported reset causes |
+
+---
 
 ### Rev. 3.2.9 - August 26, 2026
 
