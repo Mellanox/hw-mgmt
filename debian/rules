@@ -66,6 +66,8 @@ endif
 	cp -a usr/etc/hw-management-virtual/* debian/$(pname)/etc/hw-management-virtual
 	dh_installdirs -p$(pname) etc/hw-management-fast-sysfs-monitor
 	cp -a usr/etc/hw-management-fast-sysfs-monitor/* debian/$(pname)/etc/hw-management-fast-sysfs-monitor
+	dh_installdirs -p$(pname) etc/hw-management-ssd
+	cp -a usr/etc/hw-management-ssd/* debian/$(pname)/etc/hw-management-ssd
 	@if [ -d usr/etc/hw-management-exec ] && [ -n "$$(find usr/etc/hw-management-exec -maxdepth 1 -type f 2>/dev/null | head -n1)" ]; then \
 		dh_installdirs -p$(pname) etc/hw-management-exec; \
 		cp -a usr/etc/hw-management-exec/* debian/$(pname)/etc/hw-management-exec/; \
