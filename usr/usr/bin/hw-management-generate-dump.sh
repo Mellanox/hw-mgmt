@@ -37,6 +37,7 @@
 
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
+SSD_LOG_DIR="/var/log/ssd-dump"
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
 REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
@@ -127,6 +128,12 @@ dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
+
+# SSD vendor dump. Recreate $SSD_LOG_DIR; copy as ssd-dump/,
+# then remove $SSD_LOG_DIR (Python --no-tar; no nested gzip).
+# Extra logic is in hw-management-ssd-dump-collect.sh (dump_cmd).
+dump_cmd "hw-management-ssd-dump-collect.sh $DUMP_FOLDER $SSD_LOG_DIR" \
+	"ssd-dump-collect.log" "210"
 
 # Kill all the leftout child processes before creating the dump archive
 pkill -P $dump_process_pid
