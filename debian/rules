@@ -46,6 +46,11 @@ ifeq ($(with_host),1)
 	cp usr/usr/local/bin/* debian/$(pname)/usr/local/bin
 	dh_installdirs -p$(pname) etc/logrotate.d
 	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
+	dh_installdirs -p$(pname) etc/default
+	cp usr/etc/default/hw-management-nvme-shutdown debian/$(pname)/etc/default/
+	dh_installdirs -p$(pname) lib/systemd/system-shutdown
+	install -m 755 usr/usr/bin/hw-management-nvme-shutdown-hook.sh \
+		debian/$(pname)/lib/systemd/system-shutdown/hw-management-nvme-shutdown
 	dh_installdirs -p$(pname) etc/bash_completion.d
 	cp usr/etc/bash_completion.d/* debian/$(pname)/etc/bash_completion.d
 ifeq ($(DEB_HOST_ARCH),arm64)
