@@ -1032,36 +1032,101 @@ get_asic_mlxreg_dev()
 	return 1
 }
 
+# True for Spectrum-1 chassis (mlxsw_minimal I2C ASIC). Matches check_system().
+is_spc1_system()
+{
+	local bt product cpu
+
+	[ -f "$board_type_file" ] && bt=$(< "$board_type_file") || bt="Unknown"
+	case $bt in
+	VMOD0001|VMOD0002|VMOD0003|VMOD0004|VMOD0009|VMOD0014)
+		return 0
+		;;
+	esac
+
+	[ -f "$pn_file" ] && product=$(< "$pn_file") || product=""
+	case $product in
+	MSN27002|MSB78002|MSN24102|MSN274*|MSN21*|MSN24*|MSN27*|MSB*|MSX*|MSN201*|SN2201*)
+		return 0
+		;;
+	esac
+
+	if [ -f "$config_path/cpu_type" ] && \
+	   grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor 2>/dev/null; then
+		cpu=$(< "$config_path/cpu_type")
+		case $cpu in
+		"$IVB_CPU"|"$RNG_CPU")
+			return 0
+			;;
+		esac
+	fi
+	return 1
+}
+
+# Read a mlxreg-io reset_* attribute from $system_path or the hwmon source.
+# Chipup can race regio udev linking into $system_path.
+_hw_mgmt_reset_attr_is_set()
+{
+	local name="$1"
+	local f
+
+	if [ -e "$system_path/$name" ] && \
+	   [ "$(cat "$system_path/$name" 2>/dev/null)" = "1" ]; then
+		return 0
+	fi
+
+	for f in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/"$name"; do
+		[ -e "$f" ] || continue
+		if [ "$(cat "$f" 2>/dev/null)" = "1" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Cold power-cycle: recovery is another reboot, not MFSC PWM.
+# Warm reboot: COMEX/CPU reset (Linux reboot) or reset_platform.
+is_spc1_warm_reboot()
+{
+	local cold
+
+	is_spc1_system || return 1
+
+	for cold in reset_aux_pwr_or_ref reset_aux_pwr_or_fu \
+		    reset_aux_pwr_or_reload reset_long_pb reset_long_pwr_pb \
+		    reset_ac_pwr_fail; do
+		if _hw_mgmt_reset_attr_is_set "$cold"; then
+			return 1
+		fi
+	done
+
+	_hw_mgmt_reset_attr_is_set reset_from_comex && return 0
+	_hw_mgmt_reset_attr_is_set reset_platform && return 0
+	return 1
+}
+
 # After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
-# typically missing, so thermal control never latches emergency and never
-# calls write_pwm_mlxreg(). Force PWM 100% here:
-# - thermal/pwm1 if it still exists (CPLD or leftover ASIC hwmon)
-# - otherwise MFSC via mlxreg for the failed ASIC when tc_config enables
-#   ASIC PWM control
+# not created (SPC1 PWM comes from ASIC hwmon). Thermal control never
+# latches emergency and never calls write_pwm_mlxreg(), so ASIC PWM stays
+# at the HW default (~60%). Program MFSC via mlxreg for the failed ASIC.
+# Scope: SPC1 after a warm (COMEX/CPU) reboot only. Cold reboot recovery
+# is another reboot; other platforms must not get these register writes.
 # $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
 # $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
 set_asic_pwm_full_speed_on_chipup_fail()
 {
 	local asic_index
 	local explicit_dev="$2"
-	local pwm_link="$thermal_path/pwm1"
-	local tc_cfg="$config_path/tc_config.json"
 	local mt_dev=""
 	local mlxreg_rc=0
 	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
 
-	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
-
-	if [ -e "$pwm_link" ]; then
-		echo 255 > "$pwm_link"
-		log_info "Set PWM to maximum speed via sysfs after chipup failure."
-		return 0
-	fi
-
-	if [ ! -f "$tc_cfg" ] || ! grep -q '"pwm_control"[[:space:]]*:[[:space:]]*true' "$tc_cfg"; then
-		log_info "Chipup failed and PWM sysfs is missing; ASIC PWM control is not configured."
+	if ! is_spc1_warm_reboot; then
+		log_info "Skip PWM fallback after chipup failure: not SPC1 warm reboot."
 		return 1
 	fi
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
 
 	if ! command -v mlxreg >/dev/null 2>&1; then
 		log_err "mlxreg is not available; cannot set PWM after chipup failure."
