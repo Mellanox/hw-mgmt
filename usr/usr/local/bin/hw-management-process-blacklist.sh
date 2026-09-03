@@ -101,6 +101,10 @@ process_blacklist()
 
 		# Ensure Designware I2C driver is loaded early
 		add_module_at_beginning "i2c_designware_platform" "$MODULE_LOAD_FILE"
+
+		if [ "$SKU" == "HI198" ]; then
+			ensure_line_exists "blacklist thunderbolt" "$BLACKLIST_FILE"
+		fi
 		;;
 	HI176)
 		# Blacklist Designware, ASF I2C controller drivers and ipmi
