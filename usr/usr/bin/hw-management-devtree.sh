@@ -1537,7 +1537,8 @@ devtr_check_board_components()
 	local board_str=$1
 	local board_num=1
 	local board_bus_offset=0
-	local board_pdb_bus_offset=
+	local board_hotswap_bus_offset=
+	local board_pwr_conv_bus_offset=
 	local board_vr_num=
 	local board_pwr_conv_num=
 	local board_hotswap_num=
@@ -1545,6 +1546,7 @@ devtr_check_board_components()
 	local board_name_pfx=
 	local board_type=static
 #	local board_addr_offset=0
+	local comp_bus_offset=0
 	local comp_arr
 
 	case $cpu_type in
@@ -1585,11 +1587,23 @@ devtr_check_board_components()
 			if [ -e "$config_path"/swb_brd_bus_offset ]; then
 				board_bus_offset=$(< $config_path/swb_brd_bus_offset)
 			fi
-			if [ -e "$config_path"/swb_brd_pdb_bus_offset ]; then
-				board_pdb_bus_offset=$(< $config_path/swb_brd_pdb_bus_offset)
+			# Hot-swap and power converter devices can be spread over the
+			# switch board busses with their own offsets, different from the
+			# switch board bus offset (e.g on HI194).
+			if [ -e "$config_path"/swb_brd_hotswap_bus_offset ]; then
+				board_hotswap_bus_offset=$(< $config_path/swb_brd_hotswap_bus_offset)
+			fi
+			if [ -e "$config_path"/swb_brd_pwr_conv_bus_offset ]; then
+				board_pwr_conv_bus_offset=$(< $config_path/swb_brd_pwr_conv_bus_offset)
 			fi
 			if [ -e "$config_path"/swb_brd_vr_num ]; then
 				board_vr_num=$(< $config_path/swb_brd_vr_num)
+			fi
+			if [ -e "$config_path"/swb_brd_pwr_conv_num ]; then
+				board_pwr_conv_num=$(< $config_path/swb_brd_pwr_conv_num)
+			fi
+			if [ -e "$config_path"/swb_brd_hotswap_num ]; then
+				board_hotswap_num=$(< $config_path/swb_brd_hotswap_num)
 			fi
 			for key in "${!swb_alternatives[@]}"; do
 				board_alternatives["$key"]="${swb_alternatives["$key"]}"
@@ -1861,14 +1875,11 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${o_cnt}"
 				# Q3450 system has 2 switch boards, each with 1 power converter
 				# SN5800 system has 4 power boards, each with 1 power converter
+				comp_bus_offset=${board_pwr_conv_bus_offset:-$board_bus_offset}
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					if [ $board_bus_offset -ne 0 ]; then
-						if [ ! -z "$board_pdb_bus_offset" ]; then
-							curr_component[2]=$((curr_component[2]+board_pdb_bus_offset*brd))
-						else
-							curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						fi
+					if [ $comp_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+comp_bus_offset*brd))
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_pwr_conv_num}" ]; then
@@ -1911,14 +1922,11 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${h_cnt}"
 				# Q3450 system has 2 switch boards, each with 1 hot-swap controller
 				# SN5800 system has 4 power boards, each with 1 hot-swap controller
+				comp_bus_offset=${board_hotswap_bus_offset:-$board_bus_offset}
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					if [ $board_bus_offset -ne 0 ]; then
-						if [ ! -z "$board_pdb_bus_offset" ]; then
-							curr_component[2]=$((curr_component[2]+board_pdb_bus_offset*brd))
-						else
-							curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						fi
+					if [ $comp_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+comp_bus_offset*brd))
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_hotswap_num}" ]; then

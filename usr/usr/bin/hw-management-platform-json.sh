@@ -116,8 +116,11 @@ PLATFORM_JSON_BOARD_NUMERIC_KEYS=(
 	pwr_brd_pwr_conv_num
 	pwr_brd_temp_sens_num
 	swb_brd_bus_offset
+	swb_brd_hotswap_bus_offset
+	swb_brd_hotswap_num
 	swb_brd_num
-	swb_brd_pdb_bus_offset
+	swb_brd_pwr_conv_bus_offset
+	swb_brd_pwr_conv_num
 	swb_brd_vr_num
 )
 

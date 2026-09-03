@@ -3900,7 +3900,8 @@ pre_devtr_init()
 		HI175|HI178)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
-			echo 1 > "$config_path"/swb_brd_pdb_bus_offset
+			echo 1 > "$config_path"/swb_brd_hotswap_bus_offset
+			echo 1 > "$config_path"/swb_brd_pwr_conv_bus_offset
 			;;
 		HI179)
 			echo 2 > "$config_path"/swb_brd_num
@@ -3970,6 +3971,18 @@ pre_devtr_init()
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
 			echo 1 >  "$config_path"/pwr_brd_hotswap_num
 			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		esac
+		;;
+	VMOD0026)
+		case $sku in
+		HI194)
+			echo 2 > "$config_path"/swb_brd_num
+			echo 3 > "$config_path"/swb_brd_vr_num
+			echo 1 > "$config_path"/swb_brd_pwr_conv_num
+			echo 1 > "$config_path"/swb_brd_hotswap_num
+			echo 16 > "$config_path"/swb_brd_hotswap_bus_offset
+			echo 32 > "$config_path"/swb_brd_pwr_conv_bus_offset
 			;;
 		esac
 		;;
