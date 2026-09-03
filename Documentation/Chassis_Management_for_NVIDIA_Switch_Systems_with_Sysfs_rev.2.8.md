@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 2.8.1
+Rev. 2.8.2
 
 ## Table of Contents
 
@@ -400,6 +400,7 @@ Rev. 2.8.1
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 2.8.2 | September 2026 | Juliet platform family (N51XX_LD) unsupported reset causes: added `reset_comex_wd` and `reset_from_comex` |
 | 2.8.1 | May 2026 | Replaced PDF with markdown (#5014001)<br>• Corrected Juliet platform family (N51XX_LD) reset-cause list per CPLD support<br>• Documented 22 supported reset causes; removed unsupported: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 2.8 | April 2024 | Added temperature, BMC and power related attributes (PDF release) |
 | 2.6 | July 1st 2024 | Added DPU related attributes |
@@ -5302,7 +5303,7 @@ cat $bsp_path/system/reset_cause
 
 #### Juliet platform family (N51XX_LD)
 
-Per CPLD design, Juliet platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, or `reset_reload_bios`. Those attributes must not be documented or tested as available on Juliet systems.
+Juliet platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_comex_wd`, `reset_from_asic`, `reset_from_comex`, or `reset_reload_bios`.
 
 Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
 
