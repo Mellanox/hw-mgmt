@@ -604,6 +604,7 @@ function handle_hotplug_dpu_event()
     local attribute
     local dpu_event_path
 
+    print_function_call "$0" "${FUNCNAME[0]}" "attr:$1 evt:$2"
     attribute=$(echo "$1" | awk '{print tolower($0)}')
     event=$2
     dpu_i2c_path=$(echo "$3""$4" | rev | cut -d'/' -f4- | rev)
@@ -628,6 +629,7 @@ function handle_hotplug_psu_event()
 	local psu_is_dummy
 	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
 
+	print_function_call "$0" "${FUNCNAME[0]}" "psu:$psu_name evt:$event"
 	psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
 	if [ ${dummy_psus_supported} -eq 1 ]; then
 		if [ $event -eq 1 ]; then
@@ -635,6 +637,8 @@ function handle_hotplug_psu_event()
 			psu_addr=$(< "${config_path}/${psu_name}_i2c_addr")
 			psu_bus=$(< "${config_path}/${psu_name}_i2c_bus")
 			if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"psu:$psu_name skip missing bus/addr"
 				return
 			fi
 			# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming
@@ -649,6 +653,8 @@ function handle_hotplug_psu_event()
 				sleep 1
 			done
 			if [ ${psu_is_dummy} -eq 1 ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"psu:$psu_name marked dummy bus:$psu_bus addr:$psu_addr"
 				touch ${config_path}/${psu_name}_is_dummy
 			fi
 		else
@@ -720,6 +726,7 @@ function handle_hotplug_event()
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
 
+	print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event"
 	if [ -f "$events_path"/"$attribute" ]; then
 		echo "$event" > "$events_path"/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
@@ -1057,18 +1064,22 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		# Get i2c voltmon prefix.
 		prefix=$(get_i2c_busdev_name "$2" "$4")
+		print_function_call "$0" "add" "voltmon $2 prefix:$prefix"
 		if [[ $prefix == "undefined" ]] && [[ $5 != "dpu" ]];
 		then
+			print_function_call "$0" "add" "voltmon skip undefined $2 $4"
 			exit
 		fi
 		# ignore sensors started with "psu"
 		if [[ "$prefix" == "psu"* ]]; then
+			print_function_call "$0" "add" "voltmon skip psu prefix:$prefix"
 			exit
 		fi
 		# Voltmon MUST have at least one input.
 		# Filtering device that doesn't have it.
 		if [ ! -f "$3""$4"/in1_input ]; 
 		then
+			print_function_call "$0" "add" "voltmon skip no in1_input prefix:$prefix"
 			exit
 		fi
 
@@ -1268,6 +1279,7 @@ if [ "$1" == "add" ]; then
 		# In newer switches the LED color is amber. This is a workaround
 		# to avoid driver changes.
 		color=$(echo "$5" | cut -d':' -f3)
+		print_function_call "$0" "add" "led name:$name color:$color"
 		if [ "$color" == "orange" ]; then
 			color="amber"
 		fi
@@ -1291,6 +1303,7 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
+		print_function_call "$0" "add" "regio $3$4"
 		reset_attr_num=$(< $config_path/reset_attr_num)
 		reset_attrr_count=0
 		linecard=0
@@ -1389,6 +1402,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -f "$3""$4"/eeprom ]; then
 			exit
 		fi
+		print_function_call "$0" "add" "eeprom $3$4"
 		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -1405,6 +1419,7 @@ if [ "$1" == "add" ]; then
 		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 		eeprom_name=$(find_eeprom_name "$bus" "$addr" "$parentbus" "$input_bus_num")
+		print_function_call "$0" "add" "eeprom name:$eeprom_name bus:$bus addr:$addr"
 		if [ -d "$driver_dir" ]; then
 			driver_name=$(< "$driver_dir"/name)
 			if [ "$driver_name" == "mlxreg-lc" ]; then
@@ -1496,10 +1511,12 @@ if [ "$1" == "add" ]; then
 		esac
 	fi
 	if [ "$2" == "cpld" ]; then
+		print_function_call "$0" "add" "cpld $3$4"
 		asic_cpld_add_handler "${3}${4}"
 	fi
 	if [ "$2" == "watchdog" ]; then
 		wd_type=$(< "$3""$4"/identity)
+		print_function_call "$0" "add" "watchdog $wd_type"
 		case $wd_type in
 			mlx-wdt-*)
 				wd_sub="$(echo "$wd_type" | cut -c 9-)"
@@ -1522,6 +1539,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Creating dpu folders hierarchy upon dpu udev add event.
 	if [ "$2" == "dpu" ]; then
+		print_function_call "$0" "add" "dpu $3$4"
 		case $dmi_sku in
 		HI160)
 			slot_num=$(find_dpu_slot "$3$4")
@@ -1541,6 +1559,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then
+		print_function_call "$0" "add" "linecard $3$4"
 		input_bus_num=$(echo "$3""$4" | xargs basename | cut -d"-" -f1)
 		find_linecard_num "$input_bus_num"
 		if [ ! -d "$hw_management_path"/lc"$linecard_num" ]; then
@@ -1559,6 +1578,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Create i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
+		print_function_call "$0" "add" "i2c_bus $4"
 		log_info "I2C bus $4 connected."
 		handle_i2cbus_dev_action $4 "add"
 	fi
@@ -1767,6 +1787,7 @@ else
 		rm -f $led_path/led_"$name"_control
 	fi
 	if [ "$2" == "regio" ]; then
+		print_function_call "$0" "remove" "regio $3$4"
 		# Detect if it belongs to line card or to main board or to dpu.
 		# For main board dirname mlxreg-io, for line card - mlxreg-io.{bus_num}.
 		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
@@ -1854,6 +1875,7 @@ else
 	fi
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
+		print_function_call "$0" "remove" "dpu $3$4"
 		case $dmi_sku in
 		HI160)
 			slot_num=$(find_dpu_slot "$3$4")
@@ -1885,6 +1907,7 @@ else
 	# Remove i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
 		log_info "I2C bus $4 removed."
+		print_function_call "$0" "remove" "i2c_bus $4"
 		handle_i2cbus_dev_action $4 "remove"
 	fi
 	# Removed i2c links.
