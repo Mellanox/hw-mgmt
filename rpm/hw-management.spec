@@ -7,6 +7,7 @@ Distribution: Centos
 Group: Converted/utils
 BuildArch: x86_64
 AutoReq: no
+Requires: python3
 
 Provides:      config(hw-management) = %{version}
 Provides:      hw-management = %{version}
@@ -59,6 +60,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/modules.d
 mkdir -p $RPM_BUILD_ROOT/etc/modules-load.d
 mkdir -p $RPM_BUILD_ROOT/etc/modprobe.d
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-thermal
+mkdir -p $RPM_BUILD_ROOT/etc/hw-management-ssd
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 mkdir -p $RPM_BUILD_ROOT/lib/udev/rules.d
@@ -107,6 +109,7 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600C.json $RPM_BUILD
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4600.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4700.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn5600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn5600.json
+install -m 0644 usr/etc/hw-management-ssd/ssd-dump-config.json $RPM_BUILD_ROOT/etc/hw-management-ssd/ssd-dump-config.json
 install -m 0644 usr/etc/modprobe.d/hw-management.conf $RPM_BUILD_ROOT/etc/modprobe.d/hw-management.conf
 install -m 0644 usr/etc/modules-load.d/05-hw-management-modules.conf $RPM_BUILD_ROOT/etc/modules-load.d/05-hw-management-modules.conf
 
@@ -118,6 +121,8 @@ install -m 0755 usr/usr/bin/hw-management-check-bios-update.sh $RPM_BUILD_ROOT/u
 install -m 0755 usr/usr/bin/hw-management-devtree-check.sh $RPM_BUILD_ROOT/usr/bin/hw-management-devtree-check.sh
 install -m 0755 usr/usr/bin/hw-management-devtree.sh $RPM_BUILD_ROOT/usr/bin/hw-management-devtree.sh
 install -m 0755 usr/usr/bin/hw-management-generate-dump.sh $RPM_BUILD_ROOT/usr/bin/hw-management-generate-dump.sh
+install -m 0755 usr/usr/bin/hw-management-ssd-dump-collect.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ssd-dump-collect.sh
+install -m 0755 usr/usr/bin/hw-management-ssd-dump.py $RPM_BUILD_ROOT/usr/bin/hw-management-ssd-dump.py
 install -m 0755 usr/usr/bin/hw-management-global-wp.sh $RPM_BUILD_ROOT/usr/bin/hw-management-global-wp.sh
 install -m 0755 usr/usr/bin/hw-management-helpers.sh $RPM_BUILD_ROOT/usr/bin/hw-management-helpers.sh
 install -m 0755 usr/usr/bin/hw-management-i2c-gpio-expander.sh $RPM_BUILD_ROOT/usr/bin/hw-management-i2c-gpio-expander.sh
@@ -163,11 +168,13 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %files
 %dir "/etc/hw-management-sensors/"
 %dir "/etc/hw-management-thermal"
+%dir "/etc/hw-management-ssd"
 %config "/etc/hw-management-sensors/mqm9700_sensors.conf"
 #%dir %attr(0755, root, root) "/"
 #%dir %attr(0755, root, root) "/etc"
 %dir %attr(0755, root, root) "/etc/hw-management-sensors"
 %dir %attr(0755, root, root) "/etc/hw-management-thermal"
+%dir %attr(0755, root, root) "/etc/hw-management-ssd"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/e3597_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_rev1_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_sensors.conf"
@@ -192,6 +199,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn3750sx_sensors.conf"
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn5600_sensors.conf"
 
+%config(noreplace) %attr(0644, root, root) "/etc/hw-management-ssd/ssd-dump-config.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_default.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_mqm8700.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_mqm9700.json"
@@ -225,6 +233,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 #%dir %attr(0755, root, root) "/usr/local/bin"
 %attr(0755, root, root) "/usr/bin/hw-management-chassis-events.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-generate-dump.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-ssd-dump-collect.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-ssd-dump.py"
 %attr(0755, root, root) "/usr/bin/hw-management-global-wp.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-helpers.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-i2c-gpio-expander.sh"
