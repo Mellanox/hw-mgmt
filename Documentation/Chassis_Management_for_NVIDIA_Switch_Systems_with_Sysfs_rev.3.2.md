@@ -1,411 +1,3 @@
-# Chassis Management for NVIDIA Switch Systems with Sysfs User Manual
-
-![NVIDIA Logo](images/logo.png)
-
-Rev. 3.2.8
-
-## Table of Contents
-
-| Section | Description | Page |
-|---------|-------------|------|
-| 1 | Release Notes Update History | 12 |
-| 2 | Introduction | 14 |
-| 2.1 | Software Components | 14 |
-| 2.2 | Host and BMC software stacks | 14 |
-| 2.3 | Hierarchy and Structure | 15 |
-| 2.4 | Sysfs Initialization and Driver Registration | 16 |
-| 3 | Virtual SysFS Hierarchy | 17 |
-| 3.1 | Config Control | 17 |
-| 3.1.1 | Get ASIC Bus | 17 |
-| 3.1.2 | Get ASIC I2C Bus | 18 |
-| 3.1.3 | Get ASIC PCI Bus | 18 |
-| 3.1.4 | Get ASIC Chip-up completed | 19 |
-| 3.1.5 | Get ASIC init done | 19 |
-| 3.1.6 | Set Chip-down/Chip-up Delay | 19 |
-| 3.1.7 | Read CPLD Number | 20 |
-| 3.1.8 | Read PSU VPD Info | 20 |
-| 3.1.9 | Get Hot-plug Fan Number | 21 |
-| 3.1.10 | Get Hot-plug PSU Number | 21 |
-| 3.1.11 | Get Hot-plug PDB Number | 21 |
-| 3.1.12 | Get Hot-plug PWR Number | 22 |
-| 3.1.13 | Get Hot-plug Linecards | 22 |
-| 3.1.14 | Read Gearbox Counter | 22 |
-| 3.1.15 | Read Module Counter | 23 |
-| 3.1.16 | Read ASIC Chipup Counter | 23 |
-| 3.1.17 | Read ASIC Chipup Completed | 23 |
-| 3.1.18 | Read Init Done | 23 |
-| 3.1.19 | Read Max System Fans (rotors) | 24 |
-| 3.1.20 | Read Fan Drawer Number | 25 |
-| 3.1.21 | Read Fan Command | 25 |
-| 3.1.22 | Read Fan Max/Min Speed | 25 |
-| 3.1.23 | Read Fan Max/Min Speed for front/rear FAN | 25 |
-| 3.1.24 | Fan Speed Tolerance | 26 |
-| 3.1.25 | Fan Speed Units | 26 |
-| 3.1.26 | Number of Leakage Sensors | 27 |
-| 3.1.27 | Number of Cable Cartridges | 27 |
-| 3.1.28 | Read/write Time Window for Thermal Control Periodic Log Report | 27 |
-| 3.1.29 | Read PSU I2C Address | 27 |
-| 3.1.30 | Read PSU I2C Bus | 28 |
-| 3.1.31 | Read Thermal Delay | 28 |
-| 3.1.32 | Dummy PSUs Supported | 28 |
-| 3.1.33 | Read PSU power capacity | 28 |
-| 3.1.34 | Read PSU power slope | 29 |
-| 3.1.35 | Read DPU Number | 29 |
-| 3.1.36 | Read DPU Board type | 29 |
-| 3.1.37 | Read DPU board bus offset | 30 |
-| 3.1.38 | Read DPU bus offset | 30 |
-| 3.1.39 | Read DPU events | 30 |
-| 3.1.40 | Read DPU events to host | 31 |
-| 3.1.41 | Labels Ready | 31 |
-| 3.1.42 | CPU Type | 31 |
-| 3.1.43 | Named Busses | 32 |
-| 3.1.44 | I2C Bus Offset | 32 |
-| 3.1.45 | I2C Bus Connect Devices | 32 |
-| 3.1.46 | I2C Bus Default Off EEPROM CPU | 33 |
-| 3.1.47 | I2C Comex Mon Bus Default | 33 |
-| 3.1.48 | LM Sensors Configuration | 33 |
-| 3.1.49 | LM Sensor Labels | 33 |
-| 3.1.50 | Events Ready | 34 |
-| 3.1.51 | System Flow Capability | 35 |
-| 3.1.52 | Fan Direction EEPROM | 35 |
-| 3.1.53 | Global Write Protection Wait Step | 35 |
-| 3.1.54 | Global Write Protection Timeout | 36 |
-| 3.1.55 | ConnectX Default I2C Bus | 36 |
-| 3.1.56 | JTAG Bridge Offset | 36 |
-| 3.1.57 | Core 0 Temperature ID | 37 |
-| 3.1.58 | Core 1 Temperature ID | 37 |
-| 3.1.59 | Read PDB Hotswap Scale Factor | 37 |
-| 3.1.60 | Read LED Control Type Map | 38 |
-| 3.1.61 | Cable Cartridge FRU Validity | 38 |
-| 3.2 | BIOS Control | 38 |
-| 3.2.1 | BIOS Status | 38 |
-| 3.2.2 | BIOS Start Retry | 38 |
-| 3.2.3 | BIOS Active Image | 39 |
-| 3.3 | EEPROM Control | 39 |
-| 3.3.1 | Read CPU EEPROM Data | 39 |
-| 3.3.2 | Read Fan Module EEPROM Data | 39 |
-| 3.3.3 | Read Power Supply Module EEPROM Data | 40 |
-| 3.3.4 | Read System Chassis EEPROM Data | 40 |
-| 3.3.5 | Read System Chassis EEPROM Parsed Data | 40 |
-| 3.3.6 | Read Cable Cartridge EEPROM Data | 40 |
-| 3.3.7 | Read system EEPROM (BMC stack) | 40 |
-| 3.3.8 | Read BMC board EEPROM (BMC stack) | 41 |
-| 3.4 | Environment Control | 41 |
-| 3.4.1 | Get A2D Voltage | 41 |
-| 3.4.2 | Get Comex Voltage Current | 41 |
-| 3.4.3 | Get Comex Voltage Input | 42 |
-| 3.4.4 | Get Comex Voltage Power | 42 |
-| 3.4.5 | Get System Voltage Current | 42 |
-| 3.4.6 | Get System Voltage Input | 43 |
-| 3.4.7 | Get System Voltage Power | 43 |
-| 3.5 | Events | 44 |
-| 3.5.1 | Get FAN hot-plug event status | 44 |
-| 3.5.2 | Get PSU hot-plug event status | 44 |
-| 3.5.3 | PWR hot-plug event status | 44 |
-| 3.5.4 | DPU Ready event | 45 |
-| 3.5.5 | DPU Shutdown event | 45 |
-| 3.5.6 | Leakage event | 45 |
-| 3.5.7 | EROT (External Root of Trust) AP event | 45 |
-| 3.5.8 | EROT (External Root of Trust) Error Event | 45 |
-| 3.5.9 | Graceful Power Off Event | 46 |
-| 3.5.10 | Power Button Event | 46 |
-| 3.6 | Alarms | 47 |
-| 3.6.1 | Get PMBUS voltmon alarm status | 47 |
-| 3.6.2 | Get COMEX PMBUS voltmon alarm status | 47 |
-| 3.6.3 | Get PSU PMBUS alarm status | 48 |
-| 3.6.4 | Get CPU temp alarm status | 48 |
-| 3.7 | PSU FW | 50 |
-| 3.7.1 | Get Secondary FW version of PSU | 50 |
-| 3.7.2 | Get Primary FW version of PSU | 50 |
-| 3.8 | DPU system attributes | 51 |
-| 3.8.1 | Get DPU id | 51 |
-| 3.8.2 | Get DPU boot progress | 51 |
-| 3.8.3 | Get DPU cpld version | 51 |
-| 3.8.4 | Get DPU cpld base version | 51 |
-| 3.8.5 | Get DPU auxiliary power reset reason | 52 |
-| 3.8.6 | Get DPU main board reset reason | 51 |
-| 3.8.7 | Get DPU comex power failure | 51 |
-| 3.8.8 | Get DPU power reset reason | 52 |
-| 3.8.9 | Get DPU thermal shutdown reason | 52 |
-| 3.8.10 | Get DPU tpm reset reason | 52 |
-| 3.8.11 | Get DPU perst reset reason | 52 |
-| 3.8.12 | Get DPU phy reset reason | 53 |
-| 3.8.13 | Get DPU usb phy reset reason | 53 |
-| 3.8.14 | Get DPU fpga part number | 53 |
-| 3.8.15 | Get DPU fpga minor version | 53 |
-| 3.8.16 | Get DPU ufm upgrade status | 54 |
-| 3.8.17 | Get DPU VR update status | 54 |
-| 3.9 | DPU events | 55 |
-| 3.9.1 | Get DPU PLL power good indication | 55 |
-| 3.9.2 | Get DPU input power indication | 55 |
-| 3.9.3 | Get DPU serdes power indication | 55 |
-| 3.9.4 | Get DPU serdes analog power indication | 56 |
-| 3.9.5 | Get DPU core power indication | 56 |
-| 3.9.6 | Get DPU cpu power indication | 56 |
-| 3.9.7 | Get DPU digital interfaces power | 56 |
-| 3.9.8 | Get DPU ddr5 power indication | 57 |
-| 3.9.9 | Get DPU thermal trip indication | 57 |
-| 3.9.10 | Get DPU tps upgrade status | 57 |
-| 3.9.11 | Get DPU cpu power fault indication | 57 |
-| 3.9.12 | Get DPU cpu VR hot alert | 58 |
-| 3.9.13 | Get DPU ddr5 fault indication | 58 |
-| 3.9.14 | Get DPU ddr5 hot alert | 58 |
-| 3.10 | LC Alarms | 60 |
-| 3.10.1 | Get LC Hot Swap Power Alarm | 60 |
-| 3.10.2 | Get LC Voltage Input Alarm | 60 |
-| 3.10.3 | Get LC Voltage Current Alarm | 60 |
-| 3.10.4 | Get LC Voltage Power Alarm | 61 |
-| 3.11 | LC EEPROM | 62 |
-| 3.11.1 | Read LC EEPROM FRU | 62 |
-| 3.11.2 | Read LC EEPROM INI | 62 |
-| 3.11.3 | Read LC EEPROM VPD Parsed | 62 |
-| 3.11.4 | Read LC EEPROM INI Parsed | 63 |
-| 3.12 | LC Environment | 64 |
-| 3.12.1 | Get LC Voltage Current | 64 |
-| 3.12.2 | Get LC Voltage Input | 64 |
-| 3.12.3 | Get LC Voltage Power | 64 |
-| 3.12.4 | Get LC Hot Swap Current | 65 |
-| 3.12.5 | Get LC Hot Swap Input | 65 |
-| 3.12.6 | Get LC Hot Swap Power | 65 |
-| 3.12.7 | Get LC A2D Voltage | 65 |
-| 3.12.8 | Get LC A2D Voltage Scale | 66 |
-| 3.13 | LC LED | 67 |
-| 3.13.1 | Get LC Status LED | 67 |
-| 3.13.2 | Get LC Status LED Capabilities | 67 |
-| 3.13.3 | Set LC Status Green/Orange | 67 |
-| 3.13.4 | Set LC Status LED Green/Orange Delay Off | 68 |
-| 3.13.5 | Set LC Status LED Green/Orange Delay On | 68 |
-| 3.14 | LC Config | 69 |
-| 3.14.1 | Read LC CPLD Number | 69 |
-| 3.14.2 | Read LC FPGA Number | 69 |
-| 3.14.3 | Read LC Gearbox Number | 69 |
-| 3.14.4 | Read LC Gearbox Manager Number | 70 |
-| 3.14.5 | Read LC Port Number | 70 |
-| 3.14.6 | Read LC Module Counter | 70 |
-| 3.14.7 | UART | 71 |
-| 3.14.8 | ASIC control | 71 |
-| 3.15 | LC thermal | 71 |
-| 3.15.1 | Read LC Gearbox Temperature Input | 71 |
-| 3.15.2 | Get LC QSFP/SFP Module Thermal | 72 |
-| 3.15.3 | Read Temperature Critical Module | 72 |
-| 3.15.4 | Read Temperature Emergency Module | 72 |
-| 3.15.5 | Read Temperature Fault Module | 72 |
-| 3.15.6 | Read Temperature Input Module | 73 |
-| 3.15.7 | Voltage Monitor temperature value | 73 |
-| 3.15.8 | Voltage Monitor temperature critical value | 73 |
-| 3.15.9 | Voltage Monitor temperature max value | 74 |
-| 3.15.10 | System flow capability | 74 |
-| 3.16 | LED Control | 74 |
-| 3.16.1 | Get Fan Status LED | 74 |
-| 3.16.2 | Get Fan LED Capabilities | 75 |
-| 3.16.3 | Set Fan LED Green/[Amber/Red] | 75 |
-| 3.16.4 | Set Fan LED Green/[Amber/Red] Delay Off | 75 |
-| 3.16.5 | Set Fan LED Green/[Amber/Red] Delay On | 76 |
-| 3.16.6 | Trigger Fan LED Green/[Amber/Green] | 76 |
-| 3.16.7 | Get PSU LED | 76 |
-| 3.16.8 | Get PSU LED status | 77 |
-| 3.16.9 | Get PSU LED Capabilities | 77 |
-| 3.16.10 | Set PSU LED Green/[Amber/Red] | 77 |
-| 3.16.11 | Set PSU LED Green/[Amber/Red] Delay Off | 78 |
-| 3.16.12 | Set PSU LED Green/[Amber/Red] Delay On | 78 |
-| 3.16.13 | Trigger PSU LED Green/[Amber/Green] | 78 |
-| 3.16.14 | Get Status LED | 79 |
-| 3.16.15 | Get Status LED Capabilities | 79 |
-| 3.16.16 | Set Status Green/[Amber/Red] | 80 |
-| 3.16.17 | Set Status LED Green/[Amber/Red] Delay Off | 80 |
-| 3.16.18 | Set Status LED Green/[Amber/Red] Delay On | 80 |
-| 3.16.19 | Status LED Green/Amber Trigger | 80 |
-| 3.16.20 | Status LED state | 81 |
-| 3.16.21 | Get Fan LED Capabilities | 81 |
-| 3.16.22 | UID LED | 81 |
-| 3.16.23 | UID LED Color | 82 |
-| 3.16.24 | UID LED Blue Delay on/off | 82 |
-| 3.16.25 | UID LED Blue Trigger | 83 |
-| 3.16.26 | UID LED Capability | 83 |
-| 3.16.27 | UID LED State | 83 |
-| 3.16.28 | Get LED Control Owner | 83 |
-| 3.17 | Power Control | 84 |
-| 3.17.1 | Get Power Consumption | 84 |
-| 3.17.2 | Get PSU sensor Current + thresholds | 85 |
-| 3.17.3 | Get PSU sensor Voltage + thresholds | 86 |
-| 3.17.4 | Get PSU sensor Power + thresholds | 87 |
-| 3.17.5 | Get PSU sensor capability | 88 |
-| 3.18 | System / Power Control | 89 |
-| 3.18.1 | Get ASIC Health | 89 |
-| 3.18.2 | Fan OC | 90 |
-| 3.18.3 | Get CPLD Major Version | 90 |
-| 3.18.4 | Get CPLD Part Number | 91 |
-| 3.18.5 | Get CPLD Minor Version | 91 |
-| 3.18.6 | Get CPLD Full Version | 92 |
-| 3.18.7 | Fan Direction | 92 |
-| 3.18.8 | Set JTAG Mode | 93 |
-| 3.18.9 | Set PSU On/Off | 93 |
-| 3.18.10 | Set System Power Cycle | 94 |
-| 3.18.11 | Set System Power Down | 95 |
-| 3.18.12 | CPU Shut Down Request | 95 |
-| 3.18.13 | Graceful Power Off | 96 |
-| 3.18.14 | CPU Power off Ready | 96 |
-| 3.18.15 | Shutdown Unlock | 97 |
-| 3.18.16 | Boot Completed | 97 |
-| 3.18.17 | Set Line Card Power | 98 |
-| 3.18.18 | Set Line Card Enable | 98 |
-| 3.18.19 | Read Line Card Active | 99 |
-| 3.18.20 | Read Line Card Powered | 99 |
-| 3.18.21 | Read Line Card Present | 100 |
-| 3.18.22 | Read Line Card Ready | 100 |
-| 3.18.23 | Read Line Card Synced | 101 |
-| 3.18.24 | Read Line Card Verified | 101 |
-| 3.18.25 | Read Line Card Reset Mask | 102 |
-| 3.18.26 | Set Line Card Shutdown | 102 |
-| 3.18.27 | Set VPD Write Protect | 103 |
-| 3.18.28 | Power Converter Prog EN | 103 |
-| 3.18.29 | Port 80 | 104 |
-| 3.18.30 | Set ASIC Up during PCIe root complex reset | 104 |
-| 3.18.31 | Get Voltreg Update status | 105 |
-| 3.18.32 | Get Config1, Config2 | 105 |
-| 3.18.33 | Get Ufm Version | 106 |
-| 3.18.34 | Aux Power Cycle | 106 |
-| 3.18.35 | DPU Power Off | 107 |
-| 3.18.36 | DPU Force Power Off | 107 |
-| 3.18.37 | DPU Reset | 108 |
-| 3.18.38 | DPU Reset Enable | 108 |
-| 3.18.39 | Get Reset Cause | 109 |
-| 3.18.40 | Reset Attribute Number | 109 |
-| 3.18.41 | Reset Attribute Ready | 110 |
-| 3.18.42 | Hotswap Alert | 110 |
-| 3.18.43 | SPI Channel Select | 111 |
-| 3.18.44 | NVME Present | 111 |
-| 3.18.45 | CPU EROT Present | 112 |
-| 3.18.46 | CPU Board Bus Offset | 112 |
-| 3.18.47 | Global Write Protect Timeout | 113 |
-| 3.18.48 | Global Write Protect Wait Step | 113 |
-| 3.18.49 | Clock Board Num | 114 |
-| 3.18.50 | Clock Board Fail | 114 |
-| 3.18.51 | Clock Board Boot Failure | 115 |
-| 3.18.52 | Clock Board Prog EN | 115 |
-| 3.18.53 | Cartridge | 116 |
-| 3.18.54 | ASIC PG Failure | 117 |
-| 3.19 | Leakage Sensors | 118 |
-| 3.19.1 | Leakage Sensor | 118 |
-| 3.20 | Thermal | 119 |
-| 3.20.1 | Ambient sensors | 107 |
-| 3.20.2 | Read Switch ASIC Temperature | 108 |
-| 3.20.3 | Read Switch ASIC Temperature Normal | 108 |
-| 3.20.4 | Read Switch ASIC Temperature Critical | 108 |
-| 3.20.5 | Read Switch ASIC Temperature Emergency | 109 |
-| 3.20.6 | Read Switch ASIC Temperature Trip Critical | 109 |
-| 3.20.7 | Read Switch Comex Temperature | 109 |
-| 3.20.8 | MNG Temperature | 109 |
-| 3.20.9 | Read BMC Temperature | 110 |
-| 3.20.10 | Read BMC Max Temperature | 110 |
-| 3.20.11 | Read BMC Critical Temperature | 110 |
-| 3.20.12 | Read BMC Minimal Temperature | 111 |
-| 3.20.13 | Read PDB Hotswap Controller Temperature | 111 |
-| 3.20.14 | Read PDB Hotswap Controller Temperature Thresholds | 111 |
-| 3.20.15 | Read PDB Power Converter Temperature | 112 |
-| 3.20.16 | Read PDB Power Converter Temperature Thresholds | 112 |
-| 3.20.17 | Read Cooling State | 113 |
-| 3.20.18 | Cooling Name | 113 |
-| 3.20.20 | Read CPU Core Temperature | 113 |
-| 3.20.21 | CPU Core Critical Temperature | 113 |
-| 3.20.22 | CPU Core Critical Temperature Alarm | 114 |
-| 3.20.23 | CPU Core Temperature Max | 114 |
-| 3.20.24 | Read CPU Pack Temperature | 114 |
-| 3.20.25 | CPU Pack Critical Temperature | 115 |
-| 3.20.26 | CPU Pack Critical Temperature Alarm | 115 |
-| 3.20.27 | CPU Pack Temperature Max | 115 |
-| 3.20.28 | Read Fan Max Speed | 115 |
-| 3.20.29 | Read Fan Min Speed | 116 |
-| 3.20.30 | Set Fan Speed | 116 |
-| 3.20.31 | Fan Speed Tolerance | 116 |
-| 3.20.32 | Read Fan Direction | 116 |
-| 3.20.33 | Read Fan Status | 117 |
-| 3.20.34 | Read Fan Fault | 117 |
-| 3.20.35 | Comex Voltmon Temperature | 117 |
-| 3.20.36 | Comex Voltmon Critical Temperature | 118 |
-| 3.20.37 | Comex Voltmon Max Temperature | 118 |
-| 3.20.38 | Read Port Ambient | 118 |
-| 3.20.39 | Read PSU Temperature | 118 |
-| 3.20.40 | Read PSU Alarm | 119 |
-| 3.20.41 | Read PSU Max | 119 |
-| 3.20.42 | Read PSU Fan Speed | 119 |
-| 3.20.43 | Read PSU min/max Fan Speed | 120 |
-| 3.20.44 | Read PSU Power Status | 120 |
-| 3.20.45 | Read PSU Status | 120 |
-| 3.20.46 | Read System PWM1 | 120 |
-| 3.20.47 | Read Temperature Critical Module | 121 |
-| 3.20.48 | Read Temperature Emergency Module | 121 |
-| 3.20.49 | Read Temperature Trip Critical Module | 121 |
-| 3.20.50 | Read Temperature Fault Module | 122 |
-| 3.20.51 | Read Temperature Input Module | 122 |
-| 3.20.52 | Read Temperature Critical Gearbox | 122 |
-| 3.20.53 | Read Temperature Emergency Gearbox | 122 |
-| 3.20.54 | Read Temperature Trip Critical Gearbox | 123 |
-| 3.20.55 | Read Temperature Input Gearbox | 123 |
-| 3.20.56 | Read Switch CPU Temperature | 123 |
-| 3.20.57 | Read Switch Fan Temperature | 123 |
-| 3.20.58 | Read Switch Port Temperature | 124 |
-| 3.20.59 | Read Switch Power Supply Temperature | 124 |
-| 3.20.60 | SODIMM Temperature Input | 124 |
-| 3.20.61 | SODIMM Critical Temperature | 125 |
-| 3.20.62 | SODIMM Max Temperature | 125 |
-| 3.20.63 | SODIMM Min Temperature | 125 |
-| 3.20.64 | SODIMM Temperature Alarms | 126 |
-| 3.20.65 | SODIMM Temperature Hysteresis | 126 |
-| 3.20.69 | SWB ASIC Temperature | 127 |
-| 3.20.70 | Drive Temperature | 127 |
-| 3.20.71 | Drive Critical Temperature | 128 |
-| 3.20.72 | Drive Maximum Temperature Threshold | 128 |
-| 3.20.73 | Drive Minimum Temperature Threshold | 128 |
-| 3.21 | Watchdog | 129 |
-| 3.21.1 | Read Boot Status | 129 |
-| 3.21.2 | Read Identity | 129 |
-| 3.21.3 | Read No Way Out | 129 |
-| 3.21.4 | Read State | 130 |
-| 3.21.5 | Read Status | 130 |
-| 3.21.6 | Read Timeout | 130 |
-| 3.21.7 | Read Timeleft | 131 |
-| 3.22 | JTAG interface | 132 |
-| 3.22.1 | Enable / Disable JTAG mechanism | 132 |
-| 3.22.2 | Set JTAG TCK pin | 132 |
-| 3.22.3 | Set JTAG TDI pin | 133 |
-| 3.22.4 | Set JTAG TMS pin | 133 |
-| 3.22.5 | Get JTAG TDO pin | 134 |
-| 3.22.6 | JTAG Capabilities | 134 |
-| 3.22.7 | JTAG Read/Write Reg | 135 |
-| 3.22.8 | JTAG Read Only Reg | 135 |
-| 3.23 | BMC status | 136 |
-| 3.23.1 | BMC present | 136 |
-| 3.23.2 | BMC to CPU control | 136 |
-| 3.23.3 | MCTP address | 137 |
-| 3.23.4 | MCTP bus | 137 |
-| 3.23.5 | MCTP ready | 137 |
-| 3.24 | BMC reset cause | 138 |
-| 3.24.1 | Primary BMC reset cause | 138 |
-| 3.24.2 | BMC reset domain detail | 138 |
-| 3.24.3 | Raw SCU reset event logs | 139 |
-| 3.25 | BMC leakage A2D tree | 139 |
-| 3.25.1 | Leak detector attributes | 139 |
-| 3.25.2 | Leak channel attributes | 140 |
-| 4 | Thermal Control | 139 |
-| 4.1 | Thermal Control Versions | 139 |
-| 5 | Drivers | 141 |
-| 5.1 | Watchdog | 141 |
-
-## List of Figures
-
-| Figure | Description | Page |
-|--------|-------------|------|
-| 1 | System Architecture Layout | 10 |
-| 2 | Sysfs Layout | 11 |
-| 3 | Thermal Management Flow | 12 |
-
-## List of Tables
-
-| Table | Description | Page |
-|-------|-------------|------|
-| 1 | NVIDIA Hierarchy Node Support | 13 |
-
 # Release Notes Update History
 
 | Revision | Date | Description |
@@ -449,13 +41,9 @@ The major advantage of working with sysfs is that it makes HW hierarchy easy to 
 
 ## Software Components
 
-Figure 1 presents the software architecture layout and Figure 2 presents layer separation for sysfs support.
+Figure 1 presents the system architecture and layer separation for sysfs support.
 
-##### Figure 1 - System Architecture Layout
-
-![System Architecture Layout](images/system-arc-layout.png)
-
-##### Figure 2 - Sysfs Layout
+##### Figure 1 - Sysfs Layout
 
 ![Sysfs Layout](images/sysfs-layout.png)
 
@@ -503,12 +91,12 @@ they do **not** share the same `/usr/bin` install tree on a single root filesyst
 `bmc/usr/etc/HI189/5-hw-management-bmc-events.rules` and
 `hw-management-bmc-early-i2c-devices.json`):**
 
-| `$bsp_path` subtree | Symlinks / behaviour | Peripheral (I2C / driver) | Stack |
-|--------------------|----------------------|---------------------------|-------|
-| `thermal/cpu_temp_input`, `cpu_temp`, `cpu_min` | Host **CPU** temperature via BMC-side I2C | bus 15 / `0x4c`, **sbtsi** | BMC |
-| `thermal/bmc_temp_input`, `bmc_temp` | **BMC board** ambient (`bmc_min` not created — **lm75** has no `temp1_min`) | bus 4 / `0x48`, **lm75** | BMC |
-| `eeprom/eeprom_system` | System VPD EEPROM | bus 5 / `0x51`, **24c512** | BMC |
-| `eeprom/eeprom_bmc` | BMC FRU EEPROM | bus 4 / `0x50`, **24c02** | BMC |
+| `$bsp_path` subtree | Symlinks / behaviour | Peripheral / driver | Stack |
+|--------------------|----------------------|----------------------|-------|
+| `thermal/cpu_temp_input`, `cpu_temp`, `cpu_min` | Host **CPU** temperature via BMC-side I2C | **sbtsi** | BMC |
+| `thermal/bmc_temp_input`, `bmc_temp` | **BMC board** ambient (`bmc_min` not created — **lm75** has no `temp1_min`) | **lm75** | BMC |
+| `eeprom/eeprom_system` | System VPD EEPROM | **24c512** | BMC |
+| `eeprom/eeprom_bmc` | BMC FRU EEPROM | **24c02** | BMC |
 | `system/*` (many attrs) | **mlxreg-io** / **mlxreg-hotplug** register files | CPLD / platform control on BMC | BMC |
 | `leakage/<N>/<j>/…` | A2D leak-detector tree (input, thresholds, type) | ADS1015 / ADS7924 / MAX1363 per JSON config | BMC |
 | `bmc/reset_*`, `bmc/domains/reset_*`, `bmc/raw_scu*` | AST2700 BMC reset-cause exporter | `hw-management-bmc-get-reset-cause.sh` | BMC |
@@ -519,8 +107,8 @@ Example layouts: **`bmc/examples/hw-management-bmc-thermal-sysfs.txt`** (deliver
 
 **Host stack — BMC-related nodes (CPU image, not the BMC package):**
 
-| Node | Evidence | Stack |
-|------|----------|-------|
+| Node | Implementation | Stack |
+|------|----------------|-------|
 | `system/bmc_present` | GPIO symlink (host `hw-management.sh` platform GPIO mapping) | Host |
 | `system/bmc_to_cpu_ctrl` | **mlxreg-io** on CPU (`mlxplat`; same tree) | Host |
 | `system/cpu_mctp_ready` | **mlxreg-io** on CPU (same tree) | Host |
@@ -539,9 +127,9 @@ The package uses the Linux default hierarchy structure of sysfs under the direct
 
 This path is used by existing applications that use auto-discovery to find existing HW components. Two examples for such applications are:
 
- libsysfs – the libraries provide a consistent and stable interface for querying system device information exposed through sysfs.
+- libsysfs – the libraries provide a consistent and stable interface for querying system device information exposed through sysfs.
 
- systool – a utility built upon libsysfs that lists devices by bus, class, and topology.
+- systool – a utility built upon libsysfs that lists devices by bus, class, and topology.
 
 The disadvantage of using this path is that the hierarchy model includes the BUS type and location model which is subject to change between different system types.
 
@@ -549,11 +137,11 @@ To resolve this limitation, the virtual hierarchy structure that is not HW depen
 
 Chassis attributes information exported through sysfs can be utilized by a number of standard Linux tools. So, for example, the following are tools from the Linux packages lm-sensors and fancontrol, which are capable of operating on top of sysfs infrastructure:
 
- pwmconfig – tests the pulse width modulation (PWM) outputs of sensors and configures fancontrol
+- pwmconfig – tests the pulse width modulation (PWM) outputs of sensors and configures fancontrol
 
- fancontrol – automated software-based fan speed regulation
+- fancontrol – automated software-based fan speed regulation
 
- sensors – print sensors information
+- sensors – print sensors information
 ## Sysfs Initialization and Driver Registration
 
 As described in the previous sections, sysfs structure provides access to HW drivers. These
@@ -568,24 +156,37 @@ The package provides a simple way to initialize the drivers using the set of she
 
 Package contains the following files, used within the workload:
 
- /lib/systemd/system/hw-management.service: system entries for thermal control activation and de-activation.
+- /lib/systemd/system/hw-management.service: system entries for thermal control activation and de-activation.
 
- /lib/udev/rules.d/50-hw-management-events.rules: udev rules defining the triggers on which events should be handled. When trigger is matched, rule data is to be passed to the event handler (see below file /usr/bin/hw-management-events.sh).
+- /lib/udev/rules.d/50-hw-management-events.rules: udev rules defining the triggers on which events should be handled. When trigger is matched, rule data is to be passed to the event handler (see below file /usr/bin/hw-management-events.sh).
 
- /usr/bin/hw_management_thermal_control.py: contains thermal algorithm implementation (TC v2.0).
+- /usr/bin/hw_management_thermal_control.py: contains thermal algorithm implementation (TC v2.0).
  /usr/bin/hw_management_thermal_control_2_5.py: contains thermal algorithm implementation (TC v2.5).
 
- /usr/bin/hw-management-chassis-events.sh and /usr/bin/hw-management-thermal-events.sh: handle udev triggers, according to the received data, it creates or destroys symbolic links to sysfs entries. It allows to create system independent entries, and it allows thermal controls to work over this system independent model. Raises signal to thermal control service in case of fast temperature decreasing. It could happen in case one or few very hot port cables have been removed. Sets PS units internal FAN speed to default value when unit is connected to power source.
+- /usr/bin/hw-management-chassis-events.sh and /usr/bin/hw-management-thermal-events.sh: handle udev triggers, according to the received data, it creates or destroys symbolic links to sysfs entries. It allows to create system independent entries, and it allows thermal controls to work over this system independent model. Raises signal to thermal control service in case of fast temperature decreasing. It could happen in case one or few very hot port cables have been removed. Sets PS units internal FAN speed to default value when unit is connected to power source.
 
- /usr/bin/hw-management.sh: performs initialization and de-initialization, detects the system type, connects thermal drivers according to the system topology, activates and deactivates thermal algorithm.
+- /usr/bin/hw-management.sh: performs initialization and de-initialization, detects the system type, connects thermal drivers according to the system topology, activates and deactivates thermal algorithm.
 
- /usr/bin/hw-management-led-state-conversion.sh and /usr/bin/hw-management-power- helper.sh: helper scripts.
+- /usr/bin/hw-management-led-state-conversion.sh and /usr/bin/hw-management-power- helper.sh: helper scripts.
 
- /etc/modprobe.d/hw-management.conf and /etc/modules-load.d/hw-management- modules.conf: configuration for kernel modules loading.
+- /etc/modprobe.d/hw-management.conf and /etc/modules-load.d/hw-management- modules.conf: configuration for kernel modules loading.
 
 For more details follow package README file (`README.md` for host, `bmc/README.md` for BMC).
 
-##### Figure 3 - Thermal Management Flow
+**Thermal management overview**
+
+Thermal control is split into two cooperating layers. A data-collection layer (driven by
+udev events and periodic polling) reads temperature, fan, and power sensors and publishes
+them through the sysfs hierarchy described in this manual. A thermal control layer then
+reads that sysfs data, calculates the required fan PWM (duty cycle) per component, and
+applies the highest PWM demanded by any sensor to keep every monitored component within
+its safe operating range. Two thermal control implementations exist — TC v2.0 and TC v2.5
+— selected automatically based on the hardware platform; see **Thermal Control** later in
+this manual for version details, and the companion
+[Thermal Monitoring for NVIDIA Systems with Third Party OS](Thermal_Monitoring_for_NVIDIA_Systems_with_third_party_OS.md)
+document for the full algorithm description.
+
+##### Figure 2 - Thermal Management Flow
 
 ![Thermal Control Core](images/thermal-control-core.png)
 
@@ -628,3433 +229,3323 @@ Note: some of the attributes described below are not relevant to all platforms a
 
 ### Get ASIC Bus
 
-**Node name:** `$bsp_path/config/asic_bus`
-
-**Description:** Get system ASIC bus number
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-99 |
-
-**Example:** Get asic bus number:
-```bash
-cat $bsp_path/config/asic_bus
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_bus}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get system ASIC bus number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-99 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic bus number: \texttt{\small cat \$bsp\_path/config/asic\_bus}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get ASIC I2C Bus
 
-**Node name:** `$bsp_path/config/asic<index>_i2c_bus_id`
-
-**Description:** Get ASIC <index> I2C bus
-
-**Access:** Read only
-
-**Release version:** V.7.0030.2930
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |        |
-
-**Example:** Get ASIC I2C bus address:
-```bash
-cat $bsp_path/config/asic1_i2c_bus_id
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\textless{}index\textgreater{}\_i2c\_bus\_id}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC \textless{}index\textgreater{} I2C bus} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.2930} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC I2C bus address: \texttt{\small cat \$bsp\_path/config/asic1\_i2c\_bus\_id}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get ASIC PCI Bus
 
-**Node name:** `$bsp_path/config/asic<index>_pci_bus_id`
-
-**Description:** Get ASIC PCI bus ID
-
-**Access:** Read only
-
-**Release version:** V.7.0020.1338
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |        |
-
-**Example:** Get asic PCI bus number:
-```bash
-cat $bsp_path/config/asic1_pci_bus_id
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\textless{}index\textgreater{}\_pci\_bus\_id}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC PCI bus ID} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.1338} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic PCI bus number: \texttt{\small cat \$bsp\_path/config/asic1\_pci\_bus\_id}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get ASIC Chip-up completed
 
-**Node name:** `$bsp_path/config/asic_chipup_completed`
-
-**Description:** Get ASIC count which has already initialized.
-When asic_chipup_completed == asic_num, asics_init_done should be set to "1'
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0..asic_count |
-
-**Example:** Get already initialized asic count:
-```bash
-cat $bsp_path/config/asic_chipup_completed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_chipup\_completed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC count which has already initialized. When asic\_chipup\_completed == asic\_num, asics\_init\_done should be set to "1'} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0..asic\_count \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get already initialized asic count: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_completed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get ASIC init done
 
-**Node name:** `$bsp_path/config/asics_init_done`
-
-**Description:** Get ASIC init done status.
-1 – All asic initialized and ready.
-0 – One or more ASICs not ready
-When asic_chipup_completed == asic_num, asics_init_done should be set to "1'
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1 – ALL ASICs ready<br>0 – One or more ASICs not ready |
-
-**Example:** Get asics init ready:
-```bash
-cat $bsp_path/config/asics_init_done
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asics\_init\_done}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC init done status. 1 – All asic initialized and ready. 0 – One or more ASICs not ready When asic\_chipup\_completed == asic\_num, asics\_init\_done should be set to "1'} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1 – ALL ASICs ready\textless{}br\textgreater{}0 – One or more ASICs not ready \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get asics init ready: \texttt{\small cat \$bsp\_path/config/asics\_init\_done}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Chip-down/Chip-up Delay
 
-**Node name:** `$bsp_path/config/chipdown_delay`<br>`$bsp_path/config/chipup_delay`
-
-**Description:** Set delay duration in seconds for hw mgmt service from the chip down/up event.
-
-**Access:** Write/Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer (seconds) | 0 – no delay other – delay |
-
-**Example:** Get chipdown value:
-```bash
-cat $bsp_path/config/chipdown_delay
-```
-Set 5 seconds delay in chipup value:
-```bash
-echo 5 > $bsp_path/config/chipup_delay
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/chipdown\_delay}\newline \texttt{\small \$bsp\_path/config/chipup\_delay}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set delay duration in seconds for hw mgmt service from the chip down/up event.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write/Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer (seconds) & 0 – no delay other – delay \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get chipdown value: \texttt{\small cat \$bsp\_path/config/chipdown\_delay} Set 5 seconds delay in chipup value: \texttt{\small echo 5 \textgreater{} \$bsp\_path/config/chipup\_delay}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read CPLD Number
 
-**Node name:** `$bsp_path/config/cpld_num`
-
-**Description:** Get the number of CPLD modules in the system
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-X |
-
-**Example:** Get CPLD number:
-```bash
-cat $bsp_path/config/cpld_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cpld\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of CPLD modules in the system} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD number: \texttt{\small cat \$bsp\_path/config/cpld\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU VPD Info
 
-**Node name:** `$bsp_path/eeprom/psu{n}_vpd`
-
-**Description:** Get PSU VPD info in human readable format
-
-**Access:** Read only
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | ASCII | EEPROM info |
-
-**Example:** Get PSU VPD info:
-```bash
-cat $bsp_path/eeprom/psu{n}_vpd
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/psu\{n\}\_vpd}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU VPD info in human readable format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & ASCII & EEPROM info \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU VPD info: \texttt{\small cat \$bsp\_path/eeprom/psu\{n\}\_vpd}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Hot-plug Fan Number
 
-**Node name:** `$bsp_path/config/hotplug_fans`
-
-**Description:** Get hot-plug FAN number in the system
-
-**Access:** Read only
-It can be zero on fixed system.
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0-X |
-
-**Example:** Get hot-plug fan number:
-```bash
-cat $bsp_path/config/hotplug_fans
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_fans}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug FAN number in the system} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only It can be zero on fixed system.} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug fan number: \texttt{\small cat \$bsp\_path/config/hotplug\_fans}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Hot-plug PSU Number
 
-**Node name:** `$bsp_path/config/hotplug_psus`
-
-**Description:** Get hot-plug PSU number in the system. It can be zero on fixed system.
-
-**Access:** Read only
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0-X |
-
-**Example:** Get hot-plug psu number:
-```bash
-cat $bsp_path/config/hotplug_psus
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_psus}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug PSU number in the system. It can be zero on fixed system.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug psu number: \texttt{\small cat \$bsp\_path/config/hotplug\_psus}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Hot-plug PDB Number
 
-**Node name:** `$bsp_path/config/hotplug_pdbs`
-
-**Description:** Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.
-
-Note: This attribute is primarily for liquid-cooled systems (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD, N6300_LD; SN66XX_LD family: SN6600_LD).
-PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present.
-It can be zero on air-cooled systems or systems without hot-pluggable PDBs.
-Note: N6100_LD has hotplug_pdbs=0 (PDB is not hot-pluggable).
-Note: N6300_LD (SKU HI185) has hotplug_pdbs=2.
-Note: SN6600_LD (SKU HI193) has hotplug_pdbs=2 with `events/pdb1` and `events/pdb2`.
-
-**Access:** Read only
-
-**Release version:** V.7.0040.3930
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0-X (number of hot-pluggable PDBs) |
-
-**Example:** Get hot-plug PDB number:
-```bash
-cat $bsp_path/config/hotplug_pdbs
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_pdbs}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.\newline Note: This attribute is primarily for liquid-cooled systems (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD, N6300\_LD; SN66XX\_LD family: SN6600\_LD). PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present. It can be zero on air-cooled systems or systems without hot-pluggable PDBs. Note: N6100\_LD has hotplug\_pdbs=0 (PDB is not hot-pluggable). Note: N6300\_LD (SKU HI185) has hotplug\_pdbs=2. Note: SN6600\_LD (SKU HI193) has hotplug\_pdbs=2 with \texttt{\small events/pdb1} and \texttt{\small events/pdb2}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.3930} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0-X (number of hot-pluggable PDBs) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug PDB number: \texttt{\small cat \$bsp\_path/config/hotplug\_pdbs}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Hot-plug PWR Number
 
-**Node name:** `$bsp_path/config/hotplug_pwrs`
-
-**Description:** Get hot-plug Power cable number in the system. It can be zero on fixed system.
-
-**Access:** Read only
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0-X |
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_pwrs}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug Power cable number in the system. It can be zero on fixed system.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0-X \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### Get Hot-plug Linecards
 
-**Node name:** `$bsp_path/config/hotplug_linecards`
-
-**Description:** Get the number of Linecards
-
-**Access:** 
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |        |
-
-**Example:** Get the number of hot-plug linecards:
-```bash
-cat $bsp_path/config/hotplug_linecards
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_linecards}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of Linecards} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-plug linecards: \texttt{\small cat \$bsp\_path/config/hotplug\_linecards}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Gearbox Counter
 
-**Node name:** `$bsp_path/config/gearbox_counter`
-
-**Description:** Get the number of gearboxes in the system.
-
-**Access:** 
-
-**Release version:** V.7.0010.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | 0-X |
-
-**Example:** 
-```bash
-cat $bsp_path/config/gearbox_counter
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/gearbox\_counter}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of gearboxes in the system.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & 0-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/gearbox\_counter}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Module Counter
 
-**Node name:** `$bsp_path/config/module_counter`
-
-**Description:** Get the number of sfp modules in the system Note: this is attribue is valid only for I2C ASIC driver
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-X |
-
-**Example:** Get sfp module:
-```bash
-cat $bsp_path/config/module_counter
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/module\_counter}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of sfp modules in the system Note: this is attribue is valid only for I2C ASIC driver} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get sfp module: \texttt{\small cat \$bsp\_path/config/module\_counter}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read ASIC Chipup Counter
 
-**Node name:** `$bsp_path/config/asic_chipup_counter`
-
-**Description:** Number of remaining ASIC chip-up retry attempts. This counter is decremented with each chip-up attempt and reset to the initial retry count when all attempts are exhausted.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |        |
-
-**Example:** Get asic chipup completed:
-```bash
-cat $bsp_path/config/asic_chipup_counter
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_chipup\_counter}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Number of remaining ASIC chip-up retry attempts. This counter is decremented with each chip-up attempt and reset to the initial retry count when all attempts are exhausted.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic chipup completed: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_counter}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read ASIC Chipup Completed
 
-**Node name:** `$bsp_path/config/asic_chipup_completed`
-
-**Description:** counter of successful ASIC driver initialization completions:
-0 - no successful initialization completion.
-1 - one ASIC device has been successful initialized.
-n – 'n' ASIC devices has been successful initialized.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-X |
-
-**Example:** Get asic chipup completed:
-```bash
-cat $bsp_path/config/asic_chipup_completed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_chipup\_completed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{counter of successful ASIC driver initialization completions: 0 - no successful initialization completion. 1 - one ASIC device has been successful initialized. n – 'n' ASIC devices has been successful initialized.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic chipup completed: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_completed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Init Done
 
-**Node name:** `$bsp_path/config/asics_init_done`
-
-**Description:** is to be set to one, when 'asic_chipup_completed' attribute matches 'asic_num' attribute (old static attribute /var/run/hw-management/config/asic_num)
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-X |
-
-**Example:** Get asics init done:
-```bash
-cat $bsp_path/config/asics_init_done
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asics\_init\_done}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{is to be set to one, when 'asic\_chipup\_completed' attribute matches 'asic\_num' attribute (old static attribute /var/run/hw-management/config/asic\_num)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get asics init done: \texttt{\small cat \$bsp\_path/config/asics\_init\_done}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Max System Fans (rotors)
 
-**Node name:** `$bsp_path/config/max_tachos`
-
-**Description:** Get max number of system fans.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-X |
-
-**Example:** Get fans max value:
-```bash
-cat $bsp_path/config/max_tachos
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/max\_tachos}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get max number of system fans.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fans max value: \texttt{\small cat \$bsp\_path/config/max\_tachos}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Drawer Number
 
-**Node name:** `$bsp_path/config/fan_drwr_num`
-
-**Description:** Get number of system FAN drawers
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-X |
-
-**Example:** Get number of system FAN drawers:
-```bash
-cat $bsp_path/config/fan_drwr_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_drwr\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get number of system FAN drawers} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get number of system FAN drawers: \texttt{\small cat \$bsp\_path/config/fan\_drwr\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Command
 
-**Node name:** `$bsp_path/config/fan_command`
-
-**Description:** Get PMBUS command for PSU config
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Hex | 0xhh |
-
-**Example:** Get fan command:
-```bash
-cat $bsp_path/config/fan_command
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_command}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PMBUS command for PSU config} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Hex & 0xhh \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan command: \texttt{\small cat \$bsp\_path/config/fan\_command}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Max/Min Speed
 
-**Node name:** `$bsp_path/config/fan_max_speed`<br>`$bsp_path/config/fan_min_speed`
-
-**Description:** Get the absolute system fan max/min speed
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | X |
-
-**Example:** Get fan max speed:
-```bash
-cat $bsp_path/config/fan_max_speed
-```
-Get fan min speed:
-```bash
-cat $bsp_path/config/fan_min_speed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_max\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_min\_speed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the absolute system fan max/min speed} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan max speed: \texttt{\small cat \$bsp\_path/config/fan\_max\_speed} Get fan min speed: \texttt{\small cat \$bsp\_path/config/fan\_min\_speed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Max/Min Speed for front/rear FAN
 
-**Node name:** `$bsp_path/config/fan_front_max_speed`<br>`$bsp_path/config/fan_front_min_speed`<br>`$bsp_path/config/fan_rear_max_speed`<br>`$bsp_path/config/fan_rear_min_speed`
-
-**Description:** Get the absolute system fan max/min speed for front/rear FAN.
-These attributes can be present on some switch types. If not present 
-- fan_max_speed/fan_min_speed should be used instead.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | X |
-
-**Example:** Get front fan max speed:
-```bash
-cat $bsp_path/config/fan_front_max_speed
-```
-Get front fan min speed:
-```bash
-cat $bsp_path/config/fan_front_min_speed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_front\_max\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_front\_min\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_rear\_max\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_rear\_min\_speed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the absolute system fan max/min speed for front/rear FAN. These attributes can be present on some switch types. If not present  - fan\_max\_speed/fan\_min\_speed should be used instead.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get front fan max speed: \texttt{\small cat \$bsp\_path/config/fan\_front\_max\_speed} Get front fan min speed: \texttt{\small cat \$bsp\_path/config/fan\_front\_min\_speed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Fan Speed Tolerance
 
-**Node name:** `$bsp_path/config/fan_speed_tolerance`
-
-**Description:** Max tolerance for measured FAN min/max speed compared to reference defined in fan_max_speed/fan_min_speed
-
-**Access:** Read only
-
-**Release version:** V.7.0040.1032
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | int (percent) | 0..90 (default 15) |
-
-**Example:** 
-```bash
-cat $bsp_path/config/fan_speed_tolerance
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_speed\_tolerance}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Max tolerance for measured FAN min/max speed compared to reference defined in fan\_max\_speed/fan\_min\_speed} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.1032} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & int (percent) & 0..90 (default 15) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_speed\_tolerance}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Fan Speed Units
 
-**Node name:** `$bsp_path/config/fan_speed_units`
-
-**Description:** Value to write PSU PMBUS register FAN_CONFIG_1_2
-Set FAN Commanded in Duty Cycle.
-Used for PSU fan SET configuration
-
-**Access:** Read only
-
-**Release version:** V.7.10.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | X (default 0x90) |
-
-**Example:** 
-```bash
-cat $bsp_path/config/fan_speed_units
-i2cset -f -y "$bus" "$addr" "$fan_config_command" "$fan_speed_units" bp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_speed\_units}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Value to write PSU PMBUS register FAN\_CONFIG\_1\_2 Set FAN Commanded in Duty Cycle. Used for PSU fan SET configuration} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.10.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & X (default 0x90) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_speed\_units i2cset -f -y "\$bus" "\$addr" "\$fan\_config\_command" "\$fan\_speed\_units" bp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Number of Leakage Sensors
 
-**Node name:** `$bsp_path/config/leakage_counter`
-
-**Description:** Get the number of leakage sensors installed in the switch.
-
-**Access:** RO
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 1-8 |
-
-**Example:** 
-```bash
-cat $bsp_path/config/leakage_counter
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/leakage\_counter}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of leakage sensors installed in the switch.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{RO} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 1-8 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/leakage\_counter}\newline Note: On SN6600\_LD (SKU HI193), \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} sets \texttt{\small leakage\_count} to \textbf{2}, which becomes \texttt{\small config/leakage\_counter}. The same script initializes \texttt{\small events/leakage1} and \texttt{\small events/leakage2} only. Additional \texttt{\small system/leakage\textless{}N\textgreater{}} symlinks (for example \texttt{\small leakage3} through \texttt{\small leakage5} in the validated tree) can appear when mlxreg-io exposes those hwmon attributes; \texttt{\small hw-management-thermal-events.sh} links each present \texttt{\small leakageN} up to its \texttt{\small max\_leakage} limit (\textbf{8}). Consumers should treat \texttt{\small leakage\_counter} as the supported event and policy count unless platform documentation states otherwise.} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
-Note: On SN6600_LD (SKU HI193), `sn66xxld_specific()` in `hw-management.sh`
-sets `leakage_count` to **2**, which becomes `config/leakage_counter`. The same
-script initializes `events/leakage1` and `events/leakage2` only. Additional
-`system/leakage<N>` symlinks (for example `leakage3` through `leakage5` in the
-validated tree) can appear when mlxreg-io exposes those hwmon attributes;
-`hw-management-thermal-events.sh` links each present `leakageN` up to its
-`max_leakage` limit (**8**). Consumers should treat `leakage_counter` as the
-supported event and policy count unless platform documentation states
-otherwise.
 
 ### Number of Cable Cartridges
 
-**Node name:** `$bsp_path/config/cartridge_counter`
-
-**Description:** Get the number of cable cartridges in the system. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.
-
-Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX_LD family: N6100_LD, N6300_LD).
-N6100_LD and N6300_LD (SKU HI185) have 4 cable cartridges (`config/cartridge_counter` = 4).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Count | Integer | 0-X (number of cartridges) |
-
-**Example:** Get cartridge count:
-```bash
-cat $bsp_path/config/cartridge_counter
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cartridge\_counter}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of cable cartridges in the system. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD and N6300\_LD (SKU HI185) have 4 cable cartridges (\texttt{\small config/cartridge\_counter} = 4).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Count & Integer & 0-X (number of cartridges) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get cartridge count: \texttt{\small cat \$bsp\_path/config/cartridge\_counter}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read/write Time Window for Thermal Control Periodic Log Report
 
-**Node name:** `$bsp_path/config/periodic_report`
-
-**Description:** Get/Set time for thermal control periodic log report (sec, default 7200)
-
-**Access:** Read/Write
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | X |
-
-**Example:** Set periodic log report time:
-```bash
-echo 3000 > $bsp_path/config/periodic_report
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/periodic\_report}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get/Set time for thermal control periodic log report (sec, default 7200)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set periodic log report time: \texttt{\small echo 3000 \textgreater{} \$bsp\_path/config/periodic\_report}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU I2C Address
 
-**Node name:** `$bsp_path/config/psu<power supply module number>_i2c_addr`
-
-**Description:** Get the I2C address of PSU for direct connection
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Hex | 0xhh |
-
-**Example:** Get PSU1 I2C address:
-```bash
-cat $bsp_path/config/psu1_i2c_addr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu\textless{}power supply module number\textgreater{}\_i2c\_addr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the I2C address of PSU for direct connection} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Hex & 0xhh \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 I2C address: \texttt{\small cat \$bsp\_path/config/psu1\_i2c\_addr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU I2C Bus
 
-**Node name:** `$bsp_path/config/psu<X>_i2c_bus`
-
-Where `<X>` is the power supply module index (for example `psu1_i2c_bus`, `psu2_i2c_bus`).
-
-**Description:** Contains the I2C bus number of PSU<X> used for direct connection to that power supply module.
-
-This configuration parameter is **optional** and is **not mandatory** on all platforms. It is created and used by the hw-management package for internal purposes (for example dummy PSU detection and mapping on supported switch systems). The OS and user-space applications **must not** assume that `psu<X>_i2c_bus` is always present; check for the file before reading it.
-
-**Access:** Read only
-
-**Mandatory:** No
-
-**Release version:** 3.2
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Bus index | Integer | Platform-specific I2C bus number (for example `3`, `4`) |
-
-**Example:** Get PSU1 I2C bus when the file exists:
-```bash
-if [ -f $bsp_path/config/psu1_i2c_bus ]; then
-	cat $bsp_path/config/psu1_i2c_bus
-fi
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu\textless{}X\textgreater{}\_i2c\_bus}\newline Where \texttt{\small \textless{}X\textgreater{}} is the power supply module index (for example \texttt{\small psu1\_i2c\_bus}, \texttt{\small psu2\_i2c\_bus}).} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Contains the I2C bus number of PSU\textless{}X\textgreater{} used for direct connection to that power supply module.\newline This configuration parameter is \textbf{optional} and is \textbf{not mandatory} on all platforms. It is created and used by the hw-management package for internal purposes (for example dummy PSU detection and mapping on supported switch systems). The OS and user-space applications \textbf{must not} assume that \texttt{\small psu\textless{}X\textgreater{}\_i2c\_bus} is always present; check for the file before reading it.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only\newline \textbf{Mandatory:} No} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Bus index & Integer & Platform-specific I2C bus number (for example \texttt{\small 3}, \texttt{\small 4}) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 I2C bus when the file exists: \texttt{\small if [ -f \$bsp\_path/config/psu1\_i2c\_bus ]; then 	cat \$bsp\_path/config/psu1\_i2c\_bus fi}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Thermal Delay
 
-**Node name:** `$bsp_path/config/thermal_delay`
-
-**Description:** Get the delay duration (seconds) since the HW mgmt service starts until thermal control init
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer (seconds) | X |
-
-**Example:** Get thermal delay:
-```bash
-cat $bsp_path/config/thermal_delay
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/thermal\_delay}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the delay duration (seconds) since the HW mgmt service starts until thermal control init} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer (seconds) & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get thermal delay: \texttt{\small cat \$bsp\_path/config/thermal\_delay}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Dummy PSUs Supported
 
-**Node name:** `$bsp_path/config/dummy_psus_supported`
-
-**Description:** Indicates whether the system supports dummy PSUs for power management. Set to "1" for systems that support dummy PSU functionality, "0" otherwise.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | 0 or 1 |
-
-**Example:** 
-```bash
-cat $bsp_path/config/dummy_psus_supported
-1
-``` 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dummy\_psus\_supported}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Indicates whether the system supports dummy PSUs for power management. Set to "1" for systems that support dummy PSU functionality, "0" otherwise.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & 0 or 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/dummy\_psus\_supported 1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### Read PSU power capacity
 
-**Node name:** `$bsp_path/config/psu[x]_power_capacity`
-
-**Description:** Get the maximum power capacity for the psu.
-
-**Access:** Read only
-
-This attribute is present only in SN5600 and SN5400 platforms.
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Constant | Milli watt | X |
-
-**Example:** Get power capacity of the psu
-```bash
-cat $bsp_path/config/psu[x]_power_capacity
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu[x]\_power\_capacity}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the maximum power capacity for the psu.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only\newline This attribute is present only in SN5600 and SN5400 platforms.} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Constant & Milli watt & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power capacity of the psu \texttt{\small cat \$bsp\_path/config/psu[x]\_power\_capacity}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU power slope
 
-**Node name:** `$bsp_path/config/psu[x]_power_slope`
-
-**Description:** Get the power slope value for the psu. This is a hardware defined constant and will be used in power calculation
-
-**Access:** Read only
-
-This attribute is present only in SN5600 and SN5400 platforms.
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Constant | Integer | X |
-
-**Example:** Get power slope for the psu
-```bash
-cat $bsp_path/config/psu[x]_power_slope
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu[x]\_power\_slope}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the power slope value for the psu. This is a hardware defined constant and will be used in power calculation} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only\newline This attribute is present only in SN5600 and SN5400 platforms.} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Constant & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power slope for the psu \texttt{\small cat \$bsp\_path/config/psu[x]\_power\_slope}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read DPU Number
 
-**Node name:** `$bsp_path/config/dpu_num`
-
-**Description:** Number of DPUs (1-4)
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer (number) | X |
-
-**Example:** Get dpu number:
-```bash
-cat $bsp_path/config/dpu_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Number of DPUs (1-4)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer (number) & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu number: \texttt{\small cat \$bsp\_path/config/dpu\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read DPU Board type
 
-**Node name:** `$bsp_path/config/dpu_board_type`
-
-**Description:** Whether DPU sensors are loaded static or dynamic
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | String | Static / dynamic |
-
-**Example:** Get dpu board type:
-```bash
-cat $bsp_path/config/dpu_board_type
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_board\_type}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Whether DPU sensors are loaded static or dynamic} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & String & Static / dynamic \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu board type: \texttt{\small cat \$bsp\_path/config/dpu\_board\_type}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read DPU board bus offset
 
-**Node name:** `$bsp_path/config/dpu_brd_bus_offset`
-
-**Description:** DPU i2c bus offset
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer (number) | X |
-
-**Example:** Get dpu i2c bus offset
-```bash
-cat $bsp_path/config/dpu_brd_bus_offset
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_brd\_bus\_offset}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{DPU i2c bus offset} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer (number) & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu i2c bus offset \texttt{\small cat \$bsp\_path/config/dpu\_brd\_bus\_offset}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read DPU bus offset
 
-**Node name:** `$bsp_path/config/dpu_bus_off`
-
-**Description:** I2c bus offset for the dpu
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer (number) | X |
-
-**Example:** Get dpu bus offset number:
-```bash
-cat $bsp_path/config/dpu_bus_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_bus\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{I2c bus offset for the dpu} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer (number) & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu bus offset number: \texttt{\small cat \$bsp\_path/config/dpu\_bus\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read DPU events
 
-**Node name:** `$bsp_path/config/dpu_events`
-
-**Description:** Events supported by DPUs
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | String | Ev1, ev2, etc. |
-
-**Example:** Get the events supported by DPU
-```bash
-cat $bsp_path/config/dpu_events
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_events}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Events supported by DPUs} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & String & Ev1, ev2, etc. \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get the events supported by DPU \texttt{\small cat \$bsp\_path/config/dpu\_events}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read DPU events to host
 
-**Node name:** `$bsp_path/config/dpu_to_host_events`
-
-**Description:** DPU events to host
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | String | X |
-
-**Example:** Get dpu events to host
-```bash
-cat $bsp_path/config/dpu_to_host_events
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_to\_host\_events}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{DPU events to host} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & String & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu events to host \texttt{\small cat \$bsp\_path/config/dpu\_to\_host\_events}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Labels Ready
 
-**Node name:** `$bsp_path/config/labels_ready`
-
-**Description:** Label folder $bsp_path/ui_tree ready to use
-
-**Access:** Read only
-
-**Release version:** V.7.0030.0958
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          | 0 – labels init in progress<br>1 – labels init ready |
-
-**Example:** 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/labels\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Label folder \$bsp\_path/ui\_tree ready to use} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.0958} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  & 0 – labels init in progress\textless{}br\textgreater{}1 – labels init ready \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### CPU Type
 
-**Node name:** `$bsp_path/config/cpu_type`
-
-**Description:** CPU type ID. Extracted from /proc/cpuinfo.
-Format:
-0xXXYY
-XX – model num
-YY - cpu family
-
-**Access:** Read Only
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Hex |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/cpu_type
-0x656
-
-cpu family	: 6
-model		: 86
-model name	: Intel(R) Xeon(R) CPU D-1527 @ 2.20GHz
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cpu\_type}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{CPU type ID. Extracted from /proc/cpuinfo. Format: 0xXXYY XX – model num YY - cpu family} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read Only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Hex &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/cpu\_type 0x656 cpu family	: 6 model		: 86 model name	: Intel(R) Xeon(R) CPU D-1527 @ 2.20GHz}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Named Busses
 
-**Node name:** `$bsp_path/config/named_busses`
-
-**Description:** List of I2C bus idx/bus names separated by 'space'.
-Contains meaningful names for I2C busses on main board
-Present on some systems.
-
-**Access:** Read Only
-
-**Release version:** V.7.0020.3100
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** asic1 2 pwr 4 vr1 5 amb1 7 vpd 8
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/named\_busses}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{List of I2C bus idx/bus names separated by 'space'. Contains meaningful names for I2C busses on main board Present on some systems.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read Only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.3100} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{asic1 2 pwr 4 vr1 5 amb1 7 vpd 8} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### I2C Bus Offset
 
-**Node name:** `$bsp_path/config/i2c_bus_offset`
-
-**Description:** Base i2c bus idx.
-used for internal purposes
-
-**Access:** 
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/i2c_bus_offset
-2
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_bus\_offset}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Base i2c bus idx. used for internal purposes} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/i2c\_bus\_offset 2}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### I2C Bus Connect Devices
 
-**Node name:** `$bsp_path/config/i2c_bus_connect_devices`
-
-**Description:** List of i2c devices/names/bus/add
-
-used for internal purposes
-
-**Access:** Read only
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** xdpe12284 0x62 5 voltmon1 xdpe12284 0x64 5 voltmon2 … 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_bus\_connect\_devices}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{List of i2c devices/names/bus/add\newline used for internal purposes} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{xdpe12284 0x62 5 voltmon1 xdpe12284 0x64 5 voltmon2 …} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### I2C Bus Default Off EEPROM CPU
 
-**Node name:** `$bsp_path/config/i2c_bus_def_off_eeprom_cpu`
-
-**Description:** Offset of i2c bus for CPU VPD eeprom
-
-**Access:** Read only
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_bus\_def\_off\_eeprom\_cpu}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Offset of i2c bus for CPU VPD eeprom} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### I2C Comex Mon Bus Default
 
-**Node name:** `$bsp_path/config/i2c_comex_mon_bus_default`
-
-**Description:** Default I2C bus number for COMEX monitoring devices. Used for voltage monitoring and other COMEX-related sensor readings.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | Bus number |
-
-**Example:** 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_comex\_mon\_bus\_default}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Default I2C bus number for COMEX monitoring devices. Used for voltage monitoring and other COMEX-related sensor readings.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & Bus number \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### I2C SWB Bus
 
-**Node name:** `$bsp_path/config/i2c_swb_bus`
-
-**Description:** Absolute I2C adapter number for the switch-board (SWB) CPLD
-used for cartridge identity registers (rack id, topology id, tray id, slot id)
-at slave address `0x31`. Platform-specific (for example HI176 CPU bus 18,
-HI180 CPU bus 53). Created from platform.json `variables.i2c_swb_bus` or from
-legacy `*_specific()` init. Used by `hw-management-generate-dump.sh` to
-produce archive member `cpld_swb_cartridge_dump` when the node exists
-(rack_id 13 bytes + ASCII, topology/tray/slot).
-
-**Access:** Read only
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | Bus number |
-
-**Example:** 
-```bash
-cat $bsp_path/config/i2c_swb_bus
-53
-```
-
-Example `cpld_swb_cartridge_dump` (from `/tmp/hw-mgmt-dump.tar.gz`):
-```text
-i2c_swb_bus=53 addr=0x31
-rack_id: 0x31 0x38 0x32 0x34 0x32 0x32 0x35 0x34 0x31 0x30 0x30 0x31 0x33
-rack_id_ascii: 1824225410013
-topology_id: 0x00
-tray_id: 0x00
-slot_id: 0x01
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_swb\_bus}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Absolute I2C adapter number for the switch-board (SWB) CPLD used for cartridge identity registers (rack id, topology id, tray id, slot id) at slave address \texttt{\small 0x31}. Platform-specific (for example HI176 CPU bus 18, HI180 CPU bus 53). Created from platform.json \texttt{\small variables.i2c\_swb\_bus} or from legacy \texttt{\small *\_specific()} init. Used by \texttt{\small hw-management-generate-dump.sh} to produce archive member \texttt{\small cpld\_swb\_cartridge\_dump} when the node exists (rack\_id 13 bytes + ASCII, topology/tray/slot).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & Bus number \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/i2c\_swb\_bus 53}\newline Example \texttt{\small cpld\_swb\_cartridge\_dump} (from \texttt{\small /tmp/hw-mgmt-dump.tar.gz}): ``\texttt{\small text i2c\_swb\_bus=53 addr=0x31 rack\_id: 0x31 0x38 0x32 0x34 0x32 0x32 0x35 0x34 0x31 0x30 0x30 0x31 0x33 rack\_id\_ascii: 1824225410013 topology\_id: 0x00 tray\_id: 0x00 slot\_id: 0x01 }``} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### LM Sensors Configuration
 
-**Node name:** `$bsp_path/config/lm_sensors_config`
-
-**Description:** Configuration file for sensor tool from lm_sensors package. Contains sensors definition for the system  
-
-**Access:** 
-
-**Release version:** 
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Text file |  |
-
-**Example:** 
-```bash
-sensors -c $bsp_path/config/lm_sensors_config
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lm\_sensors\_config}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Configuration file for sensor tool from lm\_sensors package. Contains sensors definition for the system} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Text file &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small sensors -c \$bsp\_path/config/lm\_sensors\_config}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### LM Sensor Labels
 
-**Node name:** `$bsp_path/config/lm_sensors_labels`
-
-**Description:** Path to JSON file containing sensor labels for lm-sensors configuration. Provides human-readable names for various temperature, voltage, and fan sensors.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Text file |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/lm_sensors_labels
-/etc/hw-management-sensors/msn2700_sensors_labels.json
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lm\_sensors\_labels}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Path to JSON file containing sensor labels for lm-sensors configuration. Provides human-readable names for various temperature, voltage, and fan sensors.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Text file &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/lm\_sensors\_labels /etc/hw-management-sensors/msn2700\_sensors\_labels.json}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Events Ready
 
-**Node name:** `$bsp_path/config/events_ready`
-
-**Description:** Provides indication that VPD parsing was completed.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0/1 |
-
-**Example:** Check whether VPD parsing has been completed
-```bash
-cat $bsp_path/config/events_ready
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/events\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Provides indication that VPD parsing was completed.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Check whether VPD parsing has been completed \texttt{\small cat \$bsp\_path/config/events\_ready}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Minimal Driver Unsupported
 
-**Node name:** `$bsp_path/config/minimal_unsupported`
-
-**Description:** Provides indication for whether ASIC I2C ('minimal') driver is supported.
-
-**Access:** Read Only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0/1 |
-
-**Example:** Get indication on whether minimal driver is supported:
-```bash
-$bsp_path/config/minimal_unsupported
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/minimal\_unsupported}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Provides indication for whether ASIC I2C ('minimal') driver is supported.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read Only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get indication on whether minimal driver is supported: \texttt{\small \$bsp\_path/config/minimal\_unsupported}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SGMII PHY
 
-**Node name:** `$bsp_path/system/sgmii_phy`
-
-**Description:** SGMII (Serial Gigabit Media Independent Interface) PHY status and configuration. Provides information about the physical layer interface for gigabit Ethernet connections.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/system/sgmii_phy
-``` 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/sgmii\_phy}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{SGMII (Serial Gigabit Media Independent Interface) PHY status and configuration. Provides information about the physical layer interface for gigabit Ethernet connections.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/sgmii\_phy}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### System Flow Capability
 
-**Node name:** `$bsp_path/config/system_flow_capability`
-
-**Description:** Indicates system flow capability for thermal management. Set to "C2P" (Cold to Power) for systems that support this flow direction.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/system_flow_capability
-C2P
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/system\_flow\_capability}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Indicates system flow capability for thermal management. Set to "C2P" (Cold to Power) for systems that support this flow direction.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/system\_flow\_capability C2P}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Fan Direction EEPROM
 
-**Node name:** `$bsp_path/config/fan_dir_eeprom`
-
-**Description:** Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM. On these systems, each fan drawer direction (`thermal/fan<index>_dir`) is taken from the fan module EEPROM VPD. When the fan is removed, the corresponding `fan<index>_dir` attribute may also be removed. See [Read Fan Direction](#read-fan-direction).
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/fan_dir_eeprom
-1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_dir\_eeprom}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM. On these systems, each fan drawer direction (\texttt{\small thermal/fan\textless{}index\textgreater{}\_dir}) is taken from the fan module EEPROM VPD. When the fan is removed, the corresponding \texttt{\small fan\textless{}index\textgreater{}\_dir} attribute may also be removed. See Read Fan Direction.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_dir\_eeprom 1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Global Write Protection Wait Step
 
-**Node name:** `$bsp_path/config/global_wp_wait_step`
-
-**Description:** Write protection wait step configuration in seconds. Used by global write protection mechanism.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/global_wp_wait_step
-1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/global\_wp\_wait\_step}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Write protection wait step configuration in seconds. Used by global write protection mechanism.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/global\_wp\_wait\_step 1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Global Write Protection Timeout
 
-**Node name:** `$bsp_path/config/global_wp_timeout`
-
-**Description:** Write protection timeout configuration in seconds. Used by global write protection mechanism.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/global_wp_timeout
-20
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/global\_wp\_timeout}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Write protection timeout configuration in seconds. Used by global write protection mechanism.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/global\_wp\_timeout 20}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### ConnectX Default I2C Bus
 
-**Node name:** `$bsp_path/config/cx_default_i2c_bus`
-
-**Description:** Default I2C bus number for ConnectX devices. Used for ConnectX device communication.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/cx_default_i2c_bus
-15
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cx\_default\_i2c\_bus}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Default I2C bus number for ConnectX devices. Used for ConnectX device communication.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/cx\_default\_i2c\_bus 15}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### JTAG Bridge Offset
 
-**Node name:** `$bsp_path/config/jtag_bridge_offset`
-
-**Description:** JTAG bridge memory offset for debugging purposes. Extracted from /proc/iomem mlxplat_jtag_bridge entry.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/jtag_bridge_offset
-0x40000000
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/jtag\_bridge\_offset}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{JTAG bridge memory offset for debugging purposes. Extracted from /proc/iomem mlxplat\_jtag\_bridge entry.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/jtag\_bridge\_offset 0x40000000}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Core 0 Temperature ID
 
-**Node name:** `$bsp_path/config/core0_temp_id`
-
-**Description:** Temperature sensor ID for CPU core 0. Used for thermal monitoring of the first CPU core.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/core0_temp_id
-2
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/core0\_temp\_id}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Temperature sensor ID for CPU core 0. Used for thermal monitoring of the first CPU core.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/core0\_temp\_id 2}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Core 1 Temperature ID
 
-**Node name:** `$bsp_path/config/core1_temp_id`
-
-**Description:** Temperature sensor ID for CPU core 1. Used for thermal monitoring of the second CPU core.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      |          |  |
-
-**Example:** 
-```bash
-cat $bsp_path/config/core1_temp_id
-3
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/core1\_temp\_id}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Temperature sensor ID for CPU core 1. Used for thermal monitoring of the second CPU core.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  &  &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/core1\_temp\_id 3}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PDB Hotswap Scale Factor
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/config/pdb_hotswap_scale`
-
-**Description:** LM5066I PDB hot-swap input power and current scaling factor. Written by
-`sn66xxld_specific()` in `hw-management.sh` for SN6600_LD (SKU HI193). The same value is
-symlinked under each lm5066i PDB hotswap environment node as `*_power1_scale` and
-`*_curr1_scale` (see §3.4). lm-sensors applies the same factor via `compute` rules in
-`usr/etc/hw-management-sensors/sn66xxld_sensors.conf`.
-
-**Access:** Read only
-
-**Release version:** V.7.0070.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Scale | Float | **5.333** on SN6600_LD (validated in `hw-management.sh`) |
-
-**Example:**
-```bash
-cat $bsp_path/config/pdb_hotswap_scale
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{LM5066I PDB hot-swap input power and current scaling factor. Written by \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} for SN6600\_LD (SKU HI193). The same value is symlinked under each lm5066i PDB hotswap environment node as \texttt{\small *\_power1\_scale} and \texttt{\small *\_curr1\_scale} (see §3.4). lm-sensors applies the same factor via \texttt{\small compute} rules in \texttt{\small usr/etc/hw-management-sensors/sn66xxld\_sensors.conf}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Scale & Float & \textbf{5.333} on SN6600\_LD (validated in \texttt{\small hw-management.sh}) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/pdb\_hotswap\_scale}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LED Control Type Map
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/config/led_control_type`
-
-**Description:** Optional platform map of LED name (or glob mask) to control
-owner. Written by `set_config_data()` in `hw-management.sh` when a
-`*_specific()` function sets the `led_control_type` array. Space-separated
-pairs: `name type [name type ...]`.
-
-If the node is absent, or a given LED name is not listed, LED add uses the
-default owner `led_hw_sw` (see §3.16.28).
-
-Name matching (in `hw-management-chassis-events.sh` `get_led_control_type()`):
-
-1. Exact match of the udev LED name (`status`, `fan`, `fan1`) or `led_<name>`.
-   `fan` and `fan1` are different names.
-2. Glob mask: `*` matches any string, `?` matches one character. First matching
-   mask wins. Masks must be quoted in the platform array (`"fan*"`, `"led?"`)
-   so the shell does not expand them.
-3. Otherwise `led_hw_sw`.
-
-**Access:** Read only
-
-**Release version:** 3.2.7
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| name | String | LED name (`fan`, `status`) or mask (`fan*`, `led_psu?`, `led*`) |
-| type | String | `led_sw`, `led_hw`, `led_hw_sw` |
-
-**Platform notes:** Optional. Created only when a platform `*_specific()` function
-sets the `led_control_type` array. Otherwise the node is absent and LED add
-uses `led_hw_sw`.
-
-**Example:**
-```bash
-cat $bsp_path/config/led_control_type
-# fan led_sw psu led_sw status led_sw
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/led\_control\_type}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Optional platform map of LED name (or glob mask) to control owner. Written by \texttt{\small set\_config\_data()} in \texttt{\small hw-management.sh} when a \texttt{\small *\_specific()} function sets the \texttt{\small led\_control\_type} array. Space-separated pairs: \texttt{\small name type [name type ...]}.\newline If the node is absent, or a given LED name is not listed, LED add uses the default owner \texttt{\small led\_hw\_sw} (see §3.16.28).\newline Name matching (in \texttt{\small hw-management-chassis-events.sh} \texttt{\small get\_led\_control\_type()}):\newline 1. Exact match of the udev LED name (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}) or \texttt{\small led\_\textless{}name\textgreater{}}.    \texttt{\small fan} and \texttt{\small fan1} are different names. 2. Glob mask: \texttt{\small *} matches any string, \texttt{\small ?} matches one character. First matching    mask wins. Masks must be quoted in the platform array (\texttt{\small "fan*"}, \texttt{\small "led?"})    so the shell does not expand them. 3. Otherwise \texttt{\small led\_hw\_sw}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.7} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & name & String & LED name (\texttt{\small fan}, \texttt{\small status}) or mask (\texttt{\small fan*}, \texttt{\small led\_psu?}, \texttt{\small led*}) \\
+ & type & String & \texttt{\small led\_sw}, \texttt{\small led\_hw}, \texttt{\small led\_hw\_sw} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/led\_control\_type \# fan led\_sw psu led\_sw status led\_sw}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Cable Cartridge FRU Validity
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/config/cable_cartridge<cartridge number>_valid`
-
-**Description:** Result of the IPMI FRU check run on the cable cartridge EEPROM
-at init. The BMC reads the same EEPROM and programs the rack id, topology id,
-switch tray id and slot id into the switch board CPLD without validating it,
-so this node reports whether that source data can be trusted.
-
-Written by `validate_cartridge_fru()` in `hw-management-chassis-events.sh` after
-`ipmi-fru` parses `eeprom/cable_cartridge<n>_eeprom`. `ipmi-fru` exits 0 even
-for a broken FRU, so the verdict comes from its output: a `FRU Error` line, or a
-missing board serial number or chassis custom info field, gives 0. Failures are
-also reported to syslog.
-
-Created on the N51XX_LD and N61XX_LD families only. Other platforms that have
-cable cartridge EEPROMs parse them through a different path and do not get this
-node. It is also absent when `ipmi-fru` is not installed.
-
-The node is created when the cartridge EEPROM appears and removed when the
-cartridge is removed, so it never reports a verdict for an empty slot.
-
-One node per cartridge, so the count follows `config/cartridge_counter`, which
-is platform dependent: 4 on N6100_LD (HI180), N6300_LD (HI185), N5110_LD (HI166)
-and N5100_LD (HI167/HI170), and 2 on N5112_LD (HI169).
-
-**Access:** Read only
-
-**Release version:** 3.2.8
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Validity | Integer | 1 - FRU valid, 0 - FRU invalid |
-
-**Example:** Check cable cartridge 1 FRU validity:
-```bash
-cat $bsp_path/config/cable_cartridge1_valid
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cable\_cartridge\textless{}cartridge number\textgreater{}\_valid}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Result of the IPMI FRU check run on the cable cartridge EEPROM at init. The BMC reads the same EEPROM and programs the rack id, topology id, switch tray id and slot id into the switch board CPLD without validating it, so this node reports whether that source data can be trusted.\newline Written by \texttt{\small validate\_cartridge\_fru()} in \texttt{\small hw-management-chassis-events.sh} after \texttt{\small ipmi-fru} parses \texttt{\small eeprom/cable\_cartridge\textless{}n\textgreater{}\_eeprom}. \texttt{\small ipmi-fru} exits 0 even for a broken FRU, so the verdict comes from its output: a \texttt{\small FRU Error} line, or a missing board serial number or chassis custom info field, gives 0. Failures are also reported to syslog.\newline Created on the N51XX\_LD and N61XX\_LD families only. Other platforms that have cable cartridge EEPROMs parse them through a different path and do not get this node. It is also absent when \texttt{\small ipmi-fru} is not installed.\newline The node is created when the cartridge EEPROM appears and removed when the cartridge is removed, so it never reports a verdict for an empty slot.\newline One node per cartridge, so the count follows \texttt{\small config/cartridge\_counter}, which is platform dependent: 4 on N6100\_LD (HI180), N6300\_LD (HI185), N5110\_LD (HI166) and N5100\_LD (HI167/HI170), and 2 on N5112\_LD (HI169).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.8} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Validity & Integer & 1 - FRU valid, 0 - FRU invalid \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Check cable cartridge 1 FRU validity: \texttt{\small cat \$bsp\_path/config/cable\_cartridge1\_valid}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## BIOS Control
 
 ### BIOS Active Image
 
-**Node name:** `$bsp_path/system/bios_active_image`
-
-**Description:** Currently active BIOS image identifier. Indicates which BIOS image is currently running on the system.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Text | Image identifier |
-
-**Example:** 
-```bash
-cat $bsp_path/system/bios_active_image
-primary
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/bios\_active\_image}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Currently active BIOS image identifier. Indicates which BIOS image is currently running on the system.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Text & Image identifier \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bios\_active\_image primary}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## EEPROM Control
 
 ### Read CPU EEPROM Data
 
-**Node name:** `$bsp_path/eeprom/cpu_info`
-
-**Description:** Read CPU raw data in hexadecimal format
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | Hex | Hex dump format of memory |
-
-**Example:** Get CPU EEPROM information:
-```bash
-cat $bsp_path/eeprom/cpu_info
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/cpu\_info}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU raw data in hexadecimal format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & Hex & Hex dump format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPU EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/cpu\_info}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Module EEPROM Data
 
-**Node name:** `$bsp_path/eeprom/fan<fan module number>_info`
-
-**Description:** Read fan module raw data in hexadecimal format
-Note: This attribute is not supported on Comex CPU systems.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | Hex | Hex dump format of memory |
-
-**Example:** Get fan module 1 EEPROM information:
-```bash
-hexdump -C $bsp_path/eeprom/fan1_info
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/fan\textless{}fan module number\textgreater{}\_info}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan module raw data in hexadecimal format Note: This attribute is not supported on Comex CPU systems.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & Hex & Hex dump format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan module 1 EEPROM information: \texttt{\small hexdump -C \$bsp\_path/eeprom/fan1\_info}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Power Supply Module EEPROM Data
 
-**Node name:** `$bsp_path/eeprom/psu<power supply module number>_info`
-
-**Description:** Read power supply module raw data in hexadecimal format
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | Hex | Hex dump format of memory |
-
-**Example:** Get power supply module 1 EEPROM information:
-```bash
-cat $bsp_path/eeprom/psu1_info
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/psu\textless{}power supply module number\textgreater{}\_info}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read power supply module raw data in hexadecimal format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & Hex & Hex dump format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power supply module 1 EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/psu1\_info}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read System Chassis EEPROM Data
 
-**Node name:** `$bsp_path/eeprom/vpd_info`
-
-**Description:** Read system chassis raw data in hexadecimal format
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | Hex | Hex dump format of memory |
-
-**Example:** Get system chassis EEPROM information:
-```bash
-cat $bsp_path/eeprom/vpd_info
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/vpd\_info}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read system chassis raw data in hexadecimal format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & Hex & Hex dump format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get system chassis EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/vpd\_info}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read System Chassis EEPROM Parsed Data
 
-**Node name:** `$bsp_path/eeprom/vpd_data`
-
-**Description:** Read system chassis parsed data in text format
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | string | string format of memory |
-
-**Example:** Get system chassis EEPROM information:
-```bash
-cat $bsp_path/eeprom/vpd_data
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/vpd\_data}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read system chassis parsed data in text format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & string & string format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get system chassis EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/vpd\_data}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Cable Cartridge EEPROM Data
 
-**Node name:** `$bsp_path/eeprom/cable_cartridge<index>_eeprom`
-`$bsp_path/eeprom/cable_cartridge<index>_eeprom_data`
-
-**Description:** Read cable cartridge EEPROM raw data or parsed data. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.
-
-Note: This attribute is for systems with cable cartridges (N61XX_LD family: N6100_LD, N6300_LD).
-N6100_LD has 4 cable cartridges (index 1-4) on I2C buses 68, 69, 70, 71.
-N6300_LD (SKU HI185) uses the same cartridge EEPROM connect table as N6100_LD (`n61xxld_cartridge_eeprom_connect_table` in `hw-management.sh`).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-4 (N6100_LD) |
-| EEPROM data | Binary/String | Raw or parsed EEPROM content |
-
-**Example:** Get cable cartridge EEPROM data:
-```bash
-cat $bsp_path/eeprom/cable_cartridge1_eeprom_data
-cat $bsp_path/eeprom/cable_cartridge2_eeprom_data
-cat $bsp_path/eeprom/cable_cartridge3_eeprom_data
-cat $bsp_path/eeprom/cable_cartridge4_eeprom_data
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/cable\_cartridge\textless{}index\textgreater{}\_eeprom}\newline \texttt{\small \$bsp\_path/eeprom/cable\_cartridge\textless{}index\textgreater{}\_eeprom\_data}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read cable cartridge EEPROM raw data or parsed data. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is for systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD has 4 cable cartridges (index 1-4) on I2C buses 68, 69, 70, 71. N6300\_LD (SKU HI185) uses the same cartridge EEPROM connect table as N6100\_LD (\texttt{\small n61xxld\_cartridge\_eeprom\_connect\_table} in \texttt{\small hw-management.sh}).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-4 (N6100\_LD) \\
+ & EEPROM data & Binary/String & Raw or parsed EEPROM content \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get cable cartridge EEPROM data: \texttt{\small cat \$bsp\_path/eeprom/cable\_cartridge1\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge2\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge3\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge4\_eeprom\_data}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read system EEPROM (BMC stack)
 
-**Stack:** BMC (`hw-management-bmc-events.sh`, event `eeprom_system`)
-
-**Node name:** `$bsp_path/eeprom/eeprom_system`
-
-**Description:** Raw system VPD EEPROM on the **BMC** image. HI189 udev matches I2C
-`5-0051` (`hw-management-bmc-early-i2c-devices.json`: bus 5 / `0x51`, **24c512**).
-Symlink points at the kernel `eeprom` attribute for that device.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/eeprom/eeprom_system
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bmc-events.sh}, event \texttt{\small eeprom\_system})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/eeprom\_system}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Raw system VPD EEPROM on the \textbf{BMC} image. HI189 udev matches I2C \texttt{\small 5-0051} (\texttt{\small hw-management-bmc-early-i2c-devices.json}: bus 5 / \texttt{\small 0x51}, \textbf{24c512}). Symlink points at the kernel \texttt{\small eeprom} attribute for that device.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eeprom/eeprom\_system}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read BMC board EEPROM (BMC stack)
 
-**Stack:** BMC (`hw-management-bmc-events.sh`, event `eeprom_bmc`)
-
-**Node name:** `$bsp_path/eeprom/eeprom_bmc`
-
-**Description:** BMC FRU EEPROM on the **BMC** image. HI189 udev matches I2C `4-0050`
-(bus 4 / `0x50`, **24c02** per early-I2C JSON).
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/eeprom/eeprom_bmc
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bmc-events.sh}, event \texttt{\small eeprom\_bmc})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/eeprom\_bmc}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{BMC FRU EEPROM on the \textbf{BMC} image. HI189 udev matches I2C \texttt{\small 4-0050} (bus 4 / \texttt{\small 0x50}, \textbf{24c02} per early-I2C JSON).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eeprom/eeprom\_bmc}\newline \textbf{Reference:} \texttt{\small bmc/examples/hw-management-bmc-eeprom-sysfs.txt}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
-**Reference:** `bmc/examples/hw-management-bmc-eeprom-sysfs.txt`
 
 ## Environment Control
 
 ### Get A2D Voltage
 
-**Node name:** `$bsp_path/environment/a2d_iio:device<number>_raw<index>`
-
-**Description:** Get raw voltage input from A2D sensor
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get voltage input from A2D1:
-```bash
-cat $bsp_path/environment/a2d_iio:device0_raw_1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/a2d\_iio:device\textless{}number\textgreater{}\_raw\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from A2D sensor} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage input from A2D1: \texttt{\small cat \$bsp\_path/environment/a2d\_iio:device0\_raw\_1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Comex Voltage Current
 
-**Node name:** `$bsp_path/environment/comex_voltmon<index>_curr<index>_input`
-
-**Description:** Get raw voltage input from Comex
-
-Note: This attribute is for Comex based system only
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get comex voltage monitor 1 current2 reading:
-```bash
-cat $bsp_path/environment/comex_voltmon1_curr2_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/comex\_voltmon\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from Comex\newline Note: This attribute is for Comex based system only} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get comex voltage monitor 1 current2 reading: \texttt{\small cat \$bsp\_path/environment/comex\_voltmon1\_curr2\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Comex Voltage Input
 
-**Node name:** `$bsp_path/environment/comex_voltmon<index>_in<index>_input`
-
-**Description:** Get raw voltage input from Comex
-Note: This attribute is for Comex based system only
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get Comex voltage monitor 1 input reading:
-```bash
-cat $bsp_path/environment/comex_voltmon1_in1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/comex\_voltmon\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from Comex Note: This attribute is for Comex based system only} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get Comex voltage monitor 1 input reading: \texttt{\small cat \$bsp\_path/environment/comex\_voltmon1\_in1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Comex Voltage Power
 
-**Node name:** `$bsp_path/environment/comex_voltmon<index>_power<index>_input`
-
-**Description:** Get raw voltage input from Comex
-Note: This attribute is for Comex based system only
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get Comex voltage monitor 1 power reading:
-```bash
-cat $bsp_path/environment/comex_power2_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/comex\_voltmon\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from Comex Note: This attribute is for Comex based system only} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get Comex voltage monitor 1 power reading: \texttt{\small cat \$bsp\_path/environment/comex\_power2\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get System Voltage Current
 
-**Node name:** `$bsp_path/environment/voltmon<index>_curr<index>_input`
-
-**Description:** Get raw voltage input from system
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get voltage monitor 1 current2 reading:
-```bash
-cat $bsp_path/environment/voltmon1_curr2_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/voltmon\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from system} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 current2 reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_curr2\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get System Voltage Input
 
-**Node name:** `$bsp_path/environment/voltmon<index>_in<index>_input`
-
-**Description:** Get raw voltage input from system
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get voltage monitor 1 input reading:
-```bash
-cat $bsp_path/environment/voltmon1_in1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/voltmon\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from system} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 input reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_in1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get System Voltage Power
 
-**Node name:** `$bsp_path/environment/voltmon<index>_power<index>_input`
-
-**Description:** Get raw voltage input from system
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | X |
-
-**Example:** Get voltage monitor 1 power reading:
-```bash
-cat $bsp_path/environment/voltmon1_power2_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/voltmon\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from system} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & X \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 power reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_power2\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Hotswap Controller Current
 
-**Node name:** `$bsp_path/environment/pdb_hotswap<index>_curr<index>_input`
-
-**Description:** Get PDB (Power Distribution Board) hot-swap controller current measurement
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Current | Integer | Value in milliamps (mA) |
-
-**Example:** Get PDB hotswap 1 current input:
-```bash
-cat $bsp_path/environment/pdb_hotswap1_curr1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB (Power Distribution Board) hot-swap controller current measurement\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Current & Integer & Value in milliamps (mA) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 current input: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Hotswap Controller Voltage
 
-**Node name:** `$bsp_path/environment/pdb_hotswap<index>_in<index>_input`
-
-**Description:** Get PDB hot-swap controller voltage measurement
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | Value in millivolts (mV) |
-
-**Example:** Get PDB hotswap 1 input voltage:
-```bash
-cat $bsp_path/environment/pdb_hotswap1_in1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hot-swap controller voltage measurement\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & Value in millivolts (mV) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 input voltage: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Hotswap Controller Power
 
-**Node name:** `$bsp_path/environment/pdb_hotswap<index>_power<index>_input`
-
-**Description:** Get PDB hot-swap controller power measurement
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Power | Integer | Value in microwatts (µW) |
-
-**Example:** Get PDB hotswap 1 power input:
-```bash
-cat $bsp_path/environment/pdb_hotswap1_power1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hot-swap controller power measurement\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Power & Integer & Value in microwatts (µW) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 power input: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_power1\_input}\newline Note: On SN6600\_LD, when the underlying hwmon device is \textbf{lm5066i}, \texttt{\small hw-management-chassis-events.sh} creates scale-factor symlinks for input power and current (see following sections). lm-sensors also applies factor \textbf{5.333} to the lm5066i PDB hotswap \texttt{\small power1} and \texttt{\small curr1} labels in \texttt{\small sn66xxld\_sensors.conf}.} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
-Note: On SN6600_LD, when the underlying hwmon device is **lm5066i**, `hw-management-chassis-events.sh`
-creates scale-factor symlinks for input power and current (see following sections). lm-sensors also
-applies factor **5.333** to the lm5066i PDB hotswap `power1` and `curr1` labels in
-`sn66xxld_sensors.conf`.
 
 ### Get PDB Hotswap Power Scale
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/environment/pdb_hotswap<index>_power1_scale`
-
-**Description:** Scaling factor symlink for PDB hot-swap controller input power. Created when the
-hotswap hwmon driver name is **lm5066i**; the symlink targets `$bsp_path/config/pdb_hotswap_scale`.
-
-Note: SN6600_LD (SKU HI193) only. Not created for other hotswap driver types (for example mp5926).
-
-**Access:** Read only
-
-**Release version:** V.7.0070.1000
-
-**Example:**
-```bash
-cat $bsp_path/environment/pdb_hotswap1_power1_scale
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_power1\_scale}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Scaling factor symlink for PDB hot-swap controller input power. Created when the hotswap hwmon driver name is \textbf{lm5066i}; the symlink targets \texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}.\newline Note: SN6600\_LD (SKU HI193) only. Not created for other hotswap driver types (for example mp5926).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_power1\_scale}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Hotswap Current Scale
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/environment/pdb_hotswap<index>_curr1_scale`
-
-**Description:** Scaling factor symlink for PDB hot-swap controller input current. Created when the
-hotswap hwmon driver name is **lm5066i**; the symlink targets `$bsp_path/config/pdb_hotswap_scale`.
-
-Note: SN6600_LD (SKU HI193) only.
-
-**Access:** Read only
-
-**Release version:** V.7.0070.1000
-
-**Example:**
-```bash
-cat $bsp_path/environment/pdb_hotswap1_curr1_scale
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_curr1\_scale}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Scaling factor symlink for PDB hot-swap controller input current. Created when the hotswap hwmon driver name is \textbf{lm5066i}; the symlink targets \texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}.\newline Note: SN6600\_LD (SKU HI193) only.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_scale}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Hotswap Controller Thresholds
 
-**Node name:** `$bsp_path/environment/pdb_hotswap<index>_<sensor>_<threshold>`
-
-**Description:** Get PDB hot-swap controller threshold values (crit, lcrit, max, min)
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Threshold | Integer | Varies by sensor type |
-
-**Example:** Get PDB hotswap 1 current max threshold:
-```bash
-cat $bsp_path/environment/pdb_hotswap1_curr1_max
-cat $bsp_path/environment/pdb_hotswap1_in1_crit
-cat $bsp_path/environment/pdb_hotswap1_in1_lcrit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_\textless{}sensor\textgreater{}\_\textless{}threshold\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hot-swap controller threshold values (crit, lcrit, max, min)\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Threshold & Integer & Varies by sensor type \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 current max threshold: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_max cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_crit cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_lcrit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Power Converter Current
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_curr<index>_input` (SN58XX_LD, SN66XX_LD)
-`$bsp_path/environment/pwr_conv<index>_curr<index>_input` (N61XX_LD)
-
-**Description:** Get PDB power converter current measurement (input or output)
-
-Note: This attribute is for liquid-cooled systems only.
-- SN58XX_LD family uses: `pdb_pwr_conv<N>_...` naming (1 power converter on SN5810_LD; more on SN5800_LD)
-- SN66XX_LD family (SN6600_LD) uses: `pdb_pwr_conv<N>_...` with N = 1..2
-- N61XX_LD family uses: `pwr_conv<N>_...` naming (2 power converters)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000 (SN58XX_LD), V.7.0060.1000 (N61XX_LD)
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Current | Integer | Value in milliamps (mA) |
-
-**Example:** Get power converter current readings:
-```bash
-# SN58XX_LD systems
-cat $bsp_path/environment/pdb_pwr_conv1_curr1_input
-cat $bsp_path/environment/pdb_pwr_conv1_curr2_input
-
-# SN6600_LD systems (2 PDB converters)
-cat $bsp_path/environment/pdb_pwr_conv1_curr1_input
-cat $bsp_path/environment/pdb_pwr_conv1_curr2_input
-cat $bsp_path/environment/pdb_pwr_conv2_curr1_input
-cat $bsp_path/environment/pdb_pwr_conv2_curr2_input
-
-# N6100_LD systems (2 power converters)
-cat $bsp_path/environment/pwr_conv1_curr1_input
-cat $bsp_path/environment/pwr_conv1_curr2_input
-cat $bsp_path/environment/pwr_conv2_curr1_input
-cat $bsp_path/environment/pwr_conv2_curr2_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input} (SN58XX\_LD, SN66XX\_LD)\newline \texttt{\small \$bsp\_path/environment/pwr\_conv\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input} (N61XX\_LD)} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter current measurement (input or output)\newline Note: This attribute is for liquid-cooled systems only. - SN58XX\_LD family uses: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} naming (1 power converter on SN5810\_LD; more on SN5800\_LD) - SN66XX\_LD family (SN6600\_LD) uses: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} with N = 1..2 - N61XX\_LD family uses: \texttt{\small pwr\_conv\textless{}N\textgreater{}\_...} naming (2 power converters)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000 (SN58XX\_LD), V.7.0060.1000 (N61XX\_LD)} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Current & Integer & Value in milliamps (mA) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter current readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr2\_input \# SN6600\_LD systems (2 PDB converters) cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr2\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_curr2\_input \# N6100\_LD systems (2 power converters) cat \$bsp\_path/environment/pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pwr\_conv1\_curr2\_input cat \$bsp\_path/environment/pwr\_conv2\_curr1\_input cat \$bsp\_path/environment/pwr\_conv2\_curr2\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Power Converter Voltage
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_in<index>_input` (SN58XX_LD, SN66XX_LD)
-`$bsp_path/environment/pwr_conv<index>_in<index>_input` (N61XX_LD)
-
-**Description:** Get PDB power converter voltage measurement (input or output)
-
-Note: This attribute is for liquid-cooled systems only.
-- SN58XX_LD and SN66XX_LD families use: `pdb_pwr_conv<N>_...` naming
-- N61XX_LD family uses: `pwr_conv<N>_...` naming
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000 (SN58XX_LD), V.7.0060.1000 (N61XX_LD)
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Voltage | Integer | Value in millivolts (mV) |
-
-**Example:** Get power converter voltage readings:
-```bash
-# SN58XX_LD systems
-cat $bsp_path/environment/pdb_pwr_conv1_in1_input
-cat $bsp_path/environment/pdb_pwr_conv1_in2_input
-
-# SN6600_LD systems
-cat $bsp_path/environment/pdb_pwr_conv1_in1_input
-cat $bsp_path/environment/pdb_pwr_conv1_in2_input
-cat $bsp_path/environment/pdb_pwr_conv2_in1_input
-cat $bsp_path/environment/pdb_pwr_conv2_in2_input
-
-# N6100_LD systems
-cat $bsp_path/environment/pwr_conv1_in1_input
-cat $bsp_path/environment/pwr_conv1_in2_input
-cat $bsp_path/environment/pwr_conv2_in1_input
-cat $bsp_path/environment/pwr_conv2_in2_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input} (SN58XX\_LD, SN66XX\_LD)\newline \texttt{\small \$bsp\_path/environment/pwr\_conv\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input} (N61XX\_LD)} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter voltage measurement (input or output)\newline Note: This attribute is for liquid-cooled systems only. - SN58XX\_LD and SN66XX\_LD families use: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} naming - N61XX\_LD family uses: \texttt{\small pwr\_conv\textless{}N\textgreater{}\_...} naming} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000 (SN58XX\_LD), V.7.0060.1000 (N61XX\_LD)} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Voltage & Integer & Value in millivolts (mV) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter voltage readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in2\_input \# SN6600\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in2\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_in2\_input \# N6100\_LD systems cat \$bsp\_path/environment/pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pwr\_conv1\_in2\_input cat \$bsp\_path/environment/pwr\_conv2\_in1\_input cat \$bsp\_path/environment/pwr\_conv2\_in2\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Power Converter Power
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_power<index>_input` (SN58XX_LD, SN66XX_LD)
-`$bsp_path/environment/pwr_conv<index>_power<index>_input` (N61XX_LD)
-
-**Description:** Get PDB power converter power measurement (input or output)
-
-Note: This attribute is for liquid-cooled systems only.
-- SN58XX_LD and SN66XX_LD families use: `pdb_pwr_conv<N>_...` naming
-- N61XX_LD family uses: `pwr_conv<N>_...` naming
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000 (SN58XX_LD), V.7.0060.1000 (N61XX_LD)
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Power | Integer | Value in microwatts (µW) |
-
-**Example:** Get power converter power readings:
-```bash
-# SN58XX_LD systems
-cat $bsp_path/environment/pdb_pwr_conv1_power1_input
-
-# SN6600_LD systems
-cat $bsp_path/environment/pdb_pwr_conv1_power1_input
-cat $bsp_path/environment/pdb_pwr_conv2_power1_input
-
-# N6100_LD systems
-cat $bsp_path/environment/pwr_conv1_power1_input
-cat $bsp_path/environment/pwr_conv2_power1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input} (SN58XX\_LD, SN66XX\_LD)\newline \texttt{\small \$bsp\_path/environment/pwr\_conv\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input} (N61XX\_LD)} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter power measurement (input or output)\newline Note: This attribute is for liquid-cooled systems only. - SN58XX\_LD and SN66XX\_LD families use: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} naming - N61XX\_LD family uses: \texttt{\small pwr\_conv\textless{}N\textgreater{}\_...} naming} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000 (SN58XX\_LD), V.7.0060.1000 (N61XX\_LD)} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Power & Integer & Value in microwatts (µW) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter power readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_power1\_input \# SN6600\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_power1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_power1\_input \# N6100\_LD systems cat \$bsp\_path/environment/pwr\_conv1\_power1\_input cat \$bsp\_path/environment/pwr\_conv2\_power1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Power Converter Thresholds
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_<sensor>_<threshold>`
-
-**Description:** Get PDB power converter threshold values (crit, lcrit, max, min)
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Threshold | Integer | Varies by sensor type |
-
-**Example:** Get PDB power converter 1 thresholds:
-```bash
-cat $bsp_path/environment/pdb_pwr_conv1_curr1_crit
-cat $bsp_path/environment/pdb_pwr_conv1_in1_max
-cat $bsp_path/environment/pdb_pwr_conv1_in1_min
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_\textless{}sensor\textgreater{}\_\textless{}threshold\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter threshold values (crit, lcrit, max, min)\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Threshold & Integer & Varies by sensor type \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter 1 thresholds: \texttt{\small cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_crit cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_max cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_min}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## Events
 
 ### Get FAN hot-plug event status
 
-**Node name:** `$bsp_path/events/fan<index>`
-
-**Description:** Get hot-plug event status of FAN<index> Index max value corresponds to
-$bsp_path/config/hotplug_fans
-0 – FAN<index> was removed, 1 – FAN<index> was inserted.
-
-**Access:** Read
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get FAN3 hot-plug status:
-```bash
-cat $bsp_path/events/fan3
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/fan\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug event status of FAN\textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_fans 0 – FAN\textless{}index\textgreater{} was removed, 1 – FAN\textless{}index\textgreater{} was inserted.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get FAN3 hot-plug status: \texttt{\small cat \$bsp\_path/events/fan3}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU hot-plug event status
 
-**Node name:** `$bsp_path/events/psu<index>`
-
-**Description:** Get hot-plug event status of PSU<index> Index max value corresponds to
-$bsp_path/config/hotplug_psus
-0 – PSU<index> was removed, 1 – PSU<index> was inserted.
-
-**Access:** Read
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get PSU2 hot-plug status:
-```bash
-cat $bsp_path/events/psu2
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/psu\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug event status of PSU\textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_psus 0 – PSU\textless{}index\textgreater{} was removed, 1 – PSU\textless{}index\textgreater{} was inserted.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU2 hot-plug status: \texttt{\small cat \$bsp\_path/events/psu2}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### PWR hot-plug event status
 
-**Node name:** `$bsp_path/events/pwr<index>`
-
-**Description:** Get latest hot-plug event status of PWR<index> Index max value corresponds to
-$bsp_path/config/hotplug_pwrs
-0 – PWR<index> cable was plugged-out,
-1 – PWR<index> cable was plugged-in.
-
-**Access:** Read
-
-**Release version:** V.7.0010.1300
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get Power1 cable hot-plug status:
-```bash
-cat $bsp_path/events/pwr1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/pwr\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get latest hot-plug event status of PWR\textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_pwrs 0 – PWR\textless{}index\textgreater{} cable was plugged-out, 1 – PWR\textless{}index\textgreater{} cable was plugged-in.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get Power1 cable hot-plug status: \texttt{\small cat \$bsp\_path/events/pwr1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### PDB hot-plug event status
 
-**Node name:** `$bsp_path/events/pdb<index>`
-
-**Description:** Get hot-plug event status of PDB (Power Distribution Board) <index>
-Index max value corresponds to $bsp_path/config/hotplug_pdbs
-0 – PDB<index> was removed,
-1 – PDB<index> was inserted.
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Event | Integer | 0 / 1 |
-
-**Example:** Get PDB1 hot-plug status:
-```bash
-cat $bsp_path/events/pdb1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/pdb\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug event status of PDB (Power Distribution Board) \textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_pdbs 0 – PDB\textless{}index\textgreater{} was removed, 1 – PDB\textless{}index\textgreater{} was inserted.\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Event & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB1 hot-plug status: \texttt{\small cat \$bsp\_path/events/pdb1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### DPU Ready event
 
-**Node name:** `$bsp_path/events/dpu[1-8]_ready`
-
-**Description:** Get dpu ready event
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer | 0 / 1 |
-
-**Example:** Get dpu[1-8] ready status
-```bash
-cat $bsp_path/events/dpu1_ready
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu[1-8]\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get dpu ready event} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu[1-8] ready status \texttt{\small cat \$bsp\_path/events/dpu1\_ready}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### DPU Shutdown event
 
-**Node name:** `$bsp_path/events/dpu[1-8]_shtdn_ready`
-
-**Description:** Get dpu shutdown ready event
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer | 0 / 1 |
-
-**Example:** Get dpu[1-8] shut down ready status
-```bash
-cat $bsp_path/events/dpu1_shtdn_ready
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu[1-8]\_shtdn\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get dpu shutdown ready event} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu[1-8] shut down ready status \texttt{\small cat \$bsp\_path/events/dpu1\_shtdn\_ready}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### EROT (External Root of Trust) AP event
 
-**Node name:** `$bsp_path/events/erot<index>_ap`
-
-**Description:** EROT Application Processor event status. Indicates the state of the External Root of Trust application processor at the specified index.
-
-Note: This attribute is for systems with eRoT support (N61XX_LD family: N6100_LD).
-N6100_LD has 1 eRoT (index=1).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1 (N6100_LD) |
-| Status | Integer | 0 (inactive), 1 (active) |
-
-**Example:** Get eRoT AP status:
-```bash
-cat $bsp_path/events/erot1_ap
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/erot\textless{}index\textgreater{}\_ap}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{EROT Application Processor event status. Indicates the state of the External Root of Trust application processor at the specified index.\newline Note: This attribute is for systems with eRoT support (N61XX\_LD family: N6100\_LD). N6100\_LD has 1 eRoT (index=1).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1 (N6100\_LD) \\
+ & Status & Integer & 0 (inactive), 1 (active) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get eRoT AP status: \texttt{\small cat \$bsp\_path/events/erot1\_ap}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### EROT (External Root of Trust) Error Event
 
-**Node name:** `$bsp_path/events/erot<index>_error`
-
-**Description:** EROT error event status. Indicates error conditions detected by the External Root of Trust at the specified index.
-
-Note: This attribute is for systems with eRoT support (N61XX_LD family: N6100_LD).
-N6100_LD has 1 eRoT (index=1).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1 (N6100_LD) |
-| Status | Integer | 0 (no error), 1 (error detected) |
-
-**Example:** Get eRoT error status:
-```bash
-cat $bsp_path/events/erot1_error
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/erot\textless{}index\textgreater{}\_error}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{EROT error event status. Indicates error conditions detected by the External Root of Trust at the specified index.\newline Note: This attribute is for systems with eRoT support (N61XX\_LD family: N6100\_LD). N6100\_LD has 1 eRoT (index=1).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1 (N6100\_LD) \\
+ & Status & Integer & 0 (no error), 1 (error detected) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get eRoT error status: \texttt{\small cat \$bsp\_path/events/erot1\_error}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Graceful Power Off Event
 
-**Node name:** `$bsp_path/events/graceful_pwr_off`
-
-**Description:** Graceful power off event status. Indicates when the system is performing a graceful shutdown sequence.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | 0 (normal), 1 (graceful shutdown) |
-
-**Example:** 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/graceful\_pwr\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Graceful power off event status. Indicates when the system is performing a graceful shutdown sequence.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & 0 (normal), 1 (graceful shutdown) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### Power Button Event
 
-**Node name:** `$bsp_path/events/power_button`
-
-**Description:** Power button event status. Indicates when the system power button has been pressed.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | 0 (not pressed), 1 (pressed) |
-
-**Example:** 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/power\_button}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Power button event status. Indicates when the system power button has been pressed.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & 0 (not pressed), 1 (pressed) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### Power Events
 
-**Node name:** `$bsp_path/config/power_events`
-
-**Description:** Power events configuration file. Contains settings and thresholds for power-related event handling.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Text file | Configuration data |
-
-**Example:** 
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/power\_events}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Power events configuration file. Contains settings and thresholds for power-related event handling.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Text file & Configuration data \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### Power Button Event
 
-**Node name:** `$bsp_path/system/power_button_evt`
-
-**Description:** Power button event status. Indicates the current state of power button events in the system.
-
-**Access:** Read only
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-|      | Integer | Event status |
-
-**Example:** 
-```bash
-cat $bsp_path/system/power_button_evt
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/power\_button\_evt}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Power button event status. Indicates the current state of power button events in the system.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ &  & Integer & Event status \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/power\_button\_evt}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## Alarms
 
 ### Get PMBUS voltmon alarm status.
 
-**Node name:** `$bsp_path/alarm/voltmon<index>_<sensor_name>_alarm`
-
-**Description:** Get voltmonitor alarm status of voltmon<index>
-sensor_name one of: in, curr, power, temp.
-sensor count can be different for different voltmonitor types/configuration.
-Alarm set by voltmon sensor itself (hw controlled attribute)
-1 – alarm set
-0 – alarm clear
-
-**Access:** Read
-
-**Release version:** V.7.0010.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get voltmon1_in1_alarm:
-```bash
-cat $bsp_path/alarm/voltmon1_in1_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/voltmon\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get voltmonitor alarm status of voltmon\textless{}index\textgreater{} sensor\_name one of: in, curr, power, temp. sensor count can be different for different voltmonitor types/configuration. Alarm set by voltmon sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltmon1\_in1\_alarm: \texttt{\small cat \$bsp\_path/alarm/voltmon1\_in1\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get COMEX PMBUS voltmon alarm status.
 
-**Node name:** `$bsp_path/alarm/comex_voltmon<index>_<sensor_name>_alarm`
-
-**Description:** Get voltmonitor alarm status of comex_voltmon<index>
-sensor_name one of: in, curr, power, temp.
-sensor count can be different for different voltmonitor types/configuration.
-Alarm set by voltmon sensor itself (hw controlled attribute)
-1 – alarm set
-0 – alarm clear
-
-**Access:** Read
-
-**Release version:** V.7.0010.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get comex_voltmon1_in1_alarm:
-```bash
-cat $bsp_path/alarm/comex_voltmon1_in1_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/comex\_voltmon\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get voltmonitor alarm status of comex\_voltmon\textless{}index\textgreater{} sensor\_name one of: in, curr, power, temp. sensor count can be different for different voltmonitor types/configuration. Alarm set by voltmon sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get comex\_voltmon1\_in1\_alarm: \texttt{\small cat \$bsp\_path/alarm/comex\_voltmon1\_in1\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU PMBUS alarm status.
 
-**Node name:** `$bsp_path/alarm/psu<index>_<sensor_name>_alarm`
-
-**Description:** Get PSU PMBUS alarm status of PSU<index>
-sensor_name: in, curr, power, temp.
-sensor count can be different for different PSU types/configuration.
-Alarm set by PSU sensor itself (hw controlled attribute)
-1 – alarm set
-0 – alarm clear
-
-**Access:** Read
-
-**Release version:** V.7.0010.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get psu1_power1_alarm:
-```bash
-cat $bsp_path/alarm/psu1_power1_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/psu\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU PMBUS alarm status of PSU\textless{}index\textgreater{} sensor\_name: in, curr, power, temp. sensor count can be different for different PSU types/configuration. Alarm set by PSU sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get psu1\_power1\_alarm: \texttt{\small cat \$bsp\_path/alarm/psu1\_power1\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Hotswap Controller alarm status
 
-**Node name:** `$bsp_path/alarm/pdb_hotswap<index>_<sensor_name>_alarm`
-
-**Description:** Get PDB (Power Distribution Board) hot-swap controller alarm status
-sensor_name: in, curr, power, temp.
-Alarm set by PDB hotswap controller sensor itself (hardware-controlled attribute)
-1 – alarm set
-0 – alarm clear
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD)
-
-**Access:** Read
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Alarm | Integer | 0 / 1 |
-
-**Example:** Get PDB hotswap 1 alarms:
-```bash
-cat $bsp_path/alarm/pdb_hotswap1_curr1_alarm
-cat $bsp_path/alarm/pdb_hotswap1_in1_alarm
-cat $bsp_path/alarm/pdb_hotswap1_power1_alarm
-cat $bsp_path/alarm/pdb_hotswap1_temp1_crit_alarm
-cat $bsp_path/alarm/pdb_hotswap1_temp1_max_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/pdb\_hotswap\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB (Power Distribution Board) hot-swap controller alarm status sensor\_name: in, curr, power, temp. Alarm set by PDB hotswap controller sensor itself (hardware-controlled attribute) 1 – alarm set 0 – alarm clear\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Alarm & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 alarms: \texttt{\small cat \$bsp\_path/alarm/pdb\_hotswap1\_curr1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_in1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_power1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_temp1\_crit\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_temp1\_max\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PDB Power Converter alarm status
 
-**Node name:** `$bsp_path/alarm/pdb_pwr_conv<index>_<sensor_name>_alarm`
-
-**Description:** Get PDB power converter alarm status
-sensor_name: in, curr, power, temp.
-Alarm set by PDB power converter sensor itself (hardware-controlled attribute)
-1 – alarm set
-0 – alarm clear
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Alarm | Integer | 0 / 1 |
-
-**Example:** Get PDB power converter 1 alarms:
-```bash
-cat $bsp_path/alarm/pdb_pwr_conv1_curr1_alarm
-cat $bsp_path/alarm/pdb_pwr_conv1_curr2_alarm
-cat $bsp_path/alarm/pdb_pwr_conv1_in1_alarm
-cat $bsp_path/alarm/pdb_pwr_conv1_in2_alarm
-cat $bsp_path/alarm/pdb_pwr_conv1_power1_alarm
-cat $bsp_path/alarm/pdb_pwr_conv1_temp1_crit_alarm
-cat $bsp_path/alarm/pdb_pwr_conv1_temp1_max_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/pdb\_pwr\_conv\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter alarm status sensor\_name: in, curr, power, temp. Alarm set by PDB power converter sensor itself (hardware-controlled attribute) 1 – alarm set 0 – alarm clear\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Alarm & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter 1 alarms: \texttt{\small cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_curr1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_curr2\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_in1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_in2\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_power1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_temp1\_crit\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_temp1\_max\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get CPU temp alarm status.
 
-**Node name:** `$bsp_path/alarm/cpu_core<idx>_crit_alarm`
-
-**Description:** Get CPU core overtemperature alarm status.
-idx – 0…cpu_core_num
-cpu_core_num can be different for different CPU type
-Alarm set by CPU sensor itself (hw controlled attribute)
-1 – alarm set
-0 – alarm clear
-
-**Access:** Read
-
-**Release version:** V.7.0010.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Thermal | Integer | 0 / 1 |
-
-**Example:** Get cpu_core0_crit_alarm:
-```bash
-cat $bsp_path/alarm/cpu_core0_crit_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/cpu\_core\textless{}idx\textgreater{}\_crit\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPU core overtemperature alarm status. idx – 0…cpu\_core\_num cpu\_core\_num can be different for different CPU type Alarm set by CPU sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Thermal & Integer & 0 / 1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get cpu\_core0\_crit\_alarm: \texttt{\small cat \$bsp\_path/alarm/cpu\_core0\_crit\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## PSU FW
 
 ### Get Secondary FW version of PSU
 
-**Node name:** `$bsp_path/firmware/psu<index>_fw_ver`
-
-**Description:** Get secondary FW version of PSU<index>
-For Murata 1500/2000 and Delta 550 the contents of the file is the relevant FW version
-For all other PSUs - the contents is string "N/A"
-
-**Access:** Read
-
-**Release version:** V.7.0020.2000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| version | string |  |
-
-**Example:** Get secondary FW version of PSU1
-```bash
-$bsp_path/firmware/psu1_fw_ver
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/firmware/psu\textless{}index\textgreater{}\_fw\_ver}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get secondary FW version of PSU\textless{}index\textgreater{} For Murata 1500/2000 and Delta 550 the contents of the file is the relevant FW version For all other PSUs - the contents is string "N/A"} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.2000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & version & string &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get secondary FW version of PSU1 \texttt{\small \$bsp\_path/firmware/psu1\_fw\_ver}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Primary FW version of PSU
 
-**Node name:** `$bsp_path/firmware/psu<index>_fw_primary_ver`
-
-**Description:** Get primary FW version of PSU<index> Primary files exist only for Murata.
-For all other PSUs - the contents is string "N/A"
-
-**Access:** Read
-
-**Release version:** V.7.0020.2000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| version | string |  |
-
-**Example:** Get primary FW version of PSU1
-```bash
-$bsp_path/firmware/psu1_fw_primary_ver
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/firmware/psu\textless{}index\textgreater{}\_fw\_primary\_ver}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get primary FW version of PSU\textless{}index\textgreater{} Primary files exist only for Murata. For all other PSUs - the contents is string "N/A"} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.2000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & version & string &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get primary FW version of PSU1 \texttt{\small \$bsp\_path/firmware/psu1\_fw\_primary\_ver}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## DPU system attributes
 
 ### Get DPU id
 
-**Node name:** `$bsp_path/system/dpu<index>_id`
-
-**Description:** Get DPU<index> id
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 id
-```bash
-$bsp_path/system/dpu1_id
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_id}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} id} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 id \texttt{\small \$bsp\_path/system/dpu1\_id}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU boot progress
 
-**Node name:** `$bsp_path/system/dpu<index>_boot_progress`
-
-**Description:** Get DPU<index> boot progress
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 boot progress
-```bash
-$bsp_path/system/dpu1_boot_progress
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_boot\_progress}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} boot progress} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 boot progress \texttt{\small \$bsp\_path/system/dpu1\_boot\_progress}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU cpld version
 
-**Node name:** `$bsp_path/system/dpu<index>_cpld_version`
-
-**Description:** Get DPU<index> CPLD version
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 cpld version
-```bash
-$bsp_path/system/dpu1_cpld_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_cpld\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} CPLD version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpld version \texttt{\small \$bsp\_path/system/dpu1\_cpld\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU cpld base version
 
-**Node name:** `$bsp_path/system/dpu<index>_cpld_base_version`
-
-**Description:** Get DPU<index> CPLD base version
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 cpld base version
-```bash
-$bsp_path/system/dpu1_cpld_base_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_cpld\_base\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} CPLD base version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpld base version \texttt{\small \$bsp\_path/system/dpu1\_cpld\_base\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU auxiliary power reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_aux_pwr_rst_reason`
-
-**Description:** Get DPU<index> auxiliary power reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 auxiliary power reset reason
-```bash
-$bsp_path/system/dpu1_aux_pwr_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_aux\_pwr\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} auxiliary power reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 auxiliary power reset reason \texttt{\small \$bsp\_path/system/dpu1\_aux\_pwr\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU main board reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_main_brd_rst_reason`
-
-**Description:** Get DPU<index> main board reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 main board reset reason
-```bash
-$bsp_path/system/dpu1_main_brd_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_main\_brd\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} main board reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 main board reset reason \texttt{\small \$bsp\_path/system/dpu1\_main\_brd\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU comex power failure
 
-**Node name:** `$bsp_path/system/dpu<index>_comex_pwr_fail`
-
-**Description:** Get DPU<index> comex power failure
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 comex power failure
-```bash
-$bsp_path/system/dpu1_comex_pwr_fail
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_comex\_pwr\_fail}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} comex power failure} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 comex power failure \texttt{\small \$bsp\_path/system/dpu1\_comex\_pwr\_fail}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU power reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_pwr_rst_reason`
-
-**Description:** Get DPU<index> power reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 power reset reason
-```bash
-$bsp_path/system/dpu1_pwr_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_pwr\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} power reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 power reset reason \texttt{\small \$bsp\_path/system/dpu1\_pwr\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU thermal shutdown reason
 
-**Node name:** `$bsp_path/system/dpu<index>_thermal_shtdn_reason`
-
-**Description:** Get DPU<index> thermal shutdown reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 thermal shutdown reason
-```bash
-$bsp_path/system/dpu1_thermal_shtdn_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_thermal\_shtdn\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} thermal shutdown reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 thermal shutdown reason \texttt{\small \$bsp\_path/system/dpu1\_thermal\_shtdn\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU tpm reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_tpm_rst_reason`
-
-**Description:** Get DPU<index> tpm reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 tpm reset reason
-```bash
-$bsp_path/system/dpu1_tpm_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_tpm\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} tpm reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 tpm reset reason \texttt{\small \$bsp\_path/system/dpu1\_tpm\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU perst reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_perst_rst_reason`
-
-**Description:** Get DPU<index> perst reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 perst reset reason
-```bash
-$bsp_path/system/dpu1_perst_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_perst\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} perst reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 perst reset reason \texttt{\small \$bsp\_path/system/dpu1\_perst\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU phy reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_phy_rst_reason`
-
-**Description:** Get DPU<index> phy reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 phy reset reason
-```bash
-$bsp_path/system/dpu1_phy_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_phy\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} phy reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 phy reset reason \texttt{\small \$bsp\_path/system/dpu1\_phy\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU usb phy reset reason
 
-**Node name:** `$bsp_path/system/dpu<index>_usb_phy_rst_reason`
-
-**Description:** Get DPU<index> usb phy reset reason
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 usb phy reset reason
-```bash
-$bsp_path/system/dpu1_usb_phy_rst_reason
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_usb\_phy\_rst\_reason}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} usb phy reset reason} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 usb phy reset reason \texttt{\small \$bsp\_path/system/dpu1\_usb\_phy\_rst\_reason}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU fpga part number
 
-**Node name:** `$bsp_path/system/dpu<index>_fpga_part_number`
-
-**Description:** Get DPU<index> fpga part number
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 fpga part number
-```bash
-$bsp_path/system/dpu1_fpga_part_number
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_fpga\_part\_number}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} fpga part number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 fpga part number \texttt{\small \$bsp\_path/system/dpu1\_fpga\_part\_number}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU fpga minor version
 
-**Node name:** `$bsp_path/system/dpu<index>_fpga_minor_version`
-
-**Description:** Get DPU<index> fpga minor version
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 fpga minor version
-```bash
-$bsp_path/system/dpu1_fpga_minor_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_fpga\_minor\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} fpga minor version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 fpga minor version \texttt{\small \$bsp\_path/system/dpu1\_fpga\_minor\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU ufm upgrade status
 
-**Node name:** `$bsp_path/system/dpu<index>_ufm_upgrade_status`
-
-**Description:** Get DPU<index> ufm upgrade status
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 ufm upgrade status
-```bash
-$bsp_path/system/dpu1_ufm_upgrade_status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_ufm\_upgrade\_status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ufm upgrade status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ufm upgrade status \texttt{\small \$bsp\_path/system/dpu1\_ufm\_upgrade\_status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU VR update status
 
-**Node name:** `$bsp_path/system/dpu<index>_vr_update_status`
-
-**Description:** Get DPU<index> VR update status
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 VR update status
-```bash
-$bsp_path/system/dpu1_vr_update_status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_vr\_update\_status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} VR update status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 VR update status \texttt{\small \$bsp\_path/system/dpu1\_vr\_update\_status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 ## DPU events
 
 ### Get DPU PLL power good indication
 
-**Node name:** `$bsp_path/events/dpu<index>_pll_pwr_good`
-
-**Description:** Get DPU<index> PLL power good indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 PLL power good indication
-```bash
-$bsp_path/events/dpu1_pll_pwr_good
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_pll\_pwr\_good}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} PLL power good indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 PLL power good indication \texttt{\small \$bsp\_path/events/dpu1\_pll\_pwr\_good}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU input power indication
 
-**Node name:** `$bsp_path/events/dpu<index>_input_pwr`
-
-**Description:** Get DPU<index> input power indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 input power indication
-```bash
-$bsp_path/events/dpu1_input_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_input\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} input power indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 input power indication \texttt{\small \$bsp\_path/events/dpu1\_input\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU serdes power indication
 
-**Node name:** `$bsp_path/events/dpu<index>_serdes_pwr`
-
-**Description:** Get DPU<index> serdes power indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 serdes power indication
-```bash
-$bsp_path/events/dpu1_serdes_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_serdes\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} serdes power indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 serdes power indication \texttt{\small \$bsp\_path/events/dpu1\_serdes\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU serdes analog power indication
 
-**Node name:** `$bsp_path/events/dpu<index>_serdes_analog_pwr`
-
-**Description:** Get DPU<index> serdes analog power indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 serdes analog power indication
-```bash
-$bsp_path/events/dpu1_serdes_analog_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_serdes\_analog\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} serdes analog power indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 serdes analog power indication \texttt{\small \$bsp\_path/events/dpu1\_serdes\_analog\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU core power indication
 
-**Node name:** `$bsp_path/events/dpu<index>_core_pwr`
-
-**Description:** Get DPU<index> core power indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 core power indication
-```bash
-$bsp_path/events/dpu1_core_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_core\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} core power indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 core power indication \texttt{\small \$bsp\_path/events/dpu1\_core\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU cpu power indication
 
-**Node name:** `$bsp_path/events/dpu<index>_cpu_pwr`
-
-**Description:** Get DPU<index> cpu power indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 cpu power indication
-```bash
-$bsp_path/events/dpu1_cpu_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_cpu\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} cpu power indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu power indication \texttt{\small \$bsp\_path/events/dpu1\_cpu\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU digital interfaces power
 
-**Node name:** `$bsp_path/events/dpu<index>_digital_if_pwr`
-
-**Description:** Get DPU<index> digital interfaces power
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 digital interfaces power
-```bash
-$bsp_path/events/dpu1_digital_if_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_digital\_if\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} digital interfaces power} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 digital interfaces power \texttt{\small \$bsp\_path/events/dpu1\_digital\_if\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU ddr5 power indication
 
-**Node name:** `$bsp_path/events/dpu<index>_ddr5_pwr`
-
-**Description:** Get DPU<index> ddr5 power indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 ddr5 power indication
-```bash
-$bsp_path/events/dpu1_ddr5_pwr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_ddr5\_pwr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ddr5 power indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 power indication \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_pwr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU thermal trip indication
 
-**Node name:** `$bsp_path/events/dpu<index>_thermal_trip`
-
-**Description:** Get DPU<index> thermal trip indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 thermal trip indication
-```bash
-$bsp_path/events/dpu1_thermal_trip
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_thermal\_trip}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} thermal trip indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 thermal trip indication \texttt{\small \$bsp\_path/events/dpu1\_thermal\_trip}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU tps upgrade status
 
-**Node name:** `$bsp_path/events/dpu<index>_tps_upgrade`
-
-**Description:** Get DPU<index> tps upgrade status
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 tps upgrade status
-```bash
-$bsp_path/events/dpu1_tps_upgrade
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_tps\_upgrade}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} tps upgrade status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 tps upgrade status \texttt{\small \$bsp\_path/events/dpu1\_tps\_upgrade}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 ### Get DPU cpu power fault indication
 
-**Node name:** `$bsp_path/events/dpu<index>_cpu_pwr_fault`
-
-**Description:** Get DPU<index> cpu power fault indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 cpu power fault indication
-```bash
-$bsp_path/events/dpu1_cpu_pwr_fault
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_cpu\_pwr\_fault}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} cpu power fault indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu power fault indication \texttt{\small \$bsp\_path/events/dpu1\_cpu\_pwr\_fault}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU cpu VR hot alert
 
-**Node name:** `$bsp_path/events/dpu<index>_cpu_vr_hot`
-
-**Description:** Get DPU<index> cpu VR hot alert
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 cpu VR hot alert
-```bash
-$bsp_path/events/dpu1_cpu_vr_hot
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_cpu\_vr\_hot}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} cpu VR hot alert} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu VR hot alert \texttt{\small \$bsp\_path/events/dpu1\_cpu\_vr\_hot}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU ddr5 fault indication
 
-**Node name:** `$bsp_path/events/dpu<index>_ddr5_fault`
-
-**Description:** Get DPU<index> ddr5 fault indication
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 ddr5 fault indication
-```bash
-$bsp_path/events/dpu1_ddr5_fault
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_ddr5\_fault}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ddr5 fault indication} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 fault indication \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_fault}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get DPU ddr5 hot alert
 
-**Node name:** `$bsp_path/events/dpu<index>_ddr5_hot`
-
-**Description:** Get DPU<index> ddr5 hot alert
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-
-**Example:** Get dpu1 ddr5 hot alert
-```bash
-$bsp_path/events/dpu1_ddr5_hot
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_ddr5\_hot}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ddr5 hot alert} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 hot alert \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_hot}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 ## LC Alarms
 
 ### Get LC Hot Swap Power Alarm
 
-**Node name:** `$bsp_path/alarm/lc<index>_hotswap_pwr_alarm`
-
-**Description:** Get LC<index> hot swap power alarm
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get lc1 hot swap power alarm
-```bash
-$bsp_path/alarm/lc1_hotswap_pwr_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_hotswap\_pwr\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap power alarm} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 hot swap power alarm \texttt{\small \$bsp\_path/alarm/lc1\_hotswap\_pwr\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Voltage Input Alarm
 
-**Node name:** `$bsp_path/alarm/lc<index>_volt_in_alarm`
-
-**Description:** Get LC<index> voltage input alarm
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get lc1 voltage input alarm
-```bash
-$bsp_path/alarm/lc1_volt_in_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_volt\_in\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage input alarm} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage input alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_in\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Voltage Current Alarm
 
-**Node name:** `$bsp_path/alarm/lc<index>_volt_curr_alarm`
-
-**Description:** Get LC<index> voltage current alarm
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get lc1 voltage current alarm
-```bash
-$bsp_path/alarm/lc1_volt_curr_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_volt\_curr\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage current alarm} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage current alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_curr\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Voltage Power Alarm
 
-**Node name:** `$bsp_path/alarm/lc<index>_volt_pwr_alarm`
-
-**Description:** Get LC<index> voltage power alarm
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get lc1 voltage power alarm
-```bash
-$bsp_path/alarm/lc1_volt_pwr_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_volt\_pwr\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage power alarm} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage power alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_pwr\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## LC EEPROM
 
 ### Read LC EEPROM FRU
 
-**Node name:** `$bsp_path/eeprom/lc<index>_fru`
-
-**Description:** Read LC<index> EEPROM FRU data in hexadecimal format
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | Hex | Hex dump format of memory |
-
-**Example:** Get LC1 EEPROM FRU information:
-```bash
-cat $bsp_path/eeprom/lc1_fru
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_fru}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM FRU data in hexadecimal format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & Hex & Hex dump format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM FRU information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_fru}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC EEPROM INI
 
-**Node name:** `$bsp_path/eeprom/lc<index>_ini`
-
-**Description:** Read LC<index> EEPROM INI data in hexadecimal format
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | Hex | Hex dump format of memory |
-
-**Example:** Get LC1 EEPROM INI information:
-```bash
-cat $bsp_path/eeprom/lc1_ini
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_ini}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM INI data in hexadecimal format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & Hex & Hex dump format of memory \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM INI information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_ini}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC EEPROM VPD Parsed
 
-**Node name:** `$bsp_path/eeprom/lc<index>_vpd_parsed`
-
-**Description:** Read LC<index> EEPROM VPD parsed data in text format
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | string | Parsed VPD data |
-
-**Example:** Get LC1 EEPROM VPD parsed information:
-```bash
-cat $bsp_path/eeprom/lc1_vpd_parsed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_vpd\_parsed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM VPD parsed data in text format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & string & Parsed VPD data \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM VPD parsed information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_vpd\_parsed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC EEPROM INI Parsed
 
-**Node name:** `$bsp_path/eeprom/lc<index>_ini_parsed`
-
-**Description:** Read LC<index> EEPROM INI parsed data in text format
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| EEPROM information | string | Parsed INI data |
-
-**Example:** Get LC1 EEPROM INI parsed information:
-```bash
-cat $bsp_path/eeprom/lc1_ini_parsed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_ini\_parsed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM INI parsed data in text format} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & EEPROM information & string & Parsed INI data \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM INI parsed information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_ini\_parsed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## LC Environment
 
 ### Get LC Voltage Current
 
-**Node name:** `$bsp_path/environment/lc<index>_volt_curr<idx>_input`
-
-**Description:** Get LC<index> voltage current reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 voltage current reading:
-```bash
-cat $bsp_path/environment/lc1_volt_curr1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_volt\_curr\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage current reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage current reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_curr1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Voltage Input
 
-**Node name:** `$bsp_path/environment/lc<index>_volt_in<idx>_input`
-
-**Description:** Get LC<index> voltage input reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 voltage input reading:
-```bash
-cat $bsp_path/environment/lc1_volt_in1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_volt\_in\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage input reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage input reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_in1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Voltage Power
 
-**Node name:** `$bsp_path/environment/lc<index>_volt_pwr<idx>_input`
-
-**Description:** Get LC<index> voltage power reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 voltage power reading:
-```bash
-cat $bsp_path/environment/lc1_volt_pwr1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_volt\_pwr\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage power reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage power reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_pwr1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Hot Swap Current
 
-**Node name:** `$bsp_path/environment/lc<index>_hotswap_curr<idx>_input`
-
-**Description:** Get LC<index> hot swap current reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 hot swap current reading:
-```bash
-cat $bsp_path/environment/lc1_hotswap_curr1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_hotswap\_curr\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap current reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap current reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_curr1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Hot Swap Input
 
-**Node name:** `$bsp_path/environment/lc<index>_hotswap_in<idx>_input`
-
-**Description:** Get LC<index> hot swap input reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 hot swap input reading:
-```bash
-cat $bsp_path/environment/lc1_hotswap_in1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_hotswap\_in\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap input reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap input reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_in1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Hot Swap Power
 
-**Node name:** `$bsp_path/environment/lc<index>_hotswap_pwr<idx>_input`
-
-**Description:** Get LC<index> hot swap power reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 hot swap power reading:
-```bash
-cat $bsp_path/environment/lc1_hotswap_pwr1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_hotswap\_pwr\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap power reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap power reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_pwr1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC A2D Voltage
 
-**Node name:** `$bsp_path/environment/lc<index>_a2d_volt<idx>_input`
-
-**Description:** Get LC<index> A2D voltage reading
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 A2D voltage reading:
-```bash
-cat $bsp_path/environment/lc1_a2d_volt1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_a2d\_volt\textless{}idx\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} A2D voltage reading} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 A2D voltage reading: \texttt{\small cat \$bsp\_path/environment/lc1\_a2d\_volt1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC A2D Voltage Scale
 
-**Node name:** `$bsp_path/environment/lc<index>_a2d_volt<idx>_scale`
-
-**Description:** Get LC<index> A2D voltage scale
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 A2D voltage scale:
-```bash
-cat $bsp_path/environment/lc1_a2d_volt1_scale
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_a2d\_volt\textless{}idx\textgreater{}\_scale}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} A2D voltage scale} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 A2D voltage scale: \texttt{\small cat \$bsp\_path/environment/lc1\_a2d\_volt1\_scale}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## LC LED
@@ -4064,387 +3555,408 @@ cat $bsp_path/environment/lc1_a2d_volt1_scale
 
 ### Get LC Status LED
 
-**Node name:** `$bsp_path/led/lc<index>_status_led`
-
-**Description:** Get LC<index> status LED state
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 status LED:
-```bash
-cat $bsp_path/led/lc1_status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} status LED state} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 status LED: \texttt{\small cat \$bsp\_path/led/lc1\_status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC Status LED Capabilities
 
-**Node name:** `$bsp_path/led/lc<index>_status_led_capability`
-
-**Description:** Get LC<index> status LED capabilities
-
-**Access:** Read
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 status LED capabilities:
-```bash
-cat $bsp_path/led/lc1_status_led_capability
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led\_capability}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} status LED capabilities} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 status LED capabilities: \texttt{\small cat \$bsp\_path/led/lc1\_status\_led\_capability}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set LC Status Green/Orange
 
-**Node name:** `$bsp_path/led/lc<index>_status_led`
-
-**Description:** Set LC<index> status LED to green or orange
-
-**Access:** Write
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-| color | String | green, orange |
-
-**Example:** Set LC1 status LED to green:
-```bash
-echo green > $bsp_path/led/lc1_status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set LC\textless{}index\textgreater{} status LED to green or orange} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+ & color & String & green, orange \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/lc1\_status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set LC Status LED Green/Orange Delay Off
 
-**Node name:** `$bsp_path/led/lc<index>_status_led_delay_off`
-
-**Description:** Set LC<index> status LED delay off time
-
-**Access:** Write
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-| delay | Integer | milliseconds |
-
-**Example:** Set LC1 status LED delay off to 1000ms:
-```bash
-echo 1000 > $bsp_path/led/lc1_status_led_delay_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led\_delay\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set LC\textless{}index\textgreater{} status LED delay off time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/lc1\_status\_led\_delay\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set LC Status LED Green/Orange Delay On
 
-**Node name:** `$bsp_path/led/lc<index>_status_led_delay_on`
-
-**Description:** Set LC<index> status LED delay on time
-
-**Access:** Write
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-| delay | Integer | milliseconds |
-
-**Example:** Set LC1 status LED delay on to 500ms:
-```bash
-echo 500 > $bsp_path/led/lc1_status_led_delay_on
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led\_delay\_on}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set LC\textless{}index\textgreater{} status LED delay on time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/lc1\_status\_led\_delay\_on}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## LC Config
 
 ### Read LC CPLD Number
 
-**Node name:** `$bsp_path/config/lc<index>_cpld_num`
-
-**Description:** Get LC<index> CPLD number
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 CPLD number:
-```bash
-cat $bsp_path/config/lc1_cpld_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_cpld\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} CPLD number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 CPLD number: \texttt{\small cat \$bsp\_path/config/lc1\_cpld\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC FPGA Number
 
-**Node name:** `$bsp_path/config/lc<index>_fpga_num`
-
-**Description:** Get LC<index> FPGA number
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 FPGA number:
-```bash
-cat $bsp_path/config/lc1_fpga_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_fpga\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} FPGA number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 FPGA number: \texttt{\small cat \$bsp\_path/config/lc1\_fpga\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC Gearbox Number
 
-**Node name:** `$bsp_path/config/lc<index>_gearbox_num`
-
-**Description:** Get LC<index> gearbox number
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 gearbox number:
-```bash
-cat $bsp_path/config/lc1_gearbox_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_gearbox\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} gearbox number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox number: \texttt{\small cat \$bsp\_path/config/lc1\_gearbox\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC Gearbox Manager Number
 
-**Node name:** `$bsp_path/config/lc<index>_gearbox_mgr_num`
-
-**Description:** Get LC<index> gearbox manager number
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 gearbox manager number:
-```bash
-cat $bsp_path/config/lc1_gearbox_mgr_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_gearbox\_mgr\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} gearbox manager number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox manager number: \texttt{\small cat \$bsp\_path/config/lc1\_gearbox\_mgr\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC Port Number
 
-**Node name:** `$bsp_path/config/lc<index>_port_num`
-
-**Description:** Get LC<index> port number
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 port number:
-```bash
-cat $bsp_path/config/lc1_port_num
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_port\_num}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} port number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 port number: \texttt{\small cat \$bsp\_path/config/lc1\_port\_num}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read LC Module Counter
 
-**Node name:** `$bsp_path/config/lc<index>_module_counter`
-
-**Description:** Get LC<index> module counter
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 module counter:
-```bash
-cat $bsp_path/config/lc1_module_counter
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_module\_counter}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module counter} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module counter: \texttt{\small cat \$bsp\_path/config/lc1\_module\_counter}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### UART
 
-**Node name:** `$bsp_path/system/lc<index>_uart`
-
-**Description:** Get/set LC<index> UART configuration
-
-**Access:** Read/Write
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 UART configuration:
-```bash
-cat $bsp_path/system/lc1_uart
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_uart}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get/set LC\textless{}index\textgreater{} UART configuration} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 UART configuration: \texttt{\small cat \$bsp\_path/system/lc1\_uart}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### ASIC control
 
-**Node name:** `$bsp_path/system/lc<index>_asic_control`
-
-**Description:** Get/set LC<index> ASIC control
-
-**Access:** Read/Write
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 ASIC control:
-```bash
-cat $bsp_path/system/lc1_asic_control
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_asic\_control}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get/set LC\textless{}index\textgreater{} ASIC control} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 ASIC control: \texttt{\small cat \$bsp\_path/system/lc1\_asic\_control}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 ## LC thermal
 
 ### Read LC Gearbox Temperature Input
 
-**Node name:** `$bsp_path/thermal/lc<index>_gearbox<idx>_temp_input`
-
-**Description:** Get LC<index> gearbox<idx> temperature input
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 gearbox1 temperature:
-```bash
-cat $bsp_path/thermal/lc1_gearbox1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_gearbox\textless{}idx\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} gearbox\textless{}idx\textgreater{} temperature input} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox1 temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_gearbox1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LC QSFP/SFP Module Thermal
 
-**Node name:** `$bsp_path/thermal/lc<index>_module<idx>_temp_input`
-
-**Description:** Get LC<index> QSFP/SFP module<idx> temperature
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 module1 temperature:
-```bash
-cat $bsp_path/thermal/lc1_module1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} QSFP/SFP module\textless{}idx\textgreater{} temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Critical Module
 
-**Node name:** `$bsp_path/thermal/lc<index>_module<idx>_temp_crit`
-
-**Description:** Get LC<index> module<idx> critical temperature threshold
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 module1 critical temperature:
-```bash
-cat $bsp_path/thermal/lc1_module1_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} critical temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 ### Read Temperature Emergency Module
 
-**Node name:** `$bsp_path/thermal/lc<index>_module<idx>_temp_emergency`
-
-**Description:** Get LC<index> module<idx> emergency temperature threshold
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 module1 emergency temperature:
-```bash
-cat $bsp_path/thermal/lc1_module1_temp_emergency
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_emergency}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} emergency temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_emergency}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Fault Module
 
-**Node name:** `$bsp_path/thermal/lc<index>_module<idx>_temp_fault`
-
-**Description:** Get LC<index> module<idx> temperature fault status
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 module1 temperature fault:
-```bash
-cat $bsp_path/thermal/lc1_module1_temp_fault
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_fault}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} temperature fault status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature fault: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_fault}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Input Module
 
-**Node name:** `$bsp_path/thermal/lc<index>_module<idx>_temp_input`
-
-**Description:** Get LC<index> module<idx> temperature input
-
-**Access:** Read only
-
-**Release version:** V.7.0030.4000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Get LC1 module1 temperature input:
-```bash
-cat $bsp_path/thermal/lc1_module1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} temperature input} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature input: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## LED Control
@@ -4455,1345 +3967,1294 @@ cat $bsp_path/thermal/lc1_module1_temp_input
 
 ### Get Fan Status LED
 
-**Node name:** `$bsp_path/led/fan<index>_status_led`
-
-**Description:** Get fan<index> status LED state
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-
-**Example:** Get fan1 status LED:
-```bash
-cat $bsp_path/led/fan1_status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get fan\textless{}index\textgreater{} status LED state} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan1 status LED: \texttt{\small cat \$bsp\_path/led/fan1\_status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Fan LED Capabilities
 
-**Node name:** `$bsp_path/led/fan<index>_status_led_capability`
-
-**Description:** Get fan<index> LED capabilities
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-
-**Example:** Get fan1 LED capabilities:
-```bash
-cat $bsp_path/led/fan1_status_led_capability
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led\_capability}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get fan\textless{}index\textgreater{} LED capabilities} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan1 LED capabilities: \texttt{\small cat \$bsp\_path/led/fan1\_status\_led\_capability}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Fan LED Green/[Amber/Red]
 
-**Node name:** `$bsp_path/led/fan<index>_status_led`
-
-**Description:** Set fan<index> LED to green or amber/red
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-| color | String | green, amber, red |
-
-**Example:** Set fan1 LED to green:
-```bash
-echo green > $bsp_path/led/fan1_status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set fan\textless{}index\textgreater{} LED to green or amber/red} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+ & color & String & green, amber, red \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/fan1\_status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Fan LED Green/[Amber/Red] Delay Off
 
-**Node name:** `$bsp_path/led/fan<index>_status_led_delay_off`
-
-**Description:** Set fan<index> LED delay off time
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-| delay | Integer | milliseconds |
-
-**Example:** Set fan1 LED delay off to 1000ms:
-```bash
-echo 1000 > $bsp_path/led/fan1_status_led_delay_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led\_delay\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set fan\textless{}index\textgreater{} LED delay off time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/fan1\_status\_led\_delay\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Fan LED Green/[Amber/Red] Delay On
 
-**Node name:** `$bsp_path/led/fan<index>_status_led_delay_on`
-
-**Description:** Set fan<index> LED delay on time
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-| delay | Integer | milliseconds |
-
-**Example:** Set fan1 LED delay on to 500ms:
-```bash
-echo 500 > $bsp_path/led/fan1_status_led_delay_on
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led\_delay\_on}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set fan\textless{}index\textgreater{} LED delay on time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/fan1\_status\_led\_delay\_on}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU LED
 
-**Node name:** `$bsp_path/led/psu<index>_status_led`
-
-**Description:** Get PSU<index> LED state
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Get PSU1 LED:
-```bash
-cat $bsp_path/led/psu1_status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} LED state} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 LED: \texttt{\small cat \$bsp\_path/led/psu1\_status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU LED Capabilities
 
-**Node name:** `$bsp_path/led/psu<index>_status_led_capability`
-
-**Description:** Get PSU<index> LED capabilities
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Get PSU1 LED capabilities:
-```bash
-cat $bsp_path/led/psu1_status_led_capability
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led\_capability}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} LED capabilities} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 LED capabilities: \texttt{\small cat \$bsp\_path/led/psu1\_status\_led\_capability}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set PSU LED Green/[Amber/Red]
 
-**Node name:** `$bsp_path/led/psu<index>_status_led`
-
-**Description:** Set PSU<index> LED to green or amber/red
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-| color | String | green, amber, red |
-
-**Example:** Set PSU1 LED to green:
-```bash
-echo green > $bsp_path/led/psu1_status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set PSU\textless{}index\textgreater{} LED to green or amber/red} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+ & color & String & green, amber, red \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/psu1\_status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set PSU LED Green/[Amber/Red] Delay Off
 
-**Node name:** `$bsp_path/led/psu<index>_status_led_delay_off`
-
-**Description:** Set PSU<index> LED delay off time
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-| delay | Integer | milliseconds |
-
-**Example:** Set PSU1 LED delay off to 1000ms:
-```bash
-echo 1000 > $bsp_path/led/psu1_status_led_delay_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led\_delay\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set PSU\textless{}index\textgreater{} LED delay off time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/psu1\_status\_led\_delay\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set PSU LED Green/[Amber/Red] Delay On
 
-**Node name:** `$bsp_path/led/psu<index>_status_led_delay_on`
-
-**Description:** Set PSU<index> LED delay on time
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-| delay | Integer | milliseconds |
-
-**Example:** Set PSU1 LED delay on to 500ms:
-```bash
-echo 500 > $bsp_path/led/psu1_status_led_delay_on
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led\_delay\_on}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set PSU\textless{}index\textgreater{} LED delay on time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/psu1\_status\_led\_delay\_on}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Status LED
 
-**Node name:** `$bsp_path/led/status_led`
-
-**Description:** Get system status LED state
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| status | String |  |
-
-**Example:** Get system status LED:
-```bash
-cat $bsp_path/led/status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED state} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & status & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED: \texttt{\small cat \$bsp\_path/led/status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Status LED Capabilities
 
-**Node name:** `$bsp_path/led/status_led_capability`
-
-**Description:** Get system status LED capabilities
-
-**Access:** Read
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| capability | String |  |
-
-**Example:** Get system status LED capabilities:
-```bash
-cat $bsp_path/led/status_led_capability
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led\_capability}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED capabilities} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & capability & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED capabilities: \texttt{\small cat \$bsp\_path/led/status\_led\_capability}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Status Green/[Amber/Red]
 
-**Node name:** `$bsp_path/led/status_led`
-
-**Description:** Set system status LED to green or amber/red
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| color | String | green, amber, red |
-
-**Example:** Set system status LED to green:
-```bash
-echo green > $bsp_path/led/status_led
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED to green or amber/red} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & color & String & green, amber, red \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/status\_led}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Status LED Green/[Amber/Red] Delay Off
 
-**Node name:** `$bsp_path/led/status_led_delay_off`
-
-**Description:** Set system status LED delay off time
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| delay | Integer | milliseconds |
-
-**Example:** Set system status LED delay off to 1000ms:
-```bash
-echo 1000 > $bsp_path/led/status_led_delay_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led\_delay\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay off time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/status\_led\_delay\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Status LED Green/[Amber/Red] Delay On
 
-**Node name:** `$bsp_path/led/status_led_delay_on`
-
-**Description:** Set system status LED delay on time
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| delay | Integer | milliseconds |
-
-**Example:** Set system status LED delay on to 500ms:
-```bash
-echo 500 > $bsp_path/led/status_led_delay_on
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led\_delay\_on}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay on time} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & delay & Integer & milliseconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/status\_led\_delay\_on}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get LED Control Owner
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/led/led_<name>_control`
-
-**Description:** Control owner of LED `<name>` (`status`, `fan`, `fan1`, `psu`,
-`uid`, …). Created on LED udev add next to `led_<name>_capability` and
-`led_<name>_state`. Value is resolved from `$bsp_path/config/led_control_type`
-(§3.1.60). Missing map or unmatched name uses `led_hw_sw`.
-
-| Value | Meaning |
-|-------|---------|
-| `led_sw` | Software controlled |
-| `led_hw` | Hardware controlled |
-| `led_hw_sw` | Hardware and software controlled (default) |
-
-**Access:** Read only
-
-**Release version:** 3.2.7
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| name | String | LED type from the udev LED class name |
-| control | String | `led_sw`, `led_hw`, `led_hw_sw` |
-
-**Example:** Get status LED control owner (default when no platform map):
-```bash
-cat $bsp_path/led/led_status_control
-led_hw_sw
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/led\_\textless{}name\textgreater{}\_control}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Control owner of LED \texttt{\small \textless{}name\textgreater{}} (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}, \texttt{\small psu}, \texttt{\small uid}, …). Created on LED udev add next to \texttt{\small led\_\textless{}name\textgreater{}\_capability} and \texttt{\small led\_\textless{}name\textgreater{}\_state}. Value is resolved from \texttt{\small \$bsp\_path/config/led\_control\_type} (§3.1.60). Missing map or unmatched name uses \texttt{\small led\_hw\_sw}.\newline | Value | Meaning | |-------|---------| | \texttt{\small led\_sw} | Software controlled | | \texttt{\small led\_hw} | Hardware controlled | | \texttt{\small led\_hw\_sw} | Hardware and software controlled (default) |} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.7} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & name & String & LED type from the udev LED class name \\
+ & control & String & \texttt{\small led\_sw}, \texttt{\small led\_hw}, \texttt{\small led\_hw\_sw} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get status LED control owner (default when no platform map): \texttt{\small cat \$bsp\_path/led/led\_status\_control led\_hw\_sw}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## Power Control
 
 ### Get Power Consumption
 
-**Node name:** `$bsp_path/power/pwr_consum`<br>`$bsp_path/power/pwr_sys`
-
-**Description:** Get system power consumption values
-- `pwr_consum`: Power consumption calculation based on PSU selection
-- `pwr_sys`: System power consumption
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu1 | String | Get power consumption for PSU1 |
-| psu2 | String | Get power consumption for PSU2 |
-
-**Example:** Get power consumption for PSU1:
-```bash
-cat $bsp_path/power/pwr_consum psu1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/pwr\_consum}\newline \texttt{\small \$bsp\_path/power/pwr\_sys}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get system power consumption values - \texttt{\small pwr\_consum}: Power consumption calculation based on PSU selection - \texttt{\small pwr\_sys}: System power consumption} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu1 & String & Get power consumption for PSU1 \\
+ & psu2 & String & Get power consumption for PSU2 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get power consumption for PSU1: \texttt{\small cat \$bsp\_path/power/pwr\_consum psu1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU sensor Current + thresholds
 
-**Node name:** `$bsp_path/power/psu<index>_curr<idx>_input`
-`$bsp_path/power/psu<index>_curr<idx>_crit`
-`$bsp_path/power/psu<index>_curr<idx>_max`
-
-**Description:** Get PSU<index> current sensor readings and thresholds
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Get PSU1 current sensor:
-```bash
-cat $bsp_path/power/psu1_curr1_input
-cat $bsp_path/power/psu1_curr1_crit
-cat $bsp_path/power/psu1_curr1_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_curr\textless{}idx\textgreater{}\_input}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_curr\textless{}idx\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_curr\textless{}idx\textgreater{}\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} current sensor readings and thresholds} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 current sensor: \texttt{\small cat \$bsp\_path/power/psu1\_curr1\_input cat \$bsp\_path/power/psu1\_curr1\_crit cat \$bsp\_path/power/psu1\_curr1\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU sensor Voltage + thresholds
 
-**Node name:** `$bsp_path/power/psu<index>_in<idx>_input`
-`$bsp_path/power/psu<index>_in<idx>_crit`
-`$bsp_path/power/psu<index>_in<idx>_max`
-
-**Description:** Get PSU<index> voltage sensor readings and thresholds
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Get PSU1 voltage sensor:
-```bash
-cat $bsp_path/power/psu1_in1_input
-cat $bsp_path/power/psu1_in1_crit
-cat $bsp_path/power/psu1_in1_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_in\textless{}idx\textgreater{}\_input}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_in\textless{}idx\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_in\textless{}idx\textgreater{}\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} voltage sensor readings and thresholds} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 voltage sensor: \texttt{\small cat \$bsp\_path/power/psu1\_in1\_input cat \$bsp\_path/power/psu1\_in1\_crit cat \$bsp\_path/power/psu1\_in1\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU sensor Power + thresholds
 
-**Node name:** `$bsp_path/power/psu<index>_power<idx>_input`
-`$bsp_path/power/psu<index>_power<idx>_crit`
-`$bsp_path/power/psu<index>_power<idx>_max`
-
-**Description:** Get PSU<index> power sensor readings and thresholds
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Get PSU1 power sensor:
-```bash
-cat $bsp_path/power/psu1_power1_input
-cat $bsp_path/power/psu1_power1_crit
-cat $bsp_path/power/psu1_power1_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_power\textless{}idx\textgreater{}\_input}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_power\textless{}idx\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_power\textless{}idx\textgreater{}\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} power sensor readings and thresholds} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 power sensor: \texttt{\small cat \$bsp\_path/power/psu1\_power1\_input cat \$bsp\_path/power/psu1\_power1\_crit cat \$bsp\_path/power/psu1\_power1\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get PSU sensor capability
 
-**Node name:** `$bsp_path/power/psu<index>_sensor_capability`
-
-**Description:** Get PSU<index> sensor capabilities
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Get PSU1 sensor capabilities:
-```bash
-cat $bsp_path/power/psu1_sensor_capability
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_sensor\_capability}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} sensor capabilities} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 sensor capabilities: \texttt{\small cat \$bsp\_path/power/psu1\_sensor\_capability}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## System / Power Control
 
 ### Get ASIC Health
 
-**Node name:** `$bsp_path/system/asic_health`
-`$bsp_path/system/asic<N>_health` (for multi-ASIC systems)
-
-**Description:** Get ASIC health status. For multi-ASIC systems (N61XX_LD family: N6100_LD), additional nodes exist for each ASIC.
-
-Note: SN6600_LD (SN66XX_LD) is a single-ASIC system; only `asic_health` applies (no `asic2_health`..`asic4_health` in that configuration).
-
-Note: N6100_LD has 4 ASICs with individual health monitoring:
-- `asic_health` (ASIC1), `asic2_health`, `asic3_health`, `asic4_health`
-
-**Access:** Read only
-
-**Release version:** 1.0 (V.7.0060.1000 for multi-ASIC)
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| health | Integer | 0 (unhealthy), 1 (healthy) |
-
-**Example:** Get ASIC health:
-```bash
-# Single-ASIC systems
-cat $bsp_path/system/asic_health
-
-# Multi-ASIC systems (N6100_LD)
-cat $bsp_path/system/asic_health    # ASIC1
-cat $bsp_path/system/asic2_health   # ASIC2
-cat $bsp_path/system/asic3_health   # ASIC3
-cat $bsp_path/system/asic4_health   # ASIC4
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/asic\_health}\newline \texttt{\small \$bsp\_path/system/asic\textless{}N\textgreater{}\_health} (for multi-ASIC systems)} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC health status. For multi-ASIC systems (N61XX\_LD family: N6100\_LD), additional nodes exist for each ASIC.\newline Note: SN6600\_LD (SN66XX\_LD) is a single-ASIC system; only \texttt{\small asic\_health} applies (no \texttt{\small asic2\_health}..\texttt{\small asic4\_health} in that configuration).\newline Note: N6100\_LD has 4 ASICs with individual health monitoring: - \texttt{\small asic\_health} (ASIC1), \texttt{\small asic2\_health}, \texttt{\small asic3\_health}, \texttt{\small asic4\_health}} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0 (V.7.0060.1000 for multi-ASIC)} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & health & Integer & 0 (unhealthy), 1 (healthy) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC health: \texttt{\small \# Single-ASIC systems cat \$bsp\_path/system/asic\_health \# Multi-ASIC systems (N6100\_LD) cat \$bsp\_path/system/asic\_health    \# ASIC1 cat \$bsp\_path/system/asic2\_health   \# ASIC2 cat \$bsp\_path/system/asic3\_health   \# ASIC3 cat \$bsp\_path/system/asic4\_health   \# ASIC4}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### MCU Reset Control
 
-**Node name:** `$bsp_path/system/mcu<N>_reset`
-
-**Description:** Control MCU (Microcontroller Unit) reset for systems with multiple MCUs. Used for managing embedded controllers.
-
-Note: This attribute is for systems with MCU reset support (N61XX_LD family: N6100_LD).
-N6100_LD has 2 MCUs (mcu1_reset, mcu2_reset).
-
-**Access:** Read/Write
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| N | Integer | 1-2 (N6100_LD) |
-| reset | Integer | 0 (normal), 1 (reset) |
-
-**Example:** Reset MCU1:
-```bash
-echo 1 > $bsp_path/system/mcu1_reset
-cat $bsp_path/system/mcu1_reset
-cat $bsp_path/system/mcu2_reset
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/mcu\textless{}N\textgreater{}\_reset}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Control MCU (Microcontroller Unit) reset for systems with multiple MCUs. Used for managing embedded controllers.\newline Note: This attribute is for systems with MCU reset support (N61XX\_LD family: N6100\_LD). N6100\_LD has 2 MCUs (mcu1\_reset, mcu2\_reset).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & N & Integer & 1-2 (N6100\_LD) \\
+ & reset & Integer & 0 (normal), 1 (reset) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Reset MCU1: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/mcu1\_reset cat \$bsp\_path/system/mcu1\_reset cat \$bsp\_path/system/mcu2\_reset}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get CPLD Major Version
 
-**Node name:** `$bsp_path/system/cpld_major_version`
-
-**Description:** Get CPLD major version
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| version | Integer |  |
-
-**Example:** Get CPLD major version:
-```bash
-cat $bsp_path/system/cpld_major_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_major\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD major version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & version & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD major version: \texttt{\small cat \$bsp\_path/system/cpld\_major\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get CPLD Part Number
 
-**Node name:** `$bsp_path/system/cpld_part_number`
-
-**Description:** Get CPLD part number
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| part_number | String |  |
-
-**Example:** Get CPLD part number:
-```bash
-cat $bsp_path/system/cpld_part_number
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_part\_number}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD part number} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & part\_number & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD part number: \texttt{\small cat \$bsp\_path/system/cpld\_part\_number}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get CPLD Minor Version
 
-**Node name:** `$bsp_path/system/cpld_minor_version`
-
-**Description:** Get CPLD minor version
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| version | Integer |  |
-
-**Example:** Get CPLD minor version:
-```bash
-cat $bsp_path/system/cpld_minor_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_minor\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD minor version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & version & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD minor version: \texttt{\small cat \$bsp\_path/system/cpld\_minor\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get CPLD Full Version
 
-**Node name:** `$bsp_path/system/cpld_full_version`
-
-**Description:** Get CPLD full version
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| version | String |  |
-
-**Example:** Get CPLD full version:
-```bash
-cat $bsp_path/system/cpld_full_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_full\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD full version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & version & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD full version: \texttt{\small cat \$bsp\_path/system/cpld\_full\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Fan Direction
 
-**Node name:** `$bsp_path/system/fan_direction`
-
-**Description:** Get/set fan direction
-
-**Access:** Read/Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| direction | String | intake, exhaust |
-
-**Example:** Get fan direction:
-```bash
-cat $bsp_path/system/fan_direction
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/fan\_direction}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get/set fan direction} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & direction & String & intake, exhaust \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan direction: \texttt{\small cat \$bsp\_path/system/fan\_direction}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set JTAG Mode
 
-**Node name:** `$bsp_path/system/jtag_mode`
-
-**Description:** Set JTAG mode
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| mode | Integer | 0/1 |
-
-**Example:** Set JTAG mode:
-```bash
-echo 1 > $bsp_path/system/jtag_mode
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/jtag\_mode}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG mode} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & mode & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG mode: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/jtag\_mode}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set PSU On/Off
 
-**Node name:** `$bsp_path/system/psu<index>_on_off`
-
-**Description:** Set PSU<index> on/off
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-| state | Integer | 0/1 |
-
-**Example:** Set PSU1 on:
-```bash
-echo 1 > $bsp_path/system/psu1_on_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/psu\textless{}index\textgreater{}\_on\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set PSU\textless{}index\textgreater{} on/off} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+ & state & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 on: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/psu1\_on\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set System Power Cycle
 
-**Node name:** `$bsp_path/system/power_cycle`
-
-**Description:** Set system power cycle
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| cycle | Integer | 0/1 |
-
-**Example:** Set system power cycle:
-```bash
-echo 1 > $bsp_path/system/power_cycle
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/power\_cycle}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set system power cycle} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & cycle & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set system power cycle: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/power\_cycle}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set System Power Down
 
-**Node name:** `$bsp_path/system/power_down`
-
-**Description:** Set system power down
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| power | Integer | 0/1 |
-
-**Example:** Set system power down:
-```bash
-echo 1 > $bsp_path/system/power_down
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/power\_down}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set system power down} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & power & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set system power down: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/power\_down}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Shut Down Request
 
-**Node name:** `$bsp_path/system/cpu_shutdown_req`
-
-**Description:** CPU initiated shutdown request signal. This attribute is used by the CPU to request a system shutdown sequence.
-
-On liquid-cooled platforms where `hw_management_platform_config.py` defines a monitor entry,
-hw-mgmt polls this node (not `events/graceful_pwr_off`) and invokes `run_power_button_event` when
-the value changes. Platforms with this entry in the current tree include HI162, HI166–HI170, HI176,
-HI177, HI180, HI185 (N6300_LD), and others listed in `PLATFORM_CONFIG`.
-
-**Access:** Read/Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| request | Integer | 0/1 |
-
-**Example:** Set CPU shutdown request:
-```bash
-echo 1 > $bsp_path/system/cpu_shutdown_req
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpu\_shutdown\_req}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{CPU initiated shutdown request signal. This attribute is used by the CPU to request a system shutdown sequence.\newline On liquid-cooled platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node (not \texttt{\small events/graceful\_pwr\_off}) and invokes \texttt{\small run\_power\_button\_event} when the value changes. Platforms with this entry in the current tree include HI162, HI166–HI170, HI176, HI177, HI180, HI185 (N6300\_LD), and others listed in \texttt{\small PLATFORM\_CONFIG}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & request & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set CPU shutdown request: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_shutdown\_req}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Graceful Power Off
 
-**Node name:** `$bsp_path/system/graceful_power_off`
-
-**Description:** Initiate graceful system power off sequence. This attribute triggers a controlled shutdown procedure that allows the system to properly close processes and save state before powering off.
-
-**Access:** Read/Write
-
-**Release version:** 3.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| poweroff | Integer | 0/1 |
-
-**Example:** Initiate graceful power off:
-```bash
-echo 1 > $bsp_path/system/graceful_power_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/graceful\_power\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Initiate graceful system power off sequence. This attribute triggers a controlled shutdown procedure that allows the system to properly close processes and save state before powering off.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & poweroff & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Initiate graceful power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/graceful\_power\_off}} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{See also section 3.5.9 for the related event \texttt{\small graceful\_pwr\_off} that monitors graceful shutdown status.} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
-**Note:** See also section 3.5.9 for the related event `graceful_pwr_off` that monitors graceful shutdown status.
 
 ### CPU Power off Ready
 
-**Node name:** `$bsp_path/system/cpu_power_off_ready`
-
-**Description:** CPU signal indicating readiness for power off. This attribute is set by the CPU to signal that it has completed shutdown procedures and is ready for the system to power down.
-
-**Access:** Read/Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| ready | Integer | 0/1 |
-
-**Example:** Set CPU power off ready status:
-```bash
-echo 1 > $bsp_path/system/cpu_power_off_ready
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpu\_power\_off\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{CPU signal indicating readiness for power off. This attribute is set by the CPU to signal that it has completed shutdown procedures and is ready for the system to power down.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & ready & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set CPU power off ready status: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_power\_off\_ready}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Shutdown Unlock
 
-**Node name:** `$bsp_path/system/shutdown_unlock`
-
-**Description:** Unlock mechanism for shutdown operations. This attribute must be set to enable shutdown and power cycle operations, providing a safety mechanism to prevent accidental system shutdowns.
-
-**Access:** Read/Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| unlock | Integer | 0/1 |
-
-**Example:** Unlock shutdown operations:
-```bash
-echo 1 > $bsp_path/system/shutdown_unlock
-```
-
-**Example:** Lock shutdown operations:
-```bash
-echo 0 > $bsp_path/system/shutdown_unlock
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/shutdown\_unlock}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Unlock mechanism for shutdown operations. This attribute must be set to enable shutdown and power cycle operations, providing a safety mechanism to prevent accidental system shutdowns.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & unlock & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Unlock shutdown operations: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/shutdown\_unlock}} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Lock shutdown operations: \texttt{\small echo 0 \textgreater{} \$bsp\_path/system/shutdown\_unlock}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Boot Completed
 
-**Node name:** `$bsp_path/system/boot_completed`
-
-**Description:** System boot completion status. This attribute indicates that the system has completed its boot sequence and is fully operational.
-
-**Access:** Read/Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| status | Integer | 0 (not completed), 1 (completed) |
-
-**Example:** Read boot completion status:
-```bash
-cat $bsp_path/system/boot_completed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/boot\_completed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{System boot completion status. This attribute indicates that the system has completed its boot sequence and is fully operational.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & status & Integer & 0 (not completed), 1 (completed) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read boot completion status: \texttt{\small cat \$bsp\_path/system/boot\_completed}} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set boot completed flag: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/boot\_completed}} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{On AMD SNW CPU platforms, this may be implemented as a GPIO-based attribute.} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
-**Example:** Set boot completed flag:
-```bash
-echo 1 > $bsp_path/system/boot_completed
-```
-
-**Note:** On AMD SNW CPU platforms, this may be implemented as a GPIO-based attribute.
 
 ### Set Line Card Power
 
-**Node name:** `$bsp_path/system/lc<index>_power`
-
-**Description:** Set line card<index> power
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-| power | Integer | 0/1 |
-
-**Example:** Set LC1 power:
-```bash
-echo 1 > $bsp_path/system/lc1_power
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_power}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set line card\textless{}index\textgreater{} power} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+ & power & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 power: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_power}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Line Card Enable
 
-**Node name:** `$bsp_path/system/lc<index>_enable`
-
-**Description:** Set line card<index> enable
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-| enable | Integer | 0/1 |
-
-**Example:** Set LC1 enable:
-```bash
-echo 1 > $bsp_path/system/lc1_enable
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_enable}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set line card\textless{}index\textgreater{} enable} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+ & enable & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 enable: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_enable}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Active
 
-**Node name:** `$bsp_path/system/lc<index>_active`
-
-**Description:** Read line card<index> active status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 active status:
-```bash
-cat $bsp_path/system/lc1_active
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_active}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} active status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 active status: \texttt{\small cat \$bsp\_path/system/lc1\_active}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Powered
 
-**Node name:** `$bsp_path/system/lc<index>_powered`
-
-**Description:** Read line card<index> powered status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 powered status:
-```bash
-cat $bsp_path/system/lc1_powered
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_powered}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} powered status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 powered status: \texttt{\small cat \$bsp\_path/system/lc1\_powered}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Present
 
-**Node name:** `$bsp_path/system/lc<index>_present`
-
-**Description:** Read line card<index> present status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 present status:
-```bash
-cat $bsp_path/system/lc1_present
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_present}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} present status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 present status: \texttt{\small cat \$bsp\_path/system/lc1\_present}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Ready
 
-**Node name:** `$bsp_path/system/lc<index>_ready`
-
-**Description:** Read line card<index> ready status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 ready status:
-```bash
-cat $bsp_path/system/lc1_ready
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} ready status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 ready status: \texttt{\small cat \$bsp\_path/system/lc1\_ready}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Synced
 
-**Node name:** `$bsp_path/system/lc<index>_synced`
-
-**Description:** Read line card<index> synced status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 synced status:
-```bash
-cat $bsp_path/system/lc1_synced
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_synced}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} synced status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 synced status: \texttt{\small cat \$bsp\_path/system/lc1\_synced}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Verified
 
-**Node name:** `$bsp_path/system/lc<index>_verified`
-
-**Description:** Read line card<index> verified status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 verified status:
-```bash
-cat $bsp_path/system/lc1_verified
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_verified}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} verified status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 verified status: \texttt{\small cat \$bsp\_path/system/lc1\_verified}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Line Card Reset Mask
 
-**Node name:** `$bsp_path/system/lc<index>_reset_mask`
-
-**Description:** Read line card<index> reset mask
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-
-**Example:** Read LC1 reset mask:
-```bash
-cat $bsp_path/system/lc1_reset_mask
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_reset\_mask}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} reset mask} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 reset mask: \texttt{\small cat \$bsp\_path/system/lc1\_reset\_mask}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Line Card Shutdown
 
-**Node name:** `$bsp_path/system/lc<index>_shutdown`
-
-**Description:** Set line card<index> shutdown
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| lc | Integer |  |
-| shutdown | Integer | 0/1 |
-
-**Example:** Set LC1 shutdown:
-```bash
-echo 1 > $bsp_path/system/lc1_shutdown
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_shutdown}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set line card\textless{}index\textgreater{} shutdown} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & lc & Integer &  \\
+ & shutdown & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 shutdown: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_shutdown}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set VPD Write Protect
 
-**Node name:** `$bsp_path/system/vpd_write_protect`
-
-**Description:** Set VPD write protect
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| protect | Integer | 0/1 |
-
-**Example:** Set VPD write protect:
-```bash
-echo 1 > $bsp_path/system/vpd_write_protect
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/vpd\_write\_protect}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set VPD write protect} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & protect & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set VPD write protect: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/vpd\_write\_protect}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set ASIC Up during PCIe root complex reset
 
-**Node name:** `$bsp_path/system/asic_up_during_pcie_reset`
-
-**Description:** Set ASIC up during PCIe root complex reset
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| asic | Integer | 0/1 |
-
-**Example:** Set ASIC up during PCIe reset:
-```bash
-echo 1 > $bsp_path/system/asic_up_during_pcie_reset
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/asic\_up\_during\_pcie\_reset}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set ASIC up during PCIe root complex reset} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & asic & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set ASIC up during PCIe reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/asic\_up\_during\_pcie\_reset}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Voltreg Update status
 
-**Node name:** `$bsp_path/system/voltreg_update_status`
-
-**Description:** Get voltage regulator update status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| status | String |  |
-
-**Example:** Get voltage regulator update status:
-```bash
-cat $bsp_path/system/voltreg_update_status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/voltreg\_update\_status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get voltage regulator update status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & status & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage regulator update status: \texttt{\small cat \$bsp\_path/system/voltreg\_update\_status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Config1, Config2
 
-**Node name:** `$bsp_path/system/config1`
-`$bsp_path/system/config2`
-
-**Description:** Get system configuration 1 and 2
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| config | Integer |  |
-
-**Example:** Get system configurations:
-```bash
-cat $bsp_path/system/config1
-cat $bsp_path/system/config2
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/config1}\newline \texttt{\small \$bsp\_path/system/config2}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get system configuration 1 and 2} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & config & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get system configurations: \texttt{\small cat \$bsp\_path/system/config1 cat \$bsp\_path/system/config2}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Ufm Version
 
-**Node name:** `$bsp_path/system/ufm_version`
-
-**Description:** Get UFM version
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| version | String |  |
-
-**Example:** Get UFM version:
-```bash
-cat $bsp_path/system/ufm_version
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/ufm\_version}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get UFM version} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & version & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get UFM version: \texttt{\small cat \$bsp\_path/system/ufm\_version}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### DPU Power Off
 
-**Node name:** `$bsp_path/system/dpu<index>_power_off`
-
-**Description:** Set DPU<index> power off
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-| power | Integer | 0/1 |
-
-**Example:** Set DPU1 power off:
-```bash
-echo 1 > $bsp_path/system/dpu1_power_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_power\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set DPU\textless{}index\textgreater{} power off} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+ & power & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set DPU1 power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_power\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### DPU Force Power Off
 
-**Node name:** `$bsp_path/system/dpu<index>_force_power_off`
-
-**Description:** Force DPU<index> power off
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-| force | Integer | 0/1 |
-
-**Example:** Force DPU1 power off:
-```bash
-echo 1 > $bsp_path/system/dpu1_force_power_off
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_force\_power\_off}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Force DPU\textless{}index\textgreater{} power off} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+ & force & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Force DPU1 power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_force\_power\_off}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### DPU Reset
 
-**Node name:** `$bsp_path/system/dpu<index>_reset`
-
-**Description:** Set DPU<index> reset
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-| reset | Integer | 0/1 |
-
-**Example:** Set DPU1 reset:
-```bash
-echo 1 > $bsp_path/system/dpu1_reset
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_reset}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set DPU\textless{}index\textgreater{} reset} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+ & reset & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set DPU1 reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_reset}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### DPU Reset Enable
 
-**Node name:** `$bsp_path/system/dpu<index>_reset_enable`
-
-**Description:** Enable DPU<index> reset
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| dpu | Integer |  |
-| enable | Integer | 0/1 |
-
-**Example:** Enable DPU1 reset:
-```bash
-echo 1 > $bsp_path/system/dpu1_reset_enable
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_reset\_enable}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Enable DPU\textless{}index\textgreater{} reset} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & dpu & Integer &  \\
+ & enable & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Enable DPU1 reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_reset\_enable}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get Reset Cause
 
-**Node name:** `$bsp_path/system/reset_<cause>`
-
-**Description:** Get last system reset cause. Reset causes vary between platform families. Each supported cause is exposed as a separate read-only attribute under `$bsp_path/system/`. Reading `$bsp_path/system/reset_cause` returns the primary cause string. For most causes only one attribute reads `1`; the rest read `0`.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| cause | String | Primary reset cause (via `reset_cause`) |
-| `reset_<cause>` | Integer | `1` = this cause triggered the reset, `0` = not related |
-
-**Example:** Check if long button press caused reset:
-```bash
-cat $bsp_path/system/reset_long_pb
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/reset\_\textless{}cause\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get last system reset cause. Reset causes vary between platform families. Each supported cause is exposed as a separate read-only attribute under \texttt{\small \$bsp\_path/system/}. Reading \texttt{\small \$bsp\_path/system/reset\_cause} returns the primary cause string. For most causes only one attribute reads \texttt{\small 1}; the rest read \texttt{\small 0}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & cause & String & Primary reset cause (via \texttt{\small reset\_cause}) \\
+ & \texttt{\small reset\_\textless{}cause\textgreater{}} & Integer & \texttt{\small 1} = this cause triggered the reset, \texttt{\small 0} = not related \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Check if long button press caused reset: \texttt{\small cat \$bsp\_path/system/reset\_long\_pb}} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get reset cause string: \texttt{\small cat \$bsp\_path/system/reset\_cause}\newline \#\#\#\# N51XX\_LD platform family\newline Per CPLD design, N51XX\_LD platforms do \textbf{not} support \texttt{\small reset\_ac\_pwr\_fail}, \texttt{\small reset\_aux\_pwr\_or\_ref}, \texttt{\small reset\_from\_asic}, or \texttt{\small reset\_reload\_bios}. Those attributes must not be documented or tested as available on N51XX\_LD systems.\newline Applies to N5110\_LD, N5112\_LD, N5100\_LD, N5101\_LD, N5200\_LD, N5201\_LD, N5300\_LD, N5400\_LD, N5120\_LD, N5121\_LD, N5320\_LD, N5500\_LD (GB200/GB300), and N5240\_LD (Kyber). \texttt{\small config/reset\_attr\_num} = 22.\newline | Reset cause attribute | Description | |-----------------------|-------------| | \texttt{\small reset\_long\_pb} | Reset button was pushed for more than 15 seconds | | \texttt{\small reset\_short\_pb} | Reset button was pushed for less than 15 seconds | | \texttt{\small reset\_aux\_pwr\_or\_fu} | Reset due to CPLD power down or CPLD code refresh | | \texttt{\small reset\_swb\_dc\_dc\_pwr\_fail} | Switch board DC/DC power failure | | \texttt{\small reset\_sw\_reset} | Power cycle command initiated by software | | \texttt{\small reset\_pwr\_button\_or\_leak\_con} | Reset triggered by power button or leak connector event | | \texttt{\small reset\_swb\_wd} | Reset or power off initiated by switch-board watchdog | | \texttt{\small reset\_asic\_thermal} | ASIC power drop due to failure or thermal shutdown | | \texttt{\small reset\_cpu\_thermal} | CPU thermal shutdown | | \texttt{\small reset\_aux\_pwr\_or\_reload} | Auxiliary power failure or CPLD field upgrade | | \texttt{\small reset\_comex\_pwr\_fail} | COMe module power failure | | \texttt{\small reset\_platform} | Reboot command initiated by software | | \texttt{\small reset\_soc} | Power off initiated by SoC (for example Linux \texttt{\small poweroff}) | | \texttt{\small reset\_from\_erot} | Reset initiated by eRoT | | \texttt{\small reset\_erot} | eRoT reset | | \texttt{\small reset\_system} | System reset cycle, power on, power cycle, or ASIC reset | | \texttt{\small reset\_sw\_pwr\_off} | Power off initiated by software through CPLD | | \texttt{\small reset\_comex\_thermal} | COMe thermal shutdown | | \texttt{\small reset\_comex\_power} | COMe power event | | \texttt{\small reset\_pwr\_converter\_fail} | Power converter failure | | \texttt{\small reset\_main\_5v} | Management board 5 V rail failure | | \texttt{\small reset\_mgmt\_pwr} | Management board power failure |\newline Validation source: \texttt{\small recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch}, \texttt{\small usr/usr/bin/hw-management.sh} (\texttt{\small n51xx\_reset\_attr\_num}).} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
-**Example:** Get reset cause string:
-```bash
-cat $bsp_path/system/reset_cause
-```
-
-#### N51XX_LD platform family
-
-Per CPLD design, N51XX_LD platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, or `reset_reload_bios`. Those attributes must not be documented or tested as available on N51XX_LD systems.
-
-Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
-
-| Reset cause attribute | Description |
-|-----------------------|-------------|
-| `reset_long_pb` | Reset button was pushed for more than 15 seconds |
-| `reset_short_pb` | Reset button was pushed for less than 15 seconds |
-| `reset_aux_pwr_or_fu` | Reset due to CPLD power down or CPLD code refresh |
-| `reset_swb_dc_dc_pwr_fail` | Switch board DC/DC power failure |
-| `reset_sw_reset` | Power cycle command initiated by software |
-| `reset_pwr_button_or_leak_con` | Reset triggered by power button or leak connector event |
-| `reset_swb_wd` | Reset or power off initiated by switch-board watchdog |
-| `reset_asic_thermal` | ASIC power drop due to failure or thermal shutdown |
-| `reset_cpu_thermal` | CPU thermal shutdown |
-| `reset_aux_pwr_or_reload` | Auxiliary power failure or CPLD field upgrade |
-| `reset_comex_pwr_fail` | COMe module power failure |
-| `reset_platform` | Reboot command initiated by software |
-| `reset_soc` | Power off initiated by SoC (for example Linux `poweroff`) |
-| `reset_from_erot` | Reset initiated by eRoT |
-| `reset_erot` | eRoT reset |
-| `reset_system` | System reset cycle, power on, power cycle, or ASIC reset |
-| `reset_sw_pwr_off` | Power off initiated by software through CPLD |
-| `reset_comex_thermal` | COMe thermal shutdown |
-| `reset_comex_power` | COMe power event |
-| `reset_pwr_converter_fail` | Power converter failure |
-| `reset_main_5v` | Management board 5 V rail failure |
-| `reset_mgmt_pwr` | Management board power failure |
-
-Validation source: `recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch`, `usr/usr/bin/hw-management.sh` (`n51xx_reset_attr_num`).
 
 ### Cartridge
 
-**Node name:** `$bsp_path/system/cartridge<index>`
-
-**Description:** Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX_LD family: N6100_LD, N6300_LD) for connecting external cables.
-
-Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX_LD family: N6100_LD, N6300_LD).
-N6100_LD and N6300_LD (SKU HI185) have 4 cable cartridges.
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-4 (N6100_LD, N6300_LD) |
-| Status | Integer | 0/1 |
-
-**Example:** Get cartridge 1 status:
-```bash
-cat $bsp_path/system/cartridge1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cartridge\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX\_LD family: N6100\_LD, N6300\_LD) for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD and N6300\_LD (SKU HI185) have 4 cable cartridges.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-4 (N6100\_LD, N6300\_LD) \\
+ & Status & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get cartridge 1 status: \texttt{\small cat \$bsp\_path/system/cartridge1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### ASIC PG Failure
 
-**Node name:** `$bsp_path/system/asic_pg_fail`
-
-**Description:** Get ASIC power good failure status. Indicates power sequencing failure on the ASIC.
-
-Note: This attribute is for multi-ASIC systems (SN58XX_LD family, N61XX_LD family).
-N6100_LD has 4 ASICs with individual failure tracking.
-Exception: This API does not exist on SN6600_LD, SN6800_LD, and SN6810_LD systems.
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Status | Integer | 0/1 |
-
-**Example:** Get ASIC power good failure status:
-```bash
-cat $bsp_path/system/asic_pg_fail
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/asic\_pg\_fail}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC power good failure status. Indicates power sequencing failure on the ASIC.\newline Note: This attribute is for multi-ASIC systems (SN58XX\_LD family, N61XX\_LD family). N6100\_LD has 4 ASICs with individual failure tracking. Exception: This API does not exist on SN6600\_LD, SN6800\_LD, and SN6810\_LD systems.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Status & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC power good failure status: \texttt{\small cat \$bsp\_path/system/asic\_pg\_fail}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## Leakage Sensors
 
 ### Leakage Sensor
 
-**Node name:** `$bsp_path/system/leakage<index>`
-
-**Description:** Get leakage sensor status at the specified index. Detects liquid leaks in liquid-cooled systems.
-
-Note: This attribute is for liquid-cooled systems (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-N6100_LD has 2 leakage sensors, SN5810_LD has 2, SN5800_LD has 5.
-N6300_LD (SKU HI185): `config/leakage_counter` is **2** (`n61xxld_specific()` / HI185 branch in `hw-management.sh`).
-SN6600_LD: `config/leakage_counter` is **2**; the validated sysfs tree may
-still list `system/leakage1` through `system/leakage5` when the hardware exposes
-those mlxreg-io channels (see the `leakage_counter` section note above).
-
-**Access:** Read only
-
-**Release version:** V.7.0040.3930
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-X (system dependent) |
-| Status | Integer | 0=no leak, 1=leak detected |
-
-**Example:** Get leakage sensor 1 status:
-```bash
-cat $bsp_path/system/leakage1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/leakage\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get leakage sensor status at the specified index. Detects liquid leaks in liquid-cooled systems.\newline Note: This attribute is for liquid-cooled systems (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family). N6100\_LD has 2 leakage sensors, SN5810\_LD has 2, SN5800\_LD has 5. N6300\_LD (SKU HI185): \texttt{\small config/leakage\_counter} is \textbf{2} (\texttt{\small n61xxld\_specific()} / HI185 branch in \texttt{\small hw-management.sh}). SN6600\_LD: \texttt{\small config/leakage\_counter} is \textbf{2}; the validated sysfs tree may still list \texttt{\small system/leakage1} through \texttt{\small system/leakage5} when the hardware exposes those mlxreg-io channels (see the \texttt{\small leakage\_counter} section note above).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.3930} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-X (system dependent) \\
+ & Status & Integer & 0=no leak, 1=leak detected \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get leakage sensor 1 status: \texttt{\small cat \$bsp\_path/system/leakage1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## Thermal
@@ -5806,1532 +5267,1516 @@ cat $bsp_path/system/leakage1
 
 ### Ambient sensors
 
-**Stack:** Host (`hw-management-thermal-events.sh`)
-
-**Node name:** `$bsp_path/thermal/<ambient_name>` (platform-specific; examples include
-`mng_amb`, `comex_amb`, `port_amb`, `fan_amb`, `swb_amb`, `cpu_amb`)
-
-**Description:** Ambient temperature sensors are created by `hw-management-thermal-events.sh`
-when the corresponding hwmon device appears. The stable symlink name under
-`$bsp_path/thermal/` depends on the platform label and sensor type.
-
-Some platforms also expose management ambient via `$bsp_path/thermal/mng_amb` (see **MNG
-Temperature**). Legacy documentation referenced `$bsp_path/system/amb_sens` for mlxreg
-ambient enablement on certain systems.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:** Read management ambient temperature (when present):
-```bash
-cat $bsp_path/thermal/mng_amb
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (\texttt{\small hw-management-thermal-events.sh})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/\textless{}ambient\_name\textgreater{}} (platform-specific; examples include\newline \texttt{\small mng\_amb}, \texttt{\small comex\_amb}, \texttt{\small port\_amb}, \texttt{\small fan\_amb}, \texttt{\small swb\_amb}, \texttt{\small cpu\_amb})} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Ambient temperature sensors are created by \texttt{\small hw-management-thermal-events.sh} when the corresponding hwmon device appears. The stable symlink name under \texttt{\small \$bsp\_path/thermal/} depends on the platform label and sensor type.\newline Some platforms also expose management ambient via \texttt{\small \$bsp\_path/thermal/mng\_amb} (see \textbf{MNG Temperature}). Legacy documentation referenced \texttt{\small \$bsp\_path/system/amb\_sens} for mlxreg ambient enablement on certain systems.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read management ambient temperature (when present): \texttt{\small cat \$bsp\_path/thermal/mng\_amb}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Read Switch ASIC Temperature
 
-**Node name:** `$bsp_path/thermal/asic<index>_temp_input`
-
-**Description:** Read switch ASIC<index> temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| asic | Integer |  |
-
-**Example:** Read ASIC1 temperature:
-```bash
-cat $bsp_path/thermal/asic1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & asic & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch ASIC Temperature Normal
 
-**Node name:** `$bsp_path/thermal/asic<index>_temp_normal`
-
-**Description:** Read switch ASIC<index> normal temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| asic | Integer |  |
-
-**Example:** Read ASIC1 normal temperature:
-```bash
-cat $bsp_path/thermal/asic1_temp_normal
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_normal}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} normal temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & asic & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 normal temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_normal}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch ASIC Temperature Critical
 
-**Node name:** `$bsp_path/thermal/asic<index>_temp_crit`
-
-**Description:** Read switch ASIC<index> critical temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| asic | Integer |  |
-
-**Example:** Read ASIC1 critical temperature:
-```bash
-cat $bsp_path/thermal/asic1_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} critical temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & asic & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch ASIC Temperature Emergency
 
-**Node name:** `$bsp_path/thermal/asic<index>_temp_emergency`
-
-**Description:** Read switch ASIC<index> emergency temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| asic | Integer |  |
-
-**Example:** Read ASIC1 emergency temperature:
-```bash
-cat $bsp_path/thermal/asic1_temp_emergency
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_emergency}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} emergency temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & asic & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_emergency}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch ASIC Temperature Trip Critical
 
-**Node name:** `$bsp_path/thermal/asic<index>_temp_trip_crit`
-
-**Description:** Read switch ASIC<index> trip critical temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| asic | Integer |  |
-
-**Example:** Read ASIC1 trip critical temperature:
-```bash
-cat $bsp_path/thermal/asic1_temp_trip_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_trip\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} trip critical temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & asic & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_trip\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch Comex Temperature
 
-**Node name:** `$bsp_path/thermal/comex_temp_input`
-
-**Description:** Read switch Comex temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer |  |
-
-**Example:** Read Comex temperature:
-```bash
-cat $bsp_path/thermal/comex_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch Comex temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read Comex temperature: \texttt{\small cat \$bsp\_path/thermal/comex\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### MNG Temperature
 
-**Stack:** Host (`hw-management-thermal-events.sh`)
-
-**Node name:** `$bsp_path/thermal/mng_amb`
-
-**Description:** Read management (MNG) ambient temperature when the platform exposes this
-sensor through the hw-mgmt thermal events handler.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:** Read MNG ambient temperature:
-```bash
-cat $bsp_path/thermal/mng_amb
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (\texttt{\small hw-management-thermal-events.sh})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/mng\_amb}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read management (MNG) ambient temperature when the platform exposes this sensor through the hw-mgmt thermal events handler.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read MNG ambient temperature: \texttt{\small cat \$bsp\_path/thermal/mng\_amb}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read host CPU temperature (BMC stack)
 
-**Stack:** BMC (`hw-management-bmc-events.sh`, event `cpu_temp`)
-
-**Node name:** `$bsp_path/thermal/cpu_temp_input`
-
-**Description:** Instantaneous **host CPU** temperature as seen on the **BMC** image. The BMC
-early-I2C map binds bus 15 / `0x4c` to the **sbtsi** driver (`hw-management-bmc-early-i2c-devices.json`).
-This is not created by the host thermal events script on the CPU image.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/thermal/cpu_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bmc-events.sh}, event \texttt{\small cpu\_temp})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Instantaneous \textbf{host CPU} temperature as seen on the \textbf{BMC} image. The BMC early-I2C map binds bus 15 / \texttt{\small 0x4c} to the \textbf{sbtsi} driver (\texttt{\small hw-management-bmc-early-i2c-devices.json}). This is not created by the host thermal events script on the CPU image.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/cpu\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read host CPU temperature max / min (BMC stack)
 
-**Stack:** BMC (`hw-management-bmc-events.sh`, event `cpu_temp`)
-
-**Node name:** `$bsp_path/thermal/cpu_temp` (maps to hwmon `temp1_max`);
-`$bsp_path/thermal/cpu_min` (maps to hwmon `temp1_min`)
-
-**Description:** High/low limit attributes from the same **sbtsi** sensor as
-`cpu_temp_input`. **sbtsi** exposes `temp1_min`; both symlinks are created on HI189.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/thermal/cpu_temp
-cat $bsp_path/thermal/cpu_min
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bmc-events.sh}, event \texttt{\small cpu\_temp})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_temp} (maps to hwmon \texttt{\small temp1\_max});\newline \texttt{\small \$bsp\_path/thermal/cpu\_min} (maps to hwmon \texttt{\small temp1\_min})} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{High/low limit attributes from the same \textbf{sbtsi} sensor as \texttt{\small cpu\_temp\_input}. \textbf{sbtsi} exposes \texttt{\small temp1\_min}; both symlinks are created on HI189.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/cpu\_temp cat \$bsp\_path/thermal/cpu\_min}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read BMC Temperature
 
-**Stack:** BMC (`hw-management-bmc-events.sh`, event `bmc_temp`)
-
-**Node name:** `$bsp_path/thermal/bmc_temp_input`
-
-**Description:** Read BMC ambient temperature (instantaneous reading from the BMC
-hwmon sensor). Symlink is created under `/var/run/hw-management/thermal/` by
-`hw-management-bmc-events.sh` when the BMC temperature hwmon device appears
-(for example HI189 / SN6600: I2C `4-0048`, `lm75` driver, `temp1_input`).
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Note:** Supported on systems with the hw-mgmt BMC thermal stack only. Values are
-typically millidegrees Celsius (Linux hwmon convention).
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:** Read BMC ambient temperature:
-```bash
-cat $bsp_path/thermal/bmc_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bmc-events.sh}, event \texttt{\small bmc\_temp})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/bmc\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read BMC ambient temperature (instantaneous reading from the BMC hwmon sensor). Symlink is created under \texttt{\small /var/run/hw-management/thermal/} by \texttt{\small hw-management-bmc-events.sh} when the BMC temperature hwmon device appears (for example HI189 / SN6600: I2C \texttt{\small 4-0048}, \texttt{\small lm75} driver, \texttt{\small temp1\_input}).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{Supported on systems with the hw-mgmt BMC thermal stack only. Values are typically millidegrees Celsius (Linux hwmon convention).} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read BMC ambient temperature: \texttt{\small cat \$bsp\_path/thermal/bmc\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read BMC Max Temperature
 
-**Stack:** BMC (`hw-management-bmc-events.sh`, event `bmc_temp` — **BMC board** lm75 sensor, not host CPU)
-
-**Node name:** `$bsp_path/thermal/bmc_temp`
-
-**Description:** Read BMC ambient high-temperature limit (maps to hwmon `temp1_max`
-on the BMC sensor). Created by the same BMC thermal udev handler as
-`bmc_temp_input`. On HI189 the BMC sensor uses the `lm75` driver, which exposes
-`temp1_input` and `temp1_max` only (no `temp1_min`).
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Note:** Supported on systems with the hw-mgmt BMC thermal stack only. Do not
-expect `thermal/bmc_min` on `lm75`-backed BMC sensors; the driver does not
-register a minimum temperature attribute, so `hw-management-bmc-events.sh` does
-not create that symlink.
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | driver-specific limit semantics |
-
-**Example:** Read BMC max temperature threshold:
-```bash
-cat $bsp_path/thermal/bmc_temp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bmc-events.sh}, event \texttt{\small bmc\_temp} — \textbf{BMC board} lm75 sensor, not host CPU)} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/bmc\_temp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read BMC ambient high-temperature limit (maps to hwmon \texttt{\small temp1\_max} on the BMC sensor). Created by the same BMC thermal udev handler as \texttt{\small bmc\_temp\_input}. On HI189 the BMC sensor uses the \texttt{\small lm75} driver, which exposes \texttt{\small temp1\_input} and \texttt{\small temp1\_max} only (no \texttt{\small temp1\_min}).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{Supported on systems with the hw-mgmt BMC thermal stack only. Do not expect \texttt{\small thermal/bmc\_min} on \texttt{\small lm75}-backed BMC sensors; the driver does not register a minimum temperature attribute, so \texttt{\small hw-management-bmc-events.sh} does not create that symlink.} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & driver-specific limit semantics \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read BMC max temperature threshold: \texttt{\small cat \$bsp\_path/thermal/bmc\_temp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read BMC Critical Temperature
 
-**Stack:** BMC — **not created** on HI189 (`lm75` has no `temp1_crit`)
-
-**Node name:** `$bsp_path/thermal/bmc_crit` (legacy); not created on HI189 BMC stack
-
-**Description:** On systems with the hw-mgmt BMC thermal stack (HI189), the BMC ambient sensor
-uses the `lm75` driver, which does not expose `temp1_crit` in sysfs. `hw-management-bmc-events.sh`
-does not create a `bmc_crit` symlink. Rev. 2.8 documented `$bsp_path/thermal/bmc_crit`; use
-`bmc_temp` (max/limit) and `bmc_temp_input` on current BMC platforms.
-
-**Access:** Read only (when node exists on other platforms)
-
-**Release version:** 1.0
-
-**Note:** Virtual test trees (for example HI193) may still ship fixture files named `bmc_crit`
-under `usr/etc/hw-management-virtual/`; that naming does not apply to live HI189 runtime
-symlinks.
-
-**Example:** Not applicable on HI189 — verify with `ls $bsp_path/thermal/` on the device.
-
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC — \textbf{not created} on HI189 (\texttt{\small lm75} has no \texttt{\small temp1\_crit})} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/bmc\_crit} (legacy); not created on HI189 BMC stack} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{On systems with the hw-mgmt BMC thermal stack (HI189), the BMC ambient sensor uses the \texttt{\small lm75} driver, which does not expose \texttt{\small temp1\_crit} in sysfs. \texttt{\small hw-management-bmc-events.sh} does not create a \texttt{\small bmc\_crit} symlink. Rev. 2.8 documented \texttt{\small \$bsp\_path/thermal/bmc\_crit}; use \texttt{\small bmc\_temp} (max/limit) and \texttt{\small bmc\_temp\_input} on current BMC platforms.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (when node exists on other platforms)} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{Virtual test trees (for example HI193) may still ship fixture files named \texttt{\small bmc\_crit} under \texttt{\small usr/etc/hw-management-virtual/}; that naming does not apply to live HI189 runtime symlinks.} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Not applicable on HI189 — verify with \texttt{\small ls \$bsp\_path/thermal/} on the device.} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
 
 ### Read BMC Minimal Temperature
 
-**Stack:** BMC — **not created** on HI189 (`lm75` has no `temp1_min`; `check_n_link` skips)
-
-**Node name:** `$bsp_path/thermal/bmc_min` (legacy); not created on HI189 BMC stack
-
-**Description:** The BMC events handler attempts `temp1_min` → `bmc_min`, but `check_n_link`
-silently skips missing sources. The HI189 BMC sensor (`lm75` at I2C `4-0048`) has no
-`temp1_min` attribute, so **`bmc_min` never appears** on production SONiC images using this
-stack. See `bmc/examples/hw-management-bmc-thermal-sysfs.txt`.
-
-**Access:** Read only (when node exists on other platforms)
-
-**Release version:** 1.0
-
-**Example:** Not applicable on HI189:
-```bash
-# Expected absent on lm75-backed BMC:
-ls $bsp_path/thermal/bmc_min
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC — \textbf{not created} on HI189 (\texttt{\small lm75} has no \texttt{\small temp1\_min}; \texttt{\small check\_n\_link} skips)} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/bmc\_min} (legacy); not created on HI189 BMC stack} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{The BMC events handler attempts \texttt{\small temp1\_min} → \texttt{\small bmc\_min}, but \texttt{\small check\_n\_link} silently skips missing sources. The HI189 BMC sensor (\texttt{\small lm75} at I2C \texttt{\small 4-0048}) has no \texttt{\small temp1\_min} attribute, so \textbf{`bmc\_min` never appears} on production SONiC images using this stack. See \texttt{\small bmc/examples/hw-management-bmc-thermal-sysfs.txt}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (when node exists on other platforms)} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Not applicable on HI189: \texttt{\small \# Expected absent on lm75-backed BMC: ls \$bsp\_path/thermal/bmc\_min}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Read Cooling State
 
-**Node name:** `$bsp_path/thermal/cooling_state`
-
-**Description:** Read system cooling state
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| state | String |  |
-
-**Example:** Read cooling state:
-```bash
-cat $bsp_path/thermal/cooling_state
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cooling\_state}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read system cooling state} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & state & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read cooling state: \texttt{\small cat \$bsp\_path/thermal/cooling\_state}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Cooling Name
 
-**Node name:** `$bsp_path/config/cooling_name`
-
-**Description:** Thermal control cooling device name written by `hw-management-thermal-events.sh`
-during cooling device registration. Used by the thermal control daemon configuration.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| name | String | platform-specific |
-
-**Example:** Read cooling name:
-```bash
-cat $bsp_path/config/cooling_name
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cooling\_name}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Thermal control cooling device name written by \texttt{\small hw-management-thermal-events.sh} during cooling device registration. Used by the thermal control daemon configuration.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & name & String & platform-specific \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read cooling name: \texttt{\small cat \$bsp\_path/config/cooling\_name}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Read CPU Core Temperature
 
-**Node name:** `$bsp_path/thermal/cpu_core<index>_temp_input`
-
-**Description:** Read CPU core<index> temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| core | Integer |  |
-
-**Example:** Read CPU core1 temperature:
-```bash
-cat $bsp_path/thermal/cpu_core1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & core & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Core Critical Temperature
 
-**Node name:** `$bsp_path/thermal/cpu_core<index>_temp_crit`
-
-**Description:** Read CPU core<index> critical temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| core | Integer |  |
-
-**Example:** Read CPU core1 critical temperature:
-```bash
-cat $bsp_path/thermal/cpu_core1_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} critical temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & core & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Core Critical Temperature Alarm
 
-**Node name:** `$bsp_path/thermal/cpu_core<index>_temp_crit_alarm`
-
-**Description:** Read CPU core<index> critical temperature alarm
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| core | Integer |  |
-
-**Example:** Read CPU core1 critical temperature alarm:
-```bash
-cat $bsp_path/thermal/cpu_core1_temp_crit_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_crit\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} critical temperature alarm} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & core & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 critical temperature alarm: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_crit\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Core Temperature Max
 
-**Node name:** `$bsp_path/thermal/cpu_core<index>_temp_max`
-
-**Description:** Read CPU core<index> maximum temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| core | Integer |  |
-
-**Example:** Read CPU core1 maximum temperature:
-```bash
-cat $bsp_path/thermal/cpu_core1_temp_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} maximum temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & core & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 maximum temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read CPU Pack Temperature
 
-**Node name:** `$bsp_path/thermal/cpu_pack_temp_input`
-
-**Description:** Read CPU pack temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer |  |
-
-**Example:** Read CPU pack temperature:
-```bash
-cat $bsp_path/thermal/cpu_pack_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Pack Critical Temperature
 
-**Node name:** `$bsp_path/thermal/cpu_pack_temp_crit`
-
-**Description:** Read CPU pack critical temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer |  |
-
-**Example:** Read CPU pack critical temperature:
-```bash
-cat $bsp_path/thermal/cpu_pack_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Pack Critical Temperature Alarm
 
-**Node name:** `$bsp_path/thermal/cpu_pack_temp_crit_alarm`
-
-**Description:** Read CPU pack critical temperature alarm
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| alarm | Integer |  |
-
-**Example:** Read CPU pack critical temperature alarm:
-```bash
-cat $bsp_path/thermal/cpu_pack_temp_crit_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_crit\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature alarm} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & alarm & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature alarm: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_crit\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### CPU Pack Temperature Max
 
-**Node name:** `$bsp_path/thermal/cpu_pack_temp_max`
-
-**Description:** Read CPU pack maximum temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer |  |
-
-**Example:** Read CPU pack maximum temperature:
-```bash
-cat $bsp_path/thermal/cpu_pack_temp_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack maximum temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack maximum temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Max Speed
 
-**Node name:** `$bsp_path/thermal/fan<index>_max_speed`
-
-**Description:** Read fan<index> maximum speed
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-
-**Example:** Read fan1 maximum speed:
-```bash
-cat $bsp_path/thermal/fan1_max_speed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_max\_speed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} maximum speed} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 maximum speed: \texttt{\small cat \$bsp\_path/thermal/fan1\_max\_speed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Min Speed
 
-**Node name:** `$bsp_path/thermal/fan<index>_min_speed`
-
-**Description:** Read fan<index> minimum speed
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-
-**Example:** Read fan1 minimum speed:
-```bash
-cat $bsp_path/thermal/fan1_min_speed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_min\_speed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} minimum speed} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 minimum speed: \texttt{\small cat \$bsp\_path/thermal/fan1\_min\_speed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set Fan Speed
 
-**Node name:** `$bsp_path/thermal/fan<index>_speed_set`
-
-**Description:** Set fan PWM/speed for fan `<index>`. Symlink is created by
-`hw-management-thermal-events.sh` from the cooling device `pwm1` attribute when supported.
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| speed | Integer | platform-specific PWM scale |
-
-**Example:** Set fan1 speed:
-```bash
-echo 50 > $bsp_path/thermal/fan1_speed_set
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_speed\_set}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set fan PWM/speed for fan \texttt{\small \textless{}index\textgreater{}}. Symlink is created by \texttt{\small hw-management-thermal-events.sh} from the cooling device \texttt{\small pwm1} attribute when supported.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & speed & Integer & platform-specific PWM scale \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 speed: \texttt{\small echo 50 \textgreater{} \$bsp\_path/thermal/fan1\_speed\_set}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Fan Speed Tolerance
 
-**Node name:** `$bsp_path/thermal/fan<index>_speed_tolerance`
-
-**Description:** Fan speed tolerance for fan `<index>` when exposed under the thermal hierarchy.
-For system-wide tolerance configuration see also `$bsp_path/config/fan_speed_tolerance`
-(§3.1.24).
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| tolerance | Integer |  |
-
-**Example:** Read fan1 speed tolerance (when present):
-```bash
-cat $bsp_path/thermal/fan1_speed_tolerance
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_speed\_tolerance}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Fan speed tolerance for fan \texttt{\small \textless{}index\textgreater{}} when exposed under the thermal hierarchy. For system-wide tolerance configuration see also \texttt{\small \$bsp\_path/config/fan\_speed\_tolerance} (§3.1.24).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & tolerance & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 speed tolerance (when present): \texttt{\small cat \$bsp\_path/thermal/fan1\_speed\_tolerance}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Read Fan Direction
 
-**Node name:** `$bsp_path/thermal/fan<index>_dir`
-
-**Description:** Read fan drawer `<index>` airflow direction.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Values:**
-| Value | Meaning |
-|------|---------|
-| 0 | Reverse (C2P) |
-| 1 | Forward (P2C) |
-| 2 | Direction cannot be determined (fan missing, or fan present but direction debounce failed) |
-
-**Notes:**
-- If the fan is not present (`thermal/fan<index>_status` is 0), `fan<index>_dir` is irrelevant and must be ignored by consumers.
-- On systems that report direction via CPLD (`system/fan_dir`), a remove event keeps `fan<index>_dir` present and sets it to `2`.
-- On systems with fan-module EEPROM direction detection (`config/fan_dir_eeprom`), direction is taken from EEPROM VPD data. When the fan (and its EEPROM) is removed, `fan<index>_dir` may also be removed.
-
-**Example:** Read fan1 direction:
-```bash
-cat $bsp_path/thermal/fan1_dir
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_dir}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan drawer \texttt{\small \textless{}index\textgreater{}} airflow direction.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0\newline \textbf{Values:}\newline | Value | Meaning | |------|---------| | 0 | Reverse (C2P) | | 1 | Forward (P2C) | | 2 | Direction cannot be determined (fan missing, or fan present but direction debounce failed) |\newline \textbf{Notes:} - If the fan is not present (\texttt{\small thermal/fan\textless{}index\textgreater{}\_status} is 0), \texttt{\small fan\textless{}index\textgreater{}\_dir} is irrelevant and must be ignored by consumers. - On systems that report direction via CPLD (\texttt{\small system/fan\_dir}), a remove event keeps \texttt{\small fan\textless{}index\textgreater{}\_dir} present and sets it to \texttt{\small 2}. - On systems with fan-module EEPROM direction detection (\texttt{\small config/fan\_dir\_eeprom}), direction is taken from EEPROM VPD data. When the fan (and its EEPROM) is removed, \texttt{\small fan\textless{}index\textgreater{}\_dir} may also be removed.} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 direction: \texttt{\small cat \$bsp\_path/thermal/fan1\_dir}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 ### Read Fan Status
 
-**Node name:** `$bsp_path/thermal/fan<index>_status`
-
-**Description:** Read fan<index> status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-
-**Example:** Read fan1 status:
-```bash
-cat $bsp_path/thermal/fan1_status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 status: \texttt{\small cat \$bsp\_path/thermal/fan1\_status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Fan Fault
 
-**Node name:** `$bsp_path/thermal/fan<index>_fault`
-
-**Description:** Read fan<index> fault status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| fan | Integer |  |
-
-**Example:** Read fan1 fault status:
-```bash
-cat $bsp_path/thermal/fan1_fault
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_fault}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} fault status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & fan & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 fault status: \texttt{\small cat \$bsp\_path/thermal/fan1\_fault}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Comex Voltmon Temperature
 
-**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_input`
-
-**Description:** Read Comex PMBus voltmon temperature input.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:** Read comex voltmon1 temperature:
-```bash
-cat $bsp_path/thermal/comex_voltmon1_temp1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_voltmon\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read Comex PMBus voltmon temperature input.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read comex voltmon1 temperature: \texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Comex Voltmon Critical Temperature
 
-**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_crit`
-
-**Description:** Read Comex voltmon critical temperature threshold.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:**
-```bash
-cat $bsp_path/thermal/comex_voltmon1_temp1_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_voltmon\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read Comex voltmon critical temperature threshold.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Comex Voltmon Max Temperature
 
-**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_max`
-
-**Description:** Read Comex voltmon maximum temperature threshold.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:**
-```bash
-cat $bsp_path/thermal/comex_voltmon1_temp1_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_voltmon\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read Comex voltmon maximum temperature threshold.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Read Port Ambient
 
-**Node name:** `$bsp_path/thermal/port<index>_ambient_temp`
-
-**Description:** Read port<index> ambient temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| port | Integer |  |
-
-**Example:** Read port1 ambient temperature:
-```bash
-cat $bsp_path/thermal/port1_ambient_temp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/port\textless{}index\textgreater{}\_ambient\_temp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read port\textless{}index\textgreater{} ambient temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & port & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read port1 ambient temperature: \texttt{\small cat \$bsp\_path/thermal/port1\_ambient\_temp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU Temperature
 
-**Node name:** `$bsp_path/thermal/psu<index>_temp_input`
-
-**Description:** Read PSU<index> temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 temperature:
-```bash
-cat $bsp_path/thermal/psu1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 temperature: \texttt{\small cat \$bsp\_path/thermal/psu1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU Alarm
 
-**Node name:** `$bsp_path/thermal/psu<index>_alarm`
-
-**Description:** Read PSU<index> alarm status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 alarm:
-```bash
-cat $bsp_path/thermal/psu1_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} alarm status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 alarm: \texttt{\small cat \$bsp\_path/thermal/psu1\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU Max
 
-**Node name:** `$bsp_path/thermal/psu<index>_temp_max`
-
-**Description:** Read PSU<index> maximum temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 maximum temperature:
-```bash
-cat $bsp_path/thermal/psu1_temp_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_temp\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} maximum temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 maximum temperature: \texttt{\small cat \$bsp\_path/thermal/psu1\_temp\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU Fan Speed
 
-**Node name:** `$bsp_path/thermal/psu<index>_fan_speed`
-
-**Description:** Read PSU<index> fan speed
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 fan speed:
-```bash
-cat $bsp_path/thermal/psu1_fan_speed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_fan\_speed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} fan speed} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 fan speed: \texttt{\small cat \$bsp\_path/thermal/psu1\_fan\_speed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU min/max Fan Speed
 
-**Node name:** `$bsp_path/thermal/psu<index>_fan_min_speed`
-`$bsp_path/thermal/psu<index>_fan_max_speed`
-
-**Description:** Read PSU<index> minimum and maximum fan speed
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 fan speeds:
-```bash
-cat $bsp_path/thermal/psu1_fan_min_speed
-cat $bsp_path/thermal/psu1_fan_max_speed
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_fan\_min\_speed}\newline \texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_fan\_max\_speed}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} minimum and maximum fan speed} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 fan speeds: \texttt{\small cat \$bsp\_path/thermal/psu1\_fan\_min\_speed cat \$bsp\_path/thermal/psu1\_fan\_max\_speed}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU Power Status
 
-**Node name:** `$bsp_path/thermal/psu<index>_power_status`
-
-**Description:** Read PSU<index> power status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 power status:
-```bash
-cat $bsp_path/thermal/psu1_power_status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_power\_status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} power status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 power status: \texttt{\small cat \$bsp\_path/thermal/psu1\_power\_status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PSU Status
 
-**Node name:** `$bsp_path/thermal/psu<index>_status`
-
-**Description:** Read PSU<index> status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read PSU1 status:
-```bash
-cat $bsp_path/thermal/psu1_status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 status: \texttt{\small cat \$bsp\_path/thermal/psu1\_status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PDB Hotswap Controller Temperature
 
-**Node name:** `$bsp_path/thermal/pdb_hotswap<index>_temp<index>_input`
-
-**Description:** Read PDB (Power Distribution Board) hot-swap controller temperature
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read PDB hotswap 1 temperature:
-```bash
-cat $bsp_path/thermal/pdb_hotswap1_temp1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_hotswap\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB (Power Distribution Board) hot-swap controller temperature\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hotswap 1 temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PDB Hotswap Controller Temperature Thresholds
 
-**Node name:** `$bsp_path/thermal/pdb_hotswap<index>_temp<index>_crit`
-`$bsp_path/thermal/pdb_hotswap<index>_temp<index>_max`
-
-**Description:** Read PDB hot-swap controller temperature critical and maximum thresholds
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read PDB hotswap 1 temperature thresholds:
-```bash
-cat $bsp_path/thermal/pdb_hotswap1_temp1_crit
-cat $bsp_path/thermal/pdb_hotswap1_temp1_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_hotswap\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/thermal/pdb\_hotswap\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hot-swap controller temperature critical and maximum thresholds\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hotswap 1 temperature thresholds: \texttt{\small cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_crit cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PDB Power Converter Temperature
 
-**Node name:** `$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_input`
-
-**Description:** Read PDB power converter temperature
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read PDB power converter 1 temperature:
-```bash
-cat $bsp_path/thermal/pdb_pwr_conv1_temp1_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter temperature\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter 1 temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PDB Power Converter Temperature Thresholds
 
-**Node name:** `$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_crit`
-`$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_lcrit`
-`$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_max`
-
-**Description:** Read PDB power converter temperature thresholds (critical, lower critical, maximum)
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read PDB power converter 1 temperature thresholds:
-```bash
-cat $bsp_path/thermal/pdb_pwr_conv1_temp1_crit
-cat $bsp_path/thermal/pdb_pwr_conv1_temp1_lcrit
-cat $bsp_path/thermal/pdb_pwr_conv1_temp1_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_lcrit}\newline \texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter temperature thresholds (critical, lower critical, maximum)\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter 1 temperature thresholds: \texttt{\small cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_crit cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_lcrit cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read PDB MOSFET Ambient Temperature
 
-**Node name:** `$bsp_path/thermal/pdb_mosfet_amb<index>`
-
-**Description:** Read PDB MOSFET ambient temperature sensor
-
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
-
-**Access:** Read only
-
-**Release version:** V.7.0050.3000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read PDB MOSFET ambient temperature:
-```bash
-cat $bsp_path/thermal/pdb_mosfet_amb1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_mosfet\_amb\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB MOSFET ambient temperature sensor\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB MOSFET ambient temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_mosfet\_amb1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read System PWM1
 
-**Node name:** `$bsp_path/thermal/system_pwm1`
-
-**Description:** Read system PWM1 value
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| pwm | Integer |  |
-
-**Example:** Read system PWM1:
-```bash
-cat $bsp_path/thermal/system_pwm1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/system\_pwm1}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read system PWM1 value} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & pwm & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read system PWM1: \texttt{\small cat \$bsp\_path/thermal/system\_pwm1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Critical Module
 
-**Node name:** `$bsp_path/thermal/module<index>_temp_crit`
-
-**Description:** Read module<index> critical temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| module | Integer |  |
-
-**Example:** Read module1 critical temperature:
-```bash
-cat $bsp_path/thermal/module1_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} critical temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & module & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Emergency Module
 
-**Node name:** `$bsp_path/thermal/module<index>_temp_emergency`
-
-**Description:** Read module<index> emergency temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| module | Integer |  |
-
-**Example:** Read module1 emergency temperature:
-```bash
-cat $bsp_path/thermal/module1_temp_emergency
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_emergency}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} emergency temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & module & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_emergency}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Trip Critical Module
 
-**Node name:** `$bsp_path/thermal/module<index>_temp_trip_crit`
-
-**Description:** Read module<index> trip critical temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| module | Integer |  |
-
-**Example:** Read module1 trip critical temperature:
-```bash
-cat $bsp_path/thermal/module1_temp_trip_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_trip\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} trip critical temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & module & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_trip\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Fault Module
 
-**Node name:** `$bsp_path/thermal/module<index>_temp_fault`
-
-**Description:** Read module<index> temperature fault status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| module | Integer |  |
-
-**Example:** Read module1 temperature fault:
-```bash
-cat $bsp_path/thermal/module1_temp_fault
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_fault}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} temperature fault status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & module & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 temperature fault: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_fault}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Input Module
 
-**Node name:** `$bsp_path/thermal/module<index>_temp_input`
-
-**Description:** Read module<index> temperature input
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| module | Integer |  |
-
-**Example:** Read module1 temperature input:
-```bash
-cat $bsp_path/thermal/module1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} temperature input} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & module & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 temperature input: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Critical Gearbox
 
-**Node name:** `$bsp_path/thermal/gearbox<index>_temp_crit`
-
-**Description:** Read gearbox<index> critical temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| gearbox | Integer |  |
-
-**Example:** Read gearbox1 critical temperature:
-```bash
-cat $bsp_path/thermal/gearbox1_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} critical temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & gearbox & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Emergency Gearbox
 
-**Node name:** `$bsp_path/thermal/gearbox<index>_temp_emergency`
-
-**Description:** Read gearbox<index> emergency temperature threshold
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| gearbox | Integer |  |
-
-**Example:** Read gearbox1 emergency temperature:
-```bash
-cat $bsp_path/thermal/gearbox1_temp_emergency
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_emergency}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} emergency temperature threshold} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & gearbox & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_emergency}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Trip Critical Gearbox
 
-**Node name:** `$bsp_path/thermal/gearbox<index>_temp_trip_crit`
-
-**Description:** Read gearbox<index> trip critical temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| gearbox | Integer |  |
-
-**Example:** Read gearbox1 trip critical temperature:
-```bash
-cat $bsp_path/thermal/gearbox1_temp_trip_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_trip\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} trip critical temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & gearbox & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_trip\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Temperature Input Gearbox
 
-**Node name:** `$bsp_path/thermal/gearbox<index>_temp_input`
-
-**Description:** Read gearbox<index> temperature input
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| gearbox | Integer |  |
-
-**Example:** Read gearbox1 temperature input:
-```bash
-cat $bsp_path/thermal/gearbox1_temp_input
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} temperature input} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & gearbox & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 temperature input: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_input}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch CPU Temperature
 
-**Node name:** `$bsp_path/thermal/switch_cpu_temp`
-
-**Description:** Read switch CPU temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer |  |
-
-**Example:** Read switch CPU temperature:
-```bash
-cat $bsp_path/thermal/switch_cpu_temp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_cpu\_temp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch CPU temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch CPU temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_cpu\_temp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch Fan Temperature
 
-**Node name:** `$bsp_path/thermal/switch_fan_temp`
-
-**Description:** Read switch fan temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer |  |
-
-**Example:** Read switch fan temperature:
-```bash
-cat $bsp_path/thermal/switch_fan_temp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_fan\_temp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch fan temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch fan temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_fan\_temp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch Port Temperature
 
-**Node name:** `$bsp_path/thermal/switch_port<index>_temp`
-
-**Description:** Read switch port<index> temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| port | Integer |  |
-
-**Example:** Read switch port1 temperature:
-```bash
-cat $bsp_path/thermal/switch_port1_temp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_port\textless{}index\textgreater{}\_temp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch port\textless{}index\textgreater{} temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & port & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch port1 temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_port1\_temp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Switch Power Supply Temperature
 
-**Node name:** `$bsp_path/thermal/switch_psu<index>_temp`
-
-**Description:** Read switch power supply<index> temperature
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| psu | Integer |  |
-
-**Example:** Read switch PSU1 temperature:
-```bash
-cat $bsp_path/thermal/switch_psu1_temp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_psu\textless{}index\textgreater{}\_temp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch power supply\textless{}index\textgreater{} temperature} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & psu & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch PSU1 temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_psu1\_temp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SODIMM Temperature Input
 
-**Node name:** `$bsp_path/thermal/sodimm<index>_temp_input`
-
-**Description:** Read SODIMM (Small Outline Dual In-line Memory Module) temperature. SODIMMs are DDR memory modules with integrated temperature sensors.
-
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-SN5810_LD and N6100_LD use 2 SODIMM sensors on I2C bus 2 (addresses 0x1a, 0x1b).
-SN6600_LD uses 2 JC42 sensors on I2C bus 10 (addresses 0x52, 0x53) per validated tree.
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read SODIMM temperatures:
-```bash
-cat $bsp_path/thermal/sodimm1_temp_input  # SODIMM 1
-cat $bsp_path/thermal/sodimm2_temp_input  # SODIMM 2
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_input}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM (Small Outline Dual In-line Memory Module) temperature. SODIMMs are DDR memory modules with integrated temperature sensors.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family). SN5810\_LD and N6100\_LD use 2 SODIMM sensors on I2C bus 2 (addresses 0x1a, 0x1b). SN6600\_LD uses 2 JC42 sensors on I2C bus 10 (addresses 0x52, 0x53) per validated tree.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-2 (N6100\_LD, SN6600\_LD) \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_input  \# SODIMM 1 cat \$bsp\_path/thermal/sodimm2\_temp\_input  \# SODIMM 2}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SODIMM Critical Temperature
 
-**Node name:** `$bsp_path/thermal/sodimm<index>_temp_crit`
-
-**Description:** Read SODIMM critical temperature threshold.
-
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read SODIMM critical temperatures:
-```bash
-cat $bsp_path/thermal/sodimm1_temp_crit
-cat $bsp_path/thermal/sodimm2_temp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM critical temperature threshold.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-2 (N6100\_LD, SN6600\_LD) \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM critical temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit cat \$bsp\_path/thermal/sodimm2\_temp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SODIMM Max Temperature
 
-**Node name:** `$bsp_path/thermal/sodimm<index>_temp_max`
-
-**Description:** Read SODIMM maximum temperature threshold.
-
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read SODIMM max temperatures:
-```bash
-cat $bsp_path/thermal/sodimm1_temp_max
-cat $bsp_path/thermal/sodimm2_temp_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM maximum temperature threshold.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-2 (N6100\_LD, SN6600\_LD) \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM max temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_max cat \$bsp\_path/thermal/sodimm2\_temp\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SODIMM Min Temperature
 
-**Node name:** `$bsp_path/thermal/sodimm<index>_temp_min`
-
-**Description:** Read SODIMM minimum temperature threshold.
-
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
-| Temperature | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read SODIMM min temperatures:
-```bash
-cat $bsp_path/thermal/sodimm1_temp_min
-cat $bsp_path/thermal/sodimm2_temp_min
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_min}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM minimum temperature threshold.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-2 (N6100\_LD, SN6600\_LD) \\
+ & Temperature & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM min temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_min cat \$bsp\_path/thermal/sodimm2\_temp\_min}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SODIMM Temperature Alarms
 
-**Node name:** `$bsp_path/thermal/sodimm<index>_temp_crit_alarm`
-`$bsp_path/thermal/sodimm<index>_temp_max_alarm`
-`$bsp_path/thermal/sodimm<index>_temp_min_alarm`
-
-**Description:** Read SODIMM temperature alarm status (critical, maximum, minimum).
-
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
-| Alarm | Integer | 0 (clear), 1 (alarm) |
-
-**Example:** Read SODIMM temperature alarms:
-```bash
-cat $bsp_path/thermal/sodimm1_temp_crit_alarm
-cat $bsp_path/thermal/sodimm1_temp_max_alarm
-cat $bsp_path/thermal/sodimm1_temp_min_alarm
-cat $bsp_path/thermal/sodimm2_temp_crit_alarm
-cat $bsp_path/thermal/sodimm2_temp_max_alarm
-cat $bsp_path/thermal/sodimm2_temp_min_alarm
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_crit\_alarm}\newline \texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_max\_alarm}\newline \texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_min\_alarm}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature alarm status (critical, maximum, minimum).\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-2 (N6100\_LD, SN6600\_LD) \\
+ & Alarm & Integer & 0 (clear), 1 (alarm) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature alarms: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit\_alarm cat \$bsp\_path/thermal/sodimm1\_temp\_max\_alarm cat \$bsp\_path/thermal/sodimm1\_temp\_min\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_crit\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_max\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_min\_alarm}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SODIMM Temperature Hysteresis
 
-**Node name:** `$bsp_path/thermal/sodimm<index>_temp_crit_hyst`
-`$bsp_path/thermal/sodimm<index>_temp_max_hyst`
-
-**Description:** Read SODIMM temperature hysteresis values for critical and max thresholds.
-
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
-
-**Access:** Read only
-
-**Release version:** V.7.0060.1000
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
-| Hysteresis | Integer | Value in millidegrees Celsius (m°C) |
-
-**Example:** Read SODIMM temperature hysteresis:
-```bash
-cat $bsp_path/thermal/sodimm1_temp_crit_hyst
-cat $bsp_path/thermal/sodimm1_temp_max_hyst
-cat $bsp_path/thermal/sodimm2_temp_crit_hyst
-cat $bsp_path/thermal/sodimm2_temp_max_hyst
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_crit\_hyst}\newline \texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_max\_hyst}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature hysteresis values for critical and max thresholds.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
+\multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & index & Integer & 1-2 (N6100\_LD, SN6600\_LD) \\
+ & Hysteresis & Integer & Value in millidegrees Celsius (m°C) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature hysteresis: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit\_hyst cat \$bsp\_path/thermal/sodimm1\_temp\_max\_hyst cat \$bsp\_path/thermal/sodimm2\_temp\_crit\_hyst cat \$bsp\_path/thermal/sodimm2\_temp\_max\_hyst}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### SWB ASIC Temperature
 
-**Node name:** `$bsp_path/thermal/swb_asic<index>`
-
-**Description:** Read switch-board (SWB) ASIC temperature when present on multi-board systems.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:**
-```bash
-cat $bsp_path/thermal/swb_asic1
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/swb\_asic\textless{}index\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch-board (SWB) ASIC temperature when present on multi-board systems.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/swb\_asic1}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ### Drive Temperature
 
-**Node name:** `$bsp_path/thermal/drivetemp`
-
-**Description:** Read NVMe/drive temperature from the `drivetemp` hwmon driver when linked by
-`hw-management-thermal-events.sh`.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| temperature | Integer | millidegrees Celsius |
-
-**Example:**
-```bash
-cat $bsp_path/thermal/drivetemp
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/drivetemp}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read NVMe/drive temperature from the \texttt{\small drivetemp} hwmon driver when linked by \texttt{\small hw-management-thermal-events.sh}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & temperature & Integer & millidegrees Celsius \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Drive Critical Temperature
 
-**Node name:** `$bsp_path/thermal/drivetemp_crit`
-
-**Description:** Read drive critical temperature threshold.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/thermal/drivetemp_crit
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/drivetemp\_crit}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read drive critical temperature threshold.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_crit}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Drive Maximum Temperature Threshold
 
-**Node name:** `$bsp_path/thermal/drivetemp_max`
-
-**Description:** Read drive maximum temperature threshold.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/thermal/drivetemp_max
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/drivetemp\_max}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read drive maximum temperature threshold.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_max}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Drive Minimum Temperature Threshold
 
-**Node name:** `$bsp_path/thermal/drivetemp_min`
-
-**Description:** Read drive minimum temperature threshold.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/thermal/drivetemp_min
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/drivetemp\_min}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read drive minimum temperature threshold.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_min}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
-
 
 ## Watchdog
 
@@ -7341,142 +6786,149 @@ under `$bsp_path/watchdog/`.
 
 ### Read Boot Status
 
-**Node name:** `$bsp_path/watchdog/bootstatus`
-
-**Description:** Read watchdog boot status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| status | Integer |  |
-
-**Example:** Read watchdog boot status:
-```bash
-cat $bsp_path/watchdog/bootstatus
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/bootstatus}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog boot status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & status & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog boot status: \texttt{\small cat \$bsp\_path/watchdog/bootstatus}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Identity
 
-**Node name:** `$bsp_path/watchdog/identity`
-
-**Description:** Read watchdog identity
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| identity | String |  |
-
-**Example:** Read watchdog identity:
-```bash
-cat $bsp_path/watchdog/identity
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/identity}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog identity} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & identity & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog identity: \texttt{\small cat \$bsp\_path/watchdog/identity}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read No Way Out
 
-**Node name:** `$bsp_path/watchdog/nowayout`
-
-**Description:** Read watchdog no way out setting
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| nowayout | Integer | 0/1 |
-
-**Example:** Read watchdog no way out:
-```bash
-cat $bsp_path/watchdog/nowayout
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/nowayout}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog no way out setting} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & nowayout & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog no way out: \texttt{\small cat \$bsp\_path/watchdog/nowayout}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read State
 
-**Node name:** `$bsp_path/watchdog/state`
-
-**Description:** Read watchdog state
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| state | String |  |
-
-**Example:** Read watchdog state:
-```bash
-cat $bsp_path/watchdog/state
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/state}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog state} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & state & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog state: \texttt{\small cat \$bsp\_path/watchdog/state}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Status
 
-**Node name:** `$bsp_path/watchdog/status`
-
-**Description:** Read watchdog status
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| status | String |  |
-
-**Example:** Read watchdog status:
-```bash
-cat $bsp_path/watchdog/status
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/status}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog status} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & status & String &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog status: \texttt{\small cat \$bsp\_path/watchdog/status}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Timeout
 
-**Node name:** `$bsp_path/watchdog/timeout`
-
-**Description:** Read watchdog timeout value
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| timeout | Integer | seconds |
-
-**Example:** Read watchdog timeout:
-```bash
-cat $bsp_path/watchdog/timeout
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/timeout}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog timeout value} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & timeout & Integer & seconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog timeout: \texttt{\small cat \$bsp\_path/watchdog/timeout}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Read Timeleft
 
-**Node name:** `$bsp_path/watchdog/timeleft`
-
-**Description:** Read watchdog time left
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| timeleft | Integer | seconds |
-
-**Example:** Read watchdog time left:
-```bash
-cat $bsp_path/watchdog/timeleft
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/timeleft}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog time left} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & timeleft & Integer & seconds \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog time left: \texttt{\small cat \$bsp\_path/watchdog/timeleft}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## BMC status
@@ -7490,93 +6942,102 @@ On the **BMC** image, `bmc_to_cpu_ctrl` also appears under `$bsp_path/system/` v
 
 ### BMC present
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/system/bmc_present`
-
-**Description:** GPIO indicating whether a BMC is present. Created by host
-`hw-management.sh` (platform-specific GPIO mapping).
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/system/bmc_present
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/bmc\_present}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{GPIO indicating whether a BMC is present. Created by host \texttt{\small hw-management.sh} (platform-specific GPIO mapping).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bmc\_present}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### BMC to CPU control
 
-**Stack:** Host (mlxreg-io on CPU); also **BMC** (`system/` symlink from `regio` on BMC image)
-
-**Node name:** `$bsp_path/system/bmc_to_cpu_ctrl`
-
-**Description:** I2C bus ownership between BMC and CPU (0 = CPU, 1 = BMC on supported
-platforms). On the host image the symlink targets **mlxplat** mlxreg-io; thermal control
-may read this node (`hw_management_thermal_control.py`: `system/bmc_to_cpu_ctrl`).
-
-**Access:** Read/Write (platform-dependent)
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/system/bmc_to_cpu_ctrl
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (mlxreg-io on CPU); also \textbf{BMC} (\texttt{\small system/} symlink from \texttt{\small regio} on BMC image)} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/bmc\_to\_cpu\_ctrl}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{I2C bus ownership between BMC and CPU (0 = CPU, 1 = BMC on supported platforms). On the host image the symlink targets \textbf{mlxplat} mlxreg-io; thermal control may read this node (\texttt{\small hw\_management\_thermal\_control.py}: \texttt{\small system/bmc\_to\_cpu\_ctrl}).} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write (platform-dependent)} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bmc\_to\_cpu\_ctrl}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### MCTP address
 
-**Stack:** Host (`hw-management.sh` writes when platform defines MCTP, e.g. N5110)
-
-**Node name:** `$bsp_path/config/mctp_addr`
-
-**Description:** MCTP I2C client address used during host init to instantiate the MCTP
-device on `mctp_bus`.
-
-**Access:** Read only (after init)
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/config/mctp_addr
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (\texttt{\small hw-management.sh} writes when platform defines MCTP, e.g. N5110)} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/mctp\_addr}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{MCTP I2C client address used during host init to instantiate the MCTP device on \texttt{\small mctp\_bus}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (after init)} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/mctp\_addr}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### MCTP bus
 
-**Stack:** Host
-
-**Node name:** `$bsp_path/config/mctp_bus`
-
-**Description:** I2C bus number for MCTP client binding during host init.
-
-**Access:** Read only (after init)
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/config/mctp_bus
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/mctp\_bus}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{I2C bus number for MCTP client binding during host init.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (after init)} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/mctp\_bus}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### MCTP ready
 
-**Stack:** Host (mlxreg-io); **BMC** register `cpu_mctp_ready` under `$bsp_path/system/` on BMC image
-
-**Node name:** `$bsp_path/system/cpu_mctp_ready`
-
-**Description:** Indicates CPU MCTP readiness from platform mlxreg-io. Present in validated
-host trees (SN6600_LD, SN5810_LD, N6100_LD). On the BMC image the same logical register is
-listed in `nvsw_bmc_hid189_regio_data` / `hw-management-bmc-system-sysfs.txt`.
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Example:**
-```bash
-cat $bsp_path/system/cpu_mctp_ready
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (mlxreg-io); \textbf{BMC} register \texttt{\small cpu\_mctp\_ready} under \texttt{\small \$bsp\_path/system/} on BMC image} \\
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpu\_mctp\_ready}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Indicates CPU MCTP readiness from platform mlxreg-io. Present in validated host trees (SN6600\_LD, SN5810\_LD, N6100\_LD). On the BMC image the same logical register is listed in \texttt{\small nvsw\_bmc\_hid189\_regio\_data} / \texttt{\small hw-management-bmc-system-sysfs.txt}.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/cpu\_mctp\_ready}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ## BMC reset cause
@@ -7750,103 +7211,109 @@ Note: On BMC images for HI189, mlxreg-hotplug also exposes aggregate status regi
 
 ### Enable / Disable JTAG mechanism
 
-**Node name:** `$bsp_path/jtag/enable`
-
-**Description:** Enable or disable JTAG mechanism
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| enable | Integer | 0/1 |
-
-**Example:** Enable JTAG mechanism:
-```bash
-echo 1 > $bsp_path/jtag/enable
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/jtag/enable}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Enable or disable JTAG mechanism} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & enable & Integer & 0/1 \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Enable JTAG mechanism: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/enable}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set JTAG TCK pin
 
-**Node name:** `$bsp_path/jtag/tck`
-
-**Description:** Set JTAG TCK pin
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| tck | Integer |  |
-
-**Example:** Set JTAG TCK pin:
-```bash
-echo 1 > $bsp_path/jtag/tck
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/jtag/tck}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TCK pin} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & tck & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TCK pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tck}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set JTAG TDI pin
 
-**Node name:** `$bsp_path/jtag/tdi`
-
-**Description:** Set JTAG TDI pin
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| tdi | Integer |  |
-
-**Example:** Set JTAG TDI pin:
-```bash
-echo 1 > $bsp_path/jtag/tdi
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/jtag/tdi}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TDI pin} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & tdi & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TDI pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tdi}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Set JTAG TMS pin
 
-**Node name:** `$bsp_path/jtag/tms`
-
-**Description:** Set JTAG TMS pin
-
-**Access:** Write
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| tms | Integer |  |
-
-**Example:** Set JTAG TMS pin:
-```bash
-echo 1 > $bsp_path/jtag/tms
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/jtag/tms}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TMS pin} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & tms & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TMS pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tms}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
 
 ### Get JTAG TDO pin
 
-**Node name:** `$bsp_path/jtag/tdo`
-
-**Description:** Get JTAG TDO pin
-
-**Access:** Read only
-
-**Release version:** 1.0
-
-**Arguments:**
-| Name | Data type | Values |
-|------|-----------|--------|
-| tdo | Integer |  |
-
-**Example:** Get JTAG TDO pin:
-```bash
-cat $bsp_path/jtag/tdo
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/jtag/tdo}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get JTAG TDO pin} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & tdo & Integer &  \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Get JTAG TDO pin: \texttt{\small cat \$bsp\_path/jtag/tdo}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
 ```
+
 # Thermal Control
 
 The thermal algorithm is described in a separate document - [Thermal Monitoring for NVIDIA Systems with Third Party OS](Thermal_Monitoring_for_NVIDIA_Systems_with_third_party_OS.md)
@@ -7874,11 +7341,11 @@ The system automatically selects the appropriate thermal control version based o
 
 NVIDIA watchdog device is implemented in a programmable logic device. There are 2 types of HW watchdog implementations:
 
- Type 1 – actual HW timeout defined as a power of 2 msec. For example: Timeout 20 sec is
+- Type 1 – actual HW timeout defined as a power of 2 msec. For example: Timeout 20 sec is
 
 rounded up to 32768 msec. The maximum timeout period is 32 sec (32768 msec). Get time-left is not supported.
 
- Type 2 – actual HW timeout defined in seconds and is the same as user-defined timeout.
+- Type 2 – actual HW timeout defined in seconds and is the same as user-defined timeout.
 
 Maximum timeout is 255 sec. Get time-left is supported.
 
