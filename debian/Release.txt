@@ -1,4 +1,32 @@
 ================================================================================
+- V.7.0070.1018
+- Fri, 04 Sep 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: thermal: Fix thermal data for SN2201_M, 2163705
+    o #N/A, Update changelog and release notes for V.7.0070.1017, 51b3376
+    o #5183998, hw-mgmt: scripts: Fix PSU EEPROM parsing on systems without PSU VPD, 45985f9
+    o #5232793, hw-mgmt: thermal: Fix PWM stuck high after tacho error recovery, ad769f1
+    o #N/A, Update changelog and release notes for V.7.0070.1016, 64e4601
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1018/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1017
 - Thu, 03 Sep 2026
 --------------------------------------------------------------------------------
