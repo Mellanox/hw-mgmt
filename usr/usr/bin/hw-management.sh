@@ -674,6 +674,7 @@ sn6600_named_busses=(asic1 5 pwr 4 vr1 16 vr2 17 vpd 1 cpu-vr 6)
 sn68xxld_named_busses=(asic1 4 pwr1 6 vr1 15 vpd 1 cpu-vr 5)
 
 ACTION=$1
+print_function_call "$0" "main" "ACTION=$ACTION $2 $3"
 
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
@@ -3233,9 +3234,18 @@ check_system()
 {
 	local json_file
 
+	# restart runs do_stop then do_start in one process; both call
+	# check_system which appends to these globals. Reset so devices are
+	# not connected or disconnected twice.
+	connect_table=()
+	named_busses=()
+
+	print_function_call "$0" "${FUNCNAME[0]}" "sku:$sku board:$board_type"
 	if json_file=$(find_platform_json_config "$sku"); then
+		print_function_call "$0" "${FUNCNAME[0]}" "json:$json_file"
 		check_system_json "$json_file" || return 1
 	else
+		print_function_call "$0" "${FUNCNAME[0]}" "no json, using check_system_internal"
 		check_system_internal || return 1
 	fi
 	check_system_bmc_redfish_login || true
@@ -3318,6 +3328,7 @@ enable_vpd_wp()
 
 load_modules()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "cpu:$cpu_type sku:$sku"
 	# Some modules are not present in all the kernel
 	# versions. Use this function to load those modules
 	# which need to be loaded based on their availability
@@ -3428,6 +3439,7 @@ set_config_data()
 
 connect_platform()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	find_i2c_bus
 	# Check if it's new or old format of connect table
 	if [ -e "$devtree_file" ]; then
@@ -3456,7 +3468,12 @@ connect_platform()
 		# ASIC chipup failures.
 		if [ "$dev_connected" -eq 0 ]; then
 			log_err "Failed to connect device ${connect_table[i]} ${connect_table[i+1]} on bus ${connect_table[i+2]} after ${device_connect_retry} attempts"
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"FAIL ${connect_table[i]} ${connect_table[i+1]} bus:${connect_table[i+2]}"
 			save_i2c_trace_on_failure "device connect failed: ${connect_table[i]} ${connect_table[i+1]} bus ${connect_table[i+2]}"
+		else
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"ok ${connect_table[i]} ${connect_table[i+1]} bus:${connect_table[i+2]} tries:$((j+1))"
 		fi
 	done
 	if [ ! -z $mctp_addr ]; then
@@ -3468,6 +3485,7 @@ connect_platform()
 
 disconnect_platform()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	if [ -f $config_path/i2c_bus_offset ]; then
 		i2c_bus_offset=$(<$config_path/i2c_bus_offset)
 	fi
@@ -4142,6 +4160,7 @@ report_sed_pba_ver()
 
 do_start()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	# start i2c bus trace recording
 	start_i2c_trace
 	show_hw_info
@@ -4149,10 +4168,18 @@ do_start()
 	create_symbolic_links
 	run_fixup_script pre
 	check_cpu_type
-	pre_devtr_init || exit 1
+	print_function_call "$0" "do_start" "cpu_type:$cpu_type"
+	pre_devtr_init || {
+		print_function_call "$0" "do_start" "pre_devtr_init failed"
+		exit 1
+	}
 	load_modules
 	devtr_check_smbios_device_description
-	check_system || exit 1
+	check_system || {
+		print_function_call "$0" "do_start" "check_system failed sku:$sku"
+		exit 1
+	}
+	print_function_call "$0" "do_start" "check_system done"
 	set_asic_pci_id
 	set_dpu_pci_id
 	set_sodimms
@@ -4162,19 +4189,23 @@ do_start()
 		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
 	fi
 	asic_control=$(< $config_path/asic_control) 
+	print_function_call "$0" "do_start" "asic_control:$asic_control"
 	if [[ $asic_control -ne 0 ]]; then
 		set_asic_i2c_bus
 	fi
 	touch $udev_ready
 	run_depmod_if_needed
 
+	print_function_call "$0" "do_start" "udevadm trigger add"
 	udevadm trigger --action=add
 	udevadm settle
+	print_function_call "$0" "do_start" "udevadm settle done"
 	set_sodimm_temp_limits
 	set_gpios "export"
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
+	print_function_call "$0" "do_start" "connect_platform done"
 	sleep 1
 	enable_vpd_wp
 	echo 0 > $config_path/events_ready
@@ -4195,11 +4226,13 @@ do_start()
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
 	/usr/bin/hw-management-exec-parser.sh
+	print_function_call "$0" "do_start" "completed"
 	log_info "Init completed."
 }
 
 do_stop()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	rm -f /var/run/hw-management/exec 2>/dev/null
 	rm -fR /var/run/hw-management/exec.d 2>/dev/null
 	check_cpu_type
@@ -4221,6 +4254,7 @@ do_stop()
 		sleep 1
 		rm -fR /var/run/hw-management
 	fi
+	print_function_call "$0" "do_stop" "completed"
 }
 
 function find_asic_hwmon_path()
@@ -4239,6 +4273,8 @@ do_chip_up_down()
 	local asic_pci_bus=$3
 	local asic_i2c_bus
 
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"action:$action asic:$asic_index pci:$asic_pci_bus"
 	if [ -f "$config_path"/asic_control ]; then
 		asic_control=$(< $config_path/asic_control)
 	fi
@@ -4322,16 +4358,22 @@ do_chip_up_down()
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/delete_device
 			restore_i2c_bus_frequency_default
 		else
+			print_function_call "$0" "do_chip_up_down" \
+				"chipdown skip asic:$asic_index bus:$asic_i2c_bus addr:$i2c_asic_addr_name minimal:${minimal_unsupported:-0}"
 			unlock_service_state_change
 			return 0
 		fi
 		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		asic_chipup_completed=$(< $config_path/asic_chipup_completed)
+		print_function_call "$0" "do_chip_up_down" \
+			"chipdown done asic:$asic_index bus:$asic_i2c_bus completed:$asic_chipup_completed"
 		;;
 	1)
 		lock_service_state_change
 		[ -f "$config_path/chipup_dis" ] && disable=$(< $config_path/chipup_dis)
 		if [ "$disable" ] && [ "$disable" -gt 0 ]; then
+			print_function_call "$0" "do_chip_up_down" \
+				"chipup skipped chipup_dis:$disable asic:$asic_index"
 			disable=$((disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
@@ -4348,6 +4390,8 @@ do_chip_up_down()
 			retry_helper find_asic_hwmon_path "$chipup_test_time" "$chipup_retry_count" "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
 			if [ $? -ne 0 ]; then
 				# chipup command failed.
+				print_function_call "$0" "do_chip_up_down" \
+					"chipup failed asic:$asic_index bus:$asic_i2c_bus"
 				unlock_service_state_change
 				return 1
 			fi
@@ -4360,6 +4404,8 @@ do_chip_up_down()
 				echo "$str" > $system_path/cpld
 			fi
 		else
+			print_function_call "$0" "do_chip_up_down" \
+				"chipup skip already-present or minimal asic:$asic_index bus:$asic_i2c_bus addr:$i2c_asic_addr_name minimal:${minimal_unsupported:-0}"
 			unlock_service_state_change
 			return 0
 		fi
@@ -4504,6 +4550,8 @@ case $ACTION in
 			start_chipup_i2c_trace "$asic_index"
 
 			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
+				print_function_call "$0" "chipup" \
+					"attempt:$chipup_trace_attempt retry_left:$asic_retry asic:$asic_index"
 				do_chip_up_down 1 "$2" "$3"
 				asic_chipup_rc=$?
 				if [ "$asic_chipup_rc" -ne 0 ]; then
@@ -4515,6 +4563,7 @@ case $ACTION in
 				else
 					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
 					stop_chipup_i2c_trace
+					print_function_call "$0" "chipup" "success asic:$asic_index"
 					exit 0
 				fi
 
