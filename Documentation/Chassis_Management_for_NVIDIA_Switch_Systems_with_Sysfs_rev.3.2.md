@@ -66,7 +66,7 @@ from **different source trees** and run on **different processors**:
 
 **How to use this manual**
 
-- **§3.x attribute sections** describe **`$bsp_path` nodes** as seen by applications on either
+- The **[attribute sections](#virtual-sysfs-hierarchy)** describe **`$bsp_path` nodes** as seen by applications on either
   CPU or BMC when that node is created on the platform.
 - Sections that name **host-only** handlers (for example `hw-management-thermal-events.sh`,
   `hw_management_thermal_control.py`) apply to the **host package** unless stated otherwise.
@@ -79,7 +79,7 @@ from **different source trees** and run on **different processors**:
 Both stacks may be present on the same product (CPU + BMC each running their own package);
 they do **not** share the same `/usr/bin` install tree on a single root filesystem.
 
-**Stack column (used in §3.x):**
+**Stack column (used in the [attribute sections](#virtual-sysfs-hierarchy)):**
 
 | Label | Meaning |
 |-------|---------|
@@ -142,6 +142,7 @@ Chassis attributes information exported through sysfs can be utilized by a numbe
 - fancontrol – automated software-based fan speed regulation
 
 - sensors – print sensors information
+
 ## Sysfs Initialization and Driver Registration
 
 As described in the previous sections, sysfs structure provides access to HW drivers. These
@@ -149,7 +150,7 @@ drivers need to be initialized before using sysfs. In addition, NVIDIA virtual h
 needs to be created in order to use it.
 
 The following applies to the **host** package (`hw-management`). For the **BMC** package,
-see **§2.2** and `bmc/README.md` (systemd units, udev rules, and scripts under
+see **[Host and BMC software stacks](#host-and-bmc-software-stacks)** and `bmc/README.md` (systemd units, udev rules, and scripts under
 `hw-management-bmc-*`).
 
 The package provides a simple way to initialize the drivers using the set of shell scripts. These scripts support initialization and de-initialization of driver, virtual hierarchy structure, udev events handling, based on a set of NVIDIA system specific udev rules.
@@ -218,13 +219,14 @@ NVIDIA virtual hierarchy supports the following HW control ($bsp_path below is a
 
 Detailed information on each of these nodes can be found in the following sections.
 
-**Stack applicability:** Most §3.x nodes are created by the **host** stack
+**Stack applicability:** Most nodes in the **[attribute sections](#virtual-sysfs-hierarchy)** are created by the **host** stack
 (`hw-management-thermal-events.sh` / `hw-management-chassis-events.sh`). Sections tagged
 **Stack: BMC** or naming **`hw-management-bmc-events.sh`** apply to the **BMC package** only
-(see **§2.2**). §3.23 documents host-visible BMC status; BMC `system/` register layout is in
+(see **[Host and BMC software stacks](#host-and-bmc-software-stacks)**). **[BMC status](#bmc-status)** documents host-visible BMC status; BMC `system/` register layout is in
 `bmc/examples/hw-management-bmc-system-sysfs.txt`.
 
 Note: some of the attributes described below are not relevant to all platforms and will exist only on the platforms which support this attribute.
+
 ## Config Control
 
 ### Get ASIC Bus
@@ -1517,7 +1519,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{LM5066I PDB hot-swap input power and current scaling factor. Written by \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} for SN6600\_LD (SKU HI193). The same value is symlinked under each lm5066i PDB hotswap environment node as \texttt{\small *\_power1\_scale} and \texttt{\small *\_curr1\_scale} (see §3.4). lm-sensors applies the same factor via \texttt{\small compute} rules in \texttt{\small usr/etc/hw-management-sensors/sn66xxld\_sensors.conf}.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{LM5066I PDB hot-swap input power and current scaling factor. Written by \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} for SN6600\_LD (SKU HI193). The same value is symlinked under each lm5066i PDB hotswap environment node as \texttt{\small *\_power1\_scale} and \texttt{\small *\_curr1\_scale} (see \hyperref[environment-control]{Environment Control}). lm-sensors applies the same factor via \texttt{\small compute} rules in \texttt{\small usr/etc/hw-management-sensors/sn66xxld\_sensors.conf}.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
@@ -1539,7 +1541,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/led\_control\_type}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Optional platform map of LED name (or glob mask) to control owner. Written by \texttt{\small set\_config\_data()} in \texttt{\small hw-management.sh} when a \texttt{\small *\_specific()} function sets the \texttt{\small led\_control\_type} array. Space-separated pairs: \texttt{\small name type [name type ...]}.\newline If the node is absent, or a given LED name is not listed, LED add uses the default owner \texttt{\small led\_hw\_sw} (see §3.16.28).\newline Name matching (in \texttt{\small hw-management-chassis-events.sh} \texttt{\small get\_led\_control\_type()}):\newline 1. Exact match of the udev LED name (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}) or \texttt{\small led\_\textless{}name\textgreater{}}.    \texttt{\small fan} and \texttt{\small fan1} are different names. 2. Glob mask: \texttt{\small *} matches any string, \texttt{\small ?} matches one character. First matching    mask wins. Masks must be quoted in the platform array (\texttt{\small "fan*"}, \texttt{\small "led?"})    so the shell does not expand them. 3. Otherwise \texttt{\small led\_hw\_sw}.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Optional platform map of LED name (or glob mask) to control owner. Written by \texttt{\small set\_config\_data()} in \texttt{\small hw-management.sh} when a \texttt{\small *\_specific()} function sets the \texttt{\small led\_control\_type} array. Space-separated pairs: \texttt{\small name type [name type ...]}.\newline If the node is absent, or a given LED name is not listed, LED add uses the default owner \texttt{\small led\_hw\_sw} (see \hyperref[get-led-control-owner]{Get LED Control Owner}).\newline Name matching (in \texttt{\small hw-management-chassis-events.sh} \texttt{\small get\_led\_control\_type()}):\newline 1. Exact match of the udev LED name (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}) or \texttt{\small led\_\textless{}name\textgreater{}}.    \texttt{\small fan} and \texttt{\small fan1} are different names. 2. Glob mask: \texttt{\small *} matches any string, \texttt{\small ?} matches one character. First matching    mask wins. Masks must be quoted in the platform array (\texttt{\small "fan*"}, \texttt{\small "led?"})    so the shell does not expand them. 3. Otherwise \texttt{\small led\_hw\_sw}.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.7} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
@@ -4296,7 +4298,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay on to 
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/led\_\textless{}name\textgreater{}\_control}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Control owner of LED \texttt{\small \textless{}name\textgreater{}} (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}, \texttt{\small psu}, \texttt{\small uid}, …). Created on LED udev add next to \texttt{\small led\_\textless{}name\textgreater{}\_capability} and \texttt{\small led\_\textless{}name\textgreater{}\_state}. Value is resolved from \texttt{\small \$bsp\_path/config/led\_control\_type} (§3.1.60). Missing map or unmatched name uses \texttt{\small led\_hw\_sw}.\newline | Value | Meaning | |-------|---------| | \texttt{\small led\_sw} | Software controlled | | \texttt{\small led\_hw} | Hardware controlled | | \texttt{\small led\_hw\_sw} | Hardware and software controlled (default) |} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Control owner of LED \texttt{\small \textless{}name\textgreater{}} (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}, \texttt{\small psu}, \texttt{\small uid}, …). Created on LED udev add next to \texttt{\small led\_\textless{}name\textgreater{}\_capability} and \texttt{\small led\_\textless{}name\textgreater{}\_state}. Value is resolved from \texttt{\small \$bsp\_path/config/led\_control\_type} (\hyperref[read-led-control-type-map]{Read LED Control Type Map}). Missing map or unmatched name uses \texttt{\small led\_hw\_sw}.\newline | Value | Meaning | |-------|---------| | \texttt{\small led\_sw} | Software controlled | | \texttt{\small led\_hw} | Hardware controlled | | \texttt{\small led\_hw\_sw} | Hardware and software controlled (default) |} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.7} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
@@ -5844,7 +5846,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 speed: \texttt{\small ech
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_speed\_tolerance}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Fan speed tolerance for fan \texttt{\small \textless{}index\textgreater{}} when exposed under the thermal hierarchy. For system-wide tolerance configuration see also \texttt{\small \$bsp\_path/config/fan\_speed\_tolerance} (§3.1.24).} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Fan speed tolerance for fan \texttt{\small \textless{}index\textgreater{}} when exposed under the thermal hierarchy. For system-wide tolerance configuration see also \texttt{\small \$bsp\_path/config/fan\_speed\_tolerance} (\hyperref[fan-speed-tolerance]{Fan Speed Tolerance}).} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
@@ -6933,8 +6935,8 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog time left: \texttt{\
 
 ## BMC status
 
-Sections §3.23.1–§3.23.2 describe **host-CPU** views of BMC presence and I2C ownership
-(`hw-management.sh` / platform GPIO and mlxreg-io). §3.23.3–§3.23.5 are
+The **[BMC present](#bmc-present)** and **[BMC to CPU control](#bmc-to-cpu-control)** sections describe **host-CPU** views of BMC presence and I2C ownership
+(`hw-management.sh` / platform GPIO and mlxreg-io). The **[MCTP address](#mctp-address)**, **[MCTP bus](#mctp-bus)**, and **[MCTP ready](#mctp-ready)** sections are
 **host** config/status for MCTP setup where the platform defines it (`hw-management.sh`).
 
 On the **BMC** image, `bmc_to_cpu_ctrl` also appears under `$bsp_path/system/` via the
@@ -7045,7 +7047,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/sys
 **Stack:** BMC (`hw-management-bmc` package on AST2700 SONiC BMC OS)
 
 The BMC reset-cause exporter (`hw-management-bmc-get-reset-cause.sh`) writes a separate subtree under
-**`$bsp_path/bmc/`**. This is distinct from host CPLD reset causes documented in §3.18.39
+**`$bsp_path/bmc/`**. This is distinct from host CPLD reset causes documented in **[Get Reset Cause](#get-reset-cause)**
 (`$bsp_path/system/reset_*` on the switch CPU).
 
 Source priority for SCU register words: U-Boot environment (`fw_printenv`), then `/proc/cmdline`, then
@@ -7149,7 +7151,7 @@ Layout reference: **`bmc/examples/hw-management-bmc-leakage-sysfs.txt`**.
 directory names follow hardware `Channels[].Id` and may be non-contiguous (for example `…/1/` and
 `…/4/` only).
 
-This tree is separate from host `$bsp_path/system/leakage<N>` mlxreg-io status (§3.19.1) and from
+This tree is separate from host `$bsp_path/system/leakage<N>` mlxreg-io status (**[Leakage Sensor](#leakage-sensor)**) and from
 `$bsp_path/events/leakage<N>` on the CPU image.
 
 ### Leak detector attributes
