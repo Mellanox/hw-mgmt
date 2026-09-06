@@ -1362,11 +1362,14 @@ if [ "$1" == "add" ]; then
 				ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_vpd_filename"
 			fi
 			;;
-		swb_info)
+		swb_info|swb[0-9]*_info)
+			# Systems with several switch boards have one EEPROM per board,
+			# e.g swb_info and swb2_info on HI194.
+			eeprom_vpd_filename=${eeprom_name/"_info"/"_data"}
 			case "$dmi_board_name" in
-				VMOD0021|VMOD0023|VMOD0025)
+				VMOD0021|VMOD0023|VMOD0025|VMOD0026)
 				if command -v ipmi-fru 2>&1 >/dev/null; then
-					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/swb_data
+					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_vpd_filename"
 				fi
 				;;
 			esac
