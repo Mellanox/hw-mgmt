@@ -1539,6 +1539,7 @@ devtr_check_board_components()
 	local board_bus_offset=0
 	local board_hotswap_bus_offset=
 	local board_pwr_conv_bus_offset=
+	local board_eeprom_bus_offset=
 	local board_vr_num=
 	local board_pwr_conv_num=
 	local board_hotswap_num=
@@ -1587,14 +1588,17 @@ devtr_check_board_components()
 			if [ -e "$config_path"/swb_brd_bus_offset ]; then
 				board_bus_offset=$(< $config_path/swb_brd_bus_offset)
 			fi
-			# Hot-swap and power converter devices can be spread over the
-			# switch board busses with their own offsets, different from the
-			# switch board bus offset (e.g on HI194).
+			# Hot-swap, power converter and EEPROM devices can be spread over
+			# the switch board busses with their own offsets, different from
+			# the switch board bus offset (e.g on HI194).
 			if [ -e "$config_path"/swb_brd_hotswap_bus_offset ]; then
 				board_hotswap_bus_offset=$(< $config_path/swb_brd_hotswap_bus_offset)
 			fi
 			if [ -e "$config_path"/swb_brd_pwr_conv_bus_offset ]; then
 				board_pwr_conv_bus_offset=$(< $config_path/swb_brd_pwr_conv_bus_offset)
+			fi
+			if [ -e "$config_path"/swb_brd_eeprom_bus_offset ]; then
+				board_eeprom_bus_offset=$(< $config_path/swb_brd_eeprom_bus_offset)
 			fi
 			if [ -e "$config_path"/swb_brd_vr_num ]; then
 				board_vr_num=$(< $config_path/swb_brd_vr_num)
@@ -1799,6 +1803,8 @@ devtr_check_board_components()
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
 				# SN5600 system has 2 Clock boards. Just EEPROM is accessed on these boards.
+				# HI194 system has 2 switch boards, each with 1 EEPROM
+				comp_bus_offset=${board_eeprom_bus_offset:-$board_bus_offset}
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 # There is no currently address offset. Leave commented just for possible future use
@@ -1806,9 +1812,20 @@ devtr_check_board_components()
 #						curr_component[1]=$((curr_component[1]+board_addr_offset*brd))
 #						curr_component[1]=0x$(echo "obase=16; ${curr_component[1]}"|bc)
 #					fi
-					if [ $board_bus_offset -ne 0 ]; then
-						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
+					if [ $comp_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+comp_bus_offset*brd))
+					fi
+					# EEPROM names have no trailing number to increment per board.
+					# A name prefixed by the board name, e.g swb_info, gets the
+					# board number inserted after this prefix, e.g swb2_info. It
+					# is omitted for the first board, keeping the name of the
+					# systems having a single board.
+					if [ ! -z "${board_name_pfx}" ] && [ $brd -ne 0 ]; then
+						case ${curr_component[3]} in
+						${board_name_pfx}_*)
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]#${board_name_pfx}_}
+							;;
+						esac
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then

@@ -3983,6 +3983,7 @@ pre_devtr_init()
 			echo 1 > "$config_path"/swb_brd_hotswap_num
 			echo 16 > "$config_path"/swb_brd_hotswap_bus_offset
 			echo 32 > "$config_path"/swb_brd_pwr_conv_bus_offset
+			echo 16 > "$config_path"/swb_brd_eeprom_bus_offset
 			;;
 		esac
 		;;
