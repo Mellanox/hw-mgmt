@@ -110,6 +110,15 @@ A section name maps 1-to-1 to an `*_alternatives` associative array that is
 A section present in the JSON but with no corresponding `declare -A` in
 `hw-management-devtree.sh` is silently skipped with a `log_info` message.
 
+### Comments
+
+JSON has no comment syntax, so a top-level key named `_comment` or starting
+with `_comment` is used to document a BOM file. Such a key is not validated,
+not printed by the parser and never reaches the `*_alternatives` arrays, so its
+value can be a string, an array of lines or any other JSON value. See
+[HI194/devtree.json](../usr/etc/hw-management-cfg/HI194/devtree.json), where it
+describes how the components of the second switch board are derived.
+
 ### Keys and specs
 
 Each entry has exactly two string fields:

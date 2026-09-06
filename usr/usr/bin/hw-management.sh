@@ -3978,7 +3978,8 @@ pre_devtr_init()
 		case $sku in
 		HI194)
 			echo 2 > "$config_path"/swb_brd_num
-			echo 3 > "$config_path"/swb_brd_vr_num
+			echo 32 > "$config_path"/swb_brd_bus_offset
+			echo 6 > "$config_path"/swb_brd_vr_num
 			echo 1 > "$config_path"/swb_brd_pwr_conv_num
 			echo 1 > "$config_path"/swb_brd_hotswap_num
 			echo 16 > "$config_path"/swb_brd_hotswap_bus_offset

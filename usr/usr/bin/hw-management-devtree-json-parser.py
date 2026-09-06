@@ -50,6 +50,9 @@
 #       ...
 #   }
 #
+# Top-level keys named "_comment*" document the file. They are not validated,
+# not output and can hold any content.
+#
 # All sections present in the JSON file are output; no predefined list is used.
 # Each section name must correspond to a declared <section>_alternatives
 # associative array in hw-management-devtree.sh, e.g.: swb, port, pwr, platform,
@@ -63,6 +66,14 @@ import json
 import sys
 
 
+def is_comment(section):
+    """
+    JSON has no comment syntax, so top-level keys named '_comment*' are used to
+    document a BOM file. They hold arbitrary content and are ignored.
+    """
+    return section.startswith("_comment")
+
+
 def validate_bom(data):
     """
     Validate the structure of the BOM JSON.
@@ -72,6 +83,8 @@ def validate_bom(data):
         raise ValueError("top-level value must be a JSON object")
 
     for section, entries in data.items():
+        if is_comment(section):
+            continue
         if any(c.isspace() for c in section):
             raise ValueError(
                 f"section name '{section}' must not contain whitespace"
@@ -132,6 +145,8 @@ def main():
         sys.exit(1)
 
     for section, entries in data.items():
+        if is_comment(section):
+            continue
         for entry in entries:
             print(f"{section} {entry['key']} {entry['spec']}")
 

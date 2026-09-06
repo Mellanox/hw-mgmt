@@ -285,5 +285,39 @@ class TestParserErrorHandling:
         assert rc != 0
 
 
+class TestParserComments:
+    """A '_comment*' top-level key documents a BOM file and is ignored."""
+
+    @pytest.fixture(autouse=True)
+    def check_parser(self):
+        if not PARSER.exists():
+            pytest.skip(f"Parser not found: {PARSER}")
+
+    def test_comment_section_not_output(self, tmp_path):
+        """A '_comment' key must be accepted and must not produce output lines.
+        Its content is free-form, so it would otherwise be loaded as bogus
+        alternatives or rejected by validate_bom()."""
+        path = tmp_path / "devtree.json"
+        payload = json.dumps({
+            "_comment": ["first switch board only", "other boards are derived"],
+            "_comment_swb": "any JSON value is allowed here",
+            "swb": [{"key": "mp29816_0", "spec": "mp29816 0x61 15 voltmon1"}],
+        })
+        path.write_text(payload)
+        stdout, _, rc = run_parser(path)
+        assert rc == 0
+        assert stdout == "swb mp29816_0 mp29816 0x61 15 voltmon1\n"
+
+    def test_comment_content_not_validated(self, tmp_path):
+        """Content that would be rejected in a real section must be accepted
+        inside a '_comment' key, e.g. entries without 'key' and 'spec'."""
+        path = tmp_path / "devtree.json"
+        payload = json.dumps({"_comment": {"note": "documented, not a section"}})
+        path.write_text(payload)
+        stdout, _, rc = run_parser(path)
+        assert rc == 0
+        assert stdout == ""
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
