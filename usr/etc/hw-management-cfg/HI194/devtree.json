@@ -34,7 +34,7 @@
             "spec": "mp5926 0x12 6 hotswap1"
         },
         {
-            "key": "xdpe1a2g7_0",
+            "key": "xdpe1a2g7_pwr_conv_0",
             "spec": "xdpe1a2g7 0x5c 7 pwr_conv1"
         },
         {

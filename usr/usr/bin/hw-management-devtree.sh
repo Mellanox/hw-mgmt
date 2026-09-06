@@ -105,6 +105,11 @@ declare -A a2d_arr=( \
 	["b"]="ads1015" \
 )
 
+# Values are the prefixes of the keys of the components in the alternatives
+# arrays, not necessarily the device names. A device that can be used both as a
+# power converter and as a voltage regulator needs distinct prefixes, otherwise
+# its entries collide, as the keys are built from the prefix and the per
+# category index of the component in the SMBIOS BOM string.
 declare -A pwr_conv_arr=( \
 	["0"]="dummy" \
 	["a"]="pmbus" \
@@ -113,7 +118,7 @@ declare -A pwr_conv_arr=( \
 	["d"]="raa228000" \
 	["e"]="mp29502" \
 	["f"]="raa228004" \
-	["g"]="xdpe1a2g7" \
+	["g"]="xdpe1a2g7_pwr_conv" \
 )
 
 declare -A hotswap_arr=( \
@@ -1019,6 +1024,11 @@ devtr_bom_load_from_json()
 			continue
 		fi
 		local -n _arr="${section}_alternatives"
+		# A key describes a device and its index in the SMBIOS BOM string, so a
+		# redefined key silently hides the component that was defined before it.
+		if [ -n "${_arr[$key]}" ]; then
+			log_info "SMBIOS BOM info: duplicated key '${key}' in section '${section}', '${_arr[$key]}' replaced by '${spec}'"
+		fi
 		_arr["$key"]="$spec"
 		unset -n _arr
 	done <<< "$output"

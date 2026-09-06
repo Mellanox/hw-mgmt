@@ -89,14 +89,6 @@
             "spec": "xdpe1a2g7 0x6c 55 voltmon12"
         },
         {
-            "key": "xdpe1a2g7_12",
-            "spec": "xdpe1a2g7 0x5c 7 pwr_conv1"
-        },
-        {
-            "key": "xdpe1a2g7_13",
-            "spec": "xdpe1a2g7 0x5c 39 pwr_conv2"
-        },
-        {
             "key": "xdpe1a2g7_2",
             "spec": "xdpe1a2g7 0x6c 7 voltmon3"
         },
@@ -127,6 +119,14 @@
         {
             "key": "xdpe1a2g7_9",
             "spec": "xdpe1a2g7 0x66 55 voltmon10"
+        },
+        {
+            "key": "xdpe1a2g7_pwr_conv_0",
+            "spec": "xdpe1a2g7 0x5c 7 pwr_conv1"
+        },
+        {
+            "key": "xdpe1a2g7_pwr_conv_1",
+            "spec": "xdpe1a2g7 0x5c 39 pwr_conv2"
         }
     ],
     "platform": [
