@@ -62,6 +62,25 @@ class RedfishClient:
     DEFAULT_GET_TIMEOUT = 3
     _CFG_LOGIN_PREFIX = '# hw-mgmt-redfish: login\n'
     _CURL_HTTP_TRAILER_RE = re.compile(r'\nHTTP Status Code: (\d+)\Z')
+    # BMC is moving to HTTP-only. Start with HTTP; switch to the other scheme
+    # whenever the BMC refuses connections on the one in use.
+    SCHEME_HTTP = 'http'
+    SCHEME_HTTPS = 'https'
+    _ALT_SCHEME = {SCHEME_HTTP: SCHEME_HTTPS, SCHEME_HTTPS: SCHEME_HTTP}
+    _URL_SCHEME_RE = re.compile(r'(url = ")https?://')
+    # cURL exit codes that prove the request never reached the BMC application:
+    # proxy/host resolution, TCP connect and TLS handshake failures. Only these
+    # allow a resend on the other scheme. Codes like 28 (timeout), 52 (empty
+    # reply), 55/56 (send/recv error) can happen after the BMC already applied
+    # a POST or PATCH, so resending them could duplicate the mutation.
+    _CURL_RC_NO_CONNECTION = frozenset((
+        5,   # CURLE_COULDNT_RESOLVE_PROXY
+        6,   # CURLE_COULDNT_RESOLVE_HOST
+        7,   # CURLE_COULDNT_CONNECT
+        35,  # CURLE_SSL_CONNECT_ERROR
+        51,  # CURLE_PEER_FAILED_VERIFICATION
+        60,  # CURLE_SSL_CACERT
+    ))
 
     # Redfish URIs
     REDFISH_URI_FW_INVENTORY = '/redfish/v1/UpdateService/FirmwareInventory'
@@ -90,6 +109,7 @@ class RedfishClient:
         self.__user = user
         self.__password = password
         self.__token = None
+        self.__scheme = RedfishClient.SCHEME_HTTP
 
     def get_token(self):
         return self.__token
@@ -109,7 +129,45 @@ class RedfishClient:
         return val.replace('\\', '\\\\').replace('"', '\\"')
 
     def __curl_redfish_url(self, path_without_scheme):
-        return f'https://{self.__svr_ip}{path_without_scheme}'
+        return f'{self.__scheme}://{self.__svr_ip}{path_without_scheme}'
+
+    def __apply_scheme_to_curl_config(self, curl_config):
+        return RedfishClient._URL_SCHEME_RE.sub(
+            r'\1' + self.__scheme + '://', curl_config, count=1)
+
+    @staticmethod
+    def __curl_rc_proves_no_connection(curl_rc):
+        return curl_rc in RedfishClient._CURL_RC_NO_CONNECTION
+
+    def __try_alt_scheme_fallback(self, curl_config, ret, output_str,
+                                  error_str, curl_rc):
+        '''Retry once on the other scheme when curl never reached the BMC.
+
+        BMC firmware may move between HTTP-only and HTTPS-only at any time,
+        so this stays armed for the whole client lifetime instead of latching
+        on the first scheme that worked. The scheme in use is kept sticky, so
+        a reachable BMC costs no extra curl invocation.
+
+        Resending is only safe when curl failed before delivering the request
+        (see _CURL_RC_NO_CONNECTION), otherwise a POST or PATCH the BMC has
+        already applied would be replayed on the other scheme.
+        '''
+        if not self.__curl_rc_proves_no_connection(curl_rc):
+            return (ret, output_str, error_str)
+
+        prev_scheme = self.__scheme
+        self.__scheme = RedfishClient._ALT_SCHEME[prev_scheme]
+        ret_alt, out_alt, err_alt, rc_alt = self.__exec_curl_cmd_internal(
+            curl_config)
+        # Any reply, including an error one, means this scheme is the live
+        # endpoint, so keep it and report its result.
+        if not self.__curl_rc_proves_no_connection(rc_alt):
+            return (ret_alt, out_alt, err_alt)
+
+        # BMC unreachable on both schemes: keep the previous one so a
+        # transient outage does not flip the client onto a dead scheme.
+        self.__scheme = prev_scheme
+        return (ret, output_str, error_str)
 
     def __curl_config_auth_header_line(self):
         return (
@@ -383,10 +441,12 @@ class RedfishClient:
         return (curl_output, None)
 
     '''
-    Execute cURL command and return the output and error messages
+    Execute cURL command and return the output, error messages and the raw
+    cURL exit code (needed to tell a failed connect from a lost reply).
     '''
 
     def __exec_curl_cmd_internal(self, curl_config):
+        curl_config = self.__apply_scheme_to_curl_config(curl_config)
 
         task_mon = RedfishClient.REDFISH_URI_TASKS in curl_config
         if not task_mon:
@@ -408,7 +468,8 @@ class RedfishClient:
         output, error = process.communicate(input=stdin_bytes)
         output_decoded = output.decode('utf-8')
         error_str = error.decode('utf-8')
-        ret = process.returncode
+        curl_rc = process.returncode
+        ret = curl_rc
 
         if ret > 0:
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
@@ -421,7 +482,7 @@ class RedfishClient:
             if match:
                 error_str = match.group(1)
 
-        return (ret, output_str, error_str)
+        return (ret, output_str, error_str, curl_rc)
 
     def __update_token_in_curl_config(self, curl_config):
         if self.__token is None:
@@ -464,7 +525,10 @@ class RedfishClient:
         if (not self.has_login()) and (not is_login_cmd):
             return (RedfishClient.ERR_CODE_NOT_LOGIN, 'Not login', 'Not login')
 
-        ret, output_str, error_str = self.__exec_curl_cmd_internal(curl_config)
+        ret, output_str, error_str, curl_rc = self.__exec_curl_cmd_internal(
+            curl_config)
+        ret, output_str, error_str = self.__try_alt_scheme_fallback(
+            curl_config, ret, output_str, error_str, curl_rc)
 
         is_empty_response = ((ret == 0) and (len(output_str) == 0))
 
@@ -476,8 +540,8 @@ class RedfishClient:
             ret = self.login()
             if ret == RedfishClient.ERR_CODE_OK:
                 curl_retry = self.__update_token_in_curl_config(curl_config)
-                ret, output_str, error_str = self.__exec_curl_cmd_internal(
-                    curl_retry)
+                ret, output_str, error_str, _rc = \
+                    self.__exec_curl_cmd_internal(curl_retry)
             elif ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
                 self.__token = None
                 return (ret, 'Bad credential', 'Bad credential')
