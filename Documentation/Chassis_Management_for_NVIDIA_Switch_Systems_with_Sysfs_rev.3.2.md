@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.8
+Rev. 3.2.10
 
 ## Table of Contents
 
@@ -410,6 +410,7 @@ Rev. 3.2.8
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.10 | September 2026 | §3.18.39 N51XX_LD unsupported reset causes: added `reset_comex_wd` and `reset_from_comex` |
 | 3.2.8 | August 2026 | §3.1.61 `config/cable_cartridge<n>_valid`: IPMI FRU check result per cable cartridge (N51XX_LD / N61XX_LD) |
 | 3.2.7 | August 2026 | §3.1.60 `config/led_control_type` platform LED owner map; §3.16.28 `led/led_<name>_control` (`led_sw` / `led_hw` / `led_hw_sw`); glob masks `*` and `?` |
 | 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; §3.25 BMC A2D leakage runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
@@ -5687,7 +5688,7 @@ cat $bsp_path/system/reset_cause
 
 #### N51XX_LD platform family
 
-Per CPLD design, N51XX_LD platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, or `reset_reload_bios`. Those attributes must not be documented or tested as available on N51XX_LD systems.
+N51XX_LD platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_comex_wd`, `reset_from_asic`, `reset_from_comex`, or `reset_reload_bios`.
 
 Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
 
