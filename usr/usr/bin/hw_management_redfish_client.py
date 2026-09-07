@@ -62,6 +62,15 @@ class RedfishClient:
     DEFAULT_GET_TIMEOUT = 3
     _CFG_LOGIN_PREFIX = '# hw-mgmt-redfish: login\n'
     _CURL_HTTP_TRAILER_RE = re.compile(r'\nHTTP Status Code: (\d+)\Z')
+    # Prefer HTTP. Retry once on the other scheme only while the BMC has never
+    # been reached; then lock until process restart. Resend only on curl codes
+    # that prove no request was delivered (timeouts/send/recv can follow a
+    # POST/PATCH the BMC already applied).
+    SCHEME_HTTP = 'http'
+    SCHEME_HTTPS = 'https'
+    _ALT_SCHEME = {SCHEME_HTTP: SCHEME_HTTPS, SCHEME_HTTPS: SCHEME_HTTP}
+    _URL_SCHEME_RE = re.compile(r'(url = ")https?://')
+    _CURL_RC_NO_CONNECTION = frozenset((5, 6, 7, 35, 51, 60))
 
     # Redfish URIs
     REDFISH_URI_FW_INVENTORY = '/redfish/v1/UpdateService/FirmwareInventory'
@@ -90,6 +99,8 @@ class RedfishClient:
         self.__user = user
         self.__password = password
         self.__token = None
+        self.__scheme = RedfishClient.SCHEME_HTTP
+        self.__scheme_resolved = False
 
     def get_token(self):
         return self.__token
@@ -109,7 +120,24 @@ class RedfishClient:
         return val.replace('\\', '\\\\').replace('"', '\\"')
 
     def __curl_redfish_url(self, path_without_scheme):
-        return f'https://{self.__svr_ip}{path_without_scheme}'
+        return f'{self.__scheme}://{self.__svr_ip}{path_without_scheme}'
+
+    def __try_alt_scheme(self, curl_config, result):
+        ret, output_str, error_str, curl_rc = result
+        if self.__scheme_resolved:
+            return (ret, output_str, error_str)
+        if curl_rc not in RedfishClient._CURL_RC_NO_CONNECTION:
+            self.__scheme_resolved = True
+            return (ret, output_str, error_str)
+
+        prev = self.__scheme
+        self.__scheme = RedfishClient._ALT_SCHEME[prev]
+        ret2, out2, err2, rc2 = self.__exec_curl_cmd_internal(curl_config)
+        if rc2 not in RedfishClient._CURL_RC_NO_CONNECTION:
+            self.__scheme_resolved = True
+            return (ret2, out2, err2)
+        self.__scheme = prev
+        return (ret, output_str, error_str)
 
     def __curl_config_auth_header_line(self):
         return (
@@ -382,46 +410,32 @@ class RedfishClient:
             return (curl_output[:match.start()], match.group(1))
         return (curl_output, None)
 
-    '''
-    Execute cURL command and return the output and error messages
-    '''
-
     def __exec_curl_cmd_internal(self, curl_config):
+        curl_config = RedfishClient._URL_SCHEME_RE.sub(
+            r'\1' + self.__scheme + '://', curl_config, count=1)
 
         task_mon = RedfishClient.REDFISH_URI_TASKS in curl_config
         if not task_mon:
             cmd_str = self.__format_curl_command_for_logging(curl_config)
             print(f'Execute cURL command: {cmd_str}', file=sys.stderr)
 
-        curl_argv = [
-            self.__curl_path,
-            '-w', '\nHTTP Status Code: %{http_code}',
-            '-K', '-',
-        ]
         process = subprocess.Popen(
-            curl_argv,
+            [self.__curl_path, '-w', '\nHTTP Status Code: %{http_code}', '-K', '-'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        stdin_bytes = curl_config.encode('utf-8')
-        output, error = process.communicate(input=stdin_bytes)
-        output_decoded = output.decode('utf-8')
-        error_str = error.decode('utf-8')
-        ret = process.returncode
-
-        if ret > 0:
-            ret = RedfishClient.ERR_CODE_CURL_FAILURE
-
-        output_str, _http = self.__parse_curl_output(output_decoded)
+        output, error = process.communicate(input=curl_config.encode('utf-8'))
+        curl_rc = process.returncode
+        ret = RedfishClient.ERR_CODE_CURL_FAILURE if curl_rc > 0 else curl_rc
+        output_str, _http = self.__parse_curl_output(output.decode('utf-8'))
         output_str = output_str.rstrip('\n')
-
+        error_str = error.decode('utf-8')
         if ret != 0:
             match = re.search(r'curl: \([0-9]+\) (.*)', error_str)
             if match:
                 error_str = match.group(1)
-
-        return (ret, output_str, error_str)
+        return (ret, output_str, error_str, curl_rc)
 
     def __update_token_in_curl_config(self, curl_config):
         if self.__token is None:
@@ -464,7 +478,8 @@ class RedfishClient:
         if (not self.has_login()) and (not is_login_cmd):
             return (RedfishClient.ERR_CODE_NOT_LOGIN, 'Not login', 'Not login')
 
-        ret, output_str, error_str = self.__exec_curl_cmd_internal(curl_config)
+        ret, output_str, error_str = self.__try_alt_scheme(
+            curl_config, self.__exec_curl_cmd_internal(curl_config))
 
         is_empty_response = ((ret == 0) and (len(output_str) == 0))
 
@@ -476,8 +491,8 @@ class RedfishClient:
             ret = self.login()
             if ret == RedfishClient.ERR_CODE_OK:
                 curl_retry = self.__update_token_in_curl_config(curl_config)
-                ret, output_str, error_str = self.__exec_curl_cmd_internal(
-                    curl_retry)
+                ret, output_str, error_str, _ = \
+                    self.__exec_curl_cmd_internal(curl_retry)
             elif ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
                 self.__token = None
                 return (ret, 'Bad credential', 'Bad credential')
