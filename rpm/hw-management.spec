@@ -168,7 +168,6 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %files
 %dir "/etc/hw-management-sensors/"
 %dir "/etc/hw-management-thermal"
-%dir "/etc/hw-management-ssd"
 %config "/etc/hw-management-sensors/mqm9700_sensors.conf"
 #%dir %attr(0755, root, root) "/"
 #%dir %attr(0755, root, root) "/etc"

@@ -54,6 +54,8 @@ import tarfile
 
 DEFAULT_CONFIG = "/etc/hw-management-ssd/ssd-dump-config.json"
 DEFAULT_OUTDIR = "/var/log/ssd-dump"
+# generate-dump helper timeout is 195 s; JSON vendor budget <= this.
+TIMEOUT_SEC_JSON_MAX = 120
 STATUS_NAME = "ssd-dump-status.log"
 LOG_NAME = "ssd-dump-tool.log"
 SYSLOG_IDENT = "hw-management-ssd-dump"
@@ -78,7 +80,7 @@ def syslog_warn(msg):
         pass
 
 
-MSG_STARTED = "dump tool started"
+MSG_STARTED = "SSD dump tool started"
 
 
 def emit_always(msg):
@@ -89,10 +91,13 @@ def emit_always(msg):
 
 
 def completion_message(fields):
-    if fields.get("status") == "warning":
+    status = fields.get("status")
+    if status == "warning":
         err = (fields.get("warning") or "").strip() or "error"
-        return "dump tool completed: error: %s" % err
-    return "dump tool completed: Ok / succeeded"
+        return "SSD dump tool failed: %s" % err
+    if status == "skipped":
+        return "SSD dump tool skipped"
+    return "SSD dump tool succeeded"
 
 
 def append_log(log_path, msg):
@@ -101,6 +106,22 @@ def append_log(log_path, msg):
     try:
         with open(log_path, "a") as f:
             f.write(msg if msg.endswith("\n") else msg + "\n")
+    except OSError:
+        pass
+
+
+def drop_trailing_success_line(log_path):
+    """Remove a premature 'succeeded' line if packing failed."""
+    marker = "SSD dump tool succeeded\n"
+    if not log_path or not os.path.isfile(log_path):
+        return
+    try:
+        with open(log_path, "r") as f:
+            text = f.read()
+        if not text.endswith(marker):
+            return
+        with open(log_path, "w") as f:
+            f.write(text[: -len(marker)])
     except OSError:
         pass
 
@@ -138,6 +159,8 @@ def format_status_fields(fields):
         lines.append("%s: %s\n" % (key, val))
     if fields.get("status") == "warning":
         lines.append("Status: error\n")
+    elif fields.get("status") == "skipped":
+        lines.append("Status: skipped\n")
     else:
         lines.append("Status: Ok / succeeded\n")
     return "".join(lines)
@@ -191,7 +214,7 @@ def _require_string(obj, what):
 
 def _require_string_list(obj, what):
     if obj is None:
-        return
+        raise DumpError("invalid config: %s" % what)
     if not isinstance(obj, list) or any(not isinstance(item, str) for item in obj):
         raise DumpError("invalid config: %s" % what)
 
@@ -204,7 +227,10 @@ def _validate_config_shape(cfg):
             _require_bool(defaults["gzip"], "defaults.gzip")
         if "timeout_sec" in defaults:
             _require_int(
-                defaults["timeout_sec"], "defaults.timeout_sec", min_value=1
+                defaults["timeout_sec"],
+                "defaults.timeout_sec",
+                min_value=1,
+                max_value=TIMEOUT_SEC_JSON_MAX,
             )
         if "gzip_level" in defaults:
             _require_int(
@@ -225,19 +251,32 @@ def _validate_config_shape(cfg):
         _require_dict(models, "vendors.%s.models" % vname)
         for mkey, mcfg in (models or {}).items():
             _require_dict(mcfg, "vendors.%s.models.%s" % (vname, mkey))
-            if mcfg and "tool" in mcfg:
-                _require_string(
-                    mcfg["tool"], "vendors.%s.models.%s.tool" % (vname, mkey)
+            if not mcfg or "tool" not in mcfg:
+                raise DumpError(
+                    "invalid config: vendors.%s.models.%s.tool" % (vname, mkey)
                 )
-            if mcfg and "args" in mcfg:
-                _require_string_list(
-                    mcfg["args"], "vendors.%s.models.%s.args" % (vname, mkey)
+            _require_string(
+                mcfg["tool"], "vendors.%s.models.%s.tool" % (vname, mkey)
+            )
+            if "args" not in mcfg:
+                raise DumpError(
+                    "invalid config: vendors.%s.models.%s.args" % (vname, mkey)
+                )
+            _require_string_list(
+                mcfg["args"], "vendors.%s.models.%s.args" % (vname, mkey)
+            )
+            form = None if not mcfg else mcfg.get("device_form")
+            if form not in ("controller", "namespace"):
+                raise DumpError(
+                    "invalid config: vendors.%s.models.%s.device_form"
+                    % (vname, mkey)
                 )
             if mcfg and "timeout_sec" in mcfg:
                 _require_int(
                     mcfg["timeout_sec"],
                     "vendors.%s.models.%s.timeout_sec" % (vname, mkey),
                     min_value=1,
+                    max_value=TIMEOUT_SEC_JSON_MAX,
                 )
 
 
@@ -266,6 +305,22 @@ def list_nvme_controllers(dev_dir="/dev"):
     return sorted(found, key=_key)
 
 
+def list_nvme_namespaces(ctl, dev_dir="/dev"):
+    """Namespace nodes /dev/<ctl>nN, sorted by N."""
+    if not os.path.isdir(dev_dir):
+        return []
+    found = []
+    prefix = ctl + "n"
+    for name in os.listdir(dev_dir):
+        if not name.startswith(prefix):
+            continue
+        rest = name[len(prefix) :]
+        if rest.isdigit():
+            found.append((int(rest), os.path.join(dev_dir, name)))
+    found.sort()
+    return [p for _n, p in found]
+
+
 def parse_nvme_name(dev):
     base = os.path.basename(dev.rstrip("/"))
     m = NVME_DEV_RE.match(base)
@@ -286,8 +341,23 @@ def map_device(dev, device_form):
     if form == "namespace":
         if ns:
             return "/dev/%s%s" % (ctl, ns)
-        return "/dev/%sn1" % ctl
+        nss = list_nvme_namespaces(ctl)
+        if not nss:
+            raise DumpError("NVMe namespace not found for /dev/%s" % ctl)
+        return nss[0]
     raise DumpError("unsupported device_form: %s" % device_form)
+
+
+def check_nvme_node(path):
+    """Char/block NVMe node; no symlink. Used after map_device."""
+    try:
+        st = os.lstat(path)
+    except OSError:
+        raise DumpError("NVMe device not found: %s" % path)
+    if stat.S_ISLNK(st.st_mode):
+        raise DumpError("refusing NVMe device symlink: %s" % path)
+    if not (stat.S_ISBLK(st.st_mode) or stat.S_ISCHR(st.st_mode)):
+        raise DumpError("not an NVMe device node: %s" % path)
 
 
 def read_sysfs_nvme(ctl, sys_class="/sys/class/nvme"):
@@ -306,8 +376,10 @@ def read_sysfs_nvme(ctl, sys_class="/sys/class/nvme"):
 
 
 def part_name_from_model(model_str):
+    #SpellCheck-ignoreBlockStart
     """JSON key: last token of Identify, keep '-' suffix
     (Virtium VTPM24CEXI080-BM110006 -> VTPM24CEXI080-BM110006)."""
+    #SpellCheck-ignoreBlockEnd
     s = (model_str or "").strip()
     if not s:
         return ""
@@ -471,14 +543,7 @@ def resolve_device(explicit, cfg=None, dev_dir="/dev"):
         ctl, _ns = parse_nvme_name(explicit)
         if ctl is None:
             raise DumpError("not an NVMe device: %s" % explicit)
-        try:
-            st = os.lstat(explicit)
-        except OSError:
-            raise DumpError("NVMe device not found: %s" % explicit)
-        if stat.S_ISLNK(st.st_mode):
-            raise DumpError("refusing NVMe device symlink: %s" % explicit)
-        if not (stat.S_ISBLK(st.st_mode) or stat.S_ISCHR(st.st_mode)):
-            raise DumpError("not an NVMe device node: %s" % explicit)
+        check_nvme_node(explicit)
         return explicit
     ctrls = list_nvme_controllers(dev_dir)
     if not ctrls:
@@ -574,6 +639,7 @@ def run_collect(args, logf, fields):
     fields["timeout_sec"] = str(timeout_sec)
 
     run_dev = map_device(device, mcfg.get("device_form", "controller"))
+    check_nvme_node(run_dev)
     fields["device"] = run_dev
     fields["device_form"] = mcfg.get("device_form", "controller")
 
@@ -687,7 +753,7 @@ def parse_args(argv):
     p.add_argument(
         "--quiet",
         action="store_true",
-        help="hide WARNING stderr; start/complete still print",
+        help="hide status fields on --verify stdout; start/fail still print",
     )
     p.add_argument(
         "--verify",
@@ -721,13 +787,13 @@ def run_verify(args):
     except DumpError as exc:
         fields["status"] = "warning"
         fields["warning"] = str(exc)
-        log_print(logf, "WARNING: %s" % exc, echo=not args.quiet)
+        log_print(logf, "WARNING: %s" % exc, echo=False)
         syslog_warn(str(exc))
         rc = 1
     except Exception as exc:
         fields["status"] = "warning"
         fields["warning"] = "internal: %s" % exc
-        log_print(logf, "WARNING: internal: %s" % exc, echo=not args.quiet)
+        log_print(logf, "WARNING: internal: %s" % exc, echo=False)
         syslog_warn("internal: %s" % exc)
         rc = 1
     emit_always(completion_message(fields))
@@ -793,15 +859,13 @@ def run_dump(args):
                 except DumpError as exc:
                     fields["status"] = "warning"
                     fields["warning"] = str(exc)
-                    log_print(logf, "WARNING: %s" % exc, echo=not args.quiet)
+                    log_print(logf, "WARNING: %s" % exc, echo=False)
                     syslog_warn(str(exc))
                     rc = 1
                 except Exception as exc:
                     fields["status"] = "warning"
                     fields["warning"] = "internal: %s" % exc
-                    log_print(
-                        logf, "WARNING: internal: %s" % exc, echo=not args.quiet
-                    )
+                    log_print(logf, "WARNING: internal: %s" % exc, echo=False)
                     syslog_warn("internal: %s" % exc)
                     rc = 1
         except OSError as exc:
@@ -828,6 +892,7 @@ def run_dump(args):
             msg = "cannot pack outdir %s: %s" % (outdir, exc)
             fields["status"] = "warning"
             fields["warning"] = msg
+            drop_trailing_success_line(log_path)
             try:
                 write_status(outdir, fields)
             except OSError as status_exc:

@@ -15,6 +15,16 @@
           "timeout_sec": 90
         }
       }
+    },
+    "Phison": {
+      "models": {
+        "ESLS080GTUE-A329IJ1-TYJN": {
+          "tool": "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2",
+          "args": ["-device_index", "{device}"],
+          "device_form": "namespace",
+          "timeout_sec": 120
+        }
+      }
     }
   }
 }

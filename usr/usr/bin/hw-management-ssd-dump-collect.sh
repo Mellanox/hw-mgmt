@@ -32,12 +32,17 @@
 # DAMAGE.
 #
 
-# Called from hw-management-generate-dump.sh via dump_cmd.
-# Recreate $SSD_LOG_DIR, run hw-management-ssd-dump.py. Python packs
-# $SSD_TAR only on status ok. Do not delete or replace $SSD_TAR on
-# warning (keep last good nandlog). Copy leftover work dir into
+# Not a user CLI. generate-dump.sh dump_cmd always passes the
+# three allowlisted paths below. Do not invoke this helper with
+# other directories. Custom location / FAE:
+#   sudo hw-management-ssd-dump.py [--outdir DIR]
+# Allowlist stays: this script rm -rf SSD_LOG_DIR and copies
+# into DUMP_FOLDER as root. Python packs $SSD_TAR only on
+# status ok. Do not delete or replace $SSD_TAR on warning
+# (keep last good nandlog). Copy leftover work dir into
 # DUMP_FOLDER. Best-effort: always exit 0 after a valid invoke.
-# One caller at a time (no lock). Paths must be real, not symlinks.
+# One caller at a time (no lock). Paths must be real, not
+# symlinks.
 #
 # Usage:
 #   hw-management-ssd-dump-collect.sh <DUMP_FOLDER> <SSD_LOG_DIR> <SSD_TAR>
@@ -55,7 +60,10 @@ SSD_LOG_DIR=$2
 SSD_TAR=$3
 SSD_TOOL_TIMEOUT=195
 SSD_TOOL_KILL_AFTER=5
-# 195 = JSON vendor timeout (drop 1 max 120) + gzip/pack.
+# 195 = JSON vendor timeout (max 120) + gzip/pack.
+# JSON timeout_sec is capped at 120 so this wrapper cannot
+# kill a still-legal collect. Standalone --timeout may be
+# higher (FAE); generate-dump always uses JSON only.
 # 195+5=200; dump_cmd 210 leaves ~10 s to copy leftover dir.
 
 if [ -z "$DUMP_FOLDER" ] || [ -z "$SSD_LOG_DIR" ] || [ -z "$SSD_TAR" ]; then
@@ -63,9 +71,10 @@ if [ -z "$DUMP_FOLDER" ] || [ -z "$SSD_LOG_DIR" ] || [ -z "$SSD_TAR" ]; then
 	exit 1
 fi
 
-# Refuse unexpected paths (generate-dump always passes these
-# three). Also refuse if an allowlisted path is a symlink (do
-# not follow into another tree). DUMP_FOLDER must be a real
+# Refuse unexpected paths. generate-dump always passes these
+# three; the checks are for anyone else who runs this helper.
+# Also refuse if an allowlisted path is a symlink (do not
+# follow into another tree). DUMP_FOLDER must be a real
 # directory owned by this uid (generate-dump mkdir is 0755).
 # If a local user planted /tmp/hw-mgmt-dump, root recreates it
 # so SSD collection cannot be blocked; never rm -rf a symlink.
@@ -147,6 +156,10 @@ if [ "$(stat -c '%u' "$DUMP_FOLDER" 2>/dev/null)" != "$(id -u)" ]; then
 	echo "DUMP_FOLDER must be owned by uid $(id -u): $DUMP_FOLDER" >&2
 	exit 1
 fi
+chmod 0755 "$DUMP_FOLDER" || {
+	echo "Cannot set DUMP_FOLDER permissions: $DUMP_FOLDER" >&2
+	exit 1
+}
 
 write_status_warning() {
 	mkdir -p "$SSD_LOG_DIR"
@@ -168,9 +181,15 @@ else
 	write_status_warning "hw-management-ssd-dump.py not found on PATH"
 fi
 
-if [ -d "$SSD_LOG_DIR" ] && [ ! -f "$SSD_LOG_DIR/ssd-dump-status.log" ]; then
-	write_status_warning \
-		"hw-management-ssd-dump.py terminated before packing"
+if [ -d "$SSD_LOG_DIR" ]; then
+	st="$SSD_LOG_DIR/ssd-dump-status.log"
+	# Pack removes the work dir. Leftover + status ok means the
+	# process died after write_status and before the archive
+	# commit. Missing status is the same incomplete run.
+	if [ ! -f "$st" ] || grep -q '^status: ok$' "$st"; then
+		write_status_warning \
+			"hw-management-ssd-dump.py terminated before packing"
+	fi
 fi
 
 if [ -f "$SSD_TAR" ]; then

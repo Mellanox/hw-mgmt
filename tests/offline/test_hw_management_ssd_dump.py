@@ -68,6 +68,31 @@ def virtium_cfg(tool):
     }
 
 
+#SpellCheck-ignoreBlockStart
+def phison_cfg(tool):
+    return {
+        "defaults": {
+            "timeout_sec": 120,
+            "gzip": True,
+            "gzip_level": 5,
+            "min_free_mb": 1,
+        },
+        "vendors": {
+            "Phison": {
+                "models": {
+                    "ESLS080GTUE-A329IJ1-TYJN": {
+                        "tool": tool,
+                        "args": ["-device_index", "{device}"],
+                        "device_form": "namespace",
+                        "timeout_sec": 120,
+                    }
+                }
+            }
+        },
+    }
+#SpellCheck-ignoreBlockEnd
+
+
 def fake_tool(path):
     with open(path, "w") as f:
         f.write(
@@ -80,7 +105,23 @@ def fake_tool(path):
                 """
             )
         )
-    os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
+    os.chmod(path, 0o755)
+
+
+def fake_phison_tool(path):
+    with open(path, "w") as f:
+        f.write(
+            textwrap.dedent(
+                """\
+                #!/bin/sh
+                echo "Save to RD_Dump2_Header_20260907-125506.bin"
+                echo dummy > RD_Dump2_Header_20260907-125506.bin
+                echo dummy > RD_Dump2_Data_20260907-125506.bin
+                echo "RD Dump Pass"
+                """
+            )
+        )
+    os.chmod(path, 0o755)
 
 
 def tar_text(tar_path, member):
@@ -101,8 +142,25 @@ class TestMapDevice:
     def test_controller_stays(self, ssd):
         assert ssd.map_device("/dev/nvme0", "controller") == "/dev/nvme0"
 
-    def test_namespace_default_n1(self, ssd):
+    def test_namespace_default_n1(self, ssd, monkeypatch):
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n1"]
+        )
         assert ssd.map_device("/dev/nvme0", "namespace") == "/dev/nvme0n1"
+
+    def test_namespace_uses_lowest_if_no_n1(self, ssd, monkeypatch):
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n2"]
+        )
+        assert ssd.map_device("/dev/nvme0", "namespace") == "/dev/nvme0n2"
+
+    def test_namespace_missing_is_error(self, ssd, monkeypatch):
+        monkeypatch.setattr(ssd, "list_nvme_namespaces", lambda *_a, **_k: [])
+        with pytest.raises(ssd.DumpError, match="namespace not found"):
+            ssd.map_device("/dev/nvme0", "namespace")
+
+    def test_namespace_keeps_n1(self, ssd):
+        assert ssd.map_device("/dev/nvme0n1", "namespace") == "/dev/nvme0n1"
 
     def test_non_nvme_rejected(self, ssd):
         with pytest.raises(ssd.DumpError):
@@ -133,6 +191,36 @@ class TestModelMatch:
         cfg = virtium_cfg("vtFA_RTK_5766_v2")
         v, k, m = ssd.find_model_config(cfg, "MD681GEEBC82")
         assert v is None and k is None and m is None
+
+    #SpellCheck-ignoreBlockStart
+    def test_phison_exact_key(self, ssd):
+        cfg = phison_cfg("PCIETOOL")
+        v, k, m = ssd.find_model_config(cfg, "ESLS080GTUE-A329IJ1-TYJN")
+        assert v == "Phison" and k == "ESLS080GTUE-A329IJ1-TYJN"
+        assert m["device_form"] == "namespace"
+        assert m["args"] == ["-device_index", "{device}"]
+
+    def test_shipped_json_has_phison_and_virtium(self, ssd):
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "usr",
+            "etc",
+            "hw-management-ssd",
+            "ssd-dump-config.json",
+        )
+        cfg = ssd.load_config(path)
+        v, k, m = ssd.find_model_config(cfg, "ESLS080GTUE-A329IJ1-TYJN")
+        assert v == "Phison" and k == "ESLS080GTUE-A329IJ1-TYJN"
+        assert m["device_form"] == "namespace"
+        assert m["timeout_sec"] == 120
+        v2, k2, m2 = ssd.find_model_config(
+            cfg, "Virtium VTPM24CEXI080-BM110006"
+        )
+        assert v2 == "Virtium" and k2 == "VTPM24CEXI080-BM110006"
+        assert m2["device_form"] == "controller"
+    #SpellCheck-ignoreBlockEnd
 
 
 class TestGzip:
@@ -178,7 +266,14 @@ class TestStatusFormat:
         text = ssd.format_status_fields({"status": "ok", "warning": "", "part": "X"})
         assert "warning:" not in text
         assert text.strip().endswith("Status: Ok / succeeded")
-        assert "status: ok" in text
+
+    def test_skipped_ends_with_status_skipped(self, ssd):
+        text = ssd.format_status_fields({"status": "skipped", "warning": ""})
+        assert "warning:" not in text
+        assert text.strip().endswith("Status: skipped")
+        assert ssd.completion_message({"status": "skipped"}) == (
+            "SSD dump tool skipped"
+        )
 
     def test_error_keeps_warning_ends_with_status(self, ssd):
         text = ssd.format_status_fields(
@@ -305,13 +400,23 @@ def _dev_stat(mode):
     return os.stat_result((mode, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
 
-def _stub_lstat_dev(ssd, monkeypatch, path, mode):
+def _stub_lstat_dev(ssd, monkeypatch, path, mode, extra=None, missing=None):
     real_lstat = ssd.os.lstat
-    fake = os.path.abspath(path)
+    nodes = {os.path.abspath(path): mode}
+    if extra:
+        for p, m in extra.items():
+            nodes[os.path.abspath(p)] = m
+    missing_set = set()
+    if missing:
+        for p in missing:
+            missing_set.add(os.path.abspath(p))
 
     def _lstat(p):
-        if os.path.abspath(p) == fake:
-            return _dev_stat(mode)
+        ap = os.path.abspath(p)
+        if ap in missing_set:
+            raise OSError(2, "No such file or directory", p)
+        if ap in nodes:
+            return _dev_stat(nodes[ap])
         return real_lstat(p)
 
     monkeypatch.setattr(ssd.os, "lstat", _lstat)
@@ -430,8 +535,8 @@ class TestEndToEnd:
         captured = capsys.readouterr()
         assert rc == 0
         assert captured.out == ""
-        assert "dump tool started" in captured.err
-        assert "dump tool completed: Ok / succeeded" in captured.err
+        assert "SSD dump tool started" in captured.err
+        assert "SSD dump tool succeeded" in captured.err
 
     def test_verify_refuses_dir_symlink(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -530,7 +635,10 @@ class TestEndToEnd:
         )
         err = capsys.readouterr().err
         assert rc != 0
+        assert "SSD dump tool started" in err
+        assert "SSD dump tool failed:" in err
         assert "not found on PATH" in err
+        assert "WARNING:" not in err
         assert not outdir.exists()
 
     def test_verify_no_nvme_skipped(self, ssd, tmp_path, monkeypatch, capsys):
@@ -538,9 +646,10 @@ class TestEndToEnd:
         write_json(cfg, virtium_cfg("vtFA_RTK_5766_v2"))
         monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
         rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
-        out = capsys.readouterr().out
+        captured = capsys.readouterr()
         assert rc == 0
-        assert "status: skipped" in out
+        assert "status: skipped" in captured.out
+        assert "SSD dump tool skipped" in captured.err
 
     def test_missing_tool_writes_status(self, ssd, tmp_path, monkeypatch):
         cfg = tmp_path / "cfg.json"
@@ -717,6 +826,75 @@ class TestEndToEnd:
         assert "invalid config" in text
         assert "timeout_sec" in text
 
+    def test_timeout_over_json_max_rejected_by_verify(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        cfg = tmp_path / "cfg.json"
+        obj = virtium_cfg("vtFA")
+        obj["defaults"]["timeout_sec"] = ssd.TIMEOUT_SEC_JSON_MAX + 1
+        write_json(cfg, obj)
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "invalid config" in text
+        assert "timeout_sec" in text
+
+    def test_missing_tool_rejected_by_verify(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        cfg = tmp_path / "cfg.json"
+        obj = virtium_cfg("vtFA")
+        del obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"]["tool"]
+        write_json(cfg, obj)
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "invalid config" in text
+        assert "tool" in text
+
+    def test_missing_args_rejected_by_verify(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        cfg = tmp_path / "cfg.json"
+        obj = virtium_cfg("vtFA")
+        del obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"]["args"]
+        write_json(cfg, obj)
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "invalid config" in text
+        assert "args" in text
+
+    def test_args_null_rejected_by_verify(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        cfg = tmp_path / "cfg.json"
+        obj = virtium_cfg("vtFA")
+        obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"]["args"] = None
+        write_json(cfg, obj)
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "invalid config" in text
+        assert "args" in text
+
+    def test_bad_device_form_rejected_by_verify(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        cfg = tmp_path / "cfg.json"
+        obj = virtium_cfg("vtFA")
+        obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"][
+            "device_form"
+        ] = "disk"
+        write_json(cfg, obj)
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "status: skipped" not in text
+        assert "invalid config" in text
+        assert "device_form" in text
+
     def test_gzip_level_10_rejected_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
@@ -811,7 +989,7 @@ class TestEndToEnd:
         status = (outdir / "ssd-dump-status.log").read_text()
         assert rc == 0
         assert "status: skipped" in status
-        assert "Status: Ok / succeeded" in status
+        assert "Status: skipped" in status
         assert not any(ln.startswith("warning:") for ln in status.splitlines())
         assert "not enough free space" not in status
         assert seen == []
@@ -846,8 +1024,8 @@ class TestEndToEnd:
         assert "out/nandlog_64384-1454.bin.gz" in names
         assert "out/nandlog_64384-1454.bin" not in names
         log = tar_text(tar_path, "out/ssd-dump-tool.log")
-        assert "dump tool started" in log
-        assert "dump tool completed: Ok / succeeded" in log
+        assert "SSD dump tool started" in log
+        assert "SSD dump tool succeeded" in log
         assert "written to file" in log
 
     def test_vendor_output_not_on_console(self, ssd, tmp_path, monkeypatch, capsys):
@@ -870,11 +1048,59 @@ class TestEndToEnd:
         assert rc == 0
         captured = capsys.readouterr()
         tar_path = str(tmp_path / "out.tar.gz")
-        assert "dump tool started" in captured.err
-        assert "dump tool completed: Ok / succeeded" in captured.err
+        assert "SSD dump tool started" in captured.err
+        assert "SSD dump tool succeeded" in captured.err
         assert "written to file" not in captured.err
         assert "written to file" not in captured.out
         assert "written to file" in tar_text(tar_path, "out/ssd-dump-tool.log")
+
+    #SpellCheck-ignoreBlockStart
+    def test_phison_namespace_device_index(self, ssd, tmp_path, monkeypatch):
+        tool = str(
+            tmp_path / "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2"
+        )
+        fake_phison_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, phison_cfg(tool))
+        outdir = tmp_path / "out"
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        monkeypatch.setattr(
+            ssd,
+            "read_sysfs_nvme",
+            lambda *_a, **_k: ("ESLS080GTUE-A329IJ1-TYJN", "ETFIP0T6"),
+        )
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n1"]
+        )
+        _stub_lstat_dev(
+            ssd,
+            monkeypatch,
+            "/dev/nvme0",
+            stat.S_IFCHR | 0o600,
+            extra={"/dev/nvme0n1": stat.S_IFBLK | 0o660},
+        )
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        tar_path = str(tmp_path / "out.tar.gz")
+        status = tar_text(tar_path, "out/ssd-dump-status.log")
+        assert rc == 0, status
+        assert "status: ok" in status
+        assert "device: /dev/nvme0n1" in status
+        assert "device_form: namespace" in status
+        assert "-device_index" in status
+        names = tar_names(tar_path)
+        assert "out/RD_Dump2_Header_20260907-125506.bin.gz" in names
+        assert "out/RD_Dump2_Data_20260907-125506.bin.gz" in names
+    #SpellCheck-ignoreBlockEnd
 
     def test_pack_fail_rewrites_status_warning(self, ssd, tmp_path, monkeypatch):
         tool = str(tmp_path / "vtFA_RTK_5766_v2")
@@ -907,6 +1133,58 @@ class TestEndToEnd:
         assert "Status: error" in status
         assert "cannot pack outdir" in status
         assert tar_path.read_bytes() == b"GOOD"
+        log = (outdir / "ssd-dump-tool.log").read_text()
+        assert "SSD dump tool succeeded" not in log
+        assert "SSD dump tool failed: cannot pack outdir" in log
+
+    #SpellCheck-ignoreBlockStart
+    def test_phison_missing_namespace_is_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        tool = str(
+            tmp_path / "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2"
+        )
+        fake_phison_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, phison_cfg(tool))
+        outdir = tmp_path / "out"
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        monkeypatch.setattr(
+            ssd,
+            "read_sysfs_nvme",
+            lambda *_a, **_k: ("ESLS080GTUE-A329IJ1-TYJN", "ETFIP0T6"),
+        )
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n1"]
+        )
+        _stub_lstat_dev(
+            ssd,
+            monkeypatch,
+            "/dev/nvme0",
+            stat.S_IFCHR | 0o600,
+            missing=["/dev/nvme0n1"],
+        )
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        captured = capsys.readouterr()
+        assert rc != 0
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert "status: warning" in status
+        assert "NVMe device not found: /dev/nvme0n1" in status
+        assert (
+            "SSD dump tool failed: NVMe device not found: /dev/nvme0n1"
+            in captured.err
+        )
+    #SpellCheck-ignoreBlockEnd
 
     def test_vendor_no_dump_files_is_warning(self, ssd, tmp_path, monkeypatch):
         tool = str(tmp_path / "vtFA_empty")

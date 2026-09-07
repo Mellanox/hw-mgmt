@@ -72,8 +72,10 @@ that directory. If `status: ok`, the tool packs it to
 `--device` must be a char or block node under `/dev` (`/dev/nvme0`
 or `/dev/nvme0n1`), not a symlink or a regular file. A path
 outside `/dev` or a missing node is a warning. Virtium
-`device_form` is `controller`, so `nvme0n1` is mapped to
-`/dev/nvme0` for the vendor tool.
+`device_form` is `controller` (`nvme0n1` → `/dev/nvme0`). Phison
+is `namespace` (`nvme0` → lowest `/dev/nvmeXnN`, usually `n1`).
+The mapped namespace node must exist (char or block, not a
+symlink) or the collect is **warning**.
 
 `--verify` checks JSON, NVMe/sysfs model, vendor tool on PATH
 (+x), free space, and `--outdir` rules (protected / symlink in any
@@ -88,16 +90,22 @@ tarball after a successful pack). Vendor output is not copied to
 the console. Collector warnings also go to **syslog `LOG_WARNING`**
 (ident `hw-management-ssd-dump`): unsupported model, missing tool,
 tool present but not executable (`chmod +x`).
-`--quiet` hides WARNING stderr. **Start** and **complete**
-always go to stderr (so generate-dump's collect log has them).
-With `--verify` it also hides the status fields on stdout
-(rc still 0/1). Syslog remains. No NVMe is ignored (no syslog).
+Console always has **`SSD dump tool started`** then
+**`SSD dump tool succeeded`**, **`SSD dump tool skipped`**, or
+**`SSD dump tool failed: …`**
+(even `--quiet`; generate-dump captures them). WARNING stays in
+the log file and syslog, not duplicated on stderr.
+`--verify` prints status fields on stdout. `--verify --quiet`
+hides those fields (rc still 0/1). Syslog remains. No NVMe
+is ignored (no syslog).
 
 ## NOS image contract
 
 NOS must put the JSON `tool` name on `PATH` as-is
-(`vtFA_RTK_5766_v2`). If the tool is missing, the hw-mgmt dump is
-still created; `ssd-dump-status.log` has a warning.
+(`vtFA_RTK_5766_v2`,
+`PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2`). If the tool
+is missing, the hw-mgmt dump is still created;
+`ssd-dump-status.log` has a warning.
 
 One NVMe: first controller whose sysfs model is in JSON. Model/fw
 from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
@@ -113,6 +121,14 @@ from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
   `.gz`. If gzip fails, the original is kept.
 - `ssd-dump-tool.log` and `ssd-dump-status.log` are never gzipped.
 
+## Phison
+
+- JSON model key: **`ESLS080GTUE-A329IJ1-TYJN`**
+- Tool: `PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2 -device_index /dev/nvme0n1`
+  (`/dev/nvme0` is invalid for this tool)
+- Created files: `RD_Dump2_Header_*.bin`, `RD_Dump2_Data_*.bin` (gzipped)
+- Timeout: 120 s (sample ~57 s on Juliet-128)
+
 ## Artifacts
 
 Work dir:
@@ -126,11 +142,11 @@ Work dir:
 
 - `ssd-dump-status.log` — status, model, `part`, tool, `tool_rc`,
   files, `config` path; `warning:` only on errors; last line
-  `Status: Ok / succeeded` or `Status: error`
+  `Status: Ok / succeeded`, `Status: skipped`, or `Status: error`
 - `ssd-dump-tool.log` — collector WARNING/skipped/cmd lines, plus
   vendor stdout/stderr when the tool runs
-- created dump files (`nandlog_*.bin.gz`, or uncompressed if gzip
-  off / gzip failed)
+- created dump files (`nandlog_*.bin.gz`, `RD_Dump2_*.bin.gz`, or
+  uncompressed if gzip off / gzip failed)
 
 Kept on disk after a successful CLI collect: **`ssd-dump.tar.gz`**.
 
@@ -144,8 +160,10 @@ path so collection cannot be blocked. generate-dump mkdir is
 `0755`.
 
 CLI and generate-dump share `/var/log/ssd-dump`. **Do not run them
-in parallel** (no lock). Standalone Python timeout is 90 s (Virtium)
-or 120 s default.
+in parallel** (no lock). Vendor timeout 90 s (Virtium) or 120 s
+(Phison / defaults). JSON `timeout_sec` must be 1..120
+(generate-dump wrapper is 195 s). Standalone `--timeout` may
+be higher.
 
 ## Adding a vendor later
 
