@@ -62,6 +62,10 @@ class RedfishClient:
     DEFAULT_GET_TIMEOUT = 3
     _CFG_LOGIN_PREFIX = '# hw-mgmt-redfish: login\n'
     _CURL_HTTP_TRAILER_RE = re.compile(r'\nHTTP Status Code: (\d+)\Z')
+    # BMC is moving to HTTP-only. Prefer HTTP; fall back to HTTPS if HTTP is down.
+    SCHEME_HTTP = 'http'
+    SCHEME_HTTPS = 'https'
+    _URL_SCHEME_RE = re.compile(r'(url = ")https?://')
 
     # Redfish URIs
     REDFISH_URI_FW_INVENTORY = '/redfish/v1/UpdateService/FirmwareInventory'
@@ -90,6 +94,8 @@ class RedfishClient:
         self.__user = user
         self.__password = password
         self.__token = None
+        self.__scheme = RedfishClient.SCHEME_HTTP
+        self.__scheme_resolved = False
 
     def get_token(self):
         return self.__token
@@ -109,7 +115,31 @@ class RedfishClient:
         return val.replace('\\', '\\\\').replace('"', '\\"')
 
     def __curl_redfish_url(self, path_without_scheme):
-        return f'https://{self.__svr_ip}{path_without_scheme}'
+        return f'{self.__scheme}://{self.__svr_ip}{path_without_scheme}'
+
+    def __apply_scheme_to_curl_config(self, curl_config):
+        return RedfishClient._URL_SCHEME_RE.sub(
+            r'\1' + self.__scheme + '://', curl_config, count=1)
+
+    def __try_https_fallback(self, curl_config, ret, output_str, error_str):
+        '''If HTTP is unreachable, retry once over HTTPS and remember the winner.'''
+        if ret != RedfishClient.ERR_CODE_CURL_FAILURE:
+            self.__scheme_resolved = True
+            return (curl_config, ret, output_str, error_str)
+
+        if self.__scheme_resolved or self.__scheme != RedfishClient.SCHEME_HTTP:
+            return (curl_config, ret, output_str, error_str)
+
+        self.__scheme = RedfishClient.SCHEME_HTTPS
+        ret_https, out_https, err_https = self.__exec_curl_cmd_internal(
+            curl_config)
+        if ret_https != RedfishClient.ERR_CODE_CURL_FAILURE:
+            self.__scheme_resolved = True
+            return (self.__apply_scheme_to_curl_config(curl_config),
+                    ret_https, out_https, err_https)
+
+        self.__scheme = RedfishClient.SCHEME_HTTP
+        return (curl_config, ret, output_str, error_str)
 
     def __curl_config_auth_header_line(self):
         return (
@@ -387,6 +417,7 @@ class RedfishClient:
     '''
 
     def __exec_curl_cmd_internal(self, curl_config):
+        curl_config = self.__apply_scheme_to_curl_config(curl_config)
 
         task_mon = RedfishClient.REDFISH_URI_TASKS in curl_config
         if not task_mon:
@@ -465,6 +496,8 @@ class RedfishClient:
             return (RedfishClient.ERR_CODE_NOT_LOGIN, 'Not login', 'Not login')
 
         ret, output_str, error_str = self.__exec_curl_cmd_internal(curl_config)
+        curl_config, ret, output_str, error_str = self.__try_https_fallback(
+            curl_config, ret, output_str, error_str)
 
         is_empty_response = ((ret == 0) and (len(output_str) == 0))
 
