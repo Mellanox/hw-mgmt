@@ -143,7 +143,7 @@ class TestRedfishClientCommandBuilders:
         cmd = basic_redfish_client._RedfishClient__build_login_cmd('********')
         assert cmd.startswith(RedfishClient._CFG_LOGIN_PREFIX)
         assert 'request = POST' in cmd
-        assert 'https://10.0.1.1/login' in cmd
+        assert 'http://10.0.1.1/login' in cmd
         assert 'username' in cmd and 'admin' in cmd
         assert 'password' in cmd and '********' in cmd
 
@@ -153,7 +153,7 @@ class TestRedfishClientCommandBuilders:
         cmd = basic_redfish_client._RedfishClient__build_get_cmd('/redfish/v1/test')
         assert 'request = GET' in cmd
         assert 'header = "X-Auth-Token: test_token_123"' in cmd
-        assert 'https://10.0.1.1/redfish/v1/test' in cmd
+        assert 'http://10.0.1.1/redfish/v1/test' in cmd
 
     def test_medium_build_fw_update_cmd(self, basic_redfish_client):
         """Medium: Build firmware update command"""
@@ -179,7 +179,7 @@ class TestRedfishClientCommandBuilders:
         data = {'key1': 'value1', 'key2': 123}
         cmd = basic_redfish_client._RedfishClient__build_post_cmd('/test/uri', data)
         assert 'request = POST' in cmd
-        assert 'https://10.0.1.1/test/uri' in cmd
+        assert 'http://10.0.1.1/test/uri' in cmd
         assert 'key1' in cmd and 'value1' in cmd
 
     def test_complex_build_set_force_update_true(self, basic_redfish_client):
@@ -506,6 +506,149 @@ class TestRedfishClientExecCurl:
         captured = capsys.readouterr()
         assert 'Execute cURL command:' in captured.err
         assert 'test_token' not in captured.err
+
+
+class TestRedfishClientHttpScheme:
+    """HTTP is default; HTTPS is used only when HTTP is unreachable."""
+
+    def test_default_scheme_is_http(self, basic_redfish_client):
+        assert basic_redfish_client._RedfishClient__scheme == RedfishClient.SCHEME_HTTP
+        assert not basic_redfish_client._RedfishClient__scheme_resolved
+
+    def test_http_success_does_not_fallback(
+            self, basic_redfish_client, mock_subprocess):
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            mock_curl_stdout('{"token": "tok"}'), b'')
+        mock_process.returncode = 0
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret = basic_redfish_client.login()
+        assert ret == RedfishClient.ERR_CODE_OK
+        assert basic_redfish_client._RedfishClient__scheme == 'http'
+        assert basic_redfish_client._RedfishClient__scheme_resolved
+        stdin = mock_process.communicate.call_args.kwargs['input']
+        assert b'url = "http://' in stdin
+        assert b'https://' not in stdin
+        assert mock_subprocess.Popen.call_count == 1
+
+    def test_https_fallback_when_http_unreachable(
+            self, basic_redfish_client, mock_subprocess):
+        http_fail = MagicMock()
+        http_fail.communicate.return_value = (
+            b'', b'curl: (7) Failed to connect')
+        http_fail.returncode = 7
+        https_ok = MagicMock()
+        https_ok.communicate.return_value = (
+            mock_curl_stdout('{"token": "tok"}'), b'')
+        https_ok.returncode = 0
+        mock_subprocess.Popen.side_effect = [http_fail, https_ok]
+
+        ret = basic_redfish_client.login()
+        assert ret == RedfishClient.ERR_CODE_OK
+        assert basic_redfish_client.get_token() == 'tok'
+        assert basic_redfish_client._RedfishClient__scheme == 'https'
+        assert basic_redfish_client._RedfishClient__scheme_resolved
+        assert b'url = "http://' in http_fail.communicate.call_args.kwargs['input']
+        assert b'url = "https://' in https_ok.communicate.call_args.kwargs['input']
+
+    def test_https_fallback_both_fail_keeps_http_default(
+            self, basic_redfish_client, mock_subprocess):
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            b'', b'curl: (7) Failed to connect')
+        mock_process.returncode = 7
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret = basic_redfish_client.login()
+        assert ret == RedfishClient.ERR_CODE_CURL_FAILURE
+        assert basic_redfish_client._RedfishClient__scheme == 'http'
+        assert not basic_redfish_client._RedfishClient__scheme_resolved
+        assert mock_subprocess.Popen.call_count == 2
+
+    def test_scheme_locked_after_first_success(
+            self, basic_redfish_client, mock_subprocess):
+        """After HTTP works, do not switch to HTTPS until process restart."""
+        http_ok = MagicMock()
+        http_ok.communicate.return_value = (
+            mock_curl_stdout('{"token": "tok"}'), b'')
+        http_ok.returncode = 0
+        http_dead = MagicMock()
+        http_dead.communicate.return_value = (
+            b'', b'curl: (7) Failed to connect')
+        http_dead.returncode = 7
+        mock_subprocess.Popen.side_effect = [http_ok, http_dead]
+
+        assert basic_redfish_client.login() == RedfishClient.ERR_CODE_OK
+        assert basic_redfish_client._RedfishClient__scheme == 'http'
+
+        cfg = basic_redfish_client._RedfishClient__build_get_cmd('/redfish/v1/x')
+        ret, _output, error = basic_redfish_client.exec_curl_cmd(cfg)
+        assert ret == RedfishClient.ERR_CODE_CURL_FAILURE
+        assert error == 'Failed to connect'
+        assert basic_redfish_client._RedfishClient__scheme == 'http'
+        assert mock_subprocess.Popen.call_count == 2
+
+    @pytest.mark.parametrize('curl_rc, err', [
+        (28, b'curl: (28) Operation timed out'),
+        (52, b'curl: (52) Empty reply from server'),
+        (55, b'curl: (55) Failed sending data to the peer'),
+        (56, b'curl: (56) Recv failure: Connection reset by peer'),
+    ])
+    def test_no_resend_when_request_may_have_been_delivered(
+            self, basic_redfish_client, mock_subprocess, curl_rc, err):
+        """A lost reply must not replay a mutation on the other scheme."""
+        basic_redfish_client._RedfishClient__token = 'tok'
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (b'', err)
+        mock_process.returncode = curl_rc
+        mock_subprocess.Popen.return_value = mock_process
+
+        cfg = basic_redfish_client._build_change_user_password_cmd(
+            'admin', 'new-pass')
+        ret, _out, _err = basic_redfish_client.exec_curl_cmd(cfg)
+
+        assert ret == RedfishClient.ERR_CODE_CURL_FAILURE
+        assert mock_subprocess.Popen.call_count == 1
+        assert basic_redfish_client._RedfishClient__scheme == 'http'
+
+    def test_alt_scheme_kept_when_it_answers_with_error(
+            self, basic_redfish_client, mock_subprocess):
+        """A reply over the alternate scheme marks it as the live endpoint."""
+        http_dead = MagicMock()
+        http_dead.communicate.return_value = (
+            b'', b'curl: (7) Failed to connect')
+        http_dead.returncode = 7
+        https_timeout = MagicMock()
+        https_timeout.communicate.return_value = (
+            b'', b'curl: (28) Operation timed out')
+        https_timeout.returncode = 28
+        mock_subprocess.Popen.side_effect = [http_dead, https_timeout]
+
+        ret = basic_redfish_client.login()
+        assert ret == RedfishClient.ERR_CODE_CURL_FAILURE
+        assert basic_redfish_client._RedfishClient__scheme == 'https'
+
+    def test_https_client_returns_to_http_when_https_dies(
+            self, basic_redfish_client, mock_subprocess):
+        """Fallback works in both directions, not only http -> https."""
+        basic_redfish_client._RedfishClient__scheme = 'https'
+        basic_redfish_client._RedfishClient__token = 'tok'
+        https_dead = MagicMock()
+        https_dead.communicate.return_value = (
+            b'', b'curl: (7) Failed to connect')
+        https_dead.returncode = 7
+        http_ok = MagicMock()
+        http_ok.communicate.return_value = (mock_curl_stdout('{}'), b'')
+        http_ok.returncode = 0
+        mock_subprocess.Popen.side_effect = [https_dead, http_ok]
+
+        cfg = basic_redfish_client._RedfishClient__build_get_cmd('/redfish/v1/x')
+        ret, output, _error = basic_redfish_client.exec_curl_cmd(cfg)
+        assert ret == 0
+        assert output == '{}'
+        assert basic_redfish_client._RedfishClient__scheme == 'http'
+        assert b'url = "http://' in http_ok.communicate.call_args.kwargs['input']
 
 
 # =============================================================================
