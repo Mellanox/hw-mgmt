@@ -1,11 +1,37 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** September 1, 2026
+**Last Updated:** September 7, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.11 - September 7, 2026
+
+#### Clarified: `reset_reload_bios` cannot be triggered on SN5610 / SN5640 (#5235440)
+
+**Affected platforms:** SN5610 (HI172) and SN5640 (HI171).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.18.39 | **SN5610 / SN5640**: `reset_reload_bios` is a read-only status attribute and cannot be triggered; the CPLD does not implement the trigger that would set it |
+
+**Validation source:** `mlxplat_mlxcpld_default_ng_regs_io_data` in the mlx-platform driver (`.mode = 0444`).
+
+#### Clarified: `reset_system` is not triggerable on SN6810_LD / SN6800_LD (#5235448)
+
+**Affected platforms:** SN6810_LD (HI183) and SN6800_LD (HI187).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.18.39 | **SN6810_LD / SN6800_LD**: `reset_system` is not supported as a triggerable reset cause |
+
+---
 
 ### Rev. 3.2.10 - September 1, 2026
 

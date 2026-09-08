@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.10
+Rev. 3.2.11
 
 ## Table of Contents
 
@@ -410,6 +410,7 @@ Rev. 3.2.10
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.11 | September 2026 | §3.18.39 SN5610 / SN5640: `reset_reload_bios` cannot be triggered, the CPLD BIOS-reload trigger is not implemented (#5235440). SN6810_LD / SN6800_LD: `reset_system` is not supported as a triggerable reset cause (#5235448) |
 | 3.2.10 | September 2026 | §3.18.39 N51XX_LD unsupported reset causes: added `reset_comex_wd` and `reset_from_comex` |
 | 3.2.8 | August 2026 | §3.1.61 `config/cable_cartridge<n>_valid`: IPMI FRU check result per cable cartridge (N51XX_LD / N61XX_LD) |
 | 3.2.7 | August 2026 | §3.1.60 `config/led_control_type` platform LED owner map; §3.16.28 `led/led_<name>_control` (`led_sw` / `led_hw` / `led_hw_sw`); glob masks `*` and `?` |
@@ -5718,6 +5719,16 @@ Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD,
 | `reset_mgmt_pwr` | Management board power failure |
 
 Validation source: `recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch`, `usr/usr/bin/hw-management.sh` (`n51xx_reset_attr_num`).
+
+#### SN5610 / SN5640
+
+SN5610 (HI172) and SN5640 (HI171) expose `reset_reload_bios` as a read-only status attribute, but the CPLD does not implement the trigger that would set it, so this reset cause cannot be produced on these systems.
+
+Validation source: `mlxplat_mlxcpld_default_ng_regs_io_data` in the mlx-platform driver (`.mode = 0444`).
+
+#### SN6810_LD / SN6800_LD
+
+SN6810_LD (HI183) and SN6800_LD (HI187) do not support triggering `reset_system`.
 
 ### Cartridge
 
