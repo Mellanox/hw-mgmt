@@ -167,6 +167,7 @@ class CONST:
     # FAN calibration
     # Time for FAN rotation stabilize after change
     FAN_RELAX_TIME = 10
+    # Minimum PWM change required to activate FAN relaxation after a PWM update
     FAN_RELAX_PWM_JUMP_MIN = 4
 
     FAN_SHUTDOWN_ENA = "1"
@@ -2362,7 +2363,7 @@ class fan_sensor(system_device):
         self.val_max_def = self.get_file_val("thermal/fan{}_max".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_max"])
         self.is_calibrated = False
 
-        self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
+        self.rpm_relax_timeout = self.fan_param.get("relax_time", CONST.FAN_RELAX_TIME) * 1000
         self.rpm_relax_timestamp = current_milli_time() + self.rpm_relax_timeout
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
         self.pwm_set = self.read_pwm(CONST.PWM_MIN)
