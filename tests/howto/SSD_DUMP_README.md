@@ -3,6 +3,13 @@
 Unified NVMe nandlog collector. Vendor binaries are **not** in hw-mgmt;
 NOS puts them on `PATH`.
 
+Dump-tools (ELFs and SMI `smi/` tree, `tools/README.txt`):
+`ssh://git@gitlab-master.nvidia.com:12051/nbu-sws/bsp/bsp_ssd_fw_update.git`
+
+This package: https://github.com/Mellanox/hw-mgmt.git
+(`tests/howto/SSD_DUMP_README.md` from the repo root;
+`./howto/SSD_DUMP_README.md` if cwd is `tests/`).
+
 ## Pieces
 
 | Path | Role |
@@ -74,12 +81,14 @@ or `/dev/nvme0n1`), not a symlink or a regular file. A path
 outside `/dev` or a missing node is a warning. Virtium
 `device_form` is `controller` (`nvme0n1` → `/dev/nvme0`). Phison
 is `namespace` (`nvme0` → lowest `/dev/nvmeXnN`, usually `n1`).
-The mapped namespace node must exist (char or block, not a
-symlink) or the collect is **warning**.
+Silicon Motion is also `namespace`. The mapped namespace node
+must exist (char or block, not a symlink) or the collect is
+**warning**.
 
 `--verify` checks JSON, NVMe/sysfs model, vendor tool on PATH
-(+x), free space, and `--outdir` rules (protected / symlink in any
-component / non-empty custom / not writable) without creating or
+(+x), free space, `--outdir` rules (protected / symlink in any
+component / non-empty custom / not writable), and optional
+`stage_from` (`Setting/` + cfg, no copy) without creating or
 deleting that directory. It does **not** run the vendor tool or
 write dump files. Prints status fields to stdout (rc 0 = ok or
 skipped, 1 = warning).
@@ -103,9 +112,12 @@ is ignored (no syslog).
 
 NOS must put the JSON `tool` name on `PATH` as-is
 (`vtFA_RTK_5766_v2`,
-`PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2`). If the tool
-is missing, the hw-mgmt dump is still created;
-`ssd-dump-status.log` has a warning.
+`PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2`,
+`NVMe_Tool_SM2268XT2_Ferri_64_Z0717A`). SMI also needs the
+cwd tree at `/usr/share/hw-management-ssd/smi/` (`Setting/` and
+`one_button_NV.cfg`). That tree is **not** in the hw-mgmt RPM.
+If the tool or `stage_from` is missing, the hw-mgmt dump is
+still created; `ssd-dump-status.log` has a warning.
 
 One NVMe: first controller whose sysfs model is in JSON. Model/fw
 from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
@@ -129,6 +141,17 @@ from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
 - Created files: `RD_Dump2_Header_*.bin`, `RD_Dump2_Data_*.bin` (gzipped)
 - Timeout: 120 s (sample ~57 s on Juliet-128)
 
+## Silicon Motion
+
+- JSON model key: **`MD681GEEBC82`**
+- Tool: `NVMe_Tool_SM2268XT2_Ferri_64_Z0717A /dev/nvme0n1 one_button`
+- `stage_from`: `/usr/share/hw-management-ssd/smi` (copy `Setting/`
+  and `one_button_NV.cfg` → cwd `one_button.cfg`; not packed)
+- Pack only `one_button/` (gzip nested files). Drop `TestResult/`,
+  `Display_*.log`, and staged cfg. generate-dump uses the NV cfg
+  only, not `one_button_full.cfg`.
+- Timeout: 120 s
+
 ## Artifacts
 
 Work dir:
@@ -141,12 +164,14 @@ Work dir:
   good archive and leftover `$SSD_LOG_DIR`, copied as **`ssd-dump/`**.
 
 - `ssd-dump-status.log` — status, model, `part`, tool, `tool_rc`,
-  files, `config` path; `warning:` only on errors; last line
+  files (first 3 names, plus `(N in total)` if more), `config`
+  path; `warning:` only on errors; last line
   `Status: Ok / succeeded`, `Status: skipped`, or `Status: error`
 - `ssd-dump-tool.log` — collector WARNING/skipped/cmd lines, plus
-  vendor stdout/stderr when the tool runs
-- created dump files (`nandlog_*.bin.gz`, `RD_Dump2_*.bin.gz`, or
-  uncompressed if gzip off / gzip failed)
+  vendor stdout/stderr when the tool runs (written as `.txt` during
+  the run, renamed to `.log` before pack)
+- created dump files (`nandlog_*.bin.gz`, `RD_Dump2_*.bin.gz`,
+  `one_button/...`, or uncompressed if gzip off / gzip failed)
 
 Kept on disk after a successful CLI collect: **`ssd-dump.tar.gz`**.
 
@@ -161,7 +186,7 @@ path so collection cannot be blocked. generate-dump mkdir is
 
 CLI and generate-dump share `/var/log/ssd-dump`. **Do not run them
 in parallel** (no lock). Vendor timeout 90 s (Virtium) or 120 s
-(Phison / defaults). JSON `timeout_sec` must be 1..120
+(Phison / SMI / defaults). JSON `timeout_sec` must be 1..120
 (generate-dump wrapper is 195 s). Standalone `--timeout` may
 be higher.
 
@@ -170,7 +195,15 @@ be higher.
 Add a `vendors.<Name>.models.<Key>` object (`Key` is the last Identify
 token, including `-…`):
 `tool`, `args` (`{device}`, `{outdir}`, `{model}`), `device_form`
-(`controller` or `namespace`), optional `timeout_sec`. Do not ship the
-vendor binary in hw-mgmt. RPM: `%config(noreplace)` so a local JSON
-edit is kept on upgrade (new file as `.rpmnew`). Debian: `/etc` is a
-conffile (local kept; new as `.dpkg-dist`).
+(`controller` or `namespace`), optional `timeout_sec`, optional
+JSON boolean `gzip` (overrides `defaults.gzip`; CLI `--no-gzip`
+still wins). Optional absolute `stage_from`, `stage_cfg` (cwd
+name `one_button.cfg`),
+`keep_dirs` (default `["one_button"]` when staging). Do not ship
+the vendor binary or `smi/` tree in hw-mgmt. RPM:
+`%config(noreplace)` so a local JSON edit is kept on upgrade
+(new file as `.rpmnew`). Debian: `/etc` is a conffile (local
+kept; new as `.dpkg-dist`).
+
+HLD / operator CLI are ECR notes (`SSD-dump-collector-HLD.md`,
+`SSD-dump-collector-CLI.md`), not this package.

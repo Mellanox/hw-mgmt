@@ -58,6 +58,9 @@ DEFAULT_OUTDIR = "/var/log/ssd-dump"
 TIMEOUT_SEC_JSON_MAX = 120
 STATUS_NAME = "ssd-dump-status.log"
 LOG_NAME = "ssd-dump-tool.log"
+# Live collector/vendor log during the run; renamed to LOG_NAME after.
+LOG_TMP_NAME = "ssd-dump-tool.txt"
+FILES_FIELD_MAX = 3
 SYSLOG_IDENT = "hw-management-ssd-dump"
 PROTECTED_OUTDIRS = frozenset(("/", "/var", "/var/log", "/tmp", "/usr", "/etc"))
 NVME_CTL_RE = re.compile(r"^nvme(\d+)$")
@@ -166,6 +169,24 @@ def format_status_fields(fields):
     return "".join(lines)
 
 
+def format_files_field(relpaths, limit=FILES_FIELD_MAX):
+    """Comma list; if longer than limit, first N plus a total count."""
+    names = list(relpaths)
+    n = len(names)
+    if n <= limit:
+        return ",".join(names)
+    return "%s (%d in total)" % (",".join(names[:limit]), n)
+
+
+def promote_tool_log(outdir):
+    """Rename live .txt log to ssd-dump-tool.log for the tarball."""
+    src = os.path.join(outdir, LOG_TMP_NAME)
+    dst = os.path.join(outdir, LOG_NAME)
+    if os.path.isfile(src):
+        os.replace(src, dst)
+    return dst
+
+
 def load_config(path):
     try:
         with open(path, "r") as f:
@@ -195,10 +216,22 @@ def _require_int(obj, what, min_value=None, max_value=None):
     except (TypeError, ValueError):
         raise DumpError("invalid config: %s" % what)
     if min_value is not None and value < min_value:
-        raise DumpError("invalid config: %s" % what)
+        raise DumpError(_config_int_range_msg(what, min_value, max_value))
     if max_value is not None and value > max_value:
-        raise DumpError("invalid config: %s" % what)
+        raise DumpError(_config_int_range_msg(what, min_value, max_value))
     return value
+
+
+def _config_int_range_msg(what, min_value, max_value):
+    if min_value is not None and max_value is not None:
+        return "invalid config: %s (must be %s..%s)" % (
+            what,
+            min_value,
+            max_value,
+        )
+    if min_value is not None:
+        return "invalid config: %s (must be >= %s)" % (what, min_value)
+    return "invalid config: %s (must be <= %s)" % (what, max_value)
 
 
 def _require_bool(obj, what):
@@ -209,6 +242,12 @@ def _require_bool(obj, what):
 
 def _require_string(obj, what):
     if not isinstance(obj, str) or not obj:
+        raise DumpError("invalid config: %s" % what)
+
+
+def _require_rel_name(obj, what):
+    _require_string(obj, what)
+    if obj in (".", "..") or "/" in obj or obj.startswith("\\"):
         raise DumpError("invalid config: %s" % what)
 
 
@@ -278,6 +317,42 @@ def _validate_config_shape(cfg):
                     min_value=1,
                     max_value=TIMEOUT_SEC_JSON_MAX,
                 )
+            if mcfg and "gzip" in mcfg:
+                _require_bool(
+                    mcfg["gzip"],
+                    "vendors.%s.models.%s.gzip" % (vname, mkey),
+                )
+            if mcfg and "stage_from" in mcfg:
+                _require_string(
+                    mcfg["stage_from"],
+                    "vendors.%s.models.%s.stage_from" % (vname, mkey),
+                )
+                sp = mcfg["stage_from"]
+                if not os.path.isabs(sp):
+                    raise DumpError(
+                        "invalid config: vendors.%s.models.%s.stage_from"
+                        % (vname, mkey)
+                    )
+            if mcfg and "stage_cfg" in mcfg:
+                _require_rel_name(
+                    mcfg["stage_cfg"],
+                    "vendors.%s.models.%s.stage_cfg" % (vname, mkey),
+                )
+            if mcfg and "keep_dirs" in mcfg:
+                _require_string_list(
+                    mcfg["keep_dirs"],
+                    "vendors.%s.models.%s.keep_dirs" % (vname, mkey),
+                )
+                if not mcfg["keep_dirs"]:
+                    raise DumpError(
+                        "invalid config: vendors.%s.models.%s.keep_dirs"
+                        % (vname, mkey)
+                    )
+                for dname in mcfg["keep_dirs"]:
+                    _require_rel_name(
+                        dname,
+                        "vendors.%s.models.%s.keep_dirs" % (vname, mkey),
+                    )
 
 
 def defaults_of(cfg):
@@ -314,7 +389,7 @@ def list_nvme_namespaces(ctl, dev_dir="/dev"):
     for name in os.listdir(dev_dir):
         if not name.startswith(prefix):
             continue
-        rest = name[len(prefix) :]
+        rest = name[len(prefix):]
         if rest.isdigit():
             found.append((int(rest), os.path.join(dev_dir, name)))
     found.sort()
@@ -360,6 +435,46 @@ def check_nvme_node(path):
         raise DumpError("not an NVMe device node: %s" % path)
 
 
+def check_stage_from(stage_from, stage_cfg):
+    """Read-only vendor cwd tree (Setting/ + cfg). No symlinks."""
+    path = os.path.abspath(stage_from)
+    if os.path.realpath(path) != path:
+        raise DumpError("refusing stage_from with symlink component: %s" % path)
+    if not os.path.isdir(path) or os.path.islink(path):
+        raise DumpError("SSD dump stage_from not found: %s" % path)
+    setting = os.path.join(path, "Setting")
+    if not os.path.isdir(setting) or os.path.islink(setting):
+        raise DumpError("SSD dump stage_from missing Setting/: %s" % path)
+    cfg_src = os.path.join(path, stage_cfg)
+    if not os.path.isfile(cfg_src) or os.path.islink(cfg_src):
+        raise DumpError("SSD dump stage_from missing %s: %s" % (stage_cfg, path))
+    return path, cfg_src
+
+
+def stage_vendor_cwd(outdir, stage_from, stage_cfg):
+    src_root, cfg_src = check_stage_from(stage_from, stage_cfg)
+    dest_setting = os.path.join(outdir, "Setting")
+    shutil.copytree(os.path.join(src_root, "Setting"), dest_setting, symlinks=False)
+    shutil.copy2(cfg_src, os.path.join(outdir, "one_button.cfg"))
+
+
+def strip_workdir(outdir, keep_dirs):
+    """Drop staged cwd and vendor scratch; keep dump dirs + status/log."""
+    keep = set(keep_dirs or [])
+    keep.update((STATUS_NAME, LOG_NAME, LOG_TMP_NAME))
+    for name in os.listdir(outdir):
+        if name in keep:
+            continue
+        p = os.path.join(outdir, name)
+        try:
+            if os.path.isdir(p) and not os.path.islink(p):
+                shutil.rmtree(p)
+            else:
+                os.remove(p)
+        except OSError:
+            raise DumpError("cannot drop staged file %s" % p)
+
+
 def read_sysfs_nvme(ctl, sys_class="/sys/class/nvme"):
     model = ""
     fw = ""
@@ -376,10 +491,10 @@ def read_sysfs_nvme(ctl, sys_class="/sys/class/nvme"):
 
 
 def part_name_from_model(model_str):
-    #SpellCheck-ignoreBlockStart
+    # SpellCheck-ignoreBlockStart
     """JSON key: last token of Identify, keep '-' suffix
     (Virtium VTPM24CEXI080-BM110006 -> VTPM24CEXI080-BM110006)."""
-    #SpellCheck-ignoreBlockEnd
+    # SpellCheck-ignoreBlockEnd
     s = (model_str or "").strip()
     if not s:
         return ""
@@ -637,6 +752,9 @@ def run_collect(args, logf, fields):
     if args.timeout is not None:
         timeout_sec = args.timeout
     fields["timeout_sec"] = str(timeout_sec)
+    if "gzip" in mcfg:
+        gzip_on = bool(mcfg["gzip"]) and not args.no_gzip
+        fields["gzip"] = "yes" if gzip_on else "no"
 
     run_dev = map_device(device, mcfg.get("device_form", "controller"))
     check_nvme_node(run_dev)
@@ -647,6 +765,15 @@ def run_collect(args, logf, fields):
     fields["tool"] = tool
     tool_path = find_tool(tool)
     fields["tool_path"] = tool_path
+
+    stage_from = mcfg.get("stage_from") or ""
+    stage_cfg = mcfg.get("stage_cfg") or "one_button_NV.cfg"
+    keep_dirs = mcfg.get("keep_dirs")
+    if stage_from and keep_dirs is None:
+        keep_dirs = ["one_button"]
+    if stage_from:
+        fields["stage_from"] = stage_from
+        check_stage_from(stage_from, stage_cfg)
 
     avail = free_mb(outdir)
     fields["free_mb"] = str(avail)
@@ -669,6 +796,10 @@ def run_collect(args, logf, fields):
         fields["verify"] = "yes"
         log_print(logf, "verify ok: %s" % fields["cmd"])
         return 0
+
+    if stage_from:
+        log_print(logf, "stage_from: %s cfg=%s" % (stage_from, stage_cfg))
+        stage_vendor_cwd(outdir, stage_from, stage_cfg)
 
     log_print(logf, "running: %s (cwd=%s timeout=%ss)" % (fields["cmd"], outdir, timeout_sec))
     logf.flush()
@@ -694,7 +825,10 @@ def run_collect(args, logf, fields):
         fields["tool_rc"] = "exec_error"
         raise DumpError("vendor tool exec failed: %s" % exc)
 
-    skip = {STATUS_NAME, LOG_NAME}
+    if keep_dirs:
+        strip_workdir(outdir, keep_dirs)
+
+    skip = {STATUS_NAME, LOG_NAME, LOG_TMP_NAME}
     matched = list_created_files(outdir, skip)
     if not matched:
         raise DumpError("vendor tool produced no dump files")
@@ -713,7 +847,9 @@ def run_collect(args, logf, fields):
     else:
         result_files = matched
 
-    fields["files"] = ",".join(os.path.basename(p) for p in result_files)
+    fields["files"] = format_files_field(
+        os.path.relpath(p, outdir) for p in result_files
+    )
     if gzip_errors:
         raise DumpError("gzip failed (kept uncompressed): %s" % "; ".join(gzip_errors))
     fields["status"] = "ok"
@@ -844,8 +980,9 @@ def run_dump(args):
             )
 
         log_path = os.path.join(outdir, LOG_NAME)
+        log_tmp = os.path.join(outdir, LOG_TMP_NAME)
         try:
-            with open(log_path, "w") as logf:
+            with open(log_tmp, "w") as logf:
                 log_print(logf, MSG_STARTED, echo=False)
                 try:
                     if not os.path.isfile(args.config):
@@ -868,6 +1005,13 @@ def run_dump(args):
                     log_print(logf, "WARNING: internal: %s" % exc, echo=False)
                     syslog_warn("internal: %s" % exc)
                     rc = 1
+        except OSError as exc:
+            fields["warning"] = "cannot write log: %s" % exc
+            syslog_warn(fields["warning"])
+            rc = 1
+
+        try:
+            promote_tool_log(outdir)
         except OSError as exc:
             fields["warning"] = "cannot write log: %s" % exc
             syslog_warn(fields["warning"])

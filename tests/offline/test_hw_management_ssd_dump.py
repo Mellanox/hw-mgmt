@@ -68,7 +68,7 @@ def virtium_cfg(tool):
     }
 
 
-#SpellCheck-ignoreBlockStart
+# SpellCheck-ignoreBlockStart
 def phison_cfg(tool):
     return {
         "defaults": {
@@ -90,7 +90,7 @@ def phison_cfg(tool):
             }
         },
     }
-#SpellCheck-ignoreBlockEnd
+# SpellCheck-ignoreBlockEnd
 
 
 def fake_tool(path):
@@ -122,6 +122,64 @@ def fake_phison_tool(path):
             )
         )
     os.chmod(path, 0o755)
+
+
+# SpellCheck-ignoreBlockStart
+def fake_smi_tool(path):
+    with open(path, "w") as f:
+        f.write(
+            textwrap.dedent(
+                """\
+                #!/bin/sh
+                if [ ! -f one_button.cfg ] || [ ! -d Setting ]; then
+                    echo "missing staged cwd" >&2
+                    exit 1
+                fi
+                mkdir -p one_button/2026-09-08
+                echo dummy > one_button/2026-09-08/Identify_CTL.bin
+                mkdir -p TestResult/x
+                echo scratch > TestResult/x/a
+                echo display > Display_1.log
+                echo "Total process finished, the result is pass"
+                """
+            )
+        )
+    os.chmod(path, 0o755)
+
+
+def make_smi_stage(root):
+    setting = root / "Setting"
+    setting.mkdir(parents=True)
+    (setting / "dummy.ini").write_text("x\n")
+    (root / "one_button_NV.cfg").write_text("unlock 3\n")
+    return str(root)
+
+
+def smi_cfg(tool, stage_from):
+    return {
+        "defaults": {
+            "timeout_sec": 120,
+            "gzip": True,
+            "gzip_level": 5,
+            "min_free_mb": 1,
+        },
+        "vendors": {
+            "Silicon Motion": {
+                "models": {
+                    "MD681GEEBC82": {
+                        "tool": tool,
+                        "args": ["{device}", "one_button"],
+                        "device_form": "namespace",
+                        "timeout_sec": 120,
+                        "stage_from": stage_from,
+                        "stage_cfg": "one_button_NV.cfg",
+                        "keep_dirs": ["one_button"],
+                    }
+                }
+            }
+        },
+    }
+# SpellCheck-ignoreBlockEnd
 
 
 def tar_text(tar_path, member):
@@ -192,7 +250,7 @@ class TestModelMatch:
         v, k, m = ssd.find_model_config(cfg, "MD681GEEBC82")
         assert v is None and k is None and m is None
 
-    #SpellCheck-ignoreBlockStart
+    # SpellCheck-ignoreBlockStart
     def test_phison_exact_key(self, ssd):
         cfg = phison_cfg("PCIETOOL")
         v, k, m = ssd.find_model_config(cfg, "ESLS080GTUE-A329IJ1-TYJN")
@@ -220,7 +278,11 @@ class TestModelMatch:
         )
         assert v2 == "Virtium" and k2 == "VTPM24CEXI080-BM110006"
         assert m2["device_form"] == "controller"
-    #SpellCheck-ignoreBlockEnd
+        v3, k3, m3 = ssd.find_model_config(cfg, "MD681GEEBC82")
+        assert v3 == "Silicon Motion" and k3 == "MD681GEEBC82"
+        assert m3["device_form"] == "namespace"
+        assert m3["keep_dirs"] == ["one_button"]
+    # SpellCheck-ignoreBlockEnd
 
 
 class TestGzip:
@@ -255,8 +317,14 @@ class TestCreatedFiles:
         nand = tmp_path / "nandlog_1.bin"
         nand.write_text("x")
         (tmp_path / "ssd-dump-tool.log").write_text("log")
+        (tmp_path / "ssd-dump-tool.txt").write_text("live")
         got = ssd.list_created_files(
-            str(tmp_path), {"ssd-dump-status.log", "ssd-dump-tool.log"}
+            str(tmp_path),
+            {
+                "ssd-dump-status.log",
+                "ssd-dump-tool.log",
+                "ssd-dump-tool.txt",
+            },
         )
         assert got == [str(nand)]
 
@@ -281,6 +349,16 @@ class TestStatusFormat:
         )
         assert "warning: tool missing" in text
         assert text.strip().endswith("Status: error")
+
+
+class TestFilesField:
+    def test_short_list_unchanged(self, ssd):
+        assert ssd.format_files_field(["a.gz"]) == "a.gz"
+        assert ssd.format_files_field(["a.gz", "b.gz", "c.gz"]) == "a.gz,b.gz,c.gz"
+
+    def test_truncates_with_total(self, ssd):
+        got = ssd.format_files_field(["a.gz", "b.gz", "c.gz", "d.gz"])
+        assert got == "a.gz,b.gz,c.gz (4 in total)"
 
 
 class TestRecreateOutdir:
@@ -684,6 +762,7 @@ class TestEndToEnd:
         assert "Status: error" in status
         assert any(ln.startswith("warning:") for ln in status.splitlines())
         assert (outdir / "ssd-dump-tool.log").is_file()
+        assert not (outdir / "ssd-dump-tool.txt").exists()
         with open(tar_path, "rb") as f:
             assert f.read() == b"GOOD"
         warn_text = " ".join(str(c) for c in seen)
@@ -825,6 +904,7 @@ class TestEndToEnd:
         assert rc != 0
         assert "invalid config" in text
         assert "timeout_sec" in text
+        assert "must be 1..%s" % ssd.TIMEOUT_SEC_JSON_MAX in text
 
     def test_timeout_over_json_max_rejected_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -838,6 +918,7 @@ class TestEndToEnd:
         assert rc != 0
         assert "invalid config" in text
         assert "timeout_sec" in text
+        assert "must be 1..%s" % ssd.TIMEOUT_SEC_JSON_MAX in text
 
     def test_missing_tool_rejected_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -1027,6 +1108,69 @@ class TestEndToEnd:
         assert "SSD dump tool started" in log
         assert "SSD dump tool succeeded" in log
         assert "written to file" in log
+        assert "out/ssd-dump-tool.txt" not in names
+
+    def test_files_field_first_three_and_total(self, ssd, tmp_path, monkeypatch):
+        tool = str(tmp_path / "vtFA_many")
+        with open(tool, "w") as f:
+            f.write(
+                "#!/bin/sh\n"
+                "echo a > nandlog_a.bin\n"
+                "echo b > nandlog_b.bin\n"
+                "echo c > nandlog_c.bin\n"
+                "echo d > nandlog_d.bin\n"
+            )
+        os.chmod(tool, 0o755)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(tool))
+        outdir = tmp_path / "out"
+        self._nvme(ssd, monkeypatch)
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        tar_path = str(tmp_path / "out.tar.gz")
+        status = tar_text(tar_path, "out/ssd-dump-status.log")
+        assert rc == 0, status
+        assert "nandlog_a.bin.gz,nandlog_b.bin.gz,nandlog_c.bin.gz (4 in total)" in status
+        assert "nandlog_d.bin.gz" not in status.split("files:")[1].split("\n")[0]
+        names = tar_names(tar_path)
+        assert "out/nandlog_d.bin.gz" in names
+
+    def test_model_gzip_false_keeps_bin(self, ssd, tmp_path, monkeypatch):
+        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        fake_tool(tool)
+        obj = virtium_cfg(tool)
+        obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"][
+            "gzip"
+        ] = False
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, obj)
+        outdir = tmp_path / "out"
+        self._nvme(ssd, monkeypatch)
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        tar_path = str(tmp_path / "out.tar.gz")
+        status = tar_text(tar_path, "out/ssd-dump-status.log")
+        assert rc == 0, status
+        assert "gzip: no" in status
+        names = tar_names(tar_path)
+        assert "out/nandlog_64384-1454.bin" in names
+        assert "out/nandlog_64384-1454.bin.gz" not in names
 
     def test_vendor_output_not_on_console(self, ssd, tmp_path, monkeypatch, capsys):
         tool = str(tmp_path / "vtFA_RTK_5766_v2")
@@ -1054,7 +1198,7 @@ class TestEndToEnd:
         assert "written to file" not in captured.out
         assert "written to file" in tar_text(tar_path, "out/ssd-dump-tool.log")
 
-    #SpellCheck-ignoreBlockStart
+    # SpellCheck-ignoreBlockStart
     def test_phison_namespace_device_index(self, ssd, tmp_path, monkeypatch):
         tool = str(
             tmp_path / "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2"
@@ -1100,7 +1244,7 @@ class TestEndToEnd:
         names = tar_names(tar_path)
         assert "out/RD_Dump2_Header_20260907-125506.bin.gz" in names
         assert "out/RD_Dump2_Data_20260907-125506.bin.gz" in names
-    #SpellCheck-ignoreBlockEnd
+    # SpellCheck-ignoreBlockEnd
 
     def test_pack_fail_rewrites_status_warning(self, ssd, tmp_path, monkeypatch):
         tool = str(tmp_path / "vtFA_RTK_5766_v2")
@@ -1137,7 +1281,7 @@ class TestEndToEnd:
         assert "SSD dump tool succeeded" not in log
         assert "SSD dump tool failed: cannot pack outdir" in log
 
-    #SpellCheck-ignoreBlockStart
+    # SpellCheck-ignoreBlockStart
     def test_phison_missing_namespace_is_warning(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
@@ -1184,7 +1328,7 @@ class TestEndToEnd:
             "SSD dump tool failed: NVMe device not found: /dev/nvme0n1"
             in captured.err
         )
-    #SpellCheck-ignoreBlockEnd
+    # SpellCheck-ignoreBlockEnd
 
     def test_vendor_no_dump_files_is_warning(self, ssd, tmp_path, monkeypatch):
         tool = str(tmp_path / "vtFA_empty")
@@ -1213,3 +1357,165 @@ class TestEndToEnd:
         assert "status: warning" in status
         assert "produced no dump files" in status
         assert tar_path.read_bytes() == b"GOOD"
+
+    # SpellCheck-ignoreBlockStart
+    def test_smi_packs_one_button_not_setting(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        tool = str(tmp_path / "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A")
+        fake_smi_tool(tool)
+        stage = make_smi_stage(tmp_path / "smi")
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, smi_cfg(tool, stage))
+        outdir = tmp_path / "out"
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        monkeypatch.setattr(
+            ssd,
+            "read_sysfs_nvme",
+            lambda *_a, **_k: ("MD681GEEBC82", "FW1"),
+        )
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n1"]
+        )
+        _stub_lstat_dev(
+            ssd,
+            monkeypatch,
+            "/dev/nvme0",
+            stat.S_IFCHR | 0o600,
+            extra={"/dev/nvme0n1": stat.S_IFBLK | 0o660},
+        )
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        tar_path = str(tmp_path / "out.tar.gz")
+        status = tar_text(tar_path, "out/ssd-dump-status.log")
+        assert rc == 0, status
+        assert "status: ok" in status
+        assert "device: /dev/nvme0n1" in status
+        assert "one_button" in status
+        names = tar_names(tar_path)
+        assert "out/one_button/2026-09-08/Identify_CTL.bin.gz" in names
+        assert not any("/Setting/" in n or n.endswith("/Setting") for n in names)
+        assert not any("TestResult" in n for n in names)
+        assert not any("Display_1.log" in n for n in names)
+        assert not any("one_button.cfg" in n for n in names)
+
+    def test_smi_verify_ok_does_not_stage(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        tool = str(tmp_path / "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A")
+        fake_smi_tool(tool)
+        stage = make_smi_stage(tmp_path / "smi")
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, smi_cfg(tool, stage))
+        outdir = tmp_path / "out"
+        outdir.mkdir()
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        monkeypatch.setattr(
+            ssd,
+            "read_sysfs_nvme",
+            lambda *_a, **_k: ("MD681GEEBC82", "FW1"),
+        )
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n1"]
+        )
+        _stub_lstat_dev(
+            ssd,
+            monkeypatch,
+            "/dev/nvme0",
+            stat.S_IFCHR | 0o600,
+            extra={"/dev/nvme0n1": stat.S_IFBLK | 0o660},
+        )
+        rc = ssd.main(
+            [
+                "--verify",
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert "status: ok" in out
+        assert "verify: yes" in out
+        assert not (outdir / "Setting").exists()
+        assert not (outdir / "one_button.cfg").exists()
+        assert not (tmp_path / "out.tar.gz").exists()
+
+    def test_smi_missing_stage_from_is_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        tool = str(tmp_path / "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A")
+        fake_smi_tool(tool)
+        missing = str(tmp_path / "no-such-smi")
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, smi_cfg(tool, missing))
+        outdir = tmp_path / "out"
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        monkeypatch.setattr(
+            ssd,
+            "read_sysfs_nvme",
+            lambda *_a, **_k: ("MD681GEEBC82", "FW1"),
+        )
+        monkeypatch.setattr(
+            ssd, "list_nvme_namespaces", lambda *_a, **_k: ["/dev/nvme0n1"]
+        )
+        _stub_lstat_dev(
+            ssd,
+            monkeypatch,
+            "/dev/nvme0",
+            stat.S_IFCHR | 0o600,
+            extra={"/dev/nvme0n1": stat.S_IFBLK | 0o660},
+        )
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        captured = capsys.readouterr()
+        assert rc != 0
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert "status: warning" in status
+        assert "stage_from not found" in status
+        assert "stage_from not found" in captured.err
+
+    def test_relative_stage_from_rejected_by_verify(
+        self, ssd, tmp_path, capsys
+    ):
+        cfg = tmp_path / "cfg.json"
+        write_json(
+            cfg,
+            smi_cfg("NVMe_Tool_SM2268XT2_Ferri_64_Z0717A", "rel/smi"),
+        )
+        rc = ssd.main(
+            [
+                "--verify",
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(tmp_path / "out"),
+            ]
+        )
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "invalid config" in text
+        assert "stage_from" in text
+    # SpellCheck-ignoreBlockEnd

@@ -25,6 +25,19 @@
           "timeout_sec": 120
         }
       }
+    },
+    "Silicon Motion": {
+      "models": {
+        "MD681GEEBC82": {
+          "tool": "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A",
+          "args": ["{device}", "one_button"],
+          "device_form": "namespace",
+          "timeout_sec": 120,
+          "stage_from": "/usr/share/hw-management-ssd/smi",
+          "stage_cfg": "one_button_NV.cfg",
+          "keep_dirs": ["one_button"]
+        }
+      }
     }
   }
 }
