@@ -7,7 +7,6 @@
 
 """Offline tests for hw-management-ssd-dump.py."""
 
-import gzip
 import importlib.util
 import json
 import os
@@ -49,8 +48,6 @@ def virtium_cfg(tool):
     return {
         "defaults": {
             "timeout_sec": 120,
-            "gzip": True,
-            "gzip_level": 5,
             "min_free_mb": 1,
         },
         "vendors": {
@@ -73,8 +70,6 @@ def phison_cfg(tool):
     return {
         "defaults": {
             "timeout_sec": 120,
-            "gzip": True,
-            "gzip_level": 5,
             "min_free_mb": 1,
         },
         "vendors": {
@@ -159,8 +154,6 @@ def smi_cfg(tool, stage_from):
     return {
         "defaults": {
             "timeout_sec": 120,
-            "gzip": True,
-            "gzip_level": 5,
             "min_free_mb": 1,
         },
         "vendors": {
@@ -285,33 +278,6 @@ class TestModelMatch:
     # SpellCheck-ignoreBlockEnd
 
 
-class TestGzip:
-    def test_success_removes_bin(self, ssd, tmp_path):
-        bin_path = str(tmp_path / "nandlog_1.bin")
-        with open(bin_path, "wb") as f:
-            f.write(b"abc" * 100)
-        gz, err = ssd.gzip_file(bin_path, 5)
-        assert err is None
-        assert gz.endswith(".gz")
-        assert not os.path.isfile(bin_path)
-        with gzip.open(gz, "rb") as f:
-            assert f.read() == b"abc" * 100
-
-    def test_fail_keeps_bin(self, ssd, tmp_path, monkeypatch):
-        bin_path = str(tmp_path / "nandlog_1.bin")
-        with open(bin_path, "wb") as f:
-            f.write(b"data")
-
-        def boom(*_a, **_k):
-            raise OSError("disk full")
-
-        monkeypatch.setattr(ssd.gzip, "open", boom)
-        out, err = ssd.gzip_file(bin_path, 5)
-        assert err
-        assert out == bin_path
-        assert os.path.isfile(bin_path)
-
-
 class TestCreatedFiles:
     def test_lists_new_files_skips_log(self, ssd, tmp_path):
         nand = tmp_path / "nandlog_1.bin"
@@ -343,6 +309,15 @@ class TestStatusFormat:
             "SSD dump tool skipped"
         )
 
+    def test_results_message_dir_or_tar(self, ssd, tmp_path):
+        out = str(tmp_path / "ssd-dump")
+        assert ssd.results_message(out, True) == (
+            "SSD dump tool results: %s/" % out
+        )
+        assert ssd.results_message(out, False) == (
+            "SSD dump tool results: %s.tar.gz" % out
+        )
+
     def test_error_keeps_warning_ends_with_status(self, ssd):
         text = ssd.format_status_fields(
             {"status": "warning", "warning": "tool missing"}
@@ -352,13 +327,25 @@ class TestStatusFormat:
 
 
 class TestFilesField:
-    def test_short_list_unchanged(self, ssd):
-        assert ssd.format_files_field(["a.gz"]) == "a.gz"
-        assert ssd.format_files_field(["a.gz", "b.gz", "c.gz"]) == "a.gz,b.gz,c.gz"
+    def test_bytes_km(self, ssd):
+        assert ssd.format_bytes_km(0) == "0K"
+        assert ssd.format_bytes_km(1) == "1K"
+        assert ssd.format_bytes_km(1024) == "1K"
+        assert ssd.format_bytes_km(1025) == "2K"
+        assert ssd.format_bytes_km(12 * 1024 * 1024) == "12M"
+        assert ssd.format_bytes_km(1024 * 1024 - 1) == "1024K"
+        assert ssd.format_bytes_km(1024 * 1024) == "1M"
 
-    def test_truncates_with_total(self, ssd):
-        got = ssd.format_files_field(["a.gz", "b.gz", "c.gz", "d.gz"])
-        assert got == "a.gz,b.gz,c.gz (4 in total)"
+    def test_short_list_has_count_and_size(self, ssd):
+        assert ssd.format_files_field(["a.bin"], 1) == "a.bin (1 in total, 1K)"
+        got = ssd.format_files_field(["a.bin", "b.bin", "c.bin"], 3000)
+        assert got == "a.bin, b.bin, c.bin (3 in total, 3K)"
+
+    def test_truncates_with_total_and_size(self, ssd):
+        got = ssd.format_files_field(
+            ["a.bin", "b.bin", "c.bin", "d.bin"], 16 * 1024
+        )
+        assert got == "a.bin, b.bin, c.bin (4 in total, 16K)"
 
 
 class TestRecreateOutdir:
@@ -615,6 +602,7 @@ class TestEndToEnd:
         assert captured.out == ""
         assert "SSD dump tool started" in captured.err
         assert "SSD dump tool succeeded" in captured.err
+        assert "SSD dump tool results:" not in captured.err
 
     def test_verify_refuses_dir_symlink(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -821,8 +809,7 @@ class TestEndToEnd:
         write_json(
             cfg,
             {
-                "defaults": {"timeout_sec": 120, "gzip": True, "gzip_level": 5,
-                             "min_free_mb": 1},
+                "defaults": {"timeout_sec": 120, "min_free_mb": 1},
                 "vendors": {"Virtium": {"models": {
                     "NO_SUCH_MODEL": {
                         "tool": "vtFA_RTK_5766_v2",
@@ -976,18 +963,6 @@ class TestEndToEnd:
         assert "invalid config" in text
         assert "device_form" in text
 
-    def test_gzip_level_10_rejected_by_verify(
-        self, ssd, tmp_path, monkeypatch, capsys
-    ):
-        cfg = tmp_path / "cfg.json"
-        obj = virtium_cfg("vtFA")
-        obj["defaults"]["gzip_level"] = 10
-        write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
-        text = "".join(capsys.readouterr())
-        assert rc != 0
-        assert "gzip_level" in text
-
     def test_args_string_rejected_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
@@ -1003,17 +978,38 @@ class TestEndToEnd:
         assert "invalid config" in text
         assert "args" in text
 
-    def test_gzip_string_false_rejected_by_verify(
+    def test_legacy_gzip_keys_ignored_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
+        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        obj = virtium_cfg("vtFA")
-        obj["defaults"]["gzip"] = "false"
+        obj = virtium_cfg(tool)
+        obj["defaults"]["gzip"] = True
+        obj["defaults"]["gzip_level"] = 10
+        obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"][
+            "gzip"
+        ] = False
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
+        outdir = tmp_path / "out"
+        outdir.mkdir()
+        self._nvme(ssd, monkeypatch)
+        rc = ssd.main(
+            [
+                "--verify",
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
         text = "".join(capsys.readouterr())
-        assert rc != 0
-        assert "defaults.gzip" in text
+        assert rc == 0
+        assert "invalid config" not in text
+        assert "gzip_level" not in text
+        assert "gzip:" not in text
 
     def test_timeout_bool_rejected_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -1076,7 +1072,7 @@ class TestEndToEnd:
         assert seen == []
         assert not (tmp_path / "out.tar.gz").exists()
 
-    def test_fake_tool_gzip(self, ssd, tmp_path, monkeypatch):
+    def test_fake_tool_packs_bin(self, ssd, tmp_path, monkeypatch, capsys):
         tool = str(tmp_path / "vtFA_RTK_5766_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
@@ -1099,16 +1095,58 @@ class TestEndToEnd:
         assert "status: ok" in status
         assert "Status: Ok / succeeded" in status
         assert not any(ln.startswith("warning:") for ln in status.splitlines())
-        assert "nandlog_64384-1454.bin.gz" in status
+        assert "nandlog_64384-1454.bin" in status
         assert not outdir.exists()
         names = tar_names(tar_path)
-        assert "out/nandlog_64384-1454.bin.gz" in names
-        assert "out/nandlog_64384-1454.bin" not in names
+        assert "out/nandlog_64384-1454.bin" in names
+        assert "out/nandlog_64384-1454.bin.gz" not in names
         log = tar_text(tar_path, "out/ssd-dump-tool.log")
         assert "SSD dump tool started" in log
-        assert "SSD dump tool succeeded" in log
+        want = "SSD dump tool results: %s.tar.gz" % os.path.abspath(str(outdir))
+        assert want in log
+        started = log.index("SSD dump tool started")
+        results = log.index(want)
+        succeeded = log.index("SSD dump tool succeeded")
+        assert started < results < succeeded
+        err = capsys.readouterr().err
+        assert err.index("SSD dump tool started") < err.index(want)
+        assert err.index(want) < err.index("SSD dump tool succeeded")
         assert "written to file" in log
         assert "out/ssd-dump-tool.txt" not in names
+
+    def test_no_tar_keeps_dir(self, ssd, tmp_path, monkeypatch, capsys):
+        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(tool))
+        outdir = tmp_path / "out"
+        tar_path = tmp_path / "out.tar.gz"
+        tar_path.write_bytes(b"OLD")
+        self._nvme(ssd, monkeypatch)
+        rc = ssd.main(
+            [
+                "--no-tar",
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc == 0, status
+        assert "status: ok" in status
+        assert outdir.is_dir()
+        assert (outdir / "nandlog_64384-1454.bin").is_file()
+        assert tar_path.read_bytes() == b"OLD"
+        want = "SSD dump tool results: %s/" % os.path.abspath(str(outdir))
+        log = (outdir / "ssd-dump-tool.log").read_text()
+        assert want in log
+        err = capsys.readouterr().err
+        assert want in err
+        assert err.index("SSD dump tool started") < err.index(want)
+        assert err.index(want) < err.index("SSD dump tool succeeded")
 
     def test_files_field_first_three_and_total(self, ssd, tmp_path, monkeypatch):
         tool = str(tmp_path / "vtFA_many")
@@ -1138,39 +1176,13 @@ class TestEndToEnd:
         tar_path = str(tmp_path / "out.tar.gz")
         status = tar_text(tar_path, "out/ssd-dump-status.log")
         assert rc == 0, status
-        assert "nandlog_a.bin.gz,nandlog_b.bin.gz,nandlog_c.bin.gz (4 in total)" in status
-        assert "nandlog_d.bin.gz" not in status.split("files:")[1].split("\n")[0]
-        names = tar_names(tar_path)
-        assert "out/nandlog_d.bin.gz" in names
-
-    def test_model_gzip_false_keeps_bin(self, ssd, tmp_path, monkeypatch):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
-        fake_tool(tool)
-        obj = virtium_cfg(tool)
-        obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"][
-            "gzip"
-        ] = False
-        cfg = tmp_path / "cfg.json"
-        write_json(cfg, obj)
-        outdir = tmp_path / "out"
-        self._nvme(ssd, monkeypatch)
-        rc = ssd.main(
-            [
-                "--config",
-                str(cfg),
-                "--outdir",
-                str(outdir),
-                "--device",
-                "/dev/nvme0",
-            ]
+        assert (
+            "nandlog_a.bin, nandlog_b.bin, nandlog_c.bin (4 in total, 1K)"
+            in status
         )
-        tar_path = str(tmp_path / "out.tar.gz")
-        status = tar_text(tar_path, "out/ssd-dump-status.log")
-        assert rc == 0, status
-        assert "gzip: no" in status
+        assert "nandlog_d.bin" not in status.split("files:")[1].split("\n")[0]
         names = tar_names(tar_path)
-        assert "out/nandlog_64384-1454.bin" in names
-        assert "out/nandlog_64384-1454.bin.gz" not in names
+        assert "out/nandlog_d.bin" in names
 
     def test_vendor_output_not_on_console(self, ssd, tmp_path, monkeypatch, capsys):
         tool = str(tmp_path / "vtFA_RTK_5766_v2")
@@ -1193,6 +1205,8 @@ class TestEndToEnd:
         captured = capsys.readouterr()
         tar_path = str(tmp_path / "out.tar.gz")
         assert "SSD dump tool started" in captured.err
+        want = "SSD dump tool results: %s.tar.gz" % os.path.abspath(str(outdir))
+        assert want in captured.err
         assert "SSD dump tool succeeded" in captured.err
         assert "written to file" not in captured.err
         assert "written to file" not in captured.out
@@ -1242,11 +1256,13 @@ class TestEndToEnd:
         assert "device_form: namespace" in status
         assert "-device_index" in status
         names = tar_names(tar_path)
-        assert "out/RD_Dump2_Header_20260907-125506.bin.gz" in names
-        assert "out/RD_Dump2_Data_20260907-125506.bin.gz" in names
+        assert "out/RD_Dump2_Header_20260907-125506.bin" in names
+        assert "out/RD_Dump2_Data_20260907-125506.bin" in names
     # SpellCheck-ignoreBlockEnd
 
-    def test_pack_fail_rewrites_status_warning(self, ssd, tmp_path, monkeypatch):
+    def test_pack_fail_rewrites_status_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
         tool = str(tmp_path / "vtFA_RTK_5766_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
@@ -1279,7 +1295,10 @@ class TestEndToEnd:
         assert tar_path.read_bytes() == b"GOOD"
         log = (outdir / "ssd-dump-tool.log").read_text()
         assert "SSD dump tool succeeded" not in log
+        assert "SSD dump tool results:" not in log
         assert "SSD dump tool failed: cannot pack outdir" in log
+        err = capsys.readouterr().err
+        assert "SSD dump tool results:" not in err
 
     # SpellCheck-ignoreBlockStart
     def test_phison_missing_namespace_is_warning(
@@ -1402,7 +1421,7 @@ class TestEndToEnd:
         assert "device: /dev/nvme0n1" in status
         assert "one_button" in status
         names = tar_names(tar_path)
-        assert "out/one_button/2026-09-08/Identify_CTL.bin.gz" in names
+        assert "out/one_button/2026-09-08/Identify_CTL.bin" in names
         assert not any("/Setting/" in n or n.endswith("/Setting") for n in names)
         assert not any("TestResult" in n for n in names)
         assert not any("Display_1.log" in n for n in names)

@@ -1,8 +1,6 @@
 {
   "defaults": {
     "timeout_sec": 120,
-    "gzip": true,
-    "gzip_level": 5,
     "min_free_mb": 64
   },
   "vendors": {

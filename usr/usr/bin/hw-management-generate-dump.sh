@@ -38,7 +38,6 @@
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
 SSD_LOG_DIR="/var/log/ssd-dump"
-SSD_TAR="/var/log/ssd-dump.tar.gz"
 board_type=$(cat /sys/devices/virtual/dmi/id/board_name 2>/dev/null || echo "")
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
 REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
@@ -184,9 +183,10 @@ dump_cmd "ip addr" "ip_addr" "5"
 dump_cmd "sx_sdk --version" "sx_sdk_ver" "5"
 dump_cpld_swb_cartridge
 
-# SSD vendor dump. Recreate $SSD_LOG_DIR; $SSD_TAR only on status ok.
+# SSD vendor dump. Recreate $SSD_LOG_DIR; copy as ssd-dump/,
+# then remove $SSD_LOG_DIR (Python --no-tar; no nested gzip).
 # Extra logic is in hw-management-ssd-dump-collect.sh (dump_cmd).
-dump_cmd "hw-management-ssd-dump-collect.sh $DUMP_FOLDER $SSD_LOG_DIR $SSD_TAR" \
+dump_cmd "hw-management-ssd-dump-collect.sh $DUMP_FOLDER $SSD_LOG_DIR" \
 	"ssd-dump-collect.log" "210"
 
 # Kill all the leftout child processes before creating the dump archive

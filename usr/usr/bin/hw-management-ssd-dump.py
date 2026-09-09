@@ -40,7 +40,6 @@ from __future__ import print_function
 
 import argparse
 import fnmatch
-import gzip
 import io
 import json
 import os
@@ -84,6 +83,7 @@ def syslog_warn(msg):
 
 
 MSG_STARTED = "SSD dump tool started"
+MSG_RESULTS = "SSD dump tool results: "
 
 
 def emit_always(msg):
@@ -103,6 +103,14 @@ def completion_message(fields):
     return "SSD dump tool succeeded"
 
 
+def results_message(outdir, no_tar):
+    """Where the operator looks after a successful collect."""
+    outdir = os.path.abspath(outdir)
+    if no_tar:
+        return "%s%s/" % (MSG_RESULTS, outdir.rstrip("/"))
+    return "%s%s.tar.gz" % (MSG_RESULTS, outdir)
+
+
 def append_log(log_path, msg):
     if not log_path or not os.path.isfile(log_path):
         return
@@ -114,17 +122,22 @@ def append_log(log_path, msg):
 
 
 def drop_trailing_success_line(log_path):
-    """Remove a premature 'succeeded' line if packing failed."""
+    """Remove a premature 'succeeded' (and results) line if packing failed."""
     marker = "SSD dump tool succeeded\n"
     if not log_path or not os.path.isfile(log_path):
         return
     try:
         with open(log_path, "r") as f:
             text = f.read()
-        if not text.endswith(marker):
-            return
+        if text.endswith(marker):
+            text = text[: -len(marker)]
+        body = text[:-1] if text.endswith("\n") else text
+        idx = body.rfind("\n")
+        last = body[idx + 1 :] if idx >= 0 else body
+        if last.startswith(MSG_RESULTS):
+            text = body[: idx + 1] if idx >= 0 else ""
         with open(log_path, "w") as f:
-            f.write(text[: -len(marker)])
+            f.write(text)
     except OSError:
         pass
 
@@ -169,13 +182,36 @@ def format_status_fields(fields):
     return "".join(lines)
 
 
-def format_files_field(relpaths, limit=FILES_FIELD_MAX):
-    """Comma list; if longer than limit, first N plus a total count."""
+def format_bytes_km(nbytes):
+    """Ceil dump size to K or M (1024). Zero bytes is 0K."""
+    try:
+        n = int(nbytes)
+    except (TypeError, ValueError):
+        n = 0
+    if n <= 0:
+        return "0K"
+    mb = 1024 * 1024
+    if n >= mb:
+        return "%dM" % ((n + mb - 1) // mb)
+    return "%dK" % ((n + 1023) // 1024)
+
+
+def created_files_total_bytes(paths):
+    total = 0
+    for path in paths:
+        try:
+            total += os.path.getsize(path)
+        except OSError:
+            pass
+    return total
+
+
+def format_files_field(relpaths, total_bytes, limit=FILES_FIELD_MAX):
+    """First names (comma-space), then count and K/M size of all files."""
     names = list(relpaths)
     n = len(names)
-    if n <= limit:
-        return ",".join(names)
-    return "%s (%d in total)" % (",".join(names[:limit]), n)
+    shown = ", ".join(names[:limit] if n > limit else names)
+    return "%s (%d in total, %s)" % (shown, n, format_bytes_km(total_bytes))
 
 
 def promote_tool_log(outdir):
@@ -234,12 +270,6 @@ def _config_int_range_msg(what, min_value, max_value):
     return "invalid config: %s (must be <= %s)" % (what, max_value)
 
 
-def _require_bool(obj, what):
-    if not isinstance(obj, bool):
-        raise DumpError("invalid config: %s" % what)
-    return obj
-
-
 def _require_string(obj, what):
     if not isinstance(obj, str) or not obj:
         raise DumpError("invalid config: %s" % what)
@@ -262,21 +292,12 @@ def _validate_config_shape(cfg):
     defaults = cfg.get("defaults")
     _require_dict(defaults, "defaults")
     if defaults:
-        if "gzip" in defaults:
-            _require_bool(defaults["gzip"], "defaults.gzip")
         if "timeout_sec" in defaults:
             _require_int(
                 defaults["timeout_sec"],
                 "defaults.timeout_sec",
                 min_value=1,
                 max_value=TIMEOUT_SEC_JSON_MAX,
-            )
-        if "gzip_level" in defaults:
-            _require_int(
-                defaults["gzip_level"],
-                "defaults.gzip_level",
-                min_value=0,
-                max_value=9,
             )
         if "min_free_mb" in defaults:
             _require_int(
@@ -317,11 +338,6 @@ def _validate_config_shape(cfg):
                     min_value=1,
                     max_value=TIMEOUT_SEC_JSON_MAX,
                 )
-            if mcfg and "gzip" in mcfg:
-                _require_bool(
-                    mcfg["gzip"],
-                    "vendors.%s.models.%s.gzip" % (vname, mkey),
-                )
             if mcfg and "stage_from" in mcfg:
                 _require_string(
                     mcfg["stage_from"],
@@ -359,8 +375,6 @@ def defaults_of(cfg):
     d = cfg.get("defaults") or {}
     return {
         "timeout_sec": int(d.get("timeout_sec", 120)),
-        "gzip": d.get("gzip", True),
-        "gzip_level": int(d.get("gzip_level", 5)),
         "min_free_mb": int(d.get("min_free_mb", 64)),
     }
 
@@ -548,23 +562,6 @@ def expand_args(args, mapping):
     return out
 
 
-def gzip_file(path, level):
-    gz_path = path + ".gz"
-    try:
-        with open(path, "rb") as f_in:
-            with gzip.open(gz_path, "wb", compresslevel=level) as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        os.remove(path)
-        return gz_path, None
-    except Exception as exc:
-        if os.path.isfile(gz_path):
-            try:
-                os.remove(gz_path)
-            except OSError:
-                pass
-        return path, str(exc)
-
-
 def list_created_files(outdir, skip_names):
     """Regular files in outdir except skip_names (status/log)."""
     skip = set(skip_names)
@@ -719,9 +716,7 @@ def run_collect(args, logf, fields):
     fields["config"] = cfg_path
     cfg = load_config(args.config)
     defs = defaults_of(cfg)
-    gzip_on = defs["gzip"] and not args.no_gzip
     timeout_sec = args.timeout if args.timeout is not None else defs["timeout_sec"]
-    fields["gzip"] = "yes" if gzip_on else "no"
     fields["min_free_mb"] = str(defs["min_free_mb"])
 
     outdir = os.path.abspath(args.outdir)
@@ -752,9 +747,6 @@ def run_collect(args, logf, fields):
     if args.timeout is not None:
         timeout_sec = args.timeout
     fields["timeout_sec"] = str(timeout_sec)
-    if "gzip" in mcfg:
-        gzip_on = bool(mcfg["gzip"]) and not args.no_gzip
-        fields["gzip"] = "yes" if gzip_on else "no"
 
     run_dev = map_device(device, mcfg.get("device_form", "controller"))
     check_nvme_node(run_dev)
@@ -833,25 +825,10 @@ def run_collect(args, logf, fields):
     if not matched:
         raise DumpError("vendor tool produced no dump files")
 
-    result_files = []
-    gzip_errors = []
-    if gzip_on:
-        for p in matched:
-            if p.endswith(".gz"):
-                result_files.append(p)
-                continue
-            newp, err = gzip_file(p, defs["gzip_level"])
-            result_files.append(newp)
-            if err:
-                gzip_errors.append("%s: %s" % (os.path.basename(p), err))
-    else:
-        result_files = matched
-
     fields["files"] = format_files_field(
-        os.path.relpath(p, outdir) for p in result_files
+        (os.path.relpath(p, outdir) for p in matched),
+        created_files_total_bytes(matched),
     )
-    if gzip_errors:
-        raise DumpError("gzip failed (kept uncompressed): %s" % "; ".join(gzip_errors))
     fields["status"] = "ok"
     fields["warning"] = ""
     return 0
@@ -879,7 +856,6 @@ def parse_args(argv):
         default=DEFAULT_CONFIG,
         help="JSON config (default: %s)" % DEFAULT_CONFIG,
     )
-    p.add_argument("--no-gzip", action="store_true", help="do not gzip dump files")
     p.add_argument(
         "--timeout",
         type=_positive_int,
@@ -890,6 +866,11 @@ def parse_args(argv):
         "--quiet",
         action="store_true",
         help="hide status fields on --verify stdout; start/fail still print",
+    )
+    p.add_argument(
+        "--no-tar",
+        action="store_true",
+        help="do not pack <outdir>.tar.gz (leave the work directory)",
     )
     p.add_argument(
         "--verify",
@@ -1029,7 +1010,11 @@ def run_dump(args):
 
         if fields.get("status") != "ok":
             return rc
+        append_log(log_path, results_message(outdir, args.no_tar))
         append_log(log_path, completion_message(fields))
+        if args.no_tar:
+            log_path = None
+            return rc
         try:
             pack_outdir(outdir)
         except (OSError, tarfile.TarError) as exc:
@@ -1048,6 +1033,8 @@ def run_dump(args):
         return rc
     finally:
         append_log(log_path, completion_message(fields))
+        if fields.get("status") == "ok":
+            emit_always(results_message(outdir, args.no_tar))
         emit_always(completion_message(fields))
 
 

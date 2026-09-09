@@ -33,22 +33,23 @@
 #
 
 # Not a user CLI. generate-dump.sh dump_cmd always passes the
-# three allowlisted paths below. Do not invoke this helper with
+# two allowlisted paths below. Do not invoke this helper with
 # other directories. Custom location / FAE:
 #   sudo hw-management-ssd-dump.py [--outdir DIR]
 # Allowlist stays: this script rm -rf SSD_LOG_DIR and copies
-# into DUMP_FOLDER as root. Python packs $SSD_TAR only on
-# status ok. Do not delete or replace $SSD_TAR on warning
-# (keep last good nandlog). Copy leftover work dir into
-# DUMP_FOLDER. Best-effort: always exit 0 after a valid invoke.
+# into DUMP_FOLDER as root. Python --no-tar: leave the work
+# dir for the helper to copy as ssd-dump/. Then the helper
+# removes /var/log/ssd-dump (standalone --no-tar keeps it).
+# Do not copy /var/log/ssd-dump.tar.gz into DUMP_FOLDER.
+# Best-effort: always exit 0 after a valid invoke.
 # One caller at a time (no lock). Paths must be real, not
 # symlinks.
 #
 # Usage:
-#   hw-management-ssd-dump-collect.sh <DUMP_FOLDER> <SSD_LOG_DIR> <SSD_TAR>
+#   hw-management-ssd-dump-collect.sh <DUMP_FOLDER> <SSD_LOG_DIR>
 # Example:
 #   hw-management-ssd-dump-collect.sh /tmp/hw-mgmt-dump \
-#     /var/log/ssd-dump /var/log/ssd-dump.tar.gz
+#     /var/log/ssd-dump
 #
 # FAE / standalone nandlog (not this helper):
 #   sudo hw-management-ssd-dump.py
@@ -57,22 +58,21 @@
 
 DUMP_FOLDER=$1
 SSD_LOG_DIR=$2
-SSD_TAR=$3
 SSD_TOOL_TIMEOUT=195
 SSD_TOOL_KILL_AFTER=5
-# 195 = JSON vendor timeout (max 120) + gzip/pack.
+# 195 = JSON vendor timeout (max 120) + status/copy.
 # JSON timeout_sec is capped at 120 so this wrapper cannot
 # kill a still-legal collect. Standalone --timeout may be
 # higher (FAE); generate-dump always uses JSON only.
 # 195+5=200; dump_cmd 210 leaves ~10 s to copy leftover dir.
 
-if [ -z "$DUMP_FOLDER" ] || [ -z "$SSD_LOG_DIR" ] || [ -z "$SSD_TAR" ]; then
-	echo "Usage: hw-management-ssd-dump-collect.sh <DUMP_FOLDER> <SSD_LOG_DIR> <SSD_TAR>" >&2
+if [ -z "$DUMP_FOLDER" ] || [ -z "$SSD_LOG_DIR" ]; then
+	echo "Usage: hw-management-ssd-dump-collect.sh <DUMP_FOLDER> <SSD_LOG_DIR>" >&2
 	exit 1
 fi
 
 # Refuse unexpected paths. generate-dump always passes these
-# three; the checks are for anyone else who runs this helper.
+# two; the checks are for anyone else who runs this helper.
 # Also refuse if an allowlisted path is a symlink (do not
 # follow into another tree). DUMP_FOLDER must be a real
 # directory owned by this uid (generate-dump mkdir is 0755).
@@ -94,20 +94,9 @@ case "$SSD_LOG_DIR" in
 		exit 1
 		;;
 esac
-case "$SSD_TAR" in
-	/var/log/ssd-dump.tar.gz) ;;
-	*)
-		echo "Invalid SSD_TAR: $SSD_TAR" >&2
-		exit 1
-		;;
-esac
 
 if [ -L "$SSD_LOG_DIR" ]; then
 	echo "Invalid SSD_LOG_DIR symlink: $SSD_LOG_DIR" >&2
-	exit 1
-fi
-if [ -L "$SSD_TAR" ]; then
-	echo "Invalid SSD_TAR symlink: $SSD_TAR" >&2
 	exit 1
 fi
 
@@ -175,7 +164,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 	write_status_warning "python3 not found on PATH"
 elif [ -x "$(command -v hw-management-ssd-dump.py)" ]; then
 	timeout --kill-after="$SSD_TOOL_KILL_AFTER" "$SSD_TOOL_TIMEOUT" \
-		hw-management-ssd-dump.py --quiet \
+		hw-management-ssd-dump.py --quiet --no-tar \
 		--outdir "$SSD_LOG_DIR" || true
 else
 	write_status_warning "hw-management-ssd-dump.py not found on PATH"
@@ -183,21 +172,17 @@ fi
 
 if [ -d "$SSD_LOG_DIR" ]; then
 	st="$SSD_LOG_DIR/ssd-dump-status.log"
-	# Pack removes the work dir. Leftover + status ok means the
-	# process died after write_status and before the archive
-	# commit. Missing status is the same incomplete run.
-	if [ ! -f "$st" ] || grep -q '^status: ok$' "$st"; then
+	if [ ! -f "$st" ]; then
 		write_status_warning \
-			"hw-management-ssd-dump.py terminated before packing"
+			"hw-management-ssd-dump.py terminated before status"
 	fi
 fi
 
-if [ -f "$SSD_TAR" ]; then
-	cp -a "$SSD_TAR" "$DUMP_FOLDER/" 2>/dev/null || true
-fi
 if [ -d "$SSD_LOG_DIR" ]; then
 	rm -rf "$DUMP_FOLDER/ssd-dump"
-	cp -a "$SSD_LOG_DIR" "$DUMP_FOLDER/ssd-dump" 2>/dev/null || true
+	if cp -a "$SSD_LOG_DIR" "$DUMP_FOLDER/ssd-dump" 2>/dev/null; then
+		rm -rf "$SSD_LOG_DIR"
+	fi
 fi
 
 exit 0
