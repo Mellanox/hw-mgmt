@@ -284,6 +284,44 @@ SHIM
     check_file_value "$RUN_OUT2/domains/reset_watchdog" "1" "WDT: domains/reset_watchdog=1"
     check_file_value "$RUN_OUT2/domains/reset_power_on" "0" "WDT: domains/reset_power_on=0"
 
+    # Case B2: SCU0 software WDT7 + SCU1 non-software WDT0.
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0x00000000" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x80000000" ;;
+reset_cause_scu1_0) echo "0x00000000" ;;
+reset_cause_scu1_3) echo "0x00000001" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT2B="$WORK/run_out2b"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT2B" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT2B/reset_soft_reboot" "1" "mixed WDT words: reset_soft_reboot=1"
+    check_file_value "$RUN_OUT2B/domains/reset_software" "1" "SCU0 WDT7 SW: domains/reset_software=1"
+    check_file_value "$RUN_OUT2B/domains/reset_watchdog" "1" "SCU1 WDT0 FULL: domains/reset_watchdog=1"
+
+    # Case B3: SCU0 non-software WDT0 + SCU1 software WDT1.
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0x00000000" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x00000002" ;;
+reset_cause_scu1_0) echo "0x00000000" ;;
+reset_cause_scu1_3) echo "0x00000080" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUT2C="$WORK/run_out2c"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUT2C" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUT2C/reset_soft_reboot" "1" "mixed WDT nibbles: reset_soft_reboot=1"
+    check_file_value "$RUN_OUT2C/domains/reset_software" "1" "SCU1 WDT1 SW: domains/reset_software=1"
+    check_file_value "$RUN_OUT2C/domains/reset_watchdog" "1" "SCU0 WDT0 FULL: domains/reset_watchdog=1"
+
     # Case C: AC fingerprint (SRST, no WDT/ABR) - pwr_cycle
     cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
 #!/bin/sh
@@ -391,9 +429,9 @@ SHIM
 case "$2" in
 reset_cause_scu0_0) echo "0xffffff31" ;;
 reset_cause_scu0_1) echo "0x80000000" ;;
-reset_cause_scu0_2) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x80000002" ;;
 reset_cause_scu1_0) echo "0xffffef70" ;;
-reset_cause_scu1_3) echo "0x00000000" ;;
+reset_cause_scu1_3) echo "0x00000081" ;;
 *) exit 1 ;;
 esac
 SHIM
@@ -402,8 +440,8 @@ SHIM
         sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
     if grep -q "0x12c02050 32 0x00000001" "$CLEAR_LOG" \
         && grep -q "0x12c02060 32 0x80000000" "$CLEAR_LOG" \
-        && grep -q "0x12c02070 32 0x00000000" "$CLEAR_LOG" \
-        && grep -q "0x14c02080 32 0x00000000" "$CLEAR_LOG"; then
+        && grep -q "0x12c02070 32 0x80000002" "$CLEAR_LOG" \
+        && grep -q "0x14c02080 32 0x00000081" "$CLEAR_LOG"; then
         if grep -q "0x14c02050" "$CLEAR_LOG"; then
             fail "CLEAR_SCU_RESET_LOG=1 must not clear SCU1 0x050 (log=$(cat "$CLEAR_LOG"))"
         else

@@ -15,6 +15,7 @@ Kernel-6.12
 |0011-arm64-dts-aspeed-spc6-bmc-fix-sgmii-phy-names.patch         |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; mac2 phy-names match ftgmac100 "sgmii"    |
 |0012-usb-ehci-Add-Aspeed-AST2700-support.patch                   | 274f2232a94f       | Bugfix upstream;skip[ALL];take[sonic]    |            | BMC; AST2700 ehci1 probe ENOMEM - 64-bit DMA   |
 |0013-watchdog-aspeed-Set-WDT_RESET_MASK1-bit-1-on-AST2700.patch  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; AST2700 errata 9 - MBus hang on WDT reset |
+|0014-watchdog-aspeed-Preserve-AST2700-reset-event-logs.patch     |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; preserve WDT cause until userspace export |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:

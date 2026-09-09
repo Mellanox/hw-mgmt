@@ -36,7 +36,8 @@
 # Export BMC reset cause into hw-management style files.
 # BusyBox ash (/bin/sh): POSIX sh + C-style 0x arithmetic and bitwise ops; no bashisms.
 #
-# AST2700 primary source:
+# AST2700 primary source (preserved by U-Boot and the SONiC kernel patch until
+# this exporter snapshots the words and performs the W1C handoff):
 #   SCU0 0x050 (Reset Event Log Set 0) - SRST# / EXTRST# for power-channel
 #   SCU0 0x060 (Reset Event Log Set 2) - ABR / WDTA bit 31
 #   SCU0 0x070 (Reset Event Log Set 3) + SCU1 0x080 (Set 4) - WDT evidence
@@ -299,11 +300,15 @@ espi=$((((scu1_log0 >> 29) & 1) | ((scu1_log0 >> 28) & 1) | ((scu1_log0 >> 5) & 
 emmc=$(((scu0_log0 >> 31) & 1))
 msi=$(((scu0_log0 >> 30) & 1))
 
-# SCU1 0x080: each nibble is WDTx {SW,SOC,ARM,FULL}.
+# SCU reset-event WDT nibbles:
+#   SCU1 0x080: WDTx {SW,SOC,ARM,FULL}
+#   SCU0 0x070: WDTx {SW,PSP,FULL,SOC}
+# In both words bit 3 of each nibble is software and bits 0-2 are
+# non-software watchdog reset signals.
 soft_wdt_mask=$((0x88888888))
 non_soft_wdt_mask=$((0x77777777))
-software=$(((scu1_log3 & soft_wdt_mask) != 0))
-watchdog=$((((scu1_log3 & non_soft_wdt_mask) != 0) | (scu0_log2 != 0)))
+software=$((((scu1_log3 | scu0_log2) & soft_wdt_mask) != 0))
+watchdog=$((((scu1_log3 | scu0_log2) & non_soft_wdt_mask) != 0))
 
 # WDT2 group at bits [11:8] in SCU1 0x080.
 security_watchdog2=$((((scu1_log3 >> 8) & 0xF) != 0))

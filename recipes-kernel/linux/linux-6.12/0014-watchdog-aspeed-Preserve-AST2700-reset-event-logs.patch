@@ -1,0 +1,40 @@
+From: Dvir Zaguri <dzaguri@nvidia.com>
+Date: Wed, 9 Sep 2026 14:00:00 +0300
+Subject: [PATCH 6.12 1/1] watchdog: aspeed: Preserve AST2700 reset event logs
+
+The AST2700 reset event log is needed by the SONiC BMC reset-cause
+exporter after the watchdog devices have probed. Do not write-1-to-clear
+the AST2700 SCU0 reset event log from the watchdog driver; userspace
+snapshots the reset logs and clears the exported bits.
+
+Keep the existing driver-owned clear behavior for earlier Aspeed SoCs.
+
+Upstream-Status: Inappropriate [SONiC BMC reset-cause policy]
+
+Signed-off-by: Dvir Zaguri <dzaguri@nvidia.com>
+---
+ drivers/watchdog/aspeed_wdt.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/watchdog/aspeed_wdt.c b/drivers/watchdog/aspeed_wdt.c
+index 42b913fb4b99..ddfa327259c9 100644
+--- a/drivers/watchdog/aspeed_wdt.c
++++ b/drivers/watchdog/aspeed_wdt.c
+@@ -313,9 +313,17 @@ static void aspeed_wdt_update_bootstatus(struct platform_device *pdev,
+ 	if (status & (scu.wdt_reset_mask << reset_mask_shift))
+ 		wdt->wdd.bootstatus = WDIOF_CARDRESET;
+ 
++	/*
++	 * The SONiC BMC reset-cause exporter snapshots the AST2700 SCU reset
++	 * event logs after watchdog probe and then clears only the exported
++	 * bits. Preserve SCU0 0x070 until that handoff is complete.
++	 */
++	if (of_device_is_compatible(pdev->dev.of_node, "aspeed,ast2700-wdt"))
++		return;
++
+ 	/* clear wdt reset event flag */
+ 	if (of_device_is_compatible(pdev->dev.of_node, "aspeed,ast2400-wdt") ||
+ 	    of_device_is_compatible(pdev->dev.of_node, "aspeed,ast2500-wdt")) {
+ 		ret = regmap_read(scu_base, scu.reset_status_reg, &status);
+ 		if (!ret) {
+ 			status &= ~(scu.wdt_reset_mask << reset_mask_shift);
