@@ -122,11 +122,11 @@
         },
         {
             "key": "xdpe1a2g7_pwr_conv_0",
-            "spec": "xdpe1a2g7 0x5c 7 pwr_conv1"
+            "spec": "xdpe1a2g7b 0x5c 7 pwr_conv1"
         },
         {
             "key": "xdpe1a2g7_pwr_conv_1",
-            "spec": "xdpe1a2g7 0x5c 39 pwr_conv2"
+            "spec": "xdpe1a2g7b 0x5c 39 pwr_conv2"
         }
     ],
     "platform": [
