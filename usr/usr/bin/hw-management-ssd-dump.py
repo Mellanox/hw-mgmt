@@ -318,6 +318,11 @@ def _validate_config_shape(cfg):
             _require_string(
                 mcfg["tool"], "vendors.%s.models.%s.tool" % (vname, mkey)
             )
+            if mcfg.get("tool_alt"):
+                _require_string(
+                    mcfg["tool_alt"],
+                    "vendors.%s.models.%s.tool_alt" % (vname, mkey),
+                )
             if "args" not in mcfg:
                 raise DumpError(
                     "invalid config: vendors.%s.models.%s.args" % (vname, mkey)
@@ -711,6 +716,33 @@ def find_tool(name):
     raise DumpError("SSD dump tool not found on PATH: %s" % name)
 
 
+def tool_candidates(mcfg):
+    """JSON `tool` then optional `tool_alt` (old vendor basename)."""
+    names = []
+    for key in ("tool", "tool_alt"):
+        val = (mcfg.get(key) or "") if mcfg else ""
+        if val and val not in names:
+            names.append(val)
+    return names
+
+
+def resolve_tool(mcfg):
+    """First executable JSON tool name; basename used is fields['tool']."""
+    names = tool_candidates(mcfg)
+    if not names:
+        raise DumpError("SSD dump tool not found on PATH: ")
+    nonexec = None
+    for name in names:
+        try:
+            return find_tool(name), name
+        except DumpError as exc:
+            if "not executable" in str(exc) and nonexec is None:
+                nonexec = exc
+    if nonexec is not None:
+        raise nonexec
+    raise DumpError("SSD dump tool not found on PATH: %s" % ", ".join(names))
+
+
 def run_collect(args, logf, fields):
     cfg_path = os.path.abspath(args.config)
     fields["config"] = cfg_path
@@ -753,9 +785,8 @@ def run_collect(args, logf, fields):
     fields["device"] = run_dev
     fields["device_form"] = mcfg.get("device_form", "controller")
 
-    tool = mcfg.get("tool") or ""
+    tool_path, tool = resolve_tool(mcfg)
     fields["tool"] = tool
-    tool_path = find_tool(tool)
     fields["tool_path"] = tool_path
 
     stage_from = mcfg.get("stage_from") or ""

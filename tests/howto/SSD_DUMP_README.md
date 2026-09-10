@@ -113,13 +113,19 @@ is ignored (no syslog).
 
 ## NOS image contract
 
-NOS must put the JSON `tool` name on `PATH` as-is
-(`virtium_nvme_dump_v2`, `phison_nvme_dump_v2`,
-`smi_nvme_dump_v1`). Dump-tools 1.0 (`bsp_ssd_dump_tools_1.0`)
-is Virtium, Phison, and Silicon Motion. SMI `smi/` tree goes to
-`/usr/share/hw-management-ssd/smi`. If the tool is missing, the
-hw-mgmt dump is still created; `ssd-dump-status.log` has a
-warning.
+NOS must put a JSON `tool` or `tool_alt` name on `PATH`.
+Preferred NOS names: `virtium_nvme_dump_v2`, `phison_nvme_dump_v2`,
+`smi_nvme_dump_v1`. If those are missing, the collector tries
+vendor originals (`vtFA_RTK_5766_v2`,
+`PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2`,
+`NVMe_Tool_SM2268XT2_Ferri_64_Z0717A`). Dump-tools 1.0
+(`bsp_ssd_dump_tools_1.0`) is Virtium, Phison, and Silicon
+Motion. SMI `smi/` tree goes to
+`/usr/share/hw-management-ssd/smi`. If neither name is on PATH,
+the hw-mgmt dump is still created; `ssd-dump-status.log` has a
+warning. Later NOS may install `virtium_nvme_dump_v2` (etc.) as
+a symlink to the vendor basename; `tool` then matches and
+`tool_alt` is unused.
 
 One NVMe: first controller whose sysfs model is in JSON. Model/fw
 from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
@@ -202,7 +208,7 @@ be higher.
 
 Add a `vendors.<Name>.models.<Key>` object (`Key` is the last Identify
 token, including `-…`):
-`tool`, `args` (`{device}`, `{outdir}`, `{model}`), `device_form`
+`tool`, optional `tool_alt` (old vendor basename on PATH), `args` (`{device}`, `{outdir}`, `{model}`), `device_form`
 (`controller` or `namespace`), optional `timeout_sec`.
 Optional absolute `stage_from`, `stage_cfg` (cwd
 name `one_button.cfg`),

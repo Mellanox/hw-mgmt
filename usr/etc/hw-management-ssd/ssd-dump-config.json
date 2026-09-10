@@ -8,6 +8,7 @@
       "models": {
         "VTPM24CEXI080-BM110006": {
           "tool": "virtium_nvme_dump_v2",
+          "tool_alt": "vtFA_RTK_5766_v2",
           "args": ["{device}"],
           "device_form": "controller",
           "timeout_sec": 90
@@ -18,6 +19,7 @@
       "models": {
         "ESLS080GTUE-A329IJ1-TYJN": {
           "tool": "phison_nvme_dump_v2",
+          "tool_alt": "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2",
           "args": ["-device_index", "{device}"],
           "device_form": "namespace",
           "timeout_sec": 120
@@ -28,6 +30,7 @@
       "models": {
         "MD681GEEBC82": {
           "tool": "smi_nvme_dump_v1",
+          "tool_alt": "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A",
           "args": ["{device}", "one_button"],
           "device_form": "namespace",
           "timeout_sec": 120,

@@ -267,16 +267,21 @@ class TestModelMatch:
         assert m["device_form"] == "namespace"
         assert m["timeout_sec"] == 120
         assert m["tool"] == "phison_nvme_dump_v2"
+        assert m["tool_alt"] == (
+            "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2"
+        )
         v2, k2, m2 = ssd.find_model_config(
             cfg, "Virtium VTPM24CEXI080-BM110006"
         )
         assert v2 == "Virtium" and k2 == "VTPM24CEXI080-BM110006"
         assert m2["device_form"] == "controller"
         assert m2["tool"] == "virtium_nvme_dump_v2"
+        assert m2["tool_alt"] == "vtFA_RTK_5766_v2"
         v3, k3, m3 = ssd.find_model_config(cfg, "MD681GEEBC82")
         assert v3 == "Silicon Motion" and k3 == "MD681GEEBC82"
         assert m3["device_form"] == "namespace"
         assert m3["tool"] == "smi_nvme_dump_v1"
+        assert m3["tool_alt"] == "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A"
         assert m3["stage_from"] == "/usr/share/hw-management-ssd/smi"
         assert m3["stage_cfg"] == "one_button_NV.cfg"
     # SpellCheck-ignoreBlockEnd
@@ -463,6 +468,42 @@ class TestFindTool:
         os.chmod(str(good), 0o755)
         monkeypatch.setenv("PATH", "%s%s%s" % (d1, os.pathsep, d2))
         assert ssd.find_tool("virtium_nvme_dump_v2") == str(good)
+
+    def test_resolve_uses_alt_if_primary_missing(self, ssd, tmp_path, monkeypatch):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        alt = bin_dir / "vtFA_RTK_5766_v2"
+        alt.write_text("x")
+        os.chmod(str(alt), 0o755)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        path, name = ssd.resolve_tool(
+            {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
+        )
+        assert name == "vtFA_RTK_5766_v2"
+        assert path == str(alt)
+
+    def test_resolve_prefers_primary(self, ssd, tmp_path, monkeypatch):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        primary = bin_dir / "virtium_nvme_dump_v2"
+        alt = bin_dir / "vtFA_RTK_5766_v2"
+        primary.write_text("p")
+        alt.write_text("a")
+        os.chmod(str(primary), 0o755)
+        os.chmod(str(alt), 0o755)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        path, name = ssd.resolve_tool(
+            {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
+        )
+        assert name == "virtium_nvme_dump_v2"
+        assert path == str(primary)
+
+    def test_resolve_missing_both(self, ssd, tmp_path, monkeypatch):
+        monkeypatch.setenv("PATH", str(tmp_path))
+        with pytest.raises(ssd.DumpError, match="not found on PATH"):
+            ssd.resolve_tool(
+                {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
+            )
 
 
 def _dev_stat(mode):
