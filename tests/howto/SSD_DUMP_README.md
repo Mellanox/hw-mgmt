@@ -163,7 +163,11 @@ Work dir:
 - generate-dump helper: runs Python `--quiet --no-tar`. Copies
   leftover `$SSD_LOG_DIR` as **`ssd-dump/`**, then removes
   `/var/log/ssd-dump`. Does **not** put `ssd-dump.tar.gz` inside
-  the hw-mgmt tar.
+  the hw-mgmt tar. If the copy fails (full filesystem), stderr
+  (ssd-dump-collect.log) gets the error, status is rewritten to
+  warning, `$SSD_LOG_DIR` is kept, and a stub `ssd-dump/` with
+  the status file is left in DUMP_FOLDER. Helper still exits 0
+  so the rest of generate-dump is packed.
 
 - `ssd-dump-status.log` — status, model, `part`, tool, `tool_rc`,
   files (first 3 names, comma-space; then `(N in total, 12M)`

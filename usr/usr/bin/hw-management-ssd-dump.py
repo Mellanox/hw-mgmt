@@ -133,7 +133,7 @@ def drop_trailing_success_line(log_path):
             text = text[: -len(marker)]
         body = text[:-1] if text.endswith("\n") else text
         idx = body.rfind("\n")
-        last = body[idx + 1 :] if idx >= 0 else body
+        last = body[idx + 1:] if idx >= 0 else body
         if last.startswith(MSG_RESULTS):
             text = body[: idx + 1] if idx >= 0 else ""
         with open(log_path, "w") as f:

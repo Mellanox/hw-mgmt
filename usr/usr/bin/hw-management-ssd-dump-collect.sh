@@ -41,7 +41,10 @@
 # dir for the helper to copy as ssd-dump/. Then the helper
 # removes /var/log/ssd-dump (standalone --no-tar keeps it).
 # Do not copy /var/log/ssd-dump.tar.gz into DUMP_FOLDER.
-# Best-effort: always exit 0 after a valid invoke.
+# Best-effort: always exit 0 after a valid invoke so
+# generate-dump still packs the rest of DUMP_FOLDER. A failed
+# copy is written to stderr (ssd-dump-collect.log) and the
+# work dir is kept.
 # One caller at a time (no lock). Paths must be real, not
 # symlinks.
 #
@@ -180,8 +183,18 @@ fi
 
 if [ -d "$SSD_LOG_DIR" ]; then
 	rm -rf "$DUMP_FOLDER/ssd-dump"
-	if cp -a "$SSD_LOG_DIR" "$DUMP_FOLDER/ssd-dump" 2>/dev/null; then
+	if cp -a "$SSD_LOG_DIR" "$DUMP_FOLDER/ssd-dump"; then
 		rm -rf "$SSD_LOG_DIR"
+	else
+		msg="failed to copy $SSD_LOG_DIR to $DUMP_FOLDER/ssd-dump"
+		echo "$msg" >&2
+		write_status_warning "$msg"
+		rm -rf "$DUMP_FOLDER/ssd-dump"
+		mkdir -p "$DUMP_FOLDER/ssd-dump"
+		if [ -f "$SSD_LOG_DIR/ssd-dump-status.log" ]; then
+			cp -a "$SSD_LOG_DIR/ssd-dump-status.log" \
+				"$DUMP_FOLDER/ssd-dump/" 2>/dev/null || true
+		fi
 	fi
 fi
 
