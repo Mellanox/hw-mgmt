@@ -10,11 +10,11 @@
         },
         {
             "key": "lm5066i_0",
-            "spec": "lm5066i 0x12 6 pdb_hotswap1"
+            "spec": "lm5066i 0x12 6 hotswap1"
         },
         {
             "key": "lm5066i_1",
-            "spec": "lm5066i 0x12 22 pdb_hotswap2"
+            "spec": "lm5066i 0x12 22 hotswap2"
         },
         {
             "key": "mp29816_0",
@@ -66,11 +66,11 @@
         },
         {
             "key": "mp5926_0",
-            "spec": "mp5926 0x12 6 pdb_hotswap1"
+            "spec": "mp5926 0x12 6 hotswap1"
         },
         {
             "key": "mp5926_1",
-            "spec": "mp5926 0x12 22 pdb_hotswap2"
+            "spec": "mp5926 0x12 22 hotswap2"
         },
         {
             "key": "xdpe1a2g7_0",
