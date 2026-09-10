@@ -172,7 +172,8 @@ BMC, **`ifup`** on the host where **`/etc/network/interfaces`** defines **usb0**
 | **`bmc/usr/etc/<HID>/hw-management-bmc-network.conf`** | Default non-SONiC platform config (**`USB0_ADDRESS`**) |
 | **`bmc/usr/usr/bin/hw-management-bmc-plat-specific-preps.sh`** | Renders or skips **`.network`** unit |
 | **`bmc/usr/usr/bin/hw-management-bmc-ready-common.sh`** | **`usb_net_config()`** |
-| **`usr/usr/bin/hw-management-ifupdown.sh`** | Host udev **`ifup`** (skips **usb0** when SONiC + contract file) |
+| **`usr/usr/bin/hw-management-ifupdown.sh`** | Host **`ifup`** (skips **usb0** when SONiC + contract file) |
+| **`debian/hw-management-ifupdown@.service`** | Runs the above after **`networking.service`**, pulled in by the interface's device unit (**`SYSTEMD_WANTS`** in **`usr/lib/udev/rules.d/70-hw-management-bmc.rules`**) |
 | **`usr/usr/bin/hw-management-helpers.sh`** | **`check_host_usb0_managed_by_nos()`** |
 | **`usr/usr/bin/hw_management_sonic_check.py`** | SONiC host detection |
 | **`bmc/README.md`** | Full BMC package and **usb0** documentation |

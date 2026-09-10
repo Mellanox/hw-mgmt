@@ -58,6 +58,14 @@ ifeq ($(DEB_HOST_ARCH),arm64)
 endif
 	dh_installdirs -p$(pname) lib/udev/rules.d/
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
+	# usb0 ifup unit: a template unit activated by the interface's device unit
+	# (SYSTEMD_WANTS in 70-hw-management-bmc.rules), so it must be neither
+	# enabled nor started at install time. That is why it is installed here
+	# instead of going through dh_installinit / dh_systemd_enable /
+	# dh_systemd_start like the other host services.
+	dh_installdirs -p$(pname) lib/systemd/system
+	install -m 0644 debian/hw-management-ifupdown@.service \
+		debian/$(pname)/lib/systemd/system/hw-management-ifupdown@.service
 	dh_installdirs -p$(pname) etc/hw-management-sensors
 	cp usr/etc/hw-management-sensors/* debian/$(pname)/etc/hw-management-sensors
 	dh_installdirs -p$(pname) etc/hw-management-thermal
