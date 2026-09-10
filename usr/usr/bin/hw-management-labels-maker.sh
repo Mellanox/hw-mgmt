@@ -241,19 +241,19 @@ make_labels()
 		;;
 	hotswap1_in*|hotswap2_in*|hotswap3_in*|hotswap4_in*)
 		subfolder="voltage"
-		read folder key attr_file < <(get_label_files1 $attr_name)
+		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
 	hotswap1_curr*|hotswap2_curr*|hotswap3_curr*|hotswap4_curr*)
 		subfolder="current"
-		read folder key attr_file < <(get_label_files1 $attr_name)
+		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
 	hotswap1_power*|hotswap2_power*|hotswap3_power*|hotswap4_power*)
 		subfolder="power"
-		read folder key attr_file < <(get_label_files1 $attr_name)
+		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
 	hotswap1_temp*|hotswap2_temp*|hotswap3_temp*|hotswap4_temp*)
 		subfolder="temperature"
-		read folder key attr_file < <(get_label_files1 $attr_name)
+		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
 	fan_hotswap1_in*|fan_hotswap2_in*|fan_hotswap3_in*|fan_hotswap4_in*)
 		subfolder="voltage"
