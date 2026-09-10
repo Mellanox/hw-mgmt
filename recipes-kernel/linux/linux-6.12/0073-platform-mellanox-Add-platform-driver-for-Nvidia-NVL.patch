@@ -10,9 +10,9 @@ Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  10 +
  drivers/platform/mellanox/Makefile         |   1 +
- drivers/platform/mellanox/nvsw-host-nvl7.c | 686 +++++++++++++++++++++
+ drivers/platform/mellanox/nvsw-host-nvl7.c | 664 +++++++++++++++++++++
  drivers/platform/mellanox/nvsw.h           |   1 +
- 4 files changed, 698 insertions(+)
+ 4 files changed, 676 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-host-nvl7.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -25,7 +25,7 @@ index a335261ce..a2fd909cb 100644
  
 +config NVSW_HOST_NVL7
 +	tristate "Nvidia NVL7 host CPLD/FPGA Hardware Control and Monitoring"
-+	depends on HWMON
++	depends on HWMON && I2C
 +	select REGMAP_I2C
 +	help
 +	Say Y here to include support for the FPGA/CPLD logic by host CPU
@@ -48,10 +48,10 @@ index 0230613a9..b30b4808b 100644
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl7.c b/drivers/platform/mellanox/nvsw-host-nvl7.c
 new file mode 100644
-index 000000000..e28f096be
+index 000000000..acdde1a76 100644
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-nvl7.c
-@@ -0,0 +1,686 @@
+@@ -0,0 +1,664 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia NVL7 host platform driver
@@ -175,10 +175,10 @@ index 000000000..e28f096be
 +		.mode = 0444,
 +	},
 +	{
-+		 .label = "cpu_shutdown_req",
-+		 .reg = NVSW_REG_GP0_OFFSET,
-+		 .mask = GENMASK(7, 0) & ~BIT(2),
-+		 .mode = 0444,
++		.label = "cpu_shutdown_req",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
 +	},
 +	{
 +		.label = "vpd_wp",
@@ -351,7 +351,7 @@ index 000000000..e28f096be
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_mgmt_pwr_fail",
++		.label = "reset_mgmt_pwr",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
@@ -410,16 +410,15 @@ index 000000000..e28f096be
 +	{
 +		.label = "status:green",
 +		.reg = NVSW_REG_LED1_OFFSET,
-+		.mask = NVSW_LED_LO_NIBBLE_MASK
++		.mask = NVSW_LED_LO_NIBBLE_MASK,
 +	},
 +	{
 +		.label = "status:amber",
 +		.reg = NVSW_REG_LED1_OFFSET,
-+		.mask = NVSW_LED_LO_NIBBLE_MASK
++		.mask = NVSW_LED_LO_NIBBLE_MASK,
 +	},
 +	{
 +		.label = "power:green",
-+		.mode = 0444,
 +		.reg = NVSW_REG_LED1_OFFSET,
 +		.mask = NVSW_LED_HI_NIBBLE_MASK,
 +	},
@@ -436,8 +435,8 @@ index 000000000..e28f096be
 +};
 +
 +static struct mlxreg_core_platform_data nvsw_host_nvl7_led = {
-+		.data = nvsw_host_nvl7_led_data,
-+		.counter = ARRAY_SIZE(nvsw_host_nvl7_led_data),
++	.data = nvsw_host_nvl7_led_data,
++	.counter = ARRAY_SIZE(nvsw_host_nvl7_led_data),
 +};
 +
 +/* Watchdog main platform data */
@@ -515,14 +514,6 @@ index 000000000..e28f096be
 +	},
 +};
 +
-+/* Callback is used to indicate that all adapter devices have been created. */
-+static int
-+nvsw_host_nvl7_completion_notify(void *handle, struct i2c_adapter *parent,
-+				  struct i2c_adapter *adapters[])
-+{
-+	return 0;
-+}
-+
 +/* Mux init/exit callbacks. */
 +static int nvsw_host_nvl7_mux_topology_init(struct nvsw_core *nvsw_core)
 +{
@@ -530,9 +521,6 @@ index 000000000..e28f096be
 +
 +	/* Create mux infrastructure. */
 +	for (i = 0; i < nvsw_core->mux_num; i++) {
-+		nvsw_host_mux_data[i]->handle = nvsw_core;
-+		nvsw_host_mux_data[i]->completion_notify =
-+			nvsw_host_nvl7_completion_notify;
 +		nvsw_core->mux[i] =
 +			platform_device_register_resndata(&nvsw_host_mux_i2c_client->dev,
 +							  "i2c-mux-mlxcpld", i, NULL,
@@ -550,8 +538,6 @@ index 000000000..e28f096be
 +platform_mux_register_fail:
 +	while (--i >= 0)
 +		platform_device_unregister(nvsw_core->mux[i]);
-+	i2c_unregister_device(nvsw_host_mux_i2c_client);
-+	nvsw_host_mux_i2c_client = NULL;
 +
 +	return err;
 +}
@@ -563,13 +549,6 @@ index 000000000..e28f096be
 +	for (i = 0; i < nvsw_core->mux_num; i++) {
 +		if (nvsw_core->mux[i])
 +			platform_device_unregister(nvsw_core->mux[i]);
-+	}
-+
-+	if (nvsw_core->client) {
-+		i2c_unregister_device(nvsw_core->client);
-+		nvsw_host_mux_i2c_client = NULL;
-+		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+		nvsw_host_mux_i2c_adapter = NULL;
 +	}
 +}
 +
@@ -639,8 +618,8 @@ index 000000000..e28f096be
 +	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_PARENT_BUS_NR);
 +	if (!nvsw_host_mux_i2c_adapter) {
 +		dev_err(&pdev->dev,
-+			 "I2C adapter for bus %d is not available\n",
-+			 NVSW_I2C_MUX_PARENT_BUS_NR);
++			"I2C adapter for bus %d is not available\n",
++			NVSW_I2C_MUX_PARENT_BUS_NR);
 +		return -ENODEV;
 +	}
 +
@@ -682,11 +661,11 @@ index 000000000..e28f096be
 +		return 0;
 +
 +nvsw_host_probe_fail:
-+		i2c_unregister_device(nvsw_host_mux_i2c_client);
++	i2c_unregister_device(nvsw_host_mux_i2c_client);
 +i2c_new_client_device_fail:
-+		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+		nvsw_host_mux_i2c_adapter = NULL;
-+		return err;
++	i2c_put_adapter(nvsw_host_mux_i2c_adapter);
++	nvsw_host_mux_i2c_adapter = NULL;
++	return err;
 +}
 +
 +static void nvsw_host_remove(struct platform_device *pdev)
@@ -734,10 +713,9 @@ index 000000000..e28f096be
 +}
 +module_exit(nvsw_host_exit);
 +
-+MODULE_AUTHOR("Vadim Pasternak <vadimp@mellanox.com>");
++MODULE_AUTHOR("Felix Radensky <fradensky@nvidia.com>");
 +MODULE_DESCRIPTION("Nvidia platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
-+
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 index b45b5df54..931b7831b 100644
 --- a/drivers/platform/mellanox/nvsw.h
