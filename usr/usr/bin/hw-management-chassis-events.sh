@@ -1304,8 +1304,12 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "regio" ]; then
 		print_function_call "$0" "add" "regio $3$4"
-		reset_attr_num=$(< $config_path/reset_attr_num)
-		reset_attrr_count=0
+		if [ -f "$config_path/reset_attr_num" ]; then
+			reset_attr_num=$(< $config_path/reset_attr_num)
+		else
+			reset_attr_num=0
+		fi
+		reset_attr_count=0
 		linecard=0
 		# Detect if it belongs to line card or to main board or to dpu.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
