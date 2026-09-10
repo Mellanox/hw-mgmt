@@ -3,7 +3,7 @@
 Unified NVMe nandlog collector. Vendor binaries are **not** in hw-mgmt;
 NOS puts them on `PATH`.
 
-Dump-tools (ELFs and SMI `smi/` tree, `tools/README.txt`):
+Dump-tools (NOS 1.0 ELFs + SMI `smi/`, `tools/README.txt`):
 `ssh://git@gitlab-master.nvidia.com:12051/nbu-sws/bsp/bsp_ssd_fw_update.git`
 
 This package: https://github.com/Mellanox/hw-mgmt.git
@@ -114,13 +114,12 @@ is ignored (no syslog).
 ## NOS image contract
 
 NOS must put the JSON `tool` name on `PATH` as-is
-(`vtFA_RTK_5766_v2`,
-`PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2`,
-`NVMe_Tool_SM2268XT2_Ferri_64_Z0717A`). SMI also needs the
-cwd tree at `/usr/share/hw-management-ssd/smi/` (`Setting/` and
-`one_button_NV.cfg`). That tree is **not** in the hw-mgmt RPM.
-If the tool or `stage_from` is missing, the hw-mgmt dump is
-still created; `ssd-dump-status.log` has a warning.
+(`virtium_nvme_dump_v2`, `phison_nvme_dump_v2`,
+`smi_nvme_dump_v1`). Dump-tools 1.0 (`bsp_ssd_dump_tools_1.0`)
+is Virtium, Phison, and Silicon Motion. SMI `smi/` tree goes to
+`/usr/share/hw-management-ssd/smi`. If the tool is missing, the
+hw-mgmt dump is still created; `ssd-dump-status.log` has a
+warning.
 
 One NVMe: first controller whose sysfs model is in JSON. Model/fw
 from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
@@ -129,14 +128,14 @@ from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
 
 - JSON model key: **`VTPM24CEXI080-BM110006`** (last token of Identify,
   keep `-…`; `Virtium VTPM24CEXI080-BM110006` → `VTPM24CEXI080-BM110006`)
-- Tool: `vtFA_RTK_5766_v2 /dev/nvme0`
+- Tool: `virtium_nvme_dump_v2 /dev/nvme0`
 - Created files stay as the vendor wrote them (no per-file gzip)
 - Timeout: 90 s (default 120 s)
 
 ## Phison
 
 - JSON model key: **`ESLS080GTUE-A329IJ1-TYJN`**
-- Tool: `PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2 -device_index /dev/nvme0n1`
+- Tool: `phison_nvme_dump_v2 -device_index /dev/nvme0n1`
   (`/dev/nvme0` is invalid for this tool)
 - Created files: `RD_Dump2_Header_*.bin`, `RD_Dump2_Data_*.bin`
 - Timeout: 120 s (sample ~57 s on Juliet-128)
@@ -144,7 +143,9 @@ from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
 ## Silicon Motion
 
 - JSON model key: **`MD681GEEBC82`**
-- Tool: `NVMe_Tool_SM2268XT2_Ferri_64_Z0717A /dev/nvme0n1 one_button`
+- Tool: `smi_nvme_dump_v1 /dev/nvme0n1 one_button`
+  (vendor original `NVMe_Tool_SM2268XT2_Ferri_64_Z0717A`;
+  dump-tools ships `smi_nvme_dump_v1.gz`)
 - `stage_from`: `/usr/share/hw-management-ssd/smi` (copy `Setting/`
   and `one_button_NV.cfg` → cwd `one_button.cfg`; not packed)
 - Pack only `one_button/` (vendor files as written). Drop `TestResult/`,
@@ -189,7 +190,7 @@ path so collection cannot be blocked. generate-dump mkdir is
 
 CLI and generate-dump share `/var/log/ssd-dump`. **Do not run them
 in parallel** (no lock). Vendor timeout 90 s (Virtium) or 120 s
-(Phison / SMI / defaults). JSON `timeout_sec` must be 1..120
+(Phison / defaults). JSON `timeout_sec` must be 1..120
 (generate-dump wrapper is 195 s). Standalone `--timeout` may
 be higher.
 

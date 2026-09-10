@@ -225,21 +225,21 @@ class TestModelMatch:
         ) == "VTPM24CEXI080-BM110006"
 
     def test_suffix_virtium_prefix(self, ssd):
-        cfg = virtium_cfg("vtFA_RTK_5766_v2")
+        cfg = virtium_cfg("virtium_nvme_dump_v2")
         v, k, m = ssd.find_model_config(
             cfg, "Virtium VTPM24CEXI080-BM110006"
         )
         assert v == "Virtium"
         assert k == "VTPM24CEXI080-BM110006"
-        assert m["tool"] == "vtFA_RTK_5766_v2"
+        assert m["tool"] == "virtium_nvme_dump_v2"
 
     def test_exact_key(self, ssd):
-        cfg = virtium_cfg("vtFA_RTK_5766_v2")
+        cfg = virtium_cfg("virtium_nvme_dump_v2")
         v, k, _ = ssd.find_model_config(cfg, "VTPM24CEXI080-BM110006")
         assert v == "Virtium" and k == "VTPM24CEXI080-BM110006"
 
     def test_unknown(self, ssd):
-        cfg = virtium_cfg("vtFA_RTK_5766_v2")
+        cfg = virtium_cfg("virtium_nvme_dump_v2")
         v, k, m = ssd.find_model_config(cfg, "MD681GEEBC82")
         assert v is None and k is None and m is None
 
@@ -251,7 +251,7 @@ class TestModelMatch:
         assert m["device_form"] == "namespace"
         assert m["args"] == ["-device_index", "{device}"]
 
-    def test_shipped_json_has_phison_and_virtium(self, ssd):
+    def test_shipped_json_has_phison_virtium_smi(self, ssd):
         path = os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -266,15 +266,19 @@ class TestModelMatch:
         assert v == "Phison" and k == "ESLS080GTUE-A329IJ1-TYJN"
         assert m["device_form"] == "namespace"
         assert m["timeout_sec"] == 120
+        assert m["tool"] == "phison_nvme_dump_v2"
         v2, k2, m2 = ssd.find_model_config(
             cfg, "Virtium VTPM24CEXI080-BM110006"
         )
         assert v2 == "Virtium" and k2 == "VTPM24CEXI080-BM110006"
         assert m2["device_form"] == "controller"
+        assert m2["tool"] == "virtium_nvme_dump_v2"
         v3, k3, m3 = ssd.find_model_config(cfg, "MD681GEEBC82")
         assert v3 == "Silicon Motion" and k3 == "MD681GEEBC82"
         assert m3["device_form"] == "namespace"
-        assert m3["keep_dirs"] == ["one_button"]
+        assert m3["tool"] == "smi_nvme_dump_v1"
+        assert m3["stage_from"] == "/usr/share/hw-management-ssd/smi"
+        assert m3["stage_cfg"] == "one_button_NV.cfg"
     # SpellCheck-ignoreBlockEnd
 
 
@@ -439,26 +443,26 @@ class TestFindTool:
     def test_not_executable(self, ssd, tmp_path, monkeypatch):
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
-        tool = bin_dir / "vtFA_RTK_5766_v2"
+        tool = bin_dir / "virtium_nvme_dump_v2"
         tool.write_text("x")
         os.chmod(str(tool), 0o644)
         monkeypatch.setenv("PATH", str(bin_dir))
         with pytest.raises(ssd.DumpError, match="not executable"):
-            ssd.find_tool("vtFA_RTK_5766_v2")
+            ssd.find_tool("virtium_nvme_dump_v2")
 
     def test_executable_wins_over_earlier_nonexec(self, ssd, tmp_path, monkeypatch):
         d1 = tmp_path / "a"
         d2 = tmp_path / "b"
         d1.mkdir()
         d2.mkdir()
-        bad = d1 / "vtFA_RTK_5766_v2"
-        good = d2 / "vtFA_RTK_5766_v2"
+        bad = d1 / "virtium_nvme_dump_v2"
+        good = d2 / "virtium_nvme_dump_v2"
         bad.write_text("no")
         os.chmod(str(bad), 0o644)
         good.write_text("yes")
         os.chmod(str(good), 0o755)
         monkeypatch.setenv("PATH", "%s%s%s" % (d1, os.pathsep, d2))
-        assert ssd.find_tool("vtFA_RTK_5766_v2") == str(good)
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(good)
 
 
 def _dev_stat(mode):
@@ -545,7 +549,7 @@ class TestEndToEnd:
     def test_verify_ok_does_not_write_dumps(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -577,7 +581,7 @@ class TestEndToEnd:
     def test_verify_quiet_hides_stdout(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -709,7 +713,7 @@ class TestEndToEnd:
 
     def test_verify_no_nvme_skipped(self, ssd, tmp_path, monkeypatch, capsys):
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg("vtFA_RTK_5766_v2"))
+        write_json(cfg, virtium_cfg("virtium_nvme_dump_v2"))
         monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
         rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "out")])
         captured = capsys.readouterr()
@@ -758,7 +762,7 @@ class TestEndToEnd:
 
     def test_explicit_non_nvme_is_warning(self, ssd, tmp_path, monkeypatch):
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg("vtFA_RTK_5766_v2"))
+        write_json(cfg, virtium_cfg("virtium_nvme_dump_v2"))
         outdir = tmp_path / "out"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -781,12 +785,12 @@ class TestEndToEnd:
     def test_not_executable_tool(self, ssd, tmp_path, monkeypatch):
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
-        tool = bin_dir / "vtFA_RTK_5766_v2"
+        tool = bin_dir / "virtium_nvme_dump_v2"
         tool.write_text("x")
         os.chmod(str(tool), 0o644)
         monkeypatch.setenv("PATH", str(bin_dir))
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg("vtFA_RTK_5766_v2"))
+        write_json(cfg, virtium_cfg("virtium_nvme_dump_v2"))
         outdir = tmp_path / "out"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -812,7 +816,7 @@ class TestEndToEnd:
                 "defaults": {"timeout_sec": 120, "min_free_mb": 1},
                 "vendors": {"Virtium": {"models": {
                     "NO_SUCH_MODEL": {
-                        "tool": "vtFA_RTK_5766_v2",
+                        "tool": "virtium_nvme_dump_v2",
                         "args": ["{device}"],
                         "device_form": "controller",
                     }
@@ -981,7 +985,7 @@ class TestEndToEnd:
     def test_legacy_gzip_keys_ignored_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         obj = virtium_cfg(tool)
@@ -1028,7 +1032,7 @@ class TestEndToEnd:
             ssd.parse_args(["--timeout", "0"])
 
     def test_recreate_drops_old_files(self, ssd, tmp_path, monkeypatch):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -1055,7 +1059,7 @@ class TestEndToEnd:
 
     def test_no_nvme_skipped_no_syslog(self, ssd, tmp_path, monkeypatch):
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg("vtFA_RTK_5766_v2"))
+        write_json(cfg, virtium_cfg("virtium_nvme_dump_v2"))
         outdir = tmp_path / "out"
         monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
         monkeypatch.setattr(ssd, "free_mb", lambda *_a, **_k: 0)
@@ -1073,7 +1077,7 @@ class TestEndToEnd:
         assert not (tmp_path / "out.tar.gz").exists()
 
     def test_fake_tool_packs_bin(self, ssd, tmp_path, monkeypatch, capsys):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -1115,7 +1119,7 @@ class TestEndToEnd:
         assert "out/ssd-dump-tool.txt" not in names
 
     def test_no_tar_keeps_dir(self, ssd, tmp_path, monkeypatch, capsys):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -1185,7 +1189,7 @@ class TestEndToEnd:
         assert "out/nandlog_d.bin" in names
 
     def test_vendor_output_not_on_console(self, ssd, tmp_path, monkeypatch, capsys):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -1215,7 +1219,7 @@ class TestEndToEnd:
     # SpellCheck-ignoreBlockStart
     def test_phison_namespace_device_index(self, ssd, tmp_path, monkeypatch):
         tool = str(
-            tmp_path / "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2"
+            tmp_path / "phison_nvme_dump_v2"
         )
         fake_phison_tool(tool)
         cfg = tmp_path / "cfg.json"
@@ -1263,7 +1267,7 @@ class TestEndToEnd:
     def test_pack_fail_rewrites_status_warning(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
-        tool = str(tmp_path / "vtFA_RTK_5766_v2")
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
         write_json(cfg, virtium_cfg(tool))
@@ -1305,7 +1309,7 @@ class TestEndToEnd:
         self, ssd, tmp_path, monkeypatch, capsys
     ):
         tool = str(
-            tmp_path / "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2"
+            tmp_path / "phison_nvme_dump_v2"
         )
         fake_phison_tool(tool)
         cfg = tmp_path / "cfg.json"

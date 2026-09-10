@@ -7,7 +7,7 @@
     "Virtium": {
       "models": {
         "VTPM24CEXI080-BM110006": {
-          "tool": "vtFA_RTK_5766_v2",
+          "tool": "virtium_nvme_dump_v2",
           "args": ["{device}"],
           "device_form": "controller",
           "timeout_sec": 90
@@ -17,7 +17,7 @@
     "Phison": {
       "models": {
         "ESLS080GTUE-A329IJ1-TYJN": {
-          "tool": "PCIETOOL08-6130_RD_Dump2_(Nvidia)_Linux_64bit_v2",
+          "tool": "phison_nvme_dump_v2",
           "args": ["-device_index", "{device}"],
           "device_form": "namespace",
           "timeout_sec": 120
@@ -27,7 +27,7 @@
     "Silicon Motion": {
       "models": {
         "MD681GEEBC82": {
-          "tool": "NVMe_Tool_SM2268XT2_Ferri_64_Z0717A",
+          "tool": "smi_nvme_dump_v1",
           "args": ["{device}", "one_button"],
           "device_form": "namespace",
           "timeout_sec": 120,
