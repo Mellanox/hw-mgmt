@@ -1,0 +1,429 @@
+{
+	"name": "n7xxxld",
+	"labels_HI194_alternatives" : {
+		"voltmon1": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-1+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-1+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-1+Temp+1"},
+				"power1": {"name": "PMIC-1+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-1+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-1+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-1+ASIC_VDD+Curr+Out+1"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-1+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in3": {"name": "PMIC-1+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-1+Temp+1"},
+				"power1": {"name": "PMIC-1+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-1+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-1+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-1+ASIC_VDD+Curr+Out+1"}
+			}
+		},
+		"voltmon2": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-2+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-2+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in3": {"name": "PMIC-2+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-2+Temp+1"},
+				"temp2": {"name": "PMIC-2+Temp+2"},
+				"power1": {"name": "PMIC-2+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-2+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-2+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-2+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-2+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-2+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-2+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-2+ASIC_DVDD_PL0+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-2+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-2+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-2+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in4": {"name": "PMIC-2+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-2+Temp+1"},
+				"temp2": {"name": "PMIC-2+Temp+2"},
+				"power1": {"name": "PMIC-2+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-2+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-2+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-2+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-2+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-2+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-2+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-2+ASIC_DVDD_PL0+Curr+Out+2"}
+			}
+		},
+		"voltmon3": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-3+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-3+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in3": {"name": "PMIC-3+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-3+Temp+1"},
+				"temp2": {"name": "PMIC-3+Temp+2"},
+				"power1": {"name": "PMIC-3+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-3+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-3+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-3+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-3+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-3+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-3+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-3+ASIC_DVDD_PL1+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-3+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-3+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-3+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in4": {"name": "PMIC-3+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-3+Temp+1"},
+				"temp2": {"name": "PMIC-3+Temp+2"},
+				"power1": {"name": "PMIC-3+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-3+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-3+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-3+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-3+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-3+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-3+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-3+ASIC_DVDD_PL1+Curr+Out+2"}
+			}
+		},
+		"voltmon4": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-4+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-4+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-4+Temp+1"},
+				"power1": {"name": "PMIC-4+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-4+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-4+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-4+ASIC_VDD+Curr+Out+1"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-4+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in3": {"name": "PMIC-4+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-4+Temp+1"},
+				"power1": {"name": "PMIC-4+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-4+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-4+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-4+ASIC_VDD+Curr+Out+1"}
+			}
+		},
+		"voltmon5": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-5+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-5+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in3": {"name": "PMIC-5+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-5+Temp+1"},
+				"temp2": {"name": "PMIC-5+Temp+2"},
+				"power1": {"name": "PMIC-5+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-5+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-5+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-5+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-5+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-5+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-5+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-5+ASIC_DVDD_PL0+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-5+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-5+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-5+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in4": {"name": "PMIC-5+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-5+Temp+1"},
+				"temp2": {"name": "PMIC-5+Temp+2"},
+				"power1": {"name": "PMIC-5+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-5+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-5+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-5+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-5+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-5+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-5+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-5+ASIC_DVDD_PL0+Curr+Out+2"}
+			}
+		},
+		"voltmon6": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-6+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-6+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in3": {"name": "PMIC-6+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-6+Temp+1"},
+				"temp2": {"name": "PMIC-6+Temp+2"},
+				"power1": {"name": "PMIC-6+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-6+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-6+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-6+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-6+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-6+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-6+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-6+ASIC_DVDD_PL1+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-6+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-6+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-6+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in4": {"name": "PMIC-6+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-6+Temp+1"},
+				"temp2": {"name": "PMIC-6+Temp+2"},
+				"power1": {"name": "PMIC-6+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-6+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-6+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-6+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-6+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-6+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-6+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-6+ASIC_DVDD_PL1+Curr+Out+2"}
+			}
+		},
+		"voltmon7": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-7+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-7+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-7+Temp+1"},
+				"power1": {"name": "PMIC-7+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-7+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-7+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-7+ASIC_VDD+Curr+Out+1"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-7+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in3": {"name": "PMIC-7+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-7+Temp+1"},
+				"power1": {"name": "PMIC-7+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-7+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-7+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-7+ASIC_VDD+Curr+Out+1"}
+			}
+		},
+		"voltmon8": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-8+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-8+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in3": {"name": "PMIC-8+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-8+Temp+1"},
+				"temp2": {"name": "PMIC-8+Temp+2"},
+				"power1": {"name": "PMIC-8+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-8+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-8+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-8+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-8+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-8+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-8+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-8+ASIC_DVDD_PL0+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-8+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-8+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-8+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in4": {"name": "PMIC-8+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-8+Temp+1"},
+				"temp2": {"name": "PMIC-8+Temp+2"},
+				"power1": {"name": "PMIC-8+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-8+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-8+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-8+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-8+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-8+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-8+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-8+ASIC_DVDD_PL0+Curr+Out+2"}
+			}
+		},
+		"voltmon9": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-9+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-9+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in3": {"name": "PMIC-9+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-9+Temp+1"},
+				"temp2": {"name": "PMIC-9+Temp+2"},
+				"power1": {"name": "PMIC-9+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-9+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-9+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-9+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-9+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-9+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-9+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-9+ASIC_DVDD_PL1+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-9+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-9+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-9+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in4": {"name": "PMIC-9+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-9+Temp+1"},
+				"temp2": {"name": "PMIC-9+Temp+2"},
+				"power1": {"name": "PMIC-9+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-9+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-9+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-9+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-9+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-9+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-9+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-9+ASIC_DVDD_PL1+Curr+Out+2"}
+			}
+		},
+		"voltmon10": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-10+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-10+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-10+Temp+1"},
+				"power1": {"name": "PMIC-10+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-10+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-10+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-10+ASIC_VDD+Curr+Out+1"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-10+PVIN1_VDD_ASIC+Vol+In+1"},
+				"in3": {"name": "PMIC-10+ASIC_VDD+Vol+Out+1"},
+				"temp1": {"name": "PMIC-10+Temp+1"},
+				"power1": {"name": "PMIC-10+PVIN1_VDD_ASIC+Pwr+In+1"},
+				"power3": {"name": "PMIC-10+ASIC_VDD+Pwr+Out+1"},
+				"curr1": {"name": "PMIC-10+PVIN1_VDD_ASIC+Curr+In+1"},
+				"curr3": {"name": "PMIC-10+ASIC_VDD+Curr+Out+1"}
+			}
+		},
+		"voltmon11": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-11+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-11+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in3": {"name": "PMIC-11+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-11+Temp+1"},
+				"temp2": {"name": "PMIC-11+Temp+2"},
+				"power1": {"name": "PMIC-11+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-11+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-11+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-11+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-11+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-11+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-11+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-11+ASIC_DVDD_PL0+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-11+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-11+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-11+ASIC_HVDD_PL0+Vol+Out+1"},
+				"in4": {"name": "PMIC-11+ASIC_DVDD_PL0+Vol+Out+2"},
+				"temp1": {"name": "PMIC-11+Temp+1"},
+				"temp2": {"name": "PMIC-11+Temp+2"},
+				"power1": {"name": "PMIC-11+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-11+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-11+ASIC_HVDD_PL0+Pwr+Out+1"},
+				"power4": {"name": "PMIC-11+ASIC_DVDD_PL0+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-11+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-11+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-11+ASIC_HVDD_PL0+Curr+Out+1"},
+				"curr4": {"name": "PMIC-11+ASIC_DVDD_PL0+Curr+Out+2"}
+			}
+		},
+		"voltmon12": {
+			"mp29816" : {
+				"in1": {"name": "PMIC-12+PVIN1_HVDD_DVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-12+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in3": {"name": "PMIC-12+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-12+Temp+1"},
+				"temp2": {"name": "PMIC-12+Temp+2"},
+				"power1": {"name": "PMIC-12+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-12+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-12+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-12+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-12+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-12+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-12+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-12+ASIC_DVDD_PL1+Curr+Out+2"}
+			},
+			"xdpe1a2g7" : {
+				"in1": {"name": "PMIC-12+PVIN1_HVDD_ASIC+Vol+In+1"},
+				"in2": {"name": "PMIC-12+PVIN1_DVDD_ASIC+Vol+In+2"},
+				"in3": {"name": "PMIC-12+ASIC_HVDD_PL1+Vol+Out+1"},
+				"in4": {"name": "PMIC-12+ASIC_DVDD_PL1+Vol+Out+2"},
+				"temp1": {"name": "PMIC-12+Temp+1"},
+				"temp2": {"name": "PMIC-12+Temp+2"},
+				"power1": {"name": "PMIC-12+PVIN1_HVDD_ASIC+Pwr+In+1"},
+				"power2": {"name": "PMIC-12+PVIN1_DVDD_ASIC+Pwr+In+2"},
+				"power3": {"name": "PMIC-12+ASIC_HVDD_PL1+Pwr+Out+1"},
+				"power4": {"name": "PMIC-12+ASIC_DVDD_PL1+Pwr+Out+2"},
+				"curr1": {"name": "PMIC-12+PVIN1_HVDD_ASIC+Curr+In+1"},
+				"curr2": {"name": "PMIC-12+PVIN1_DVDD_ASIC+Curr+In+2"},
+				"curr3": {"name": "PMIC-12+ASIC_HVDD_PL1+Curr+Out+1"},
+				"curr4": {"name": "PMIC-12+ASIC_DVDD_PL1+Curr+Out+2"}
+			}
+		},
+		"hotswap1": {
+			"lm5066i" : {
+				"in1": {"name": "HSC-1+VinDC+Vol+In+1"},
+				"in3": {"name": "HSC-1+Vout+Vol+Out+1"},
+				"power1": {"name": "HSC-1+VinDC+Pwr+In+1"},
+				"curr1": {"name": "HSC-1+VinDC+Curr+In+1"},
+				"temp1": {"name": "HSC-1+Temp"}
+			},
+			"mp5926" : {
+				"in1": {"name": "HSC-1+VinDC+Vol+In+1"},
+				"in2": {"name": "HSC-1+Vout+Vol+Out+1"},
+				"power1": {"name": "HSC-1+VinDC+Pwr+In+1"},
+				"curr1": {"name": "HSC-1+VinDC+Curr+In+1"},
+				"temp1": {"name": "HSC-1+Temp"}
+			}
+		},
+		"hotswap2": {
+			"lm5066i" : {
+				"in1": {"name": "HSC-2+VinDC+Vol+In+1"},
+				"in3": {"name": "HSC-2+Vout+Vol+Out+1"},
+				"power1": {"name": "HSC-2+VinDC+Pwr+In+1"},
+				"curr1": {"name": "HSC-2+VinDC+Curr+In+1"},
+				"temp1": {"name": "HSC-2+Temp"}
+			},
+			"mp5926" : {
+				"in1": {"name": "HSC-2+VinDC+Vol+In+1"},
+				"in2": {"name": "HSC-2+Vout+Vol+Out+1"},
+				"power1": {"name": "HSC-2+VinDC+Pwr+In+1"},
+				"curr1": {"name": "HSC-2+VinDC+Curr+In+1"},
+				"temp1": {"name": "HSC-2+Temp"}
+			}
+		}
+	},
+	"labels_HI194_rev1_array" : {
+		"pwr_conv1_in1" : "PWR_CONV-1+VinDC_HV_BUCK1_HV_BUCK2+Vol+In+1",
+		"pwr_conv1_in2" : "PWR_CONV-1+HV_BUCK1+Vol+Out+1",
+		"pwr_conv1_in3" : "PWR_CONV-1+HV_BUCK2+Vol+Out+2",
+		"pwr_conv1_temp1" : "PWR_CONV-1+Temp+1",
+		"pwr_conv1_temp2" : "PWR_CONV-1+Temp+2",
+		"pwr_conv1_power1" : "PWR_CONV-1+VinDC_HV_BUCK1+Pwr+In+1",
+		"pwr_conv1_power2" : "PWR_CONV-1+VinDC_HV_BUCK2+Pwr+In+2",
+		"pwr_conv1_power3" : "PWR_CONV-1+HV_BUCK1+Pwr+Out+1",
+		"pwr_conv1_power4" : "PWR_CONV-1+HV_BUCK2+Pwr+Out+2",
+		"pwr_conv1_curr1" : "PWR_CONV-1+VinDC_HV_BUCK1+Curr+In+1",
+		"pwr_conv1_curr2" : "PWR_CONV-1+VinDC_HV_BUCK2+Curr+In+2",
+		"pwr_conv1_curr3" : "PWR_CONV-1+HV_BUCK1+Curr+Out+1",
+		"pwr_conv1_curr4" : "PWR_CONV-1+HV_BUCK2+Curr+Out+2",
+		"pwr_conv2_in1" : "PWR_CONV-2+VinDC_HV_BUCK1_HV_BUCK2+Vol+In+1",
+		"pwr_conv2_in2" : "PWR_CONV-2+HV_BUCK1+Vol+Out+1",
+		"pwr_conv2_in3" : "PWR_CONV-2+HV_BUCK2+Vol+Out+2",
+		"pwr_conv2_temp1" : "PWR_CONV-2+Temp+1",
+		"pwr_conv2_temp2" : "PWR_CONV-2+Temp+2",
+		"pwr_conv2_power1" : "PWR_CONV-2+VinDC_HV_BUCK1+Pwr+In+1",
+		"pwr_conv2_power2" : "PWR_CONV-2+VinDC_HV_BUCK2+Pwr+In+2",
+		"pwr_conv2_power3" : "PWR_CONV-2+HV_BUCK1+Pwr+Out+1",
+		"pwr_conv2_power4" : "PWR_CONV-2+HV_BUCK2+Pwr+Out+2",
+		"pwr_conv2_curr1" : "PWR_CONV-2+VinDC_HV_BUCK1+Curr+In+1",
+		"pwr_conv2_curr2" : "PWR_CONV-2+VinDC_HV_BUCK2+Curr+In+2",
+		"pwr_conv2_curr3" : "PWR_CONV-2+HV_BUCK1+Curr+Out+1",
+		"pwr_conv2_curr4" : "PWR_CONV-2+HV_BUCK2+Curr+Out+2",
+		"comex_voltmon1_in0" : "CPU+PMIC+VDDCR+Vol+In+1",
+		"comex_voltmon1_in1" : "CPU+PMIC+VDDCR_CPU+Vol+Out+1",
+		"comex_voltmon1_in3" : "CPU+PMIC+VDDCR_SOC+Vol+Out+2",
+		"comex_voltmon1_temp1" : "CPU+PMIC+VDDCR_CPU+Phase+Temp",
+		"comex_voltmon1_temp3" : "CPU+PMIC+VDDCR_SOC+Phase+Temp",
+		"comex_voltmon1_curr1" : "CPU+PMIC+VDDCR_CPU+Curr+Out+1",
+		"comex_voltmon1_curr3" : "CPU+PMIC+VDDCR_SOC+Curr+Out+2",
+		"comex_voltmon2_in1" : "DDR+PMIC+VDD_MEM+Vol+In+1",
+		"comex_voltmon2_in2" : "DDR+PMIC+VDD_MEMIO+Vol+Out+1",
+		"comex_voltmon2_in3" : "DDR+PMIC+VDD_MEM+Vol+Out+2",
+		"comex_voltmon2_temp1" : "DDR+PMIC+VDD_MEM+Phase+Temp",
+		"comex_voltmon2_power1" : "DDR+PMIC+VDD_MEM+Pwr+In+1",
+		"comex_voltmon2_power2" : "DDR+PMIC+VDD_MEMIO+Pwr+Out+1",
+		"comex_voltmon2_power3" : "DDR+PMIC+VDD_MEM+Pwr+Out+2",
+		"comex_voltmon2_curr1" : "DDR+PMIC+VDD_MEM+Curr+In+1",
+		"comex_voltmon2_curr2" : "DDR+PMIC+VDD_MEMIO+Curr+Out+1",
+		"comex_voltmon2_curr5" : "DDR+PMIC+VDD_MEM+Curr+Out+2",
+		"drivetemp" : "SSD+Temp"
+	},
+	"labels_scale_HI194_rev1_array" : {
+	}
+}
