@@ -1,0 +1,30 @@
+[Unit]
+Description=HW Management bring up BMC USB network interface %I
+Documentation=file:/usr/bin/hw-management-ifupdown.sh
+# %i is configured with ifup, which serializes every run on a single lock
+# (/run/network/.lock for ifupdown2) and fails immediately when that lock is
+# busy. Ordering after the networking service keeps this out of the boot window
+# in which that service runs "ifup --allow=mgmt", "ifup -a" and its hotplug
+# phase, holding the lock for as long as bringing up all interfaces takes.
+# Ordering has no effect once the networking service is active, which is the
+# case when the interface appears at runtime, for example after a BMC reset.
+After=networking.service
+# Give up if the interface goes away while we are still retrying.
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hw-management-ifupdown.sh %i
+# The script retries a lock conflict for up to its own IFUP_TIMEOUT, and the last
+# ifup it starts may overshoot that deadline by IFUP_MIN_TIMEOUT. Keep this well
+# above their sum, so a lost race ends with the script's diagnostics in syslog
+# rather than with systemd killing it mid-retry.
+TimeoutStartSec=150
+
+# No [Install] section: the unit is pulled in by the interface's device unit
+# through SYSTEMD_WANTS in 70-hw-management-bmc.rules, so it must not be
+# enabled. See the notes in debian/rules.
