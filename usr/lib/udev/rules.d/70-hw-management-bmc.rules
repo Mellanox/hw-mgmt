@@ -34,4 +34,12 @@
 # Configure usb0 network interface
 # The assumption is that kernel names the interface as usb0
 # For 6.1 kernels in the range 6.1.115-6.1.132 the patch 0113-net-usb-usbnet-restore-usb-d-name-exception-for-loca.patch should be applied
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="usb0", RUN+="/usr/bin/logger 'hw-management: configuring usb0'", RUN+="/usr/bin/hw-management-ifupdown.sh usb0"
+#
+# The interface is brought up by hw-management-ifupdown@usb0.service rather than by
+# RUN+=, because ifup may have to be retried for as long as the networking service
+# holds the ifupdown lock and a UDEV worker must not be blocked for that long. The
+# service is ordered after that service and pulled in by the device unit, which
+# needs the device to be tagged for systemd; net devices are already tagged in
+# systemd's own 99-systemd.rules, so TAG+= here is belt-and-braces. %k is the
+# kernel name.
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="usb0", RUN+="/usr/bin/logger 'hw-management: configuring usb0'", TAG+="systemd", ENV{SYSTEMD_WANTS}+="hw-management-ifupdown@%k.service"
