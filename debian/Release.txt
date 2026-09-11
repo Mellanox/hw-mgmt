@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.1020
+- Fri, 11 Sep 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5245926, hw-mgmt: thermal: Make FAN relax time configurable per platform, 15b8962
+    o #N/A, Update changelog and release notes for V.7.0070.1019, e267f92
+    o #4966961, hw-mgmt: thermal: SPC1: Add fallback in case if I2C ASIC driver failure (#2912), 82e9f3f
+    o #1050174, hw-mgmt: kernel: patch 6.1/6.12: Fix duplicate /dev/i2c-N node creation, 12e7650
+    o #5125814, hw-mgmt: sensors: ignore PSU hotspot temperatures on SN5640 and SN5610., 41b8950
+    o #N/A, Update changelog and release notes for V.7.0070.1018, 6806f5c
+    o #N/A, hw-mgmt: thermal: Fix thermal data for SN2201_M, 2163705
+    o #N/A, Update changelog and release notes for V.7.0070.1017, 51b3376
+    o #5183998, hw-mgmt: scripts: Fix PSU EEPROM parsing on systems without PSU VPD, 45985f9
+    o #5232793, hw-mgmt: thermal: Fix PWM stuck high after tacho error recovery, ad769f1
+    o #N/A, Update changelog and release notes for V.7.0070.1016, 64e4601
+    o #N/A, hw-mgmt: kernel 6.12 BMC: Set WDT_RESET_MASK1 bit 1 on AST2700 WDT restart (#2852), 20e10c6
+    o #N/A, Update changelog and release notes for V.7.0070.1015 (#2848), 3145e6a
+    o #N/A, hw-mgmt: bmc: leakage: Propagate MAX1363 raw programming failures, 29a5d37
+    o #N/A, hw-mgmt: bmc: leakage: Set MAX1363 IIO scale after Vdd reference, 9b2f6c6
+    o #N/A, hw-mgmt: bmc: leakage: Drop MAX1363 readback verify, add setup byte, 3950659
+    o #N/A, hw-mgmt: patches: Add max1363 voltage_reference sysfs attribute, 83568fe
+    o #N/A, hw-mgmt: patches: exclude FLR workaround patch for kernel 6.12, f86486a
+    o #5226174, hw-mgmt: scripts: Fix MP2845 CPU VR voltage and current link creation, 7ebd003
+    o #5224885, hw-mgmt: scripts: Fix CPU and DDR VR I2C bus for SN6600_LD system, 3520f8a
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1020/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.1019
 - Thu, 10 Sep 2026
 --------------------------------------------------------------------------------
