@@ -61,8 +61,10 @@ mkdir -p $RPM_BUILD_ROOT/etc/modprobe.d
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-thermal
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/usr/local/bin
+mkdir -p $RPM_BUILD_ROOT/etc/default
 mkdir -p $RPM_BUILD_ROOT/lib/udev/rules.d
 mkdir -p $RPM_BUILD_ROOT/lib/systemd/system
+mkdir -p $RPM_BUILD_ROOT/lib/systemd/system-shutdown
 mkdir -p $RPM_BUILD_ROOT/usr/share/doc/hw-management
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man8
@@ -128,6 +130,13 @@ install -m 0755 usr/usr/bin/hw-management-power-helper.sh $RPM_BUILD_ROOT/usr/bi
 install -m 0755 usr/usr/bin/hw-management-ps-vpd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ps-vpd.sh
 install -m 0755 usr/usr/bin/hw-management-ready.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ready.sh
 install -m 0755 usr/usr/bin/hw-management-start-post.sh $RPM_BUILD_ROOT/usr/bin/hw-management-start-post.sh
+install -m 0755 usr/usr/bin/hw-management-nvme-shutdown.sh $RPM_BUILD_ROOT/usr/bin/hw-management-nvme-shutdown.sh
+install -m 0755 usr/usr/bin/hw-management-nvme-shutdown-hook.sh $RPM_BUILD_ROOT/usr/bin/hw-management-nvme-shutdown-hook.sh
+install -m 0755 usr/usr/bin/hw-management-nvme-shutdown-condition.sh $RPM_BUILD_ROOT/usr/bin/hw-management-nvme-shutdown-condition.sh
+install -m 0755 usr/usr/bin/hw-management-nvme-shutdown-setup.sh $RPM_BUILD_ROOT/usr/bin/hw-management-nvme-shutdown-setup.sh
+install -m 0644 usr/etc/default/hw-management-nvme-shutdown $RPM_BUILD_ROOT/etc/default/hw-management-nvme-shutdown
+install -m 0755 usr/usr/bin/hw-management-nvme-shutdown-hook.sh \
+	$RPM_BUILD_ROOT/lib/systemd/system-shutdown/hw-management-nvme-shutdown
 install -m 0755 usr/usr/bin/hw-management-thermal-events.sh $RPM_BUILD_ROOT/usr/bin/hw-management-thermal-events.sh
 install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/hw-management-vpd-parser.py
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
@@ -234,6 +243,12 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-ps-vpd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ready.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-start-post.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-nvme-shutdown.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-nvme-shutdown-hook.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-nvme-shutdown-condition.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-nvme-shutdown-setup.sh"
+%config %attr(0644, root, root) "/etc/default/hw-management-nvme-shutdown"
+%attr(0755, root, root) "/lib/systemd/system-shutdown/hw-management-nvme-shutdown"
 %attr(0755, root, root) "/usr/bin/hw-management-thermal-events.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
