@@ -3,7 +3,7 @@
 # /var/run/hw-management/system — runtime layout (HI189 / nvsw-bmc-hid162)
 #
 # Source of truth for register/event labels: Linux driver
-#   recipes-kernel/linux/linux-6.12/0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+#   recipes-kernel/linux/linux-6.12/0046-2-platform-mellanox-nvsw-bmc-Add-system-control-and-m.patch
 #   → drivers/platform/mellanox/nvsw-bmc-hid162.c
 #
 # Structures (HID189):
