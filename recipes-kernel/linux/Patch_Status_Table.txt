@@ -721,7 +721,9 @@ Kernel-6.1
 |0103-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                         |
 |0104-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Downstream accepted                      |            | mp2869                                         |
 |0105-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Downstream accepted                      |            | mp29502                                        |
-|0106-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  |                    | Downstream accepted                      |            |                                                |
+|0106-platform-mellanox-nvsw-host-spc6-Add-system-control-.patch  |                    | Downstream accepted                      |            |                                                |
+|0106-1-platform-mellanox-nvsw-host-nvl6-Add-system-control.patch |                    | Downstream accepted                      |            |                                                |
+|0106-2-platform-mellanox-nvsw-host-spc5-Add-system-control.patch |                    | Downstream accepted                      |            |                                                |
 |0107-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0109-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch  |                    | Downstream accepted; os[nvos]            |            | xdpe1a2g7b                                     |

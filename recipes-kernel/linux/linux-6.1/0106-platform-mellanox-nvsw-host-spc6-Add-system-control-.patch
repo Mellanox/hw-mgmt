@@ -1,6 +1,6 @@
-From b7454a6e818ae4fcbe162aa6d9af6cb543db2186 Mon Sep 17 00:00:00 2001
+From ed601a265951a93031dd314ba0ba36c01deeed32 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
-Date: Thu, 4 Jul 2024 23:50:27 +0300
+Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-host-spc6: Add system control and
  monitoring driver for Nvidia SPC6 switches
 
@@ -20,25 +20,23 @@ Add the nvsw core, which implements the register map and the device
 creation flow shared by all the nvsw host platform drivers, along with
 the register definitions used by them.
 
-Upstream-Status: Pending
-
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  19 +
  drivers/platform/mellanox/Makefile         |   2 +
- drivers/platform/mellanox/nvsw-core.c      | 759 +++++++++++++++++
- drivers/platform/mellanox/nvsw-host-spc6.c | 887 +++++++++++++++++++++
- drivers/platform/mellanox/nvsw.h           | 317 ++++++++
- 5 files changed, 1984 insertions(+)
+ drivers/platform/mellanox/nvsw-core.c      | 726 ++++++++++++++++
+ drivers/platform/mellanox/nvsw-host-spc6.c | 896 +++++++++++++++++++++
+ drivers/platform/mellanox/nvsw.h           | 300 +++++++
+ 5 files changed, 1943 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-spc6.c
  create mode 100644 drivers/platform/mellanox/nvsw.h
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index e3afbe62c7f6..650f7f463c9e 100644
+index 9c86385e70a3..08a49dafff30 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -105,6 +105,25 @@ config MLXBF_PMC
+@@ -113,6 +113,25 @@ config MLXBF_PMC
  	  to performance monitoring counters within various blocks in the
  	  Mellanox BlueField SoC via a sysfs interface.
  
@@ -65,22 +63,23 @@ index e3afbe62c7f6..650f7f463c9e 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on HWMON && I2C
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index e86723b44c2e..a959d07f1787 100644
+index 7d11503dde9b..b2ae1a180e59 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -11,4 +11,6 @@ obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
+@@ -11,5 +11,7 @@ obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 +obj-$(CONFIG_NVSW_CORE) += nvsw-core.o
 +obj-$(CONFIG_NVSW_HOST_SPC6) += nvsw-host-spc6.o
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
+ obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
 new file mode 100644
-index 000000000000..f3c48adfd447
+index 000000000000..dedce37ac0fd
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-core.c
-@@ -0,0 +1,759 @@
+@@ -0,0 +1,726 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia switch platform driver
@@ -102,10 +101,6 @@ index 000000000000..f3c48adfd447
 +static bool nvsw_writeable_reg(struct device *dev, unsigned int reg)
 +{
 +	switch (reg) {
-+	case NVSW_REG_CPLD1_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD2_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD3_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD4_DBG_LED_OFFSET:
 +	case NVSW_REG_PG1_EVENT_OFFSET:
 +	case NVSW_REG_PG1_MASK_OFFSET:
 +	case NVSW_REG_PG2_EVENT_OFFSET:
@@ -119,7 +114,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_GP0_OFFSET:
 +	case NVSW_REG_GP1_OFFSET:
 +	case NVSW_REG_GP7_OFFSET:
-+	case NVSW_REG_UART_BAUD_OFFSET:
 +	case NVSW_REG_PWM_CONTROL_OFFSET:
 +	case NVSW_REG_RESET_GP2_OFFSET:
 +	case NVSW_REG_GP4_OFFSET:
@@ -139,16 +133,12 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_AGGRLO_MASK_OFFSET:
 +	case NVSW_REG_BRD1_EVENT_OFFSET:
 +	case NVSW_REG_BRD1_MASK_OFFSET:
-+	case NVSW_REG_BRD2_EVENT_OFFSET:
-+	case NVSW_REG_BRD2_MASK_OFFSET:
 +	case NVSW_REG_ASIC1_EVENT_OFFSET:
 +	case NVSW_REG_ASIC1_MASK_OFFSET:
 +	case NVSW_REG_ASIC2_EVENT_OFFSET:
 +	case NVSW_REG_ASIC2_MASK_OFFSET:
 +	case NVSW_REG_ASIC3_EVENT_OFFSET:
 +	case NVSW_REG_ASIC3_MASK_OFFSET:
-+	case NVSW_REG_ASIC4_EVENT_OFFSET:
-+	case NVSW_REG_ASIC4_MASK_OFFSET:
 +	case NVSW_REG_VR1_ALERT_EVENT_OFFSET:
 +	case NVSW_REG_VR1_ALERT_MASK_OFFSET:
 +	case NVSW_REG_VR2_ALERT_EVENT_OFFSET:
@@ -198,10 +188,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_CPLD4_VER_OFFSET:
 +	case NVSW_REG_CPLD4_PN_OFFSET:
 +	case NVSW_REG_CPLD4_PN1_OFFSET:
-+	case NVSW_REG_CPLD1_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD2_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD3_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD4_DBG_LED_OFFSET:
 +	case NVSW_REG_CPLD7_VER_OFFSET:
 +	case NVSW_REG_PG1_OFFSET:
 +	case NVSW_REG_PG1_EVENT_OFFSET:
@@ -236,14 +222,12 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_RESET_GP2_OFFSET:
 +	case NVSW_REG_GP0_RO_OFFSET:
 +	case NVSW_REG_GP1_RO_OFFSET:
-+	case NVSW_REG_GP2_RO_OFFSET:
 +	case NVSW_REG_GP4_RO_OFFSET:
 +	case NVSW_REG_GP5_RO_OFFSET:
 +	case NVSW_REG_GPCOM0_OFFSET:
 +	case NVSW_REG_GP0_OFFSET:
 +	case NVSW_REG_GP1_OFFSET:
 +	case NVSW_REG_GP7_OFFSET:
-+	case NVSW_REG_UART_BAUD_OFFSET:
 +	case NVSW_REG_PWM_CONTROL_OFFSET:
 +	case NVSW_REG_GP4_OFFSET:
 +	case NVSW_REG_GP5_OFFSET:
@@ -264,9 +248,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_BRD1_OFFSET:
 +	case NVSW_REG_BRD1_EVENT_OFFSET:
 +	case NVSW_REG_BRD1_MASK_OFFSET:
-+	case NVSW_REG_BRD2_OFFSET:
-+	case NVSW_REG_BRD2_EVENT_OFFSET:
-+	case NVSW_REG_BRD2_MASK_OFFSET:
 +	case NVSW_REG_ASIC1_HEALTH_OFFSET:
 +	case NVSW_REG_ASIC1_EVENT_OFFSET:
 +	case NVSW_REG_ASIC1_MASK_OFFSET:
@@ -276,9 +257,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_ASIC3_HEALTH_OFFSET:
 +	case NVSW_REG_ASIC3_EVENT_OFFSET:
 +	case NVSW_REG_ASIC3_MASK_OFFSET:
-+	case NVSW_REG_ASIC4_HEALTH_OFFSET:
-+	case NVSW_REG_ASIC4_EVENT_OFFSET:
-+	case NVSW_REG_ASIC4_MASK_OFFSET:
 +	case NVSW_REG_VR1_ALERT_OFFSET:
 +	case NVSW_REG_VR1_ALERT_EVENT_OFFSET:
 +	case NVSW_REG_VR1_ALERT_MASK_OFFSET:
@@ -376,10 +354,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_CPLD4_VER_OFFSET:
 +	case NVSW_REG_CPLD4_PN_OFFSET:
 +	case NVSW_REG_CPLD4_PN1_OFFSET:
-+	case NVSW_REG_CPLD1_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD2_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD3_DBG_LED_OFFSET:
-+	case NVSW_REG_CPLD4_DBG_LED_OFFSET:
 +	case NVSW_REG_CPLD7_VER_OFFSET:
 +	case NVSW_REG_PG1_OFFSET:
 +	case NVSW_REG_PG1_EVENT_OFFSET:
@@ -414,12 +388,10 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_RESET_GP2_OFFSET:
 +	case NVSW_REG_GP0_RO_OFFSET:
 +	case NVSW_REG_GP1_RO_OFFSET:
-+	case NVSW_REG_GP2_RO_OFFSET:
 +	case NVSW_REG_GPCOM0_OFFSET:
 +	case NVSW_REG_GP0_OFFSET:
 +	case NVSW_REG_GP1_OFFSET:
 +	case NVSW_REG_GP7_OFFSET:
-+	case NVSW_REG_UART_BAUD_OFFSET:
 +	case NVSW_REG_PWM_CONTROL_OFFSET:
 +	case NVSW_REG_GP4_OFFSET:
 +	case NVSW_REG_GP5_OFFSET:
@@ -440,9 +412,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_BRD1_OFFSET:
 +	case NVSW_REG_BRD1_EVENT_OFFSET:
 +	case NVSW_REG_BRD1_MASK_OFFSET:
-+	case NVSW_REG_BRD2_OFFSET:
-+	case NVSW_REG_BRD2_EVENT_OFFSET:
-+	case NVSW_REG_BRD2_MASK_OFFSET:
 +	case NVSW_REG_ASIC1_HEALTH_OFFSET:
 +	case NVSW_REG_ASIC1_EVENT_OFFSET:
 +	case NVSW_REG_ASIC1_MASK_OFFSET:
@@ -452,9 +421,6 @@ index 000000000000..f3c48adfd447
 +	case NVSW_REG_ASIC3_HEALTH_OFFSET:
 +	case NVSW_REG_ASIC3_EVENT_OFFSET:
 +	case NVSW_REG_ASIC3_MASK_OFFSET:
-+	case NVSW_REG_ASIC4_HEALTH_OFFSET:
-+	case NVSW_REG_ASIC4_EVENT_OFFSET:
-+	case NVSW_REG_ASIC4_MASK_OFFSET:
 +	case NVSW_REG_VR1_ALERT_OFFSET:
 +	case NVSW_REG_VR1_ALERT_EVENT_OFFSET:
 +	case NVSW_REG_VR1_ALERT_MASK_OFFSET:
@@ -842,10 +808,10 @@ index 000000000000..f3c48adfd447
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000000..abfb84877224
+index 000000000000..28045114b90c
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,887 @@
+@@ -0,0 +1,896 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -1513,6 +1479,14 @@ index 000000000000..abfb84877224
 +	},
 +};
 +
++/* Callback is used to indicate that all adapter devices have been created. */
++static int
++nvsw_host_spc6_completion_notify(void *handle, struct i2c_adapter *parent,
++				  struct i2c_adapter *adapters[])
++{
++	return 0;
++}
++
 +/* Mux init/exit callbacks. */
 +static int nvsw_host_spc6_mux_topology_init(struct nvsw_core *nvsw_core)
 +{
@@ -1682,7 +1656,7 @@ index 000000000000..abfb84877224
 +	return err;
 +}
 +
-+static void nvsw_host_remove(struct platform_device *pdev)
++static int nvsw_host_remove(struct platform_device *pdev)
 +{
 +	struct nvsw_core *nvsw_core = platform_get_drvdata(pdev);
 +
@@ -1691,6 +1665,7 @@ index 000000000000..abfb84877224
 +	nvsw_host_mux_i2c_client = NULL;
 +	i2c_put_adapter(nvsw_host_mux_i2c_adapter);
 +	nvsw_host_mux_i2c_adapter = NULL;
++	return 0;
 +}
 +
 +static struct platform_driver nvsw_host_driver = {
@@ -1735,10 +1710,10 @@ index 000000000000..abfb84877224
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 new file mode 100644
-index 000000000000..c81eeb330228
+index 000000000000..58aa55ee73cf
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw.h
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,300 @@
 +/* SPDX-License-Identifier: GPL-2.0+
 + *
 + * Nvidia switch platform driver
@@ -1762,10 +1737,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_REG_CPLD3_PN1_OFFSET	0x2509
 +#define NVSW_REG_CPLD4_PN_OFFSET	0x250a
 +#define NVSW_REG_CPLD4_PN1_OFFSET	0x250b
-+#define NVSW_REG_CPLD1_DBG_LED_OFFSET	0x250c
-+#define NVSW_REG_CPLD2_DBG_LED_OFFSET	0x250d
-+#define NVSW_REG_CPLD3_DBG_LED_OFFSET	0x250e
-+#define NVSW_REG_CPLD4_DBG_LED_OFFSET	0x250f
 +#define NVSW_REG_CPLD7_VER_OFFSET	0x2510
 +#define NVSW_REG_PG1_OFFSET		0x2511
 +#define NVSW_REG_PG1_EVENT_OFFSET	0x2512
@@ -1791,7 +1762,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_REG_GP0_OFFSET		0x252e
 +#define NVSW_REG_GP7_OFFSET		0x252f
 +#define NVSW_REG_GP1_OFFSET		0x2530
-+#define NVSW_REG_UART_BAUD_OFFSET	0x2531
 +#define NVSW_REG_GP4_OFFSET		0x2532
 +#define NVSW_REG_GP5_RO_OFFSET		0x2533
 +#define NVSW_REG_FIELD_UPGRADE		0x2534
@@ -1812,9 +1782,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_REG_BRD1_OFFSET		0x2547
 +#define NVSW_REG_BRD1_EVENT_OFFSET	0x2548
 +#define NVSW_REG_BRD1_MASK_OFFSET	0x2549
-+#define NVSW_REG_BRD2_OFFSET		0x254a
-+#define NVSW_REG_BRD2_EVENT_OFFSET	0x254b
-+#define NVSW_REG_BRD2_MASK_OFFSET	0x254c
 +#define NVSW_REG_HEALTH_OFFSET		0x254d
 +#define NVSW_REG_HEALTH_EVENT_OFFSET	0x254e
 +#define NVSW_REG_HEALTH_MASK_OFFSET	0x254f
@@ -1830,7 +1797,7 @@ index 000000000000..c81eeb330228
 +#define NVSW_REG_VR2_ALERT_OFFSET	0x255e
 +#define NVSW_REG_VR2_ALERT_EVENT_OFFSET	0x255f
 +#define NVSW_REG_VR2_ALERT_MASK_OFFSET	0x2560
-+#define NVSW_REG_PS_DC_OK_OFFSET	0x2567
++#define NVSW_REG_PS_DC_OK_OFFSET		0x2567
 +#define NVSW_REG_PS_DC_OK_EVENT_OFFSET	0x2568
 +#define NVSW_REG_PS_DC_OK_MASK_OFFSET	0x2569
 +#define NVSW_REG_CPLD8_PN_OFFSET	0x2573
@@ -1849,9 +1816,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_REG_ASIC3_HEALTH_OFFSET	0x2582
 +#define NVSW_REG_ASIC3_EVENT_OFFSET	0x2583
 +#define NVSW_REG_ASIC3_MASK_OFFSET	0x2584
-+#define NVSW_REG_ASIC4_HEALTH_OFFSET	0x2585
-+#define NVSW_REG_ASIC4_EVENT_OFFSET	0x2586
-+#define NVSW_REG_ASIC4_MASK_OFFSET	0x2587
 +#define NVSW_REG_FAN_OFFSET		0x2588
 +#define NVSW_REG_FAN_EVENT_OFFSET	0x2589
 +#define NVSW_REG_FAN_MASK_OFFSET	0x258a
@@ -1873,8 +1837,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_REG_LEAK_OFFSET		0x25af
 +#define NVSW_REG_LEAK_EVENT_OFFSET	0x25b0
 +#define NVSW_REG_LEAK_MASK_OFFSET	0x25b1
-+#define NVSW_REG_CURRENT_TEMP_RO	0x25c0
-+#define NVSW_REG_SWITCH_IC_QTY		0x25c1
 +#define NVSW_REG_GP4_RO_OFFSET		0x25c2
 +#define NVSW_REG_SPI_CHNL_SELECT	0x25c3
 +#define NVSW_REG_CPLD5_MVER_OFFSET	0x25c4
@@ -1962,7 +1924,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_LED_LO_NIBBLE_MASK		GENMASK(7, 4)
 +#define NVSW_LED_HI_NIBBLE_MASK		GENMASK(3, 0)
 +#define NVSW_UART_SEL_MASK		GENMASK(7, 6)
-+#define NVSW_UART_BAUD_MASK		GENMASK(3, 0)
 +#define NVSW_BIOS_STATUS_MASK		GENMASK(3, 1)
 +#define NVSW_REG_RESET_MASK		BIT(1)
 +#define NVSW_MASTER_MASK		BIT(5)
@@ -1973,7 +1934,6 @@ index 000000000000..c81eeb330228
 +#define NVSW_WD3_DFLT_TIMEOUT		600
 +#define NVSW_I2C_CAP_BIT		0x04
 +#define NVSW_I2C_CAP_MASK		GENMASK(5, NVSW_I2C_CAP_BIT)
-+#define NVSW_I2C_TRAN_END_L		BIT(5)
 +
 +#define NVSW_NR_NONE			-1
 +#define NVSW_MUX_MAX			2
@@ -1991,8 +1951,6 @@ index 000000000000..c81eeb330228
 +	HID185,
 +	HID187,
 +	HID188,
-+	HID189,
-+	HID191,
 +	HID193,
 +};
 +
