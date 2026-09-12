@@ -1,4 +1,4 @@
-From ee5b643193f6fdcf90965f236fec5f30e6ea9664 Mon Sep 17 00:00:00 2001
+From 5345fd96c4206ec0ccfbd0b2b0eea2b1e4fec224 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Thu, 25 Jun 2026 13:58:15 +0300
 Subject: [PATCH] platform: mellanox: Add support for new SN6600 Nvidia system
@@ -16,12 +16,12 @@ Reviewed-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/platform/mellanox/nvsw-core.c      |  49 ++
- drivers/platform/mellanox/nvsw-host-spc6.c | 601 ++++++++++++++++++++-
+ drivers/platform/mellanox/nvsw-host-spc6.c | 605 ++++++++++++++++++++-
  drivers/platform/mellanox/nvsw.h           |  29 +-
- 3 files changed, 675 insertions(+), 4 deletions(-)
+ 3 files changed, 672 insertions(+), 11 deletions(-)
 
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
-index 0dae7e07..36bca18e 100644
+index e3093780f461..c774e425e897 100644
 --- a/drivers/platform/mellanox/nvsw-core.c
 +++ b/drivers/platform/mellanox/nvsw-core.c
 @@ -38,6 +38,9 @@ static bool nvsw_writeable_reg(struct device *dev, unsigned int reg)
@@ -138,7 +138,7 @@ index 0dae7e07..36bca18e 100644
  	case NVSW_REG_FAN_DRW_CAP_OFFSET:
  	case NVSW_REG_TACHO_SPEED_OFFSET:
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
-index 757846b9..df3f565e 100644
+index 17efbfa55988..94e9831d72dc 100644
 --- a/drivers/platform/mellanox/nvsw-host-spc6.c
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
 @@ -2,7 +2,7 @@
@@ -438,7 +438,7 @@ index 757846b9..df3f565e 100644
 +	{
 +		.label = "jtag_cap",
 +		.reg = NVSW_REG_FU_CAP_OFFSET,
-+		.mask = NVSW_FU_CAP_MASK	,
++		.mask = NVSW_FU_CAP_MASK,
 +		.bit = 1,
 +		.mode = 0444,
 +	},
@@ -524,8 +524,8 @@ index 757846b9..df3f565e 100644
  /* Platform led data */
  static struct mlxreg_core_data nvsw_host_spc6_lc_led_data[] = {
  	{
-@@ -592,6 +952,123 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_lc_led = {
- 		.counter = ARRAY_SIZE(nvsw_host_spc6_lc_led_data),
+@@ -591,6 +951,121 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_lc_led = {
+ 	.counter = ARRAY_SIZE(nvsw_host_spc6_lc_led_data),
  };
  
 +
@@ -534,16 +534,15 @@ index 757846b9..df3f565e 100644
 +	{
 +		.label = "status:green",
 +		.reg = NVSW_REG_LED1_OFFSET,
-+		.mask = NVSW_LED_LO_NIBBLE_MASK
++		.mask = NVSW_LED_LO_NIBBLE_MASK,
 +	},
 +	{
 +		.label = "status:amber",
 +		.reg = NVSW_REG_LED1_OFFSET,
-+		.mask = NVSW_LED_LO_NIBBLE_MASK
++		.mask = NVSW_LED_LO_NIBBLE_MASK,
 +	},
 +	{
 +		.label = "psu:green",
-+		.mode = 0444,
 +		.reg = NVSW_REG_LED1_OFFSET,
 +		.mask = NVSW_LED_HI_NIBBLE_MASK,
 +	},
@@ -554,7 +553,6 @@ index 757846b9..df3f565e 100644
 +	},
 +	{
 +		.label = "fan:green",
-+		.mode = 0444,
 +		.reg = NVSW_REG_LED6_OFFSET,
 +		.mask = NVSW_LED_LO_NIBBLE_MASK,
 +	},
@@ -641,17 +639,24 @@ index 757846b9..df3f565e 100644
 +};
 +
 +static struct mlxreg_core_platform_data nvsw_host_spc6_hid186_led = {
-+		.data = nvsw_host_spc6_hid186_led_data,
-+		.counter = ARRAY_SIZE(nvsw_host_spc6_hid186_led_data),
++	.data = nvsw_host_spc6_hid186_led_data,
++	.counter = ARRAY_SIZE(nvsw_host_spc6_hid186_led_data),
 +};
 +
  /* Watchdog type3 platform data */
  static struct mlxreg_core_data nvsw_host_wd_main_regs_type3[] = {
  	{
-@@ -666,6 +1143,105 @@ static struct mlxreg_core_platform_data nvsw_host_wd_set_type3[] = {
+@@ -665,13 +1140,104 @@ static struct mlxreg_core_platform_data nvsw_host_wd_set_type3[] = {
  	},
  };
  
+-/* Callback is used to indicate that all adapter devices have been created. */
+-static int
+-nvsw_host_spc6_completion_notify(void *handle, struct i2c_adapter *parent,
+-				  struct i2c_adapter *adapters[])
+-{
+-	return 0;
+-}
 +/* SPC6 platform fan data */
 +static struct mlxreg_core_data nvsw_host_cpld_hid186_fan_data[] = {
 +	{
@@ -745,26 +750,26 @@ index 757846b9..df3f565e 100644
 +};
 +
 +static struct mlxreg_core_platform_data nvsw_host_spc6_hid186_fan_data = {
-+		.data = nvsw_host_cpld_hid186_fan_data,
-+		.counter = ARRAY_SIZE(nvsw_host_cpld_hid186_fan_data),
-+		.capability = NVSW_REG_FAN_DRW_CAP_OFFSET,
-+		.version = 1,
++	.data = nvsw_host_cpld_hid186_fan_data,
++	.counter = ARRAY_SIZE(nvsw_host_cpld_hid186_fan_data),
++	.capability = NVSW_REG_FAN_DRW_CAP_OFFSET,
++	.version = 1,
 +};
-+
- /* Callback is used to indicate that all adapter devices have been created. */
- static int
- nvsw_host_spc6_completion_notify(void *handle, struct i2c_adapter *parent,
-@@ -727,6 +1303,9 @@ static void nvsw_host_spc6_mux_topology_exit(struct nvsw_core *nvsw_core)
+ 
+ /* Mux init/exit callbacks. */
+ static int nvsw_host_spc6_mux_topology_init(struct nvsw_core *nvsw_core)
+@@ -718,16 +1284,27 @@ static void nvsw_host_spc6_mux_topology_exit(struct nvsw_core *nvsw_core)
+ 
  static int __init nvsw_host_dmi_spc6_switch_matched(const struct dmi_system_id *dmi)
  {
- 	int i, err;
 +	const char *sku;
-+
-+	sku = dmi_get_system_info(DMI_PRODUCT_SKU);
+ 	int i;
  
- 	/* Allocate the platform device structure */
- 	nvsw_host_pdev =
-@@ -747,8 +1326,16 @@ static int __init nvsw_host_dmi_spc6_switch_matched(const struct dmi_system_id *
++	sku = dmi_get_system_info(DMI_PRODUCT_SKU);
++
+ 	/* Set system configuration. */
+ 	nvsw_host_hid = HID193;
+ 	mux_num = ARRAY_SIZE(nvsw_host_spc6_mux_data);
  	for (i = 0; i < mux_num; i++)
  		nvsw_host_mux_data[i] = &nvsw_host_spc6_mux_data[i];
  	nvsw_host_mux_brdinfo = &nvsw_host_spc6_mux_brdinfo;
@@ -783,7 +788,7 @@ index 757846b9..df3f565e 100644
  	for (i = 0; i < ARRAY_SIZE(nvsw_host_wd_set_type3); i++)
  		nvsw_wd_data[i] = &nvsw_host_wd_set_type3[i];
  
-@@ -763,6 +1350,13 @@ static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
+@@ -742,6 +1319,13 @@ static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
  		},
  	},
@@ -797,7 +802,7 @@ index 757846b9..df3f565e 100644
  	{
  		.callback = nvsw_host_dmi_spc6_switch_matched,
  		.matches = {
-@@ -845,6 +1439,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
+@@ -825,6 +1409,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
  		nvsw_core->wd_data[i] = nvsw_wd_data[i];
  	nvsw_core->regio_data = nvsw_regs_io_data;
  	nvsw_core->led_data = nvsw_led_data;
@@ -806,7 +811,7 @@ index 757846b9..df3f565e 100644
  	nvsw_core->mux_exit = nvsw_host_spc6_mux_topology_exit;
  	platform_set_drvdata(pdev, nvsw_core);
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
-index 9644f6d9..1063940a 100644
+index 5dd1c031f599..0aa09e172050 100644
 --- a/drivers/platform/mellanox/nvsw.h
 +++ b/drivers/platform/mellanox/nvsw.h
 @@ -34,6 +34,9 @@
@@ -886,5 +891,5 @@ index 9644f6d9..1063940a 100644
  #define NVSW_REG_MAX			0x26ff
  
 -- 
-2.47.3
+2.34.1
 
