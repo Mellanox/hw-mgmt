@@ -1,6 +1,6 @@
-From d9b339b65110f9f6e2dca0ceef575a7a02164d43 Mon Sep 17 00:00:00 2001
+From 1a5be1524068c44386a0a71b7f1430c07b286124 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
-Date: Thu, 4 Jul 2024 23:50:27 +0300
+Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-host-nvl6: Add system control and
  monitoring driver for Nvidia NVL6 switches
 
@@ -15,21 +15,19 @@ This control includes:
 - General purpose registers attributes.
 - LED control.
 
-Upstream-Status: Pending
-
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  10 +
  drivers/platform/mellanox/Makefile         |   1 +
- drivers/platform/mellanox/nvsw-host-nvl6.c | 738 +++++++++++++++++++++
- 3 files changed, 749 insertions(+)
+ drivers/platform/mellanox/nvsw-host-nvl6.c | 739 +++++++++++++++++++++
+ 3 files changed, 750 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-host-nvl6.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 650f7f463c9e..d2214ea1780c 100644
+index 08a49dafff30..ede1d4da17c3 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -114,6 +114,16 @@ config NVSW_CORE
+@@ -122,6 +122,16 @@ config NVSW_CORE
  	  selected by the drivers that need it, which are built as separate
  	  modules against it.
  
@@ -47,22 +45,23 @@ index 650f7f463c9e..d2214ea1780c 100644
  	tristate "Nvidia SPC6 host CPLD/FPGA Hardware Control and Monitoring"
  	depends on DMI && HWMON && I2C
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index a959d07f1787..11070f26b468 100644
+index b2ae1a180e59..4e3dff41bbed 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -12,5 +12,6 @@ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
+@@ -12,6 +12,7 @@ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
  obj-$(CONFIG_NVSW_CORE) += nvsw-core.o
 +obj-$(CONFIG_NVSW_HOST_NVL6) += nvsw-host-nvl6.o
  obj-$(CONFIG_NVSW_HOST_SPC6) += nvsw-host-spc6.o
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
+ obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
 new file mode 100644
-index 000000000000..2d2ad0d34bd5
+index 000000000000..0246a81b2d63
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
-@@ -0,0 +1,738 @@
+@@ -0,0 +1,739 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia NVL6 host platform driver
@@ -200,7 +199,7 @@ index 000000000000..2d2ad0d34bd5
 +		.label = "bios_status",
 +		.reg = NVSW_REG_GPCOM0_OFFSET,
 +		.mask = GENMASK(3, 1),
-+		.bit = 2,
++		.bit = 3,
 +		.mode = 0444,
 +	},
 +	{
@@ -754,11 +753,12 @@ index 000000000000..2d2ad0d34bd5
 +	return nvsw_core_init(nvsw_core);
 +}
 +
-+static void nvsw_host_remove(struct platform_device *pdev)
++static int nvsw_host_remove(struct platform_device *pdev)
 +{
 +	struct nvsw_core *nvsw_core = platform_get_drvdata(nvsw_host_dev);
 +
-+	return nvsw_core_exit(nvsw_core);
++	nvsw_core_exit(nvsw_core);
++	return 0;
 +}
 +
 +static struct platform_driver nvsw_host_driver = {

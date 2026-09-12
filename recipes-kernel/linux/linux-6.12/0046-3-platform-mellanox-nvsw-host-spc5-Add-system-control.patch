@@ -1,5 +1,5 @@
 From 6fa40ab2846aa9edc1af299b517166734fed3d67 Mon Sep 17 00:00:00 2001
-From: Vadim Pasternak <vadimp@nvidia.com>
+From: Felix Radensky <fradensky@nvidia.com>
 Date: Thu, 4 Jul 2024 23:50:27 +0300
 Subject: [PATCH] platform/mellanox: nvsw-host-spc5: Add system control and
  monitoring driver for Nvidia SPC5 switches
@@ -18,7 +18,7 @@ This control includes:
 
 Upstream-Status: Pending
 
-Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  10 +
  drivers/platform/mellanox/Makefile         |   1 +
