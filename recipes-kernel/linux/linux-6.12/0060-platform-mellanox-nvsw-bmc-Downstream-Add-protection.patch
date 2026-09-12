@@ -1,8 +1,8 @@
-From ac1dcaac74bbfc305add230936df03a161110334 Mon Sep 17 00:00:00 2001
+From ca93c0934e778ad65f9877bc51f91a79b03955ed Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 23 Mar 2026 17:31:25 +0200
-Subject: [PATCH 6.12 2/4] platform/mellanox: nvsw-bmc: Downstream: Add
- protection for mux access
+Subject: [PATCH] platform/mellanox: nvsw-bmc: Downstream: Add protection for
+ mux access
 
 Since mux ownership could be moved between CPU and BMC sides, mux setting
 should be allowed only by designated owner.
@@ -53,10 +53,10 @@ index fb5e89c82423..cd8b45fa4dba 100644
  	/* Deselect active channel */
  	mux->last_val = -1;
 diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-index 89343d7660a4..1a0bd9093dd9 100644
+index 3a94b519d6ea..a2319a412725 100644
 --- a/drivers/platform/mellanox/nvsw-bmc-hid162.c
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-@@ -6965,6 +6965,19 @@ nvsw_bmc_hid162_completion_notify(void *handle, struct i2c_adapter *parent,
+@@ -6984,6 +6984,19 @@ nvsw_bmc_hid162_completion_notify(void *handle, struct i2c_adapter *parent,
  	return 0;
  }
  
@@ -76,7 +76,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
  {
  	int i;
-@@ -6976,6 +6989,7 @@ static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -6995,6 +7008,7 @@ static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid162_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -84,7 +84,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7002,6 +7016,7 @@ static int nvsw_bmc_hid176_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7021,6 +7035,7 @@ static int nvsw_bmc_hid176_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -92,7 +92,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7027,6 +7042,7 @@ static int nvsw_bmc_hid177_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7046,6 +7061,7 @@ static int nvsw_bmc_hid177_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -100,7 +100,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7052,6 +7068,7 @@ static int nvsw_bmc_hid180_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7071,6 +7087,7 @@ static int nvsw_bmc_hid180_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid180_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -108,7 +108,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7077,10 +7094,20 @@ static int nvsw_bmc_hid181_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7096,10 +7113,20 @@ static int nvsw_bmc_hid181_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid181_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -129,7 +129,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  	nvsw_core->regio_data = &nvsw_bmc_hid181_regio;
  	nvsw_core->led_data = &nvsw_bmc_hid177_led;
  	nvsw_core->hotplug_data = &nvsw_bmc_hid181_hotplug;
-@@ -7106,6 +7133,15 @@ static int nvsw_bmc_hid189_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7125,6 +7152,15 @@ static int nvsw_bmc_hid189_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
  
@@ -145,7 +145,7 @@ index 89343d7660a4..1a0bd9093dd9 100644
  	nvsw_core->regio_data = &nvsw_bmc_hid193_regio; /* hid189 uses info from 193 */
  	nvsw_core->led_data = &nvsw_bmc_hid177_led;
  	nvsw_core->hotplug_data = &nvsw_bmc_hid193_hotplug;
-@@ -7156,6 +7192,15 @@ static int nvsw_bmc_hid193_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7175,6 +7211,15 @@ static int nvsw_bmc_hid193_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
  
