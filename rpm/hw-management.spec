@@ -90,6 +90,7 @@ install -m 0644 usr/etc/hw-management-sensors/msn3700_A1_sensors.conf  $RPM_BUIL
 install -m 0644 usr/etc/hw-management-sensors/msn4800_sensors_lc.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/msn4800_sensors_lc.conf
 install -m 0644 usr/etc/hw-management-sensors/sn3750sx_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn3750sx_sensors.conf
 install -m 0644 usr/etc/hw-management-sensors/sn5600_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5600_sensors.conf
+install -m 0644 usr/etc/hw-management-sensors/sn66xx_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn66xx_sensors.conf
 
 install -m 0644 usr/etc/hw-management-thermal/tc_config_default.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_default.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_mqm8700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_mqm8700.json
@@ -107,6 +108,7 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600C.json $RPM_BUILD
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4600.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4700.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn5600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn5600.json
+install -m 0644 usr/etc/hw-management-thermal/tc_config_sn6600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_sn6600.json
 install -m 0644 usr/etc/modprobe.d/hw-management.conf $RPM_BUILD_ROOT/etc/modprobe.d/hw-management.conf
 install -m 0644 usr/etc/modules-load.d/05-hw-management-modules.conf $RPM_BUILD_ROOT/etc/modules-load.d/05-hw-management-modules.conf
 
@@ -132,6 +134,10 @@ install -m 0755 usr/usr/bin/hw-management-thermal-events.sh $RPM_BUILD_ROOT/usr/
 install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/hw-management-vpd-parser.py
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
 install -m 0755 usr/usr/bin/hw-management.sh $RPM_BUILD_ROOT/usr/bin/hw-management.sh
+# Imported by hw_management_thermal_control*.py and hw_management_thermal_updater.py,
+# never executed directly, so installed non-executable like in the source tree.
+install -m 0644 usr/usr/bin/hw_management_lib.py $RPM_BUILD_ROOT/usr/bin/hw_management_lib.py
+install -m 0644 usr/usr/bin/hw_management_platform_config.py $RPM_BUILD_ROOT/usr/bin/hw_management_platform_config.py
 install -m 0755 usr/usr/bin/hw_management_nvl_temperature_get.py $RPM_BUILD_ROOT/usr/bin/hw_management_nvl_temperature_get.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_common.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
@@ -191,6 +197,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-sensors/msn4800_sensors_lc.conf"
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn3750sx_sensors.conf"
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn5600_sensors.conf"
+%config %attr(0644, root, root) "/etc/hw-management-sensors/sn66xx_sensors.conf"
 
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_default.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_mqm8700.json"
@@ -208,6 +215,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn4600.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn4700.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn5600.json"
+%config %attr(0644, root, root) "/etc/hw-management-thermal/tc_config_sn6600.json"
 
 #%dir %attr(0755, root, root) "/etc/modprobe.d"
 %config %attr(0644, root, root) "/etc/modprobe.d/hw-management.conf"
@@ -237,6 +245,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-thermal-events.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
+%attr(0644, root, root) "/usr/bin/hw_management_lib.py"
+%attr(0644, root, root) "/usr/bin/hw_management_platform_config.py"
 %attr(0755, root, root) "/usr/bin/hw_management_nvl_temperature_get.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_common.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_delta.py"
