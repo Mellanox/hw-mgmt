@@ -42,7 +42,7 @@ The userspace package assumes a **Mellanox `nvsw_bmc` platform** driver exposes 
 
 For **Linux 6.12** BMC kernels in this tree, new **`HINNN` / `hidNNN`** support is normally developed **on top of** the existing downstream platform series, including at least:
 
-- **`recipes-kernel/linux/linux-6.12/0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch`**
+- **`recipes-kernel/linux/linux-6.12/0046-2-platform-mellanox-nvsw-bmc-Add-system-control-and-m.patch`**
 - **`recipes-kernel/linux/linux-6.12/0060-platform-mellanox-nvsw-bmc-Downstream-Add-protection.patch`**
 
 If your branch carries **renumbered or merged** equivalents of those changes, base your new HID work on the **effective baseline** that already contains the same functionality (system control / protection paths), then add a **follow-on patch** (or DTS-only delta) that:
