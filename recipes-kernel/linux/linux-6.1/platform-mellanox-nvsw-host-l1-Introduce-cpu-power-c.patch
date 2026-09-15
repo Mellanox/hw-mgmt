@@ -1,0 +1,61 @@
+From 9570572cefe7957047874757852ee3dbd1d4aac3 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Tue, 15 Sep 2026 07:39:09 +0300
+Subject: platform: mellanox: nvsw-host-l1: Introduce cpu power cycle
+
+This patch add the following:
+ - Introduce a new cpld attribute that is used to
+   trigger a cpu only power cycle. NVMe will also
+   be power cycled. Asic will remain powered on if
+   the perst_en signal is asserted before triggerring
+   cpu_pwr_cycle
+ - Changes the default watchdog action to cpu_pwr_cycle
+   instead of cpu reset.
+
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-host-l1.c | 6 ++++++
+ drivers/platform/mellanox/nvsw.h         | 3 ++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
+index 3706787b5..aa51101e0 100644
+--- a/drivers/platform/mellanox/nvsw-host-l1.c
++++ b/drivers/platform/mellanox/nvsw-host-l1.c
+@@ -199,6 +199,12 @@ static struct mlxreg_core_data nvsw_host_l1_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0244,
+ 	},
++	{
++		.label = "cpu_pwr_cycle",
++		.reg = NVSW_REG_RESET_GP3_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0244,
++	},
+ 	{
+ 		.label = "pwr_down",
+ 		.reg = NVSW_REG_GP1_OFFSET,
+diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
+index 87d924ee2..164a67b63 100644
+--- a/drivers/platform/mellanox/nvsw.h
++++ b/drivers/platform/mellanox/nvsw.h
+@@ -30,6 +30,7 @@
+ #define NVSW_REG_PG2_MASK_OFFSET	0x2516
+ #define NVSW_REG_RESET_GP1_OFFSET	0x2517
+ #define NVSW_REG_RESET_GP2_OFFSET	0x2519
++#define NVSW_REG_RESET_GP3_OFFSET	0x251b
+ #define NVSW_REG_RESET_CAUSE_OFFSET	0x251d
+ #define NVSW_REG_RESET_CAUSE1_OFFSET	0x251e
+ #define NVSW_REG_RESET_CAUSE2_OFFSET	0x251f
+@@ -212,7 +213,7 @@
+ #define NVSW_MASTER_MASK                BIT(5)
+ 
+ #define NVSW_FU_CAP_MASK		GENMASK(1, 0)
+-#define NVSW_WD_RESET_ACT_MASK		GENMASK(7, 1)
++#define NVSW_WD_RESET_ACT_MASK		(GENMASK(7, 0) & ~BIT(1))
+ #define NVSW_WD_FAN_ACT_MASK		(GENMASK(7, 0) & ~BIT(4))
+ #define NVSW_WD_TYPE2_TO_MASK		0
+ #define NVSW_WD3_DFLT_TIMEOUT		600
+-- 
+2.47.3
+
