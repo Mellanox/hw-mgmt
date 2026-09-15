@@ -520,6 +520,12 @@ if [ "$1" == "add" ]; then
 						esac
 					fi
 				done
+				# Write the current time into the sysfs ready file.
+				if [ "$name" == "mlxsw" ]; then
+					current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
+					echo "$current_time" > "$SYSFS_MONITOR_MLXSW_RDY_FILE"
+					print_function_call "$0" "add" "switch mlxsw asic ready: $SYSFS_MONITOR_MLXSW_RDY_FILE"
+				fi
 			fi
 		fi
 	fi
@@ -1292,6 +1298,8 @@ else
 			rm -f "$tpath/module*_temp_emergency"
 
 			check_n_unlink $cpath/asic_hwmon
+			rm -f "$SYSFS_MONITOR_MLXSW_RDY_FILE"
+			print_function_call "$0" "remove" "switch mlxsw asic ready: $SYSFS_MONITOR_MLXSW_RDY_FILE"
 			set_asic_ready "$3""$4" 0
 
 			if [ "$lc_id" -ne 0 ]; then
