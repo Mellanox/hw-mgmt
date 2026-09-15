@@ -1,0 +1,62 @@
+From b5803097bbc3811d1274f74e80f4c96526e63da4 Mon Sep 17 00:00:00 2001
+From: Sunil Uttarwar <Sunilprakashrao.uttarwar@amd.com>
+Date: Mon, 17 Aug 2020 16:24:21 +0530
+Subject: [PATCH] amd-xgbe: Support accessing MII management bus from userspace
+
+---
+ drivers/net/ethernet/amd/xgbe/xgbe-drv.c    | 2 +-
+ drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c | 1 +
+ drivers/net/ethernet/amd/xgbe/xgbe.h        | 2 ++
+ 3 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+index 256969ac2..ed107dbdd 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+@@ -2041,7 +2041,9 @@ static int xgbe_ioctl(struct net_device *netdev, struct ifreq *ifreq, int cmd)
+ 		break;
+ 
+ 	default:
+-		ret = -EOPNOTSUPP;
++		if (!pdata->phydev)
++			return -ENODEV;
++		ret = phy_mii_ioctl(pdata->phydev, ifreq, cmd);
+ 	}
+ 
+ 	return ret;
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c b/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
+index ff3751a03..36ec85b8c 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
+@@ -851,6 +851,7 @@ static void xgbe_phy_free_phy_device(struct xgbe_prv_data *pdata)
+ 		phy_device_remove(phy_data->phydev);
+ 		phy_device_free(phy_data->phydev);
+ 		phy_data->phydev = NULL;
++		pdata->phydev = NULL;
+ 	}
+ }
+ 
+@@ -1031,6 +1032,7 @@ static int xgbe_phy_find_phy_device(struct xgbe_prv_data *pdata)
+ 		return ret;
+ 	}
+ 	phy_data->phydev = phydev;
++	pdata->phydev = phydev;
+ 
+ 	xgbe_phy_external_phy_quirks(pdata);
+ 
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgbe/xgbe.h
+index 92c40142c..92d9ae8a2 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe.h
++++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
+@@ -1312,6 +1312,8 @@ struct xgbe_prv_data {
+ 
+ 	bool debugfs_an_cdr_workaround;
+ 	bool debugfs_an_cdr_track_early;
++
++	struct phy_device	*phydev;
+ };
+ 
+ /* Function prototypes*/
+-- 
+2.17.1
+

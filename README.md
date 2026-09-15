@@ -1,5 +1,5 @@
-# Mellanox Hardware Management package
-This package supports thermal control and hardware management for Mellanox switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
+# NVIDIA Hardware Management package
+This package supports thermal control and hardware management for NVIDIA switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
 
 The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.
 For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
@@ -17,25 +17,60 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN2740
 - MSN2100
 - MSN2410
+- MSN24102
 - MSN2700
 - MSN2700-A1
+- MSN27002
 - MSN2010
 - MQMB7800
 - MSN3420
+- MSN3510
 - MSN3700
 - MSN3700C
 - MSN3700S
 - MSN3750SX
 - MSN3800
+- MSN38XX
 - MSN4410
-- MSN4700
-- MSN4600C
 - MSN4600
-- MQM9700
+- MSN4600C
+- MSN46XX
+- MSN4700
+- MSN47XX
 - MSN4800
 - MSN5600
+- MSN5600d
+- MSN5700
+- MQM8700
+- MQM87XX
+- MQM9700
+- MQM97XX
+- MSB78002
+- MSB87XX
+- MSX87XX
 - SGN2410
 - SN2201
+- SN4280
+- SN5400
+- SN5600
+- SN5610
+- SN5640
+- SN5700
+- N5100LD
+- N5101LD
+- N5110LD
+- N5112LD
+- N5200LD
+- N5240LD
+- N5300LD
+- N5500LD
+- N61XX_LD
+- Q3200
+- Q3400
+- Q3401
+- Q3450
+- Q3451
+- XH3000
 - E3597
 - P4697
 - P2317
@@ -45,7 +80,8 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 ## Supported Kernel versions:
 - 5.10.103, 5.10.140, 5.10.179, 5.10.218, 5.10.226
 - 5.14 all up to 5.14.21
-- 6.1.38, 6.1.90, ,6.1.94, 6.1.119, 6.1.123
+- 6.1.38, 6.1.90, ,6.1.94, 6.1.119, 6.1.123, 6.1.164, 6.1.174
+- 6.12.38, 6.12.41, 6.12.44, 6.12.62, 6.12.94.
 
 ## Sysfs attributes:
 The thermal control operates over sysfs attributes.
@@ -112,6 +148,9 @@ CONFIG_MLXSW_PCI=m or CONFIG_MLXSW_I2C=m
 CONFIG_MLXSW_SPECTRUM=m or CONFIG_MLXSW_MINIMAL=m
 CONFIG_I2C_MLXCPLD=m
 CONFIG_MLX_PLATFORM=m
+CONFIG_NVSW_HOST_L1=m
+CONFIG_NVSW_HOST_SPC5=m
+CONFIG_NVSW_HOST_SPC6=m
 CONFIG_MLXREG_HOTPLUG=m
 CONFIG_MLXREG_IO=m
 CONFIG_MLX_WDT=m
@@ -145,6 +184,8 @@ CONFIG_SENSORS_XDPE122=m
 CONFIG_SENSORS_MP2975=m
 CONFIG_SENSORS_MP2888=m
 CONFIG_SENSORS_MP2891=m
+CONFIG_SENSORS_MP2845=m
+CONFIG_SENSORS_MP5926=m
 CONFIG_GPIO_ICH=m
 CONFIG_LPC_ICH=m
 CONFIG_CPU_THERMAL=y
@@ -183,6 +224,7 @@ CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y (if kernel version >= v5.4, optional up to 
 CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y (if kernel version >= v5.4, optional up to user)
 CONFIG_THERMAL_NETLINK=y (if kernel version >= v5.10)
 CONFIG_SENSORS_XDPE152=m
+CONFIG_SENSORS_XDPE1A2G7B=m
 CONFIG_SENSORS_DRIVETEMP=m
 CONFIG_SENSORS_IIO_HWMON=m
 CONFIG_SENSORS_LM25066=m
@@ -272,6 +314,8 @@ CONFIG_SENSORS_MP2975=m
 CONFIG_SENSORS_MP2888=m
 CONFIG_SENSORS_MP2891=m
 CONFIG_SENSORS_MP2855=m
+CONFIG_SENSORS_MP2845=m
+CONFIG_SENSORS_MP5926=m
 CONFIG_IGB=m
 CONFIG_IGB_HWMON=y
 CONFIG_INOTIFY_USER=y
@@ -285,6 +329,7 @@ CONFIG_I2C_MUX_PCA954x=m
 CONFIG_GPIO_PCA953X=m
 CONFIG_THERMAL_NETLINK=y
 CONFIG_SENSORS_XDPE152=m
+CONFIG_SENSORS_XDPE1A2G7B=m
 CONFIG_SENSORS_DRIVETEMP=m
 CONFIG_SENSORS_IIO_HWMON=m
 CONFIG_SENSORS_LM25066=m
@@ -320,7 +365,7 @@ The package depends on the next packages:
 
 Package contains the folder Debian, with the rules for Debian package build.
 Location: `https://github.com/Mellanox/hw-mgmt`
-To get package sources: `git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt`
+To get package sources: `git clone https://github.com/Mellanox/hw-mgmt`
 
 **For Debian package build:**
 On a debian-based system, install the following programs:
@@ -332,6 +377,8 @@ sudo apt-get install devscripts build-essential lintian
 - To build without lm_sensor dependecy (for Sonic-based OS) run 'debuild --set-envvar=LM_DEPENDS=0 -us -uc -b'
 or 'export LM_DEPENDS=0 && dpkg-buildpackage -us -uc -b'
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
+
+**SONiC BMC (`hw-management-bmc`):** the same source tree also builds **`hw-management-bmc_<version>_<arch>.deb`** (payload under **`bmc/`**, profiles in **`debian/rules`**). Packaging uses custom **`debian/hw-management-bmc.postinst`** and **`debian/hw-management-bmc.prerm`** so first-boot **`apt`** from **`rc.local`** does not block on synchronous **`bmc_init_main`** (issue **#4992267**). Details: **`bmc/README.md`** and **`bmc/FILE_MAPPING.md`** § *Debian package scripts*.
 
 **For converting .deb package to .rpm package:**
 - On a Debian-based system, install the `alien` program: `sudo apt-get install alien`
@@ -386,4 +433,4 @@ This project is Licensed under the GNU General Public License Version 2.
 
 ## Acknowledgments
 
-* Mellanox Low-Level Team.
+* NVIDIA Low-Level Team.

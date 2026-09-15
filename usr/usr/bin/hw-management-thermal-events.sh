@@ -1,7 +1,8 @@
 #!/bin/bash
 
 ###########################################################################
-# Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,8 +34,8 @@
 #
 
 source hw-management-helpers.sh
-board_type=$(< $board_type_file)
-sku=$(< $sku_file)
+dmi_board_name=$(< "$board_type_file")
+dmi_sku=$(< "$sku_file")
 
 # Local variables
 fan_psu_default=$config_path/fan_psu_default
@@ -63,7 +64,7 @@ AMD_SNW_TEMP_MAX=95000
 
 FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 
-if [ "$board_type" == "VMOD0014" ]; then
+if [ "$dmi_board_name" == "VMOD0014" ]; then
 	i2c_bus_max=14
 	i2c_asic_bus_default=6
 	max_tachos=4
@@ -173,7 +174,7 @@ sn2201_find_cpu_core_temp_ids()
 		core0_temp_id=$(<$config_path/core0_temp_id)
 	else
 		tmp=$(cat /proc/cpuinfo | grep -m1 "core id" | awk '{print $4}')
-		core0_temp_id==$(($tmp+2))
+		core0_temp_id=$(($tmp+2))
 	fi
 	if [ -e $config_path/core1_temp_id ]; then
 		core1_temp_id=$(<$config_path/core1_temp_id)
@@ -275,6 +276,35 @@ function get_psu_eeprom_type()
 	echo $eeprom_type
 }
 
+# Set ASIC ready state
+# $1 - sysfs path of PCI device
+# $2 - ASIC ready state (0 or 1)
+# return none
+function set_asic_ready()
+{
+	local asic_num=0
+	sysfs_picdev_path=$1
+	state=$2
+	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
+	print_function_call "$0" "${FUNCNAME[0]}" "path:$sysfs_picdev_path state:$state asic_num:$asic_num"
+	if [ $asic_num -gt 1 ]; then
+		pci_bus="${sysfs_picdev_path: -7}"
+		for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
+			bus=$(< $config_path/asic"$asic_id"_pci_bus_id)
+			if [ "$bus" == "$pci_bus" ]; then
+				echo $state > $config_path/asic"$asic_id"_ready
+				if [ $asic_id -eq 1 ]; then
+					echo $state > $config_path/asic_ready
+				fi
+				break
+			fi
+		done
+	else
+		echo $state > $config_path/asic1_ready
+		echo $state > $config_path/asic_ready
+	fi
+}
+
 # Don't process udev events until service is started and directories are created
 if [ ! -f ${udev_ready} ]; then
 	exit 0
@@ -306,6 +336,7 @@ if [ "$1" == "add" ]; then
 			asic_i2c_bus_id=$(< $config_path/asic"$i"_i2c_bus_id)
 			asic_bus=$((asic_i2c_bus_id+i2c_bus_offset))
 			if [ "$bus" == "$asic_bus" ]; then
+				print_function_call "$0" "add" "amb skip asic bus:$bus $2"
 				exit 0
 			fi
 		done
@@ -320,7 +351,7 @@ if [ "$1" == "add" ]; then
 			check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
 		else
 			therml_sensor_name=$(get_i2c_busdev_name "$2" "$4")
-			if [[ $therml_sensor_name == "undefined" ]];
+			if [[ $therml_sensor_name == "undefined" ]] || [[ $therml_sensor_name == "tempX" ]];
 			then
 				exit
 			fi
@@ -330,6 +361,7 @@ if [ "$1" == "add" ]; then
 	esac
 	if [ "$2" == "switch" ]; then
 		name=$(< "$3""$4"/name)
+		print_function_call "$0" "add" "switch name:$name"
 		if [[ $name != *"nvme"* ]]; then
 			get_lc_id_hwmon "$3$4"
 			lc_number=$?
@@ -354,8 +386,8 @@ if [ "$1" == "add" ]; then
 			fi
 
 			if [ "$name" == "mlxsw" ]; then
-				case $sku in
-					HI157|HI158)
+				case $dmi_sku in
+					HI157|HI158|HI179)
 						# Mapping of ASIC I2C bus to ASIC index
 						asic_indices=([2]=1 [18]=2 [34]=3 [50]=4)
 						asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
@@ -405,13 +437,16 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
 						check_n_link "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
 						check_n_link "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
-						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
-						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
 						ln -sf "$cpath"/fan_speed_tolerance "$tpath"/fan"$j"_speed_tolerance
 						# Save max_tachos to config
 						echo $i > "$cpath"/max_tachos
 					fi
 				done
+				for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
+					set_fan_speed_limits fan"$i"
+				done
+				print_function_call "$0" "add" "switch mlxsw asic ready pwm:$(< "$tpath"/pwm1 2>/dev/null)"
+				set_asic_ready "$3""$4" 1
 			fi
 
 			lcmatch=`echo $name | cut -d"#" -f1`
@@ -430,7 +465,7 @@ if [ "$1" == "add" ]; then
 							else
 								j="$i"
 							fi
-							case $sku in
+							case $dmi_sku in
 								# First 18 modules are accessible via ASIC1, all the rest - via ASIC2
 								HI157)
 									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
@@ -440,7 +475,7 @@ if [ "$1" == "add" ]; then
 									fi
 									;;
 								# All modules are accessible via ASIC1
-								HI158)
+								HI158|HI179)
 									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
@@ -491,11 +526,13 @@ if [ "$1" == "add" ]; then
 
 	if [ "$2" == "regfan" ]; then
 		name=$(< "$3""$4"/name)
+		print_function_call "$0" "add" "regfan name:$name"
 		echo "$name" > $config_path/cooling_name
 		check_n_link "$3""$4"/pwm1 $thermal_path/pwm1
 		pwm_level=$(< "$thermal_path/pwm1")
 		# If PWM level less then minimum then set it to default value
 		if [ $pwm_level -lt $pwm_min_level ]; then
+			print_function_call "$0" "add" "regfan pwm $pwm_level -> $pwm_min_level"
 			echo $pwm_min_level > $thermal_path/pwm1
 		fi
 		for ((i=1; i<=max_pwm; i+=1)); do
@@ -512,16 +549,18 @@ if [ "$1" == "add" ]; then
 				check_n_link "$3""$4"/fan"$i"_input $thermal_path/fan"$j"_speed_get
 				check_n_link "$3""$4"/pwm1 $thermal_path/fan"$j"_speed_set
 				check_n_link "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
-				check_n_link $config_path/fan_min_speed $thermal_path/fan"$j"_min
-				check_n_link $config_path/fan_max_speed $thermal_path/fan"$j"_max
 				check_n_link $config_path/fan_speed_tolerance $thermal_path/fan"$j"_speed_tolerance
 				# Save max_tachos to config.
 				echo $i > $config_path/max_tachos
 			fi
 		done
+		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
+			set_fan_speed_limits fan"$i"
+		done
 	fi
 	if [ "$2" == "thermal_zone" ]; then
 		zonetype=$(< "$3""$4"/type)
+		[ "$zonetype" == "mlxsw" ] && print_function_call "$0" "add" "thermal_zone $zonetype"
 		get_lc_id_tz "$zonetype"
 		lc_number=$?
 		if [ "$lc_number" -ne 0 ]; then
@@ -571,17 +610,14 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
+		print_function_call "$0" "fan hotplug" "$1 $2 $3 $4 start"
 		for ((i=1; i<=max_tachos; i+=1)); do
-			if [ -f "$3""$4"/fan$i ]; then
-				check_n_link "$3""$4"/fan$i $thermal_path/fan"$i"_status
-				event=$(< $thermal_path/fan"$i"_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/fan"$i"
-				fi
+			if init_hotplug_sysfs_event "$3$4" "fan$i" \
+				"$thermal_path/fan${i}_status" "fan$i"; then
 				(( fan_drwr_num++ ))
 			fi
 		done
-
+		print_function_call "$0" "fan hotplug" "$1 $2 $3 $4 end"
 		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
 			get_fixed_fans_direction
 			dir=$?
@@ -596,136 +632,47 @@ if [ "$1" == "add" ]; then
 		fi
 
 		for ((i=1; i<=max_psus; i+=1)); do
-			if [ -f "$3""$4"/psu$i ]; then
-				check_n_link "$3""$4"/psu$i $thermal_path/psu"$i"_status
-				event=$(< $thermal_path/psu"$i"_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/psu"$i"
-				fi
-			fi
-			if [ -f "$3""$4"/pwr$i ]; then
-				check_n_link "$3""$4"/pwr$i $thermal_path/psu"$i"_pwr_status
-				event=$(< "$thermal_path"/psu"$i"_pwr_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/pwr"$i"
-				fi
-			fi
-			if [ -f "$3""$4"/pdb$i ]; then
-				check_n_link "$3""$4"/pdb$i $thermal_path/pdb"$i"_pwr_status
-				event=$(< "$thermal_path"/pdb"$i"_pwr_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/pdb"$i"
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "psu$i" \
+				"$thermal_path/psu${i}_status" "psu$i"
+			init_hotplug_sysfs_event "$3$4" "pwr$i" \
+				"$thermal_path/psu${i}_pwr_status" "pwr$i"
+			init_hotplug_sysfs_event "$3$4" "pdb$i" \
+				"$thermal_path/pdb${i}_pwr_status" "pdb$i"
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
-			if [ -f "$3""$4"/lc"$i"_active ]; then
-				check_n_link "$3""$4"/lc"$i"_active $system_path/lc"$i"_active
-				event=$(< $system_path/lc"$i"_active)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_active
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_powered ]; then
-				check_n_link "$3""$4"/lc"$i"_powered $system_path/lc"$i"_powered
-				event=$(< $system_path/lc"$i"_powered)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_powered
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_present ]; then
-				check_n_link "$3""$4"/lc"$i"_present $system_path/lc"$i"_present
-				event=$(< $system_path/lc"$i"_present)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_present
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_ready ]; then
-				check_n_link "$3""$4"/lc"$i"_ready $system_path/lc"$i"_ready
-				event=$(< $system_path/lc"$i"_ready)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_ready
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_shutdown ]; then
-				check_n_link "$3""$4"/lc"$i"_shutdown $system_path/lc"$i"_shutdown
-				event=$(< $system_path/lc"$i"_shutdown)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_shutdown
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_synced ]; then
-				check_n_link "$3""$4"/lc"$i"_synced $system_path/lc"$i"_synced
-				event=$(< $system_path/lc"$i"_synced)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_synced
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_verified ]; then
-				check_n_link "$3""$4"/lc"$i"_verified $system_path/lc"$i"_verified
-				event=$(< $system_path/lc"$i"_verified)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_verified
-				fi
-			fi
+			for attr in active powered present ready shutdown synced verified; do
+				init_hotplug_sysfs_event "$3$4" "lc${i}_${attr}" \
+					"$system_path/lc${i}_${attr}" "lc${i}_${attr}"
+			done
 		done
 		for ((i=1; i<=max_erots; i+=1)); do
-			if [ -f "$3""$4"/erot"$i"_ap ]; then
-				check_n_link "$3""$4"/erot"$i"_ap $system_path/erot"$i"_ap
-				event=$(< $system_path/erot"$i"_ap)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/erot"$i"_ap
-				fi
-			fi
-			if [ -f "$3""$4"/erot"$i"_error ]; then
-				check_n_link "$3""$4"/erot"$i"_error $system_path/erot"$i"_error
-				event=$(< $system_path/erot"$i"_error)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/erot"$i"_error
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "erot${i}_ap" \
+				"$system_path/erot${i}_ap" "erot${i}_ap"
+			init_hotplug_sysfs_event "$3$4" "erot${i}_error" \
+				"$system_path/erot${i}_error" "erot${i}_error"
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
-			if [ -f "$3""$4"/leakage"$i" ]; then
-				check_n_link "$3""$4"/leakage$i $system_path/leakage"$i"
-				event=$(< $system_path/leakage"$i")
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/leakage"$i"
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "leakage$i" \
+				"$system_path/leakage${i}" "leakage${i}"
 		done
 		for ((i=1; i<=max_leakage_rope; i+=1)); do
-			if [ -f "$3""$4"/leakage_rope"$i" ]; then
-				check_n_link "$3""$4"/leakage_rope"$i" $system_path/leakage_rope"$i"
-				event=$(< $system_path/leakage_rope"$i")
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/leakage_rope"$i"
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "leakage_rope$i" \
+				"$system_path/leakage_rope${i}" "leakage_rope${i}"
 		done
 		for ((i=0; i<=max_health_events; i+=1)); do
-			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
-				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
-				event=$(< $system_path/${l1_switch_health_events[$i]})
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/${l1_switch_health_events[$i]}
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "${l1_switch_health_events[$i]}" \
+				"$system_path/${l1_switch_health_events[$i]}" \
+				"${l1_switch_health_events[$i]}"
 		done
-		if [ -f "$3""$4"/power_button ]; then
-			check_n_link "$3""$4"/power_button $system_path/power_button
-			event=$(< $system_path/power_button)
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $events_path/power_button
-			fi
-		fi
+		init_hotplug_sysfs_event "$3$4" "power_button" \
+			"$system_path/power_button" "power_button"
 		# Add DPU ready/shutdown_ready attributes
-		init_hotplug_events "$dpu2host_events_file" "$3$4" 0
+		init_hotplug_dpu_events "$dpu2host_events_file" "$3$4" 0
 		# Add hotplug attributes from DPU
-		init_hotplug_events "$dpu_events_file" "$3$4" 1
-		init_hotplug_events "$dpu_events_file" "$3$4" 2
-		init_hotplug_events "$dpu_events_file" "$3$4" 3
-		init_hotplug_events "$dpu_events_file" "$3$4" 4
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 1
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 2
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 3
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 4
 		# Based on the DPU ready signal, connect the DPU sensors
 		load_dpu_sensors 1
 		load_dpu_sensors 2
@@ -769,13 +716,14 @@ if [ "$1" == "add" ]; then
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
+		print_function_call "$0" "add" "cputemp $3$4"
 		for i in {1..16}; do
 			if [ -f "$3""$4"/temp"$i"_input ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
 				else
 					id=$((i - 2))
-					if [ "$board_type" == "VMOD0014" ]; then
+					if [ "$dmi_board_name" == "VMOD0014" ]; then
 					# Denverton CPU on SN2201 has ridicolous CPU Core numbers 6, 12 instead 0, 1
 					# These core id numbers also can differ in various CPU batches.
 					# This was fixed in later version of coretemp driver e.g. in kernel 5.10.162 
@@ -827,7 +775,7 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
 		name=$(< /sys/"$3"/name)
-		if [ "$name" != "jc42" ]; then
+		if [ "$name" != "jc42" ] && [ "$name" != "spd5118" ]; then
 			exit
 		fi
 		check_cpu_type
@@ -854,6 +802,10 @@ if [ "$1" == "add" ]; then
 				sodimm2_addr='001b'
 				sodimm3_addr='001e'
 				sodimm4_addr='001f'
+			;;
+			$AMD_V3000_CPU|$AMD_FRNG_CPU)
+				sodimm1_addr='0052'
+				sodimm2_addr='0053'
 			;;
 			*)
 				exit 0
@@ -883,13 +835,21 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
 	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
-	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
-		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ] ||
+	   [ "$2" == "psuX" ]; then
+		print_function_call "$0" "add" "psu $2 $3"
+		if [[ $dmi_sku == "HI138" ]] || [[ $dmi_sku == "HI139" ]]; then
+			print_function_call "$0" "add" "psu skip sku:$dmi_sku $2"
 			exit 0
 		fi
-		psu_name="$2"
+		psu_name=$(get_i2c_busdev_name "$2" "$3")
+		if [[ $psu_name == "undefined" ]] || [[ $psu_name == "psuX" ]];
+		then
+			print_function_call "$0" "add" "psu skip name:$psu_name $2 $3"
+			exit
+		fi
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
-		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
+		if [[ ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
 		fi
 		find_i2c_bus
@@ -900,21 +860,30 @@ if [ "$1" == "add" ]; then
 		bus="${busfolder:0:${#busfolder}-5}"
 		# Verify if this is COMEX device
 		if [ "$bus" == "$comex_bus" ]; then
+			print_function_call "$0" "add" "psu skip comex bus:$bus $2"
 			exit 0
 		fi
 		# Allow PS controller to stabilize
-		retry_helper "ls" 0.2 20 "$2 takes too long to init" "$5""$3"/in1_input
+		retry_helper "ls" 0.2 20 "$psu_name takes too long to init" "$5""$3"/in1_input
 		sleep 1
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
+		print_function_call "$0" "add" "psu linked name:$psu_name bus:$bus"
 
 		# Add thermal attributes
 		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp1
 		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp1_max
 		check_n_link "$5""$3"/temp1_max_alarm $alarm_path/"$psu_name"_temp1_max_alarm
-		check_n_link "$5""$3"/temp2_input $thermal_path/"$psu_name"_temp2
-		check_n_link "$5""$3"/temp2_max $thermal_path/"$psu_name"_temp2_max
-		check_n_link "$5""$3"/temp2_max_alarm $alarm_path/"$psu_name"_temp2_max_alarm
+		# SN5640 (HI171) and SN5610 (HI172) PSU FW reports the ambient thresholds
+		# (OTW 63C / OTP 68C) for the hotspot sensors too, while temp2 is rated
+		# 105C/120C. The dps460 driver has no PMBus page support, so the real
+		# per-page limits can't be fetched, and the FW-driven alarm bit asserts
+		# above 68C. Don't expose the sensor until page-aware FW and driver.
+		if [[ $dmi_sku != "HI171" && $dmi_sku != "HI172" ]]; then
+			check_n_link "$5""$3"/temp2_input $thermal_path/"$psu_name"_temp2
+			check_n_link "$5""$3"/temp2_max $thermal_path/"$psu_name"_temp2_max
+			check_n_link "$5""$3"/temp2_max_alarm $alarm_path/"$psu_name"_temp2_max_alarm
+		fi
 		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$psu_name"_fan1_alarm
 		check_n_link "$5""$3"/power1_alarm $alarm_path/"$psu_name"_power1_alarm
 		check_n_link "$5""$3"/fan1_input $thermal_path/"$psu_name"_fan1_speed_get
@@ -959,7 +928,7 @@ if [ "$1" == "add" ]; then
 		psu_addr=$(< $config_path/"$psu_name"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 		eeprom_name="$psu_name"_info
-		if [ "$board_type" == "VMOD0014" ]; then
+		if [ "$dmi_board_name" == "VMOD0014" ]; then
 			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		else
 			arch=$(uname -m)
@@ -976,7 +945,7 @@ if [ "$1" == "add" ]; then
 			psu_eeprom_type=$(get_psu_eeprom_type $bus $psu_addr)
 			cmd_status=$?
 			if [ $cmd_status -ne 0 ]; then
-				if [ "$board_type" == "VMOD0014" ]; then
+				if [ "$dmi_board_name" == "VMOD0014" ]; then
 					psu_eeprom_type="24c02"
 				else
 					psu_eeprom_type="24c32"
@@ -986,7 +955,11 @@ if [ "$1" == "add" ]; then
 				psu_eeprom_type=$(< "$config_path"/psu_eeprom_type)
 			fi
 			echo "$psu_eeprom_type" 0x"$psu_eeprom_addr" > /sys/class/i2c-dev/i2c-"$bus"/device/new_device
-			ln -sf "$eeprom_file" "$eeprom_path"/"$eeprom_name" 2>/dev/null
+			for ((i=0; i<2; i++)); do
+				[ -f "$eeprom_file" ] && break
+				sleep 0.5
+			done
+			check_n_link "$eeprom_file" "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			chmod 400 "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			echo 1 > $config_path/"$psu_name"_eeprom_us
 		else
@@ -1008,7 +981,7 @@ if [ "$1" == "add" ]; then
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
 		if [ $? -ne 0 ]; then
 			# PS EEPROM VPD.
-			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
+			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info >> $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
 				if is_virtual_machine; then
@@ -1057,12 +1030,12 @@ if [ "$1" == "add" ]; then
 		cap=$(grep CAPACITY $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
 
 		# Don't set default PSU FAN speed for Delta 2000 on HI172 - let's PSU FW handle it
-		if [[ "$cap" != "2000" || $sku != "HI172" || $mfr != "DELTA" ]]; then
+		if [[ "$cap" != "2000" || $dmi_sku != "HI172" || $mfr != "DELTA" ]]; then
 		    psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		fi
 
 		if [[ "$cap" == "1100" && $mfr == "DELTA" ]]; then
-			out_crit=$(<"$thermal_path"/"$psu_name"_volt_out_crit)
+			out_crit=$(<"$power_path"/"$psu_name"_volt_out_crit)
 			out_lcrit=$(((out_crit*662)/1000))
 			out_min=$(((out_crit*745)/1000))
 			out_max=$(((out_crit*952)/1000))
@@ -1094,7 +1067,7 @@ if [ "$1" == "add" ]; then
 					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
 				fi
-				if [[ "$cap" == "3000" && ( $sku == "HI144" || $sku == "HI147" ) ]]; then
+				if [[ "$cap" == "3000" && ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) ]]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
 					fi
@@ -1129,13 +1102,17 @@ if [ "$1" == "add" ]; then
 
 	fi
 	if [ "$2" == "sxcore" ]; then
+		print_function_call "$0" "add" "sxcore $4/$5"
 		if [ -f "$config_path"/minimal_unsupported ]; then
 			minimal_unsupported=$(< $config_path/minimal_unsupported)
 		fi
 		if [ ${minimal_unsupported} -eq 0 ] && [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
+		# sxcore uses 0-based ASIC index; chipup maps 0 to asic1_* and
+		# uses $3 (%S/%p PCI path) to identify the failed ASIC.
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
+		set_asic_ready "$4/$5" 1
 	fi
 	if [ "$2" == "nvme_temp" ]; then
 		dev_name=$(cat "$3""$4"/name)
@@ -1168,8 +1145,8 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "dpu" ]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		case $sku in
+		print_function_call "$0" "add" "dpu $3$4"
+		case $dmi_sku in
 		HI160)
 			# DPU event, replace output folder.
 			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
@@ -1186,12 +1163,16 @@ if [ "$1" == "add" ]; then
 
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "hotplug_asic" ]; then
+		print_function_call "$0" "change" "hotplug_asic $3 index:$6"
 		if [ -d /sys/module/mlxsw_pci ]; then
+			print_function_call "$0" "change" "hotplug_asic skip mlxsw_pci"
 			exit 0
 		fi
 		asic_index="$6"
 		asic_num=$(< $config_path/asic_num)
 		if [ "$asic_num" -lt "$asic_index" ]; then
+			print_function_call "$0" "change" \
+				"hotplug_asic skip index:$asic_index asic_num:$asic_num"
 			exit 0
 		fi
 		if [ "$3" == "up" ]; then
@@ -1203,17 +1184,28 @@ elif [ "$1" == "change" ]; then
 			fi
 			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
 			if [ -f /etc/autochipup ]; then
+				print_function_call "$0" "change" "hotplug_asic autochipup index:$asic_index"
 				asic_chipup_completed=$(< $config_path/asic_chipup_completed)
 				[ ${asic_chipup_completed} -eq 0 ] && sleep 3
 				/usr/bin/hw-management.sh chipup "$asic_index"
+			else
+				print_function_call "$0" "change" \
+					"hotplug_asic up no autochipup index:$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
+			print_function_call "$0" "change" "hotplug_asic chipdown index:$asic_index"
 			/usr/bin/hw-management.sh chipdown "$asic_index"
 		fi
 	fi
 else
 	case "$2" in
-		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2 | tempX)
+
+		sensor_name=$(get_i2c_busdev_name "$2" "$4")
+		if [[ $sensor_name == "undefined" ]] || [[ $sensor_name == "tempX" ]];
+		then
+			exit
+		fi
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
@@ -1238,12 +1230,13 @@ else
 		elif [ "$bus" == "$cx_i2c_bus" ]; then
 			unlink $thermal_path/cx_amb
 		else
-			unlink $thermal_path/"$2"
+			unlink $thermal_path/"$sensor_name"
 		fi
 		;;
 	esac
 	if [ "$2" == "switch" ]; then
 		name=$(< "$3""$4"/name)
+		print_function_call "$0" "remove" "switch name:$name"
 		if [[ $name != *"nvme"* ]]; then
 			[ -f "$config_path/stopping" ] && stopping=$(< $config_path/stopping)
 			if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
@@ -1299,6 +1292,7 @@ else
 			rm -f "$tpath/module*_temp_emergency"
 
 			check_n_unlink $cpath/asic_hwmon
+			set_asic_ready "$3""$4" 0
 
 			if [ "$lc_id" -ne 0 ]; then
 				exit 0
@@ -1318,6 +1312,7 @@ else
 		fi
 	fi
 	if [ "$2" == "regfan" ]; then
+		print_function_call "$0" "remove" "regfan $3$4"
 		for ((i=1; i<=max_pwm; i+=1)); do
 			if [ -L $thermal_path/pwm"$i" ]; then
 				unlink $thermal_path/pwm"$i"
@@ -1364,6 +1359,7 @@ else
 		check_n_unlink $thermal_path/highest_thermal_zone
 	fi
 	if [ "$2" == "hotplug" ]; then
+		print_function_call "$0" "remove" "hotplug $3$4"
 		for ((i=1; i<=max_tachos; i+=1)); do
 			check_n_unlink $thermal_path/fan"$i"_status
 		done
@@ -1406,9 +1402,10 @@ else
 			check_n_unlink $system_path/${l1_switch_health_events[$i]}
 		done
 		check_n_unlink  $system_path/power_button
-		deinit_hotplug_events "$dpu2host_events_file" 0
+		deinit_hotplug_dpu_events "$dpu2host_events_file" 0
 	fi
 	if [ "$2" == "cputemp" ]; then
+		print_function_call "$0" "remove" "cputemp"
 		unlink $thermal_path/cpu_pack
 		unlink $thermal_path/cpu_pack_crit
 		unlink $thermal_path/cpu_pack_max
@@ -1428,15 +1425,25 @@ else
 		unlink $thermal_path/pch_temp
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
+		name=$(< /sys/"$3"/name)
+		if [ "$name" != "jc42" ] && [ "$name" != "spd5118" ]; then
+			exit
+		fi
 		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
 	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
-	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
-		psu_name="$2"
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ] ||
+	   [ "$2" == "psuX" ]; then
+		print_function_call "$0" "remove" "psu $2 $3"
+		psu_name=$(get_i2c_busdev_name "$2" "$3")
+		if [[ $psu_name == "undefined" ]] || [[ $psu_name == "psuX" ]];
+		then
+			exit
+		fi
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
-		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
+		if [[ ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
 		fi
 		find_i2c_bus
@@ -1460,22 +1467,29 @@ else
 		# Remove thermal attributes
 		check_n_unlink $thermal_path/"$psu_name"_temp
 		check_n_unlink $thermal_path/"$psu_name"_temp_max
-		check_n_unlink $thermal_path/"$psu_name"_temp_alarm
-		check_n_unlink $thermal_path/"$psu_name"_temp_max_alarm
+		check_n_unlink $alarm_path/"$psu_name"_temp_alarm
+		check_n_unlink $alarm_path/"$psu_name"_temp_max_alarm
+		check_n_unlink $thermal_path/"$psu_name"_temp1
+		check_n_unlink $thermal_path/"$psu_name"_temp1_max
+		check_n_unlink $alarm_path/"$psu_name"_temp1_alarm
+		check_n_unlink $alarm_path/"$psu_name"_temp1_max_alarm
 		check_n_unlink $thermal_path/"$psu_name"_temp2
 		check_n_unlink $thermal_path/"$psu_name"_temp2_max
-		check_n_unlink $thermal_path/"$psu_name"_temp2_max_alarm
+		check_n_unlink $alarm_path/"$psu_name"_temp2_max_alarm
 		check_n_unlink $thermal_path/"$psu_name"_fan1_speed_get
 		check_n_unlink $alarm_path/"$psu_name"_fan1_alarm
 		check_n_unlink $alarm_path/"$psu_name"_power1_alarm
 
 		# Remove power attributes
 		psu_disconnect_power_sensor "$psu_name"_volt_in
+		psu_disconnect_power_sensor "$psu_name"_volt_out
 		psu_disconnect_power_sensor "$psu_name"_volt
 		psu_disconnect_power_sensor "$psu_name"_volt_out2
 		psu_disconnect_power_sensor "$psu_name"_power_in
+		psu_disconnect_power_sensor "$psu_name"_power_out
 		psu_disconnect_power_sensor "$psu_name"_power
 		psu_disconnect_power_sensor "$psu_name"_curr_in
+		psu_disconnect_power_sensor "$psu_name"_curr_out
 		psu_disconnect_power_sensor "$psu_name"_curr
 
 		rm -f $eeprom_path/"$psu_name"_vpd
@@ -1489,11 +1503,13 @@ else
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
+		print_function_call "$0" "remove" "sxcore $4/$5"
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
+		set_asic_ready "$4/$5" 0
 	fi
 	if [ "$2" == "dpu" ]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		case $sku in
+		print_function_call "$0" "remove" "dpu $3$4"
+		case ${dmi_sku} in
 		HI160)
 			# DPU event, replace output folder.
 			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)

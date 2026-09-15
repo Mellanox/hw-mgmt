@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# Template only: not read by systemd-networkd from this path. Installed as
+# /usr/etc/systemd/network/... ; hw-management-bmc-plat-specific-preps.sh replaces
+# __USB0_ADDRESS__ and copies the result to /etc/systemd/network/ before networkd starts.
+#
+[Match]
+Name=usb0
+
+[Network]
+DHCP=no
+ConfigureWithoutCarrier=true
+Address=__USB0_ADDRESS__

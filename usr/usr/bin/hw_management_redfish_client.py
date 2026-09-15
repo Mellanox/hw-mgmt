@@ -1,17 +1,35 @@
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+########################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# http://www.apache.org/licenses/LICENSE-2.0
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 #
 #############################################################################
 # Nvidia
@@ -25,19 +43,44 @@ import subprocess
 import json
 import time
 import re
-import shlex
 import os
+import sys
+import base64
+import fcntl
 
 # TBD:
 # Support token persistency later on and remove RedfishClient.__password
 
 
 '''
-cURL wrapper for Redfish client access
+cURL wrapper for Redfish client access (curl -K stdin; secrets off argv).
 '''
+
+
 class RedfishClient:
 
     DEFAULT_GET_TIMEOUT = 3
+    _CFG_LOGIN_PREFIX = '# hw-mgmt-redfish: login\n'
+    _CURL_HTTP_TRAILER_RE = re.compile(r'\nHTTP Status Code: (\d+)\Z')
+    # BMC is moving to HTTP-only. Start with HTTP; switch to the other scheme
+    # whenever the BMC refuses connections on the one in use.
+    SCHEME_HTTP = 'http'
+    SCHEME_HTTPS = 'https'
+    _ALT_SCHEME = {SCHEME_HTTP: SCHEME_HTTPS, SCHEME_HTTPS: SCHEME_HTTP}
+    _URL_SCHEME_RE = re.compile(r'(url = ")https?://')
+    # cURL exit codes that prove the request never reached the BMC application:
+    # proxy/host resolution, TCP connect and TLS handshake failures. Only these
+    # allow a resend on the other scheme. Codes like 28 (timeout), 52 (empty
+    # reply), 55/56 (send/recv error) can happen after the BMC already applied
+    # a POST or PATCH, so resending them could duplicate the mutation.
+    _CURL_RC_NO_CONNECTION = frozenset((
+        5,   # CURLE_COULDNT_RESOLVE_PROXY
+        6,   # CURLE_COULDNT_RESOLVE_HOST
+        7,   # CURLE_COULDNT_CONNECT
+        35,  # CURLE_SSL_CONNECT_ERROR
+        51,  # CURLE_PEER_FAILED_VERIFICATION
+        60,  # CURLE_SSL_CACERT
+    ))
 
     # Redfish URIs
     REDFISH_URI_FW_INVENTORY = '/redfish/v1/UpdateService/FirmwareInventory'
@@ -59,13 +102,15 @@ class RedfishClient:
     '''
     Constructor
     '''
+
     def __init__(self, curl_path, ip_addr, user, password):
         self.__curl_path = curl_path
         self.__svr_ip = ip_addr
         self.__user = user
         self.__password = password
         self.__token = None
-       
+        self.__scheme = RedfishClient.SCHEME_HTTP
+
     def get_token(self):
         return self.__token
 
@@ -74,184 +119,390 @@ class RedfishClient:
         self.__token = None
         self.__password = password
 
-    '''
-    Build the POST command to get bearer token
-    '''
-    def __build_login_cmd(self, password, timeout = DEFAULT_GET_TIMEOUT):
-        cmd = f'{self.__curl_path} -m {timeout} -k ' \
-              f'-H "Content-Type: application/json" ' \
-              f'-X POST https://{self.__svr_ip}/login ' \
-              f'-d \'{{"username" : "{self.__user}", "password" : "{password}"}}\''
-        return cmd
+    @staticmethod
+    def __curl_config_escape_double_quoted_value(val):
+        '''Escape content for curl -K \"...\" quoted strings (\\ and ").'''
+        if val is None:
+            return ''
+        if not isinstance(val, str):
+            val = os.fspath(val)
+        return val.replace('\\', '\\\\').replace('"', '\\"')
+
+    def __curl_redfish_url(self, path_without_scheme):
+        return f'{self.__scheme}://{self.__svr_ip}{path_without_scheme}'
+
+    def __apply_scheme_to_curl_config(self, curl_config):
+        return RedfishClient._URL_SCHEME_RE.sub(
+            r'\1' + self.__scheme + '://', curl_config, count=1)
+
+    @staticmethod
+    def __curl_rc_proves_no_connection(curl_rc):
+        return curl_rc in RedfishClient._CURL_RC_NO_CONNECTION
+
+    def __try_alt_scheme_fallback(self, curl_config, ret, output_str,
+                                  error_str, curl_rc):
+        '''Retry once on the other scheme when curl never reached the BMC.
+
+        BMC firmware may move between HTTP-only and HTTPS-only at any time,
+        so this stays armed for the whole client lifetime instead of latching
+        on the first scheme that worked. The scheme in use is kept sticky, so
+        a reachable BMC costs no extra curl invocation.
+
+        Resending is only safe when curl failed before delivering the request
+        (see _CURL_RC_NO_CONNECTION), otherwise a POST or PATCH the BMC has
+        already applied would be replayed on the other scheme.
+        '''
+        if not self.__curl_rc_proves_no_connection(curl_rc):
+            return (ret, output_str, error_str)
+
+        prev_scheme = self.__scheme
+        self.__scheme = RedfishClient._ALT_SCHEME[prev_scheme]
+        ret_alt, out_alt, err_alt, rc_alt = self.__exec_curl_cmd_internal(
+            curl_config)
+        # Any reply, including an error one, means this scheme is the live
+        # endpoint, so keep it and report its result.
+        if not self.__curl_rc_proves_no_connection(rc_alt):
+            return (ret_alt, out_alt, err_alt)
+
+        # BMC unreachable on both schemes: keep the previous one so a
+        # transient outage does not flip the client onto a dead scheme.
+        self.__scheme = prev_scheme
+        return (ret, output_str, error_str)
+
+    def __curl_config_auth_header_line(self):
+        return (
+            'header = "X-Auth-Token: ' +
+            self.__curl_config_escape_double_quoted_value(self.__token) + '"'
+        )
 
     '''
-    Build the GET command
+    Build curl stdin config for POST /login (credentials in config only, never argv).
     '''
-    def __build_get_cmd(self, uri, timeout = DEFAULT_GET_TIMEOUT):
-        cmd = f'{self.__curl_path} -m {timeout} -k ' \
-              f'-H "X-Auth-Token: {self.__token}" --request GET ' \
-              f'--location https://{self.__svr_ip}{uri}'
-        return cmd
+
+    def __build_login_cmd(self, password, timeout=DEFAULT_GET_TIMEOUT):
+        body = json.dumps({'username': self.__user, 'password': password})
+        cred_escape = self.__curl_config_escape_double_quoted_value(body)
+        login_url_escape = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url('/login'))
+        return '\n'.join([
+            self._CFG_LOGIN_PREFIX.rstrip('\n'),
+            'insecure',
+            f'max-time = {timeout}',
+            'header = "Content-Type: application/json"',
+            'request = POST',
+            f'url = "{login_url_escape}"',
+            f'data-raw = "{cred_escape}"',
+        ])
 
     '''
-    Build the POST command to do firmware update
+    Build curl stdin config for GET (token off argv).
     '''
+
+    def __build_get_cmd(self, uri, timeout=DEFAULT_GET_TIMEOUT):
+        full_url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(uri))
+        return '\n'.join([
+            '# hw-mgmt-redfish: GET',
+            'insecure',
+            f'max-time = {timeout}',
+            'location',
+            self.__curl_config_auth_header_line(),
+            'request = GET',
+            f'url = "{full_url_esc}"',
+        ])
+
+    '''
+    Build curl stdin config for firmware upload POST (token off argv).
+    '''
+
     def __build_fw_update_cmd(self, fw_image):
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-H "Content-Type: application/octet-stream" -X POST ' \
-              f'https://{self.__svr_ip}' \
-              f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE} -T {fw_image}'
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(RedfishClient.REDFISH_URI_UPDATE_SERVICE))
+        up_esc = self.__curl_config_escape_double_quoted_value(fw_image)
+        return '\n'.join([
+            '# hw-mgmt-redfish: fw-post-upload',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/octet-stream"',
+            'request = POST',
+            f'upload-file = "{up_esc}"',
+            f'url = "{url_esc}"',
+        ])
 
     '''
-    Build the PATCH command to change login password
+    Build curl stdin config for PATCH account password (token off argv).
     '''
+
     def __build_change_password_cmd(self, new_password):
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-H "Content-Type: application/json" -X PATCH ' \
-              f'https://{self.__svr_ip}' \
-              f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user} ' \
-              f'-d \'{{"Password" : "{new_password}"}}\''
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user}'))
+        body = json.dumps({'Password': new_password})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH account-self',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     def _build_change_user_password_cmd(self, user, new_password):
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-H "Content-Type: application/json" -X PATCH ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user} ' \
-            f'-d \'{{"Password" : "{new_password}"}}\''  # Change password for the specific user
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user}'))
+        body = json.dumps({'Password': new_password})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH account-user',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     def _build_change_user_password_after_factory_cmd(self, user, user_pwd, new_password):
-        cmd = f'{self.__curl_path} -k -u {user}:{user_pwd} ' \
-            f'-H "Content-Type: application/json" -X PATCH ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user} ' \
-            f'-d \'{{"Password" : "{new_password}"}}\''  # Change password for the specific user
-        return cmd
+        user_esc = self.__curl_config_escape_double_quoted_value(
+            f'{user}:{user_pwd}')
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user}'))
+        body = json.dumps({'Password': new_password})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH account-factory',
+            'insecure',
+            f'user = "{user_esc}"',
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     def _build_delete_cmd(self, user_to_delete):
-        # curl -k -H "X-Auth-Token: $bmc_token" -X DELETE https://${bmc}/redfish/v1/AccountService/Accounts/admin_user
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-            f'-X DELETE ' \
-            f'https://{self.__svr_ip}' \
-            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user_to_delete} '
-        return cmd
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(
+                f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user_to_delete}'))
+        return '\n'.join([
+            '# hw-mgmt-redfish: DELETE account',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'request = DELETE',
+            f'url = "{url_esc}"',
+        ])
 
     '''
-    Build the PATCH command to set 'ForceUpdate' attribute
+    Build curl stdin config for PATCH ForceUpdate (token off argv).
     '''
+
     def __build_set_force_update_cmd(self, force):
-        value = 'true' if force else 'false'
-        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-X PATCH -d \'{{"HttpPushUriOptions":{{"ForceUpdate":{value}}}}}\' ' \
-              f'https://{self.__svr_ip}' \
-              f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE}'
-        return cmd
+        body = json.dumps({'HttpPushUriOptions': {'ForceUpdate': bool(force)}})
+        data_esc = self.__curl_config_escape_double_quoted_value(body)
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(RedfishClient.REDFISH_URI_UPDATE_SERVICE))
+        return '\n'.join([
+            '# hw-mgmt-redfish: PATCH force-update',
+            'insecure',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = PATCH',
+            f'url = "{url_esc}"',
+            f'data-raw = "{data_esc}"',
+        ])
 
     '''
-    Build generic POST command
+    Build curl stdin config for generic JSON POST (token off argv).
     '''
-    def __build_post_cmd(self, uri, data_dict, timeout = DEFAULT_GET_TIMEOUT):
-        data_str = json.dumps(data_dict)
-        cmd = f'{self.__curl_path} -m {timeout} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-H "Content-Type: application/json" ' \
-              f'-X POST https://{self.__svr_ip}{uri} ' \
-              f'-d \'{data_str}\''
-        return cmd
+
+    def __build_post_cmd(self, uri, data_dict=None, timeout=DEFAULT_GET_TIMEOUT):
+        url_esc = self.__curl_config_escape_double_quoted_value(
+            self.__curl_redfish_url(uri))
+        lines = [
+            '# hw-mgmt-redfish: POST json',
+            'insecure',
+            f'max-time = {timeout}',
+            self.__curl_config_auth_header_line(),
+            'header = "Content-Type: application/json"',
+            'request = POST',
+            f'url = "{url_esc}"',
+        ]
+        if data_dict is not None:
+            data_str = json.dumps(data_dict)
+            data_esc = self.__curl_config_escape_double_quoted_value(data_str)
+            lines.append(f'data-raw = "{data_esc}"')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def __redact_json_field_in_curl_config(cfg, field_name):
+        '''
+        Redact JSON field values in curl -K config (plain or backslash-escaped).
+        '''
+        key = re.escape(field_name)
+        escaped_comma = (
+            rf'(\\"{key}\\"\s*:\s*\\")((?:\\.[^"\\]|[^"\\])*)(\\")(?=,)'
+        )
+        escaped_end = (
+            rf'(\\"{key}\\"\s*:\s*\\")((?:\\.[^"\\]|[^"\\])*)(\\")(?=}})'
+        )
+        plain = rf'("{key}"\s*:\s*")((?:\\.[^"\\]|[^"\\])*)(")'
+        redacted, count = re.subn(
+            escaped_comma, r'\1******\3', cfg, count=1, flags=re.IGNORECASE)
+        if count:
+            return redacted
+        redacted, count = re.subn(
+            escaped_end, r'\1******\3', cfg, count=1, flags=re.IGNORECASE)
+        if count:
+            return redacted
+        return re.sub(plain, r'\1******\3', cfg, count=1, flags=re.IGNORECASE)
 
     '''
-    Obfuscate username and password while asking for bearer token
+    Redact secrets from curl --config stdin for syslog / debug logs.
     '''
-    def __obfuscate_user_password(self, cmd):
-        pattern = r'"username" : "[^"]*", "password" : "[^"]*"'
-        replacement = '"username" : "******", "password" : "******"'
-        obfuscation_cmd = re.sub(pattern, replacement, cmd)
-        return obfuscation_cmd
+
+    def __curl_config_for_logging(self, curl_config):
+
+        cfg = curl_config
+
+        for field in ('username', 'password', 'Password'):
+            cfg = self.__redact_json_field_in_curl_config(cfg, field)
+
+        cfg = re.sub(
+            r'header = "X-Auth-Token:[^"]*"',
+            'header = "X-Auth-Token: ******"',
+            cfg)
+
+        cfg = re.sub(
+            r'user = "[^"]*"',
+            'user = "******:******"',
+            cfg)
+
+        cfg = re.sub(
+            r'/AccountService/Accounts/[^"/\s]+',
+            '/AccountService/Accounts/******',
+            cfg)
+
+        return cfg
+
+    def __format_curl_command_for_logging(self, curl_config):
+        '''
+        Log argv plus redacted -K stdin config for copy-paste debugging.
+        '''
+        redacted_cfg = self.__curl_config_for_logging(curl_config)
+        return (
+            f'{self.__curl_path} -w "\\nHTTP Status Code: %{{http_code}}" -K - '
+            f'<<\'HW_MGMT_CURL_CFG\'\n{redacted_cfg}\nHW_MGMT_CURL_CFG'
+        )
 
     '''
-    Obfuscate bearer token in the response string
+    Obfuscate username and password in curl config (delegates to __curl_config_for_logging).
     '''
+
+    def __obfuscate_user_password(self, curl_config):
+        return self.__curl_config_for_logging(curl_config)
+
+    '''
+    Obfuscate bearer token in a Redfish login response string (logging helpers/tests).
+    '''
+
     def __obfuscate_token_response(self, response):
-        # Credential obfuscation
         pattern = r'"token": "[^"]*"'
         replacement = '"token": "******"'
-        obfuscation_response = re.sub(pattern,
-                                        replacement,
-                                        response)
-        return obfuscation_response
+        return re.sub(pattern, replacement, response)
 
     '''
-    Obfuscate bearer token passed to cURL
+    Obfuscate bearer token passed to cURL (stdin config or legacy argv string).
     '''
+
     def __obfuscate_auth_token(self, cmd):
-        pattern = r'X-Auth-Token: [^"]+'
-        replacement = 'X-Auth-Token: ******'
-
-        obfuscation_cmd = re.sub(pattern, replacement, cmd)
-        return obfuscation_cmd
+        obfuscated = self.__curl_config_for_logging(cmd)
+        return re.sub(
+            r'X-Auth-Token:\s*[^\s"]+',
+            'X-Auth-Token: ******',
+            obfuscated)
 
     '''
-    Obfuscate password while aksing for password change
+    Obfuscate password in curl config (delegates to __curl_config_for_logging).
     '''
+
     def __obfuscate_password(self, cmd):
-        pattern = r'"Password" : "[^"]*"'
-        replacement = '"Password" : "******"'
-        obfuscation_cmd = re.sub(pattern, replacement, cmd)
+        return self.__curl_config_for_logging(cmd)
 
-        return obfuscation_cmd
+    def __parse_curl_output(self, curl_output):
+        '''
+        Split curl -w trailer from body. Trailer must be at end of stdout only.
+        '''
+        match = RedfishClient._CURL_HTTP_TRAILER_RE.search(curl_output)
+        if match:
+            return (curl_output[:match.start()], match.group(1))
+        return (curl_output, None)
 
     '''
-    Execute cURL command and return the output and error messages
+    Execute cURL command and return the output, error messages and the raw
+    cURL exit code (needed to tell a failed connect from a lost reply).
     '''
-    def __exec_curl_cmd_internal(self, cmd):
 
-        # Will not print task monitor to syslog
-        task_mon = (RedfishClient.REDFISH_URI_TASKS in cmd)
-        login_cmd = ('/login ' in cmd)
-        password_change = (RedfishClient.REDFISH_URI_ACCOUNTS in cmd)
+    def __exec_curl_cmd_internal(self, curl_config):
+        curl_config = self.__apply_scheme_to_curl_config(curl_config)
 
-        # Credential obfuscation
-        if login_cmd:
-            obfuscation_cmd = self.__obfuscate_user_password(cmd)
-        else:
-            obfuscation_cmd = self.__obfuscate_auth_token(cmd)
+        task_mon = RedfishClient.REDFISH_URI_TASKS in curl_config
+        if not task_mon:
+            cmd_str = self.__format_curl_command_for_logging(curl_config)
+            print(f'Execute cURL command: {cmd_str}', file=sys.stderr)
 
-        if password_change:
-            obfuscation_cmd = self.__obfuscate_password(obfuscation_cmd)
-
-        process = subprocess.Popen(shlex.split(cmd),
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-        output, error = process.communicate()
-        output_str = output.decode('utf-8')
+        curl_argv = [
+            self.__curl_path,
+            '-w', '\nHTTP Status Code: %{http_code}',
+            '-K', '-',
+        ]
+        process = subprocess.Popen(
+            curl_argv,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdin_bytes = curl_config.encode('utf-8')
+        output, error = process.communicate(input=stdin_bytes)
+        output_decoded = output.decode('utf-8')
         error_str = error.decode('utf-8')
-        ret = process.returncode
-        #print ("Curl send:{}\n".format(cmd))
-        #print ("Curl rcv: err:{}\nout:{}".format(error_str, output_str))
+        curl_rc = process.returncode
+        ret = curl_rc
 
-        if (ret > 0):
+        if ret > 0:
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
 
-        if (ret == 0): # cURL retuns ok
-            if login_cmd:
-                obfuscation_output_str = \
-                    self.__obfuscate_token_response(output_str)
-            else:
-                obfuscation_output_str = output_str
+        output_str, _http = self.__parse_curl_output(output_decoded)
+        output_str = output_str.rstrip('\n')
 
-        else: # cURL returns error
-            # Extract cURL command failure reason
+        if ret != 0:
             match = re.search(r'curl: \([0-9]+\) (.*)', error_str)
             if match:
                 error_str = match.group(1)
 
-        return (ret, output_str, error_str)
+        return (ret, output_str, error_str, curl_rc)
+
+    def __update_token_in_curl_config(self, curl_config):
+        if self.__token is None:
+            return curl_config
+        hdr = (
+            'header = "X-Auth-Token: ' +
+            self.__curl_config_escape_double_quoted_value(self.__token) + '"')
+        return re.sub(
+            r'^header = "X-Auth-Token:[^"]*"',
+            hdr,
+            curl_config,
+            count=1,
+            flags=re.MULTILINE)
 
     def __get_http_request_type(self, cmd):
+        m = re.search(r'^request = (\w+)', cmd, re.MULTILINE | re.I)
+        if m:
+            return m.group(1).upper()
 
-        patterns = ( r'-X[ \t]+([A-Z]+)', r'--request[ \t]+([A-Z]+)')
-
+        patterns = (r'-X[ \t]+([A-Z]+)', r'--request[ \t]+([A-Z]+)')
         for pattern in patterns:
             match = re.search(pattern, cmd)
             if match:
@@ -263,17 +514,21 @@ class RedfishClient:
     Wrapper function to execute the given cURL command which can deal with
     invalid bearer token case.
     '''
-    def exec_curl_cmd(self, cmd):
-        is_login_cmd = ('/login ' in cmd)
 
-        req_type = self.__get_http_request_type(cmd)
+    def exec_curl_cmd(self, curl_config):
+        is_login_cmd = curl_config.startswith(RedfishClient._CFG_LOGIN_PREFIX)
+
+        req_type = self.__get_http_request_type(curl_config)
         is_patch_req = (req_type == 'PATCH')
 
         # Not login, return
         if (not self.has_login()) and (not is_login_cmd):
             return (RedfishClient.ERR_CODE_NOT_LOGIN, 'Not login', 'Not login')
 
-        ret, output_str, error_str = self.__exec_curl_cmd_internal(cmd)
+        ret, output_str, error_str, curl_rc = self.__exec_curl_cmd_internal(
+            curl_config)
+        ret, output_str, error_str = self.__try_alt_scheme_fallback(
+            curl_config, ret, output_str, error_str, curl_rc)
 
         is_empty_response = ((ret == 0) and (len(output_str) == 0))
 
@@ -281,17 +536,16 @@ class RedfishClient:
         # GET & POST.
         # Need to re-generate token
         if (is_empty_response and (not is_login_cmd) and (not is_patch_req)):
-            # print(f'need to regenerate token..')
             self.__token = None
             ret = self.login()
             if ret == RedfishClient.ERR_CODE_OK:
-                ret, output_str, error_str = self.__exec_curl_cmd_internal(cmd)
+                curl_retry = self.__update_token_in_curl_config(curl_config)
+                ret, output_str, error_str, _rc = \
+                    self.__exec_curl_cmd_internal(curl_retry)
             elif ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
-                # Login fails, invalidate token.
                 self.__token = None
                 return (ret, 'Bad credential', 'Bad credential')
             else:
-                # Login fails, invalidate token.
                 self.__token = None
                 return (ret, 'Login failure', 'Login failure')
 
@@ -300,24 +554,25 @@ class RedfishClient:
     '''
     Check if already login
     '''
+
     def has_login(self):
         return self.__token is not None
 
     '''
     Login Redfish server and get bearer token
     '''
-    def login(self, password = None):
+
+    def login(self, password=None):
         if self.has_login():
             return RedfishClient.ERR_CODE_OK
 
         if not password:
             password = self.__password
 
-        cmd = self.__build_login_cmd(password)
-        # print(f'cmd:{cmd}')
-        ret, response, error = self.exec_curl_cmd(cmd)
+        curl_cfg = self.__build_login_cmd(password)
+        ret, response, error = self.exec_curl_cmd(curl_cfg)
 
-        if (ret != 0): # cURL execution error
+        if (ret != 0):  # cURL execution error
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
         else:
             # Note that 'curl' returns 0 and empty response
@@ -351,27 +606,35 @@ class RedfishClient:
 
     def build_get_cmd(self, uri):
         return self.__build_get_cmd(uri)
-    
-    def build_post_cmd(self, uri, data_dict):
+
+    def build_post_cmd(self, uri, data_dict=None):
         return self.__build_post_cmd(uri, data_dict)
+
 
 '''
 BMCAccessor encapsulates BMC details such as IP address, credential management.
-It also acts as wrapper of RedfishClient. For each memmber function
+It also acts as wrapper of RedfishClient. For each member function
 RedfishClient.redfish_api_func(), there will be a wrapper member function
 BMCAccessor.func() implicitly defined.
 '''
+
+
 class BMCAccessor(object):
     CURL_PATH = '/usr/bin/curl'
-    BMC_INTERNAL_IP_ADDR = '10.0.1.1'
     BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
-    BMC_NOS_ACCOUNT = 'yormnAnb' # used for communication between NOS and BMC
-    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51" # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
-    BMC_ROOT_PASSWORD = "ABYX12#14artb" # root pwd which should be patched to
+    BMC_NOS_ACCOUNT = 'yormnAnb'  # used for communication between NOS and BMC
+    # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51"
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
+    # Advisory lock for get_login_password() TPM usage (legacy and modern path).
+    # Serializes access when called async from multiple processes / permission levels.
+    LOCK_DIR = "/run/lock"
+    LOCK_FILE = "hw_management_get_login_password.lock"
+    FLOCK_TIMEOUT_SEC = 10
+    LEGACY_PLATFORM_PATTERN = r'N5\d{3}_LD'
 
     def __init__(self):
         # TBD: Token persistency.
@@ -382,18 +645,21 @@ class BMCAccessor(object):
                                        self.get_login_password())
 
     def get_ip_addr(self):
-        redis_cmd = '/usr/bin/sonic-db-cli ' \
-                    'CONFIG_DB hget "DEVICE_METADATA|localhost" bmc_addr'
-        result = subprocess.run(redis_cmd,
+        # Return BMC IP address. get usb0 IP address and replace the last
+        # byte with '1'.
+        # The assumption is that BMC IP address is always X.X.X.1.
+        cmd = "/usr/sbin/ip -o -4 addr list usb0 | awk -F ' *|/' '{print $4}'"
+        result = subprocess.run(cmd,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 shell=True,
                                 universal_newlines=True)
 
-        addr = self.BMC_INTERNAL_IP_ADDR
+        addr = "0.0.0.0"
         if result.returncode == 0:
             if len(result.stdout.strip()):
                 addr = result.stdout.strip()
+                addr = '.'.join(addr.split('.')[:-1] + ['1'])
         return addr
 
     def __getattr__(self, name):
@@ -419,83 +685,173 @@ class BMCAccessor(object):
         err_msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
         raise AttributeError(err_msg)
 
+    def _acquire_lock(self, timeout_sec=None):
+        """Acquire advisory lock for TPM usage.
+        Returns lock_fd (int). Caller must release with _release_lock(lock_fd).
+        Waits up to timeout_sec (default: FLOCK_TIMEOUT_SEC).
+        """
+        if timeout_sec is None:
+            timeout_sec = self.FLOCK_TIMEOUT_SEC
+
+        lock_path = os.path.join(self.LOCK_DIR, self.LOCK_FILE)
+        deadline = time.clock_gettime(time.CLOCK_MONOTONIC) + timeout_sec
+        while True:
+            try:
+                lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
+            except OSError as e:
+                raise Exception(f"Cannot create lock file for TPM access: {e}") from e
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return lock_fd
+            except BlockingIOError:
+                os.close(lock_fd)
+                if time.clock_gettime(time.CLOCK_MONOTONIC) >= deadline:
+                    raise Exception(
+                        f"Cannot acquire TPM lock within {timeout_sec}s (timeout)"
+                    )
+                time.sleep(0.2)
+            except OSError as e:
+                os.close(lock_fd)
+                raise Exception(f"Cannot acquire TPM lock: {e}") from e
+
+    def _release_lock(self, lock_fd):
+        """Release advisory TPM lock and close fd."""
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        try:
+            os.close(lock_fd)
+        except OSError:
+            pass
+
+    def _handle_legacy_password(self):
+        """Handle legacy password generation for N51XX_LD platforms (e.g. N5500_LD)"""
+        pass_len = 13
+        attempt = 1
+        max_attempts = 100
+        max_repeat = int(3 + 0.09 * pass_len)
+        hex_data = "1300NVOS-BMC-USER-Const"
+
+        lock_fd = self._acquire_lock()
+        try:
+            return self._handle_legacy_password_impl(
+                pass_len, attempt, max_attempts, max_repeat, hex_data)
+        finally:
+            self._release_lock(lock_fd)
+
+    def _handle_legacy_password_impl(self, pass_len, attempt, max_attempts, max_repeat, hex_data):
+        """Implementation of legacy password generation (called with lock held)."""
+        os.makedirs(self.BMC_DIR, exist_ok=True)
+        cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
+        try:
+            subprocess.run(cmd, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Failed to write hex file: {e}")
+        tpm_command = ["tpm2_createprimary", "-C", "o", "-u",
+                       f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
+        try:
+            result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Failed to create primary with hex file: {e}")
+
+        while attempt <= max_attempts:
+            if attempt > 1:
+                const = f"1300NVOS-BMC-USER-Const-{attempt}"
+                mess = f"Password did not meet criteria; retrying with const: {const}"
+                # print(mess)
+                tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
+                try:
+                    result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
+                except subprocess.CalledProcessError as e:
+                    print(
+                        f"[_handle_legacy_password] tpm2_createprimary "
+                        f"(stdin, attempt={attempt}) failed: "
+                        f"returncode={e.returncode}",
+                        file=sys.stderr)
+                    if e.stderr:
+                        print(f"[_handle_legacy_password] stderr: {e.stderr.strip()}", file=sys.stderr)
+                    raise Exception(f"Failed to create primary with stdin: {e}")
+
+            symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
+            symcipher_match = re.search(symcipher_pattern, result.stdout)
+
+            if not symcipher_match:
+                raise Exception("Symmetric cipher not found in TPM output")
+
+            # BMC dictates a password of 13 characters. Random from TPM is used with an append of A!
+            symcipher_part = symcipher_match.group(1)[:pass_len - 2]
+            if symcipher_part.isdigit():
+                symcipher_value = symcipher_part[:pass_len - 3] + 'vA!'
+            elif symcipher_part.isalpha() and symcipher_part.islower():
+                symcipher_value = symcipher_part[:pass_len - 3] + '9A!'
+            else:
+                symcipher_value = symcipher_part + 'A!'
+            if len(symcipher_value) != pass_len:
+                raise Exception("Bad cipher length from TPM output")
+
+            # check for monotonic
+            monotonic_check = True
+            for i in range(len(symcipher_value) - 3):
+                seq = symcipher_value[i:i + 4]
+                increments = [ord(seq[j + 1]) - ord(seq[j]) for j in range(3)]
+                if increments == [1, 1, 1] or increments == [-1, -1, -1]:
+                    monotonic_check = False
+                    break
+
+            variety_check = len(set(symcipher_value)) >= 5
+            repeating_pattern_check = sum(1 for i in range(pass_len - 1)
+                                          if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
+
+            # check for consecutive_pairs
+            count = 0
+            for i in range(11):
+                val1 = symcipher_value[i]
+                val2 = symcipher_value[i + 1]
+                if val2 == "v" or val1 == "v":
+                    continue
+                if abs(int(val2, 16) - int(val1, 16)) == 1:
+                    count += 1
+            consecutive_pair_check = count <= 4
+
+            if consecutive_pair_check and variety_check and repeating_pattern_check and monotonic_check:
+                os.remove(f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}")
+                return symcipher_value
+            else:
+                attempt += 1
+        raise Exception("Failed to generate a valid password after maximum retries.")
+
     def get_login_password(self):
         try:
-            pass_len = 13
-            attempt = 1
-            max_attempts = 100
-            max_repeat = int(3 + 0.09 * pass_len)
-            hex_data = "1300NVOS-BMC-USER-Const"
-            os.makedirs(self.BMC_DIR, exist_ok=True)
-            cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
-            subprocess.run(cmd, shell=True, check=True)
-
-            tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
-            result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
-
-            while attempt <= max_attempts:
-                if attempt > 1:
-                    const = f"1300NVOS-BMC-USER-Const-{attempt}"
-                    mess = f"Password did not meet criteria; retrying with const: {const}"
-                    #print(mess)
+            with open('/sys/devices/virtual/dmi/id/product_name') as f:
+                platform_name = f.read().strip()
+            if re.match(self.LEGACY_PLATFORM_PATTERN, platform_name.upper()):
+                try:
+                    return self._handle_legacy_password()
+                except Exception as e:
+                    raise Exception(f"Failed to generate a valid password for legacy platform: {e}")
+            else:
+                lock_fd = self._acquire_lock()
+                try:
+                    const = "1300NVOS-BMC-USER-Const"
                     tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
-                    result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
-
-                symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
-                symcipher_match = re.search(symcipher_pattern, result.stdout)
-
-                if not symcipher_match:
-                    raise Exception("Symmetric cipher not found in TPM output")
-
-                # BMC dictates a password of 13 characters. Random from TPM is used with an append of A!
-                symcipher_part = symcipher_match.group(1)[:pass_len-2]
-                if symcipher_part.isdigit():
-                    symcipher_value = symcipher_part[:pass_len-3] + 'vA!'
-                elif symcipher_part.isalpha() and symcipher_part.islower():
-                    symcipher_value = symcipher_part[:pass_len-3] + '9A!'
-                else:
-                    symcipher_value = symcipher_part + 'A!'
-                if len (symcipher_value) != pass_len:
-                    raise Exception("Bad cipher length from TPM output")
-                
-                # check for monotonic
-                monotonic_check = True
-                for i in range(len(symcipher_value) - 3): 
-                    seq = symcipher_value[i:i+4] 
-                    increments = [ord(seq[j+1]) - ord(seq[j]) for j in range(3)]
-                    if increments == [1, 1, 1] or increments == [-1, -1, -1]:
-                        monotonic_check = False
-                        break
-
-                variety_check = len(set(symcipher_value)) >= 5
-                repeating_pattern_check = sum(1 for i in range(pass_len - 1) if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
-
-                # check for consecutive_pairs
-                count = 0
-                for i in range(11):
-                    val1 = symcipher_value[i]
-                    val2 = symcipher_value[i + 1]
-                    if val2 == "v" or val1 == "v":
-                        continue
-                    if abs(int(val2, 16) - int(val1, 16)) == 1:
-                        count += 1
-                consecutive_pair_check = count <= 4
-
-                if consecutive_pair_check and variety_check and repeating_pattern_check and monotonic_check:
-                    os.remove(f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}")
-                    return symcipher_value
-                else:
-                    attempt += 1
-
-            raise Exception("Failed to generate a valid password after maximum retries.")
-
+                    result = subprocess.run(tpm_command, shell=True,
+                                            capture_output=True, check=True,
+                                            text=True).stdout
+                    match = re.search(r"symcipher:\s+([\da-fA-F]+)", result)
+                    if not match:
+                        raise Exception("Symmetric cipher not found in TPM output")
+                    # Extract symcipher and encode to base64
+                    return base64.b64encode(bytes.fromhex(match.group(1))).decode("ascii")
+                finally:
+                    self._release_lock(lock_fd)
+        # Lock is always released by inner finally before we get here.
         except subprocess.CalledProcessError as e:
-            #print(f"Error executing TPM command: {e}")
-            raise Exception("Failed to communicate with TPM")
-
+            raise Exception(f"Failed to communicate with TPM: {e}")
+        except (FileNotFoundError, PermissionError) as e:
+            raise Exception(f"No platform name found: {e}")
         except Exception as e:
-            #print(f"Error: {e}")
-            raise
+            raise Exception(f"Failed to generate a valid password: {e}")
 
     def create_user(self, user, password):
         cmd = self.rf_client.build_post_cmd(RedfishClient.REDFISH_URI_ACCOUNTS, {
@@ -503,7 +859,7 @@ class BMCAccessor(object):
             "Password": password,
             "RoleId": "Administrator"
         })
-        
+
         # print(f'cmd:{cmd}')
         ret, output, error = self.rf_client.exec_curl_cmd(cmd)
         return ret
@@ -512,7 +868,7 @@ class BMCAccessor(object):
         if not self.rf_client.has_login():
             return RedfishClient.ERR_CODE_NOT_LOGIN
 
-        cmd = self.rf_client._build_change_user_password_cmd(user, password) 
+        cmd = self.rf_client._build_change_user_password_cmd(user, password)
         # print(f'cmd:{cmd}')
         ret, output_str, error_str = self.rf_client.exec_curl_cmd(cmd)
         return ret
@@ -522,17 +878,17 @@ class BMCAccessor(object):
         ret = self.rf_client.login()
         return ret
 
-    def login(self, password = None):
+    def login(self, password=None):
         print("Login to BMC")
         cp = []
         try:
-            cp.append("A") # try with BMC_NOS_ACCOUNT and TPM password")
+            cp.append("A")  # try with BMC_NOS_ACCOUNT and TPM password")
             ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
             if ret == RedfishClient.ERR_CODE_OK:
                 cp.append("Z1")
                 return ret
 
-            cp.append("B") # try with BMC_NOS_ACCOUNT and bmc account default password")
+            cp.append("B")  # try with BMC_NOS_ACCOUNT and bmc account default password")
             ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
             if ret == RedfishClient.ERR_CODE_OK:
                 cp.append("Z2")
@@ -543,16 +899,16 @@ class BMCAccessor(object):
                     cp.append("Z'1")
                 return ret
 
-            cp.append("C") # login as admin and tpm pwd")
+            cp.append("C")  # login as admin and tpm pwd")
             ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, self.get_login_password())
             if ret != RedfishClient.ERR_CODE_OK:
-                cp.append("C1") # login as admin and default pwd")
+                cp.append("C1")  # login as admin and default pwd")
                 ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
                 if ret != RedfishClient.ERR_CODE_OK:
                     cp.append("Z'2")
                     return ret
 
-            cp.append("D") # add BMC_NOS_ACCOUNT with tpm pwd")
+            cp.append("D")  # add BMC_NOS_ACCOUNT with tpm pwd")
             self.rf_client.update_credentials(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
             ret = self.rf_client.login()
 

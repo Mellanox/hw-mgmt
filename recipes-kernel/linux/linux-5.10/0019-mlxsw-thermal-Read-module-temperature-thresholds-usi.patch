@@ -1,5 +1,5 @@
 From 5e6f570de0f814bd843fdc5b36251538bdf7405f Mon Sep 17 00:00:00 2001
-From: Mykola Kostenok <c_mykolak@nvidia.com>
+From: Mykola Kostenok <c_mykolak@mellanox.com>
 Date: Tue, 8 Jun 2021 15:44:14 +0300
 Subject: [PATCH backport 5.10 019/182] mlxsw: thermal: Read module temperature
  thresholds using MTMP register
@@ -19,7 +19,7 @@ This is both more reliable and more efficient than current method, as
 temperature and thresholds are queried in one transaction instead of
 three. This is significant when working over a slow bus such as I2C.
 
-Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Signed-off-by: Mykola Kostenok <c_mykolak@mellanox.com>
 Acked-by: Vadim Pasternak <vadimp@nvidia.com>
 Signed-off-by: Ido Schimmel <idosch@nvidia.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>

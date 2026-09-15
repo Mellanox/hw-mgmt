@@ -55,17 +55,14 @@ index 018ce2833..14c14c9c2 100644
  	tristate "Mellanox platform hotplug driver support"
  	depends on HWMON
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index d7f4d940c..7d11503dd 100644
+index d7f4d940c..2b774cdf4 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -8,6 +8,7 @@ obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
- obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
- obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
- obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
-+obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
- obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
+@@ -11,3 +11,4 @@ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
+ obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
++obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
 new file mode 100644
 index 000000000..c6cfbee55

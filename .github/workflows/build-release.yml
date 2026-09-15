@@ -1,34 +1,150 @@
-# This is an action script to build and attach the packages to a release
+# Build Debian packages and optional RPMs; attach selected assets to a release.
+# - "both": host + BMC .debs, both tarballs, RPM.
+# - "cpu-only": host .debs + hw-management-<tag>.tar.gz (+ RPM).
+# - "bmc-only": BMC .deb + hw-management-bmc-<tag>.tar.gz.
+#
+# Triggers:
+#   - release published → scope "both", ref = release tag
+#   - workflow_dispatch → choose scope and ref (must match an existing Git tag for upload)
+#
+# Debian uses Build-Profiles in debian/control (pkg.hw-mgmt.cpu-only / pkg.hw-mgmt.bmc-only).
 name: Build hw-management release artifacts
 
-on: 
+on:
   release:
     types: [published]
-    
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Which products to build and upload
+        type: choice
+        options:
+          - both
+          - cpu-only
+          - bmc-only
+        default: both
+      ref:
+        description: Existing Git tag to build and attach to (e.g. V.7.0001.0001)
+        type: string
+        required: true
+
 jobs:
-  rpm_build:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'both' }}
     steps:
-      - uses: actions/checkout@v3.5.2
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.release.tag_name }}
+
+      - name: Resolve release tag name
+        id: meta
+        run: |
+          set -euo pipefail
+          if git describe --tags --exact-match HEAD 2>/dev/null; then
+            TAG=$(git describe --tags --exact-match HEAD)
+          else
+            TAG="${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.release.tag_name }}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Resolved TAG=${TAG}"
+
       - name: Install build packages
         run: |
           sudo apt-get update
-          sudo apt-get install rpm
-          sudo apt-get install devscripts build-essential lintian dh-make
-      - name: Build deb & rpm packages
+          sudo apt-get install -y rpm devscripts build-essential lintian dh-make
+
+      - name: Set Debian build profile from scope
+        run: |
+          SCOPE="${RELEASE_SCOPE}"
+          case "$SCOPE" in
+            both)
+              echo 'DEB_BUILD_PROFILES=' >> "$GITHUB_ENV"
+              ;;
+            cpu-only)
+              echo 'DEB_BUILD_PROFILES=pkg.hw-mgmt.cpu-only' >> "$GITHUB_ENV"
+              ;;
+            bmc-only)
+              echo 'DEB_BUILD_PROFILES=pkg.hw-mgmt.bmc-only' >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unknown scope: $SCOPE" >&2
+              exit 1
+              ;;
+          esac
+          echo "RELEASE_SCOPE=${SCOPE} (DEB_BUILD_PROFILES applied on next steps)"
+
+      - name: Build Debian packages
         run: |
           debuild -us -uc -d
           debuild -us -uc -b -aarm64
+
+      - name: Build source tarballs (git archive)
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          SCOPE="${RELEASE_SCOPE}"
+          case "$SCOPE" in
+            both|cpu-only)
+              git archive --format=tar.gz --prefix=hw-management/ \
+                -o "../hw-management-${TAG}.tar.gz" HEAD usr rpm debian
+              ;;
+          esac
+          case "$SCOPE" in
+            both|bmc-only)
+              git archive --format=tar.gz --prefix=hw-management-bmc/ \
+                -o "../hw-management-bmc-${TAG}.tar.gz" HEAD bmc
+              ;;
+          esac
+
+      - name: Build RPM packages (host only)
+        if: env.RELEASE_SCOPE == 'both' || env.RELEASE_SCOPE == 'cpu-only'
+        run: |
           cd rpm
           chmod a+x ./gen_rpm.sh
           ./gen_rpm.sh
-          
-      - name: Release
-        uses: softprops/action-gh-release@v0.1.15
-        if: startsWith(github.ref, 'refs/tags/')
+
+      - name: Collect files for GitHub Release
+        id: assets
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.tag }}"
+          SCOPE="${RELEASE_SCOPE}"
+          : > /tmp/release-files.txt
+          shopt -s nullglob
+          case "$SCOPE" in
+            both)
+              for f in ../*hw-management_*.deb; do echo "$f" >> /tmp/release-files.txt; done
+              for f in ../*hw-management-bmc_*.deb; do echo "$f" >> /tmp/release-files.txt; done
+              echo "../hw-management-${TAG}.tar.gz" >> /tmp/release-files.txt
+              echo "../hw-management-bmc-${TAG}.tar.gz" >> /tmp/release-files.txt
+              for f in rpm/*.rpm; do echo "$f" >> /tmp/release-files.txt; done
+              ;;
+            cpu-only)
+              for f in ../*hw-management_*.deb; do echo "$f" >> /tmp/release-files.txt; done
+              echo "../hw-management-${TAG}.tar.gz" >> /tmp/release-files.txt
+              for f in rpm/*.rpm; do echo "$f" >> /tmp/release-files.txt; done
+              ;;
+            bmc-only)
+              for f in ../*hw-management-bmc_*.deb; do echo "$f" >> /tmp/release-files.txt; done
+              echo "../hw-management-bmc-${TAG}.tar.gz" >> /tmp/release-files.txt
+              ;;
+          esac
+          shopt -u nullglob
+          sort -u /tmp/release-files.txt -o /tmp/release-files.txt
+          echo "Attaching:"
+          cat /tmp/release-files.txt
+          {
+            echo "list<<EOF"
+            cat /tmp/release-files.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ../*.deb
-            rpm/*.rpm
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: ${{ steps.assets.outputs.list }}

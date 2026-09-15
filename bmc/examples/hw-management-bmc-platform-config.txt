@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# BMC platform shell config — reference (example)
+#
+# Purpose
+#   Variables consumed when /etc/hw-management-bmc-platform.conf is sourced.
+#   Primary readers:
+#     • hw-management-bmc-helpers.sh — check_power_restore_policy(), get_power_restore_delay()
+#     • hw-management-bmc-helpers-common.sh — bmc_init_eth() reads MGMT_IF_NUM after sourcing
+#     • hw-management-bmc-helpers-common.sh — log_cpld_dump() uses CPLD_I2C_BUS if set
+#
+# Packaged reference (HI189)
+#   usr/etc/HI189/hw-management-bmc-platform.conf
+#   Copied to /etc/hw-management-bmc-platform.conf by hw-management-bmc-plat-specific-preps.sh
+#   when the device-tree SKU maps to that platform directory (e.g. hid189 → HI189).
+#
+# Runtime loading
+#   Override path: HW_MANAGEMENT_BMC_PLATFORM_CONF=/path/to/file
+#   Default file:   /etc/hw-management-bmc-platform.conf (see PLATFORM_CONFIG_FILE in
+#   hw-management-bmc-helpers-common.sh). Scripts source it when needed (helpers.sh
+#   uses _helpers_bmc_source_platform_conf before policy/delay queries).
+#
+# File format
+#   POSIX-style KEY=value assignments; comments with #. Values are case-sensitive where noted.
+#
+# Variables
+#
+#   CPLD_I2C_BUS
+#     Integer I2C bus used as a fallback when CPLD-related tooling has no other source.
+#
+#   POWER_ON_POLICY
+#     OpenBMC-style host power policy for check_power_restore_policy() return code:
+#       AlwaysOff — do not auto-start host from policy (return 0), except when
+#                   /var/reset_bypass exists (PowerCycleBypass path → return 1).
+#       AlwaysOn  — allow start path when delay is 0 (return 1); non-zero POWER_POLICY_DELAY
+#                   returns 0 from this branch (defer / do not start from policy here).
+#       Restore   — return 2 (last-state style; see script).
+#     If unset or not one of the above, legacy default: return 3.
+#     hw-management-bmc-ready.sh uses cpu_start_policy==1 for bmc_to_cpu / mux paths.
+#
+#   POWER_POLICY_DELAY
+#     Non-negative integer, seconds, in this file. get_power_restore_delay() converts to
+#     microseconds for hw-management-bmc-events.sh (usleep). Use 0 unless you understand
+#     the power-button delay path.
+#
+#   MGMT_IF_NUM
+#     2 = eth0 + eth1 (default when unset in code). 1 = no eth1; bmc_init_eth() skips eth1
+#     bring-up / PHY LED and still runs eth0 DHCP recovery when applicable.
+#
+# Example (HI189-style)
+#
+#   CPLD_I2C_BUS=14
+#   POWER_ON_POLICY=AlwaysOff
+#   POWER_POLICY_DELAY=0
+#   MGMT_IF_NUM=1

@@ -1,6 +1,7 @@
 #!/bin/bash
 ##################################################################################
-# Copyright (c) 2021 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -76,9 +77,15 @@ l1_power_events=("power_button graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
+udev_event_log_max_size=4194304
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
+fixup_hook_script=/usr/local/bin/hw-management-fixup.sh
+asic_chipup_status=/run/.asic_chipup_completed
+# TC run state across hw-management stop/start. Outside $hw_management_path
+# (removed on stop). Keep in sync with hw-management-tc.service.
+tc_state_file="/var/run/.hw-management-tc-state"
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -115,6 +122,9 @@ declare -A sys_fandir_vs_pn=(["00MP584"]=F ["00MP594"]=R ["00MP593"]=R \
 
 base_cpu_bus_offset=10
 max_tachos=20
+fan_debounce_timeout_ms=750
+fan_debounce_poll_ms=50
+fan_dir_lock_file="/var/run/hw-management-fan-dir.lock"
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
 i2c_bus_min=1
@@ -122,9 +132,8 @@ i2c_bus_max=26
 bmc_i2c_bus_max=9
 bmc_i2c_bus_offset=70
 cpu_type=
-device_connect_delay=0.2
 
-# CPU Family + CPU Model should idintify exact CPU architecture
+# CPU Family + CPU Model should identify exact CPU architecture
 # IVB - Ivy-Bridge
 # RNG - Atom Rangeley
 # BDW - Broadwell-DE
@@ -132,6 +141,8 @@ device_connect_delay=0.2
 # DNV - Denverton
 # BF3 - BlueField-3
 # AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
+# AMD_V3000 - AMD V3000
+# AMD_FRNG - AMD FireRange
 # ARMv7 - Aspeed 2600
 IVB_CPU=0x63A
 RNG_CPU=0x64D
@@ -140,10 +151,26 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+AMD_V3000_CPU=0x1944
+AMD_FRNG_CPU=0x1A44
 ARMv7_CPU=0xC07
 amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 n5110_mctp_bus="0"
 n5110_mctp_addr="1040"
+
+
+# Optional per-LED-type control map, saved as space-separated pairs in
+# $config_path/led_control_type: "name type [name type ...]".
+# Name may be exact (fan, led_status) or a glob mask (fan*, led_psu?).
+# Example in *_specific(): led_control_type=(status "$LED_CONTROL_HW" "fan*" "$LED_CONTROL_SW")
+# Quote masks ("fan*", "led?") so the shell does not expand them.
+# Unset map or missing LED name uses LED_CONTROL_HW_SW.
+
+# LED control owner. Written to led/led_<name>_control.
+# Platform *_specific() may set led_control_type=(name type ...) pairs.
+LED_CONTROL_SW="led_sw"
+LED_CONTROL_HW="led_hw"
+LED_CONTROL_HW_SW="led_hw_sw"
 
 # hw-mngmt-sysfs-monitor GLOBALS
 SYSFS_MONITOR_TIMEOUT=20 # Total Sysfs T/O.
@@ -172,6 +199,12 @@ log_info()
 
 trace_udev_events()
 {
+	log_size=$(stat -c %s "$udev_event_log" 2>/dev/null || echo 0)
+	if [ "$log_size" -ge "$udev_event_log_max_size" ]; then
+		if ! pgrep -x logrotate > /dev/null 2>&1; then
+			/usr/sbin/logrotate --state /var/lib/logrotate/status /etc/logrotate.d/udev 2>/dev/null
+		fi
+	fi
 	echo "[$(date '+%Y-%m-%d %H:%M:%S.%3N')] $@" >> $udev_event_log
 	return 0
 }
@@ -205,6 +238,7 @@ show_hw_info()
 check_cpu_type()
 {
 	if [ ! -f $config_path/cpu_type ]; then
+		mkdir -p $config_path
 		# ARM CPU provide "CPU part" field, x86 does not. Check for ARM first.
 		cpu_pn=$(grep -m1 "CPU part" /proc/cpuinfo | awk '{print $4}')
 		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
@@ -212,6 +246,7 @@ check_cpu_type()
 		if [ "$cpu_pn" == "$BF3_CPU" ] || [ "$cpu_pn" == "$ARMv7_CPU" ]; then
 			cpu_type=$cpu_pn
 			echo $cpu_type > $config_path/cpu_type
+			print_function_call "$0" "${FUNCNAME[0]}" "cpu_type:$cpu_type"
 			return 0
 		fi
 
@@ -222,11 +257,12 @@ check_cpu_type()
 	else
 		cpu_type=$(cat $config_path/cpu_type)
 	fi
+	print_function_call "$0" "${FUNCNAME[0]}" "cpu_type:$cpu_type"
 }
 
 find_i2c_bus()
 {
-    # Find physical bus number of Mellanox I2C controller. The default
+    # Find physical bus number of Nvidia I2C controller. The default
     # number is 1, but it could be assigned to others id numbers on
     # systems with different CPU types.
     if [ -f $config_path/i2c_bus_offset ]; then
@@ -260,12 +296,16 @@ find_i2c_bus()
                 esac
 
                 echo $i2c_bus_offset > $config_path/i2c_bus_offset
+                print_function_call "$0" "${FUNCNAME[0]}" \
+			"i2c_bus_offset:$i2c_bus_offset sku:$sku"
                 return
             fi
         fi
     done
 
     log_err "I2C infrastructure is not created"
+    print_function_call "$0" "${FUNCNAME[0]}" \
+	"I2C infrastructure is not created bus_min:$bus_min bus_max:$bus_max"
     exit 0
 }
 
@@ -281,10 +321,11 @@ unlock_service_state_change()
     /usr/bin/flock -u ${LOCKFD}
 }
 
+# This function checks if the labels are enabled for the current platform.
+# Returns 0 if labels are enabled, 1 otherwise.
 check_labels_enabled()
 {
-    ui_tree_archive_file="$(get_ui_tree_archive_file)"
-    if ([ "$ui_tree_sku" = "HI130" ] ||
+    if [ "$ui_tree_sku" = "HI130" ] ||
         [ "$ui_tree_sku" = "HI151" ] ||
         [ "$ui_tree_sku" = "HI157" ] ||
         [ "$ui_tree_sku" = "HI158" ] ||
@@ -298,19 +339,26 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI175" ] ||
         [ "$ui_tree_sku" = "HI176" ] ||
         [ "$ui_tree_sku" = "HI177" ] ||
-        [ "$ui_tree_sku" = "HI178" ]) &&
-        ([ ! -e "$ui_tree_archive_file" ]); then
-        return 0
-    else
-        return 1
+        [ "$ui_tree_sku" = "HI178" ] ||
+        [ "$ui_tree_sku" = "HI179" ] ||
+        [ "$ui_tree_sku" = "HI180" ] ||
+        [ "$ui_tree_sku" = "HI185" ]; then
+        ui_tree_archive_file="$(get_ui_tree_archive_file)"
+        if [ ! -e "$ui_tree_archive_file" ]; then
+            return 0
+        fi
     fi
+    return 1
 }
 
 # This function checks if the platform is having BSP emulation support.
+# return 0 if supported, 1 otherwise.
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|\
+		HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI183|\
+		HI185|HI186|HI187|HI193|HI194|HI199|HI200|HI201)
 			return 0
 			;;
 
@@ -335,15 +383,72 @@ check_simx()
 check_tc_is_supported()
 {
 	if grep -q '"platform_support" : 0' $config_path/tc_config.json; then
-		return 1
-	else
 		return 0
+	else
+		return 1
 	fi
+}
+
+# Read once and remove. Prints "started" or nothing if missing/invalid.
+consume_tc_saved_state()
+{
+	local state=""
+
+	if [ -L "$tc_state_file" ]; then
+		rm -f "$tc_state_file"
+		return
+	fi
+	if [ ! -f "$tc_state_file" ]; then
+		return
+	fi
+	state=$(tr -d '[:space:]' < "$tc_state_file" 2>/dev/null)
+	rm -f "$tc_state_file"
+	case $state in
+		started)
+			print_function_call "$0" "${FUNCNAME[0]}" "state:started"
+			printf '%s\n' "$state"
+			;;
+	esac
+}
+
+# This function checks if BMC is supported for current platform
+# Returns 0 if BMC is supported, 1 otherwise.
+check_bmc_is_supported()
+{
+	case $vm_sku in
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193)
+			return 0
+			;;
+
+		*)
+			return 1
+			;;
+	esac
+}
+
+# This function checks if the host NOS is SONiC.
+# On SONiC, SONiC itself owns CPU<->BMC communication, so hw-management must
+# skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
+# polling). On any other host OS the behavior is unchanged.
+# Returns 0 if the host runs SONiC, 1 otherwise (single source of truth:
+# hw_management_sonic_check.py).
+check_host_os_is_sonic()
+{
+	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
+}
+
+# Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
+# Requires SONiC plus a host-side contract file (same well-known paths as on the BMC).
+check_host_usb0_managed_by_nos()
+{
+	check_host_os_is_sonic || return 1
+	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
 }
 
 # This function create or cleans sysfs monitor helper files.
 init_sysfs_monitor_timestamp_files()
 {
+    print_function_call "$0" "${FUNCNAME[0]}" "entering..."
     SYSFS_MONITOR_FILES=(
         "$SYSFS_MONITOR_RESET_FILE_A"
         "$SYSFS_MONITOR_RESET_FILE_B"
@@ -387,14 +492,25 @@ init_sysfs_monitor_timestamp_files()
 # Used by both hw-management service and sysfs monitor service.
 refresh_sysfs_monitor_timestamps()
 {
-    # Capture the current time with milliseconds.
-    local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
-    # Read the last update time from both reset files.
-    local last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
-    local last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
-    # Ensure both variables are valid integers, defaulting to 0 if empty or invalid.
-    last_reset_time_A=${last_reset_time_A:-0}
-    last_reset_time_B=${last_reset_time_B:-0}
+    local uptime_sec int_part frac_part current_time
+    # Read uptime from /proc/uptime and extract integer and fractional parts.
+    read -r uptime_sec _ </proc/uptime 2>/dev/null || uptime_sec="0.000"
+    # Extract integer part of uptime.
+    int_part=${uptime_sec%%.*}
+    # Extract fractional part of uptime.
+    frac_part=${uptime_sec#*.}
+    # Take up to the first 3 digits of the fractional part.
+    frac_part=${frac_part:0:3}
+    # Default to 0 if fractional part is empty.
+    frac_part=${frac_part:-0}
+    # Pad fractional part with zeros if it has fewer than 3 digits.
+    while [ ${#frac_part} -lt 3 ]; do frac_part="${frac_part}0"; done
+    # Calculate current time in milliseconds.
+    current_time=$(( int_part * 1000 + 10#$frac_part ))
+
+    local last_reset_time_A last_reset_time_B
+    read -r last_reset_time_A < "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || last_reset_time_A=0
+    read -r last_reset_time_B < "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || last_reset_time_B=0
     # Determine which file was written most recently.
     if [ "$last_reset_time_A" -gt "$last_reset_time_B" ]; then
         # Write the current time to the less recently updated file (B).
@@ -411,7 +527,7 @@ process_simx_links()
 	local dir_list
 
 	# Create the attributes in thermal and environment directories of hw-management.
-        dir_list="thermal environment"
+        dir_list="thermal environment alarm"
         for i in $dir_list; do
                 while IFS=' ' read -r filename value; do
                         [ -z "$filename" ] && continue
@@ -505,6 +621,41 @@ unlock_service_state_change_update_and_match()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+# Normalize I2C address from config (59 or 0x59) to 0xNN for connect_device/disconnect_device.
+# $1 - raw address from config (59 or 0x59).
+# Prints normalized address on stdout (e.g. 0x59). Zero-pads a single hex digit (5 -> 0x05).
+i2c_config_addr_to_hex() {
+	local raw="$1"
+	local val="${raw,,}"   # convert to lowercase
+	val="${val#0x}"
+	if [ ${#val} -eq 1 ]; then
+		val="0${val}"
+	fi
+	printf '0x%s\n' "$val"
+}
+
+# Check if module is loaded
+# $1 - module name
+# return 0 if module is loaded, 1 otherwise
+is_module()
+{
+	/sbin/lsmod 2>/dev/null | grep -w "$1" > /dev/null
+	RC=$?
+	return $RC
+}
+
+# Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
+# Poll every 100 ms for device driver connection.
+# Input: 
+# - $1 - device name
+# - $2 - device address
+# - $3 - device bus
+# Output:
+# - 0 - success
+# - 1 - failure
+# Max wait for I2C new_device driver connect (milliseconds); connect_device polls every 100 ms.
+device_connect_delay_ms=400
+device_connect_poll_step_ms=100
 connect_device()
 {
 	find_i2c_bus
@@ -513,13 +664,28 @@ connect_device()
 	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+		   	local device_connect_timer=$device_connect_delay_ms
+			local step_sec
+			step_sec=$(awk "BEGIN {printf \"%.3f\", $device_connect_poll_step_ms/1000}")
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-			sleep ${device_connect_delay}
-			if [ ! -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] &&
-			   [ ! -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
-				return 1
-			fi
+			while true
+			do
+				if [ -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] ||
+				   [ -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
+					return 0
+				fi
+				device_connect_timer=$((device_connect_timer - device_connect_poll_step_ms))
+				[ "$device_connect_timer" -lt 0 ] && break
+				# We know that sleep is not accurate. But it is acceptable for this use case.
+				sleep "$step_sec"
+			done
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"bind timeout driver:$1 addr:$2 bus:$bus"
+			return 1
 		fi
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"skip: missing i2c-$bus/new_device driver:$1 addr:$2"
 	fi
 
 	return 0
@@ -534,6 +700,7 @@ disconnect_device()
 		
 		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "addr:$1 bus:$bus"
 			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
 			return $?
 		fi
@@ -572,6 +739,8 @@ function retry_helper()
 	if [ ! -z "$$user_log" ]; then
 		log_err "$user_log"
 	fi
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"failed func:$user_func retries:$retry_cnt log:$user_log param:$user_param"
 
 	return 1
 }
@@ -591,11 +760,57 @@ psu_set_fan_speed()
 	local fan_command=$(< $config_path/fan_command)
 	local speed=$2
 
+	print_function_call "$0" "${FUNCNAME[0]}" "psu:$1 speed:$speed bus:$bus addr:$addr"
 	# Set fan speed units (percentage or RPM)
 	i2cset -f -y "$bus" "$addr" "$fan_config_command" "$fan_speed_units" bp
 
 	# Set fan speed
 	i2cset -f -y "$bus" "$addr" "$fan_command" "${speed}" wp
+}
+
+# set fan min/max speed based on FAN number in drawer and FAN direaction
+# $1 - FAN name in hw-mgmt. fan1, fan2, etc.
+set_fan_speed_limits()
+{
+	local fan_name=$1
+
+	# If fan not ready - nothing to do, return
+	if [ ! -f $thermal_path/"$fan_name"_speed_get ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "$fan_name skip: speed_get missing"
+		return
+	fi
+
+	local fan_drwr_num=$(< $config_path/fan_drwr_num) 
+	local max_tachos=$(< $config_path/max_tachos)
+	local fan_min_fname fan_max_fname
+
+	# If fan drwr num and max tachos are ready, set fan speed limits
+	if [ -n "$fan_drwr_num" ] && [ -n "$max_tachos"  ] && [ "$fan_drwr_num" -ne 0 ]; then
+		local fan_idx="${fan_name//[!0-9]/}"
+		local fan_num_in_drwr=$((max_tachos / fan_drwr_num))
+		local fan_in_drwr_pos=$(((fan_idx-1) % fan_num_in_drwr))
+		local fan_drwr_idx=$(((fan_idx+1) / fan_num_in_drwr ))
+
+		if [  $fan_in_drwr_pos -eq 0 ]; then
+			fan_min_fname="fan_front_min_speed"
+			fan_max_fname="fan_front_max_speed"
+		else
+			fan_min_fname="fan_rear_min_speed"
+			fan_max_fname="fan_rear_max_speed"
+		fi
+	fi
+
+	# Set fan speed limits. Check if exists separate Front/Rear fan speed limits.
+	if [ -f "$config_path/$fan_min_fname" ] && [ -f "$config_path/$fan_max_fname" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"$fan_name min:$fan_min_fname max:$fan_max_fname"
+		check_n_link "$config_path"/"$fan_min_fname" "$thermal_path"/"$fan_name"_min
+		check_n_link "$config_path"/"$fan_max_fname" "$thermal_path"/"$fan_name"_max
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" "$fan_name using default fan_min/max_speed"
+		check_n_link "$config_path"/fan_min_speed "$thermal_path"/"$fan_name"_min
+		check_n_link "$config_path"/fan_max_speed "$thermal_path"/"$fan_name"_max
+	fi
 }
 
 is_virtual_machine()
@@ -616,9 +831,11 @@ function handle_i2cbus_dev_action()
 	i2c_busdev_path=$1
 	i2c_busdev_action=$2
 
+	print_function_call "$0" "${FUNCNAME[0]}" "path:$i2c_busdev_path action:$i2c_busdev_action"
 	# Check if we have devices list which should be connected to dynamic i2c buses.
 	if [ ! -f $config_path/i2c_bus_connect_devices ];
 	then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c_bus_connect_devices"
 		return
 	fi
 
@@ -626,6 +843,7 @@ function handle_i2cbus_dev_action()
 	i2cbus_regex="i2c-([0-9]+)$"
 	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
 	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: bus index not matched path:$i2c_busdev_path"
 		return
 	else
 		i2cbus="${BASH_REMATCH[1]}"
@@ -641,9 +859,13 @@ function handle_i2cbus_dev_action()
 		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
 		then
 			if [ "$i2c_busdev_action" == "add" ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"add ${dynamic_i2c_bus_connect_table[i]} ${dynamic_i2c_bus_connect_table[i+1]} bus:$i2cbus"
 				connect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
 					"${dynamic_i2c_bus_connect_table[i+2]}"
 			elif [ "$i2c_busdev_action" == "remove" ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"remove ${dynamic_i2c_bus_connect_table[i+1]} bus:$i2cbus"
 				diconnect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
 					"${dynamic_i2c_bus_connect_table[i+2]}"
 			fi
@@ -692,6 +914,8 @@ function get_i2c_busdev_name()
 			then
 				dev_name="${dynamic_i2c_bus_connect_table[i+3]}"
 				if [ $dev_name == "NA" ]; then 
+					print_function_call "$0" "${FUNCNAME[0]}" \
+						"NA bus:$i2cbus addr:$i2caddr path:$i2c_busdev_path"
 					echo "undefined"
 				else
 					echo "$dev_name"
@@ -705,10 +929,39 @@ function get_i2c_busdev_name()
 	# returning passed "devname" name or "undefined" in case if passed '{devtype}X"
 	if [ ${dev_name:0-1} == "X" ];
 	then
+		print_function_call "$0" "${FUNCNAME[0]}" "undefined suffixX name:$1 path:$i2c_busdev_path"
 		dev_name="undefined"
 	fi
 
 	echo "$dev_name"
+}
+
+# Get device driver name from devtree based on device i2c bus and address
+# $1 - device i2c bus
+# $2 - device i2c address
+# return device driver name if match is found or empty string in other case.
+get_devtree_device_driver_name()
+{
+	local i2c_bus=$1
+	local i2c_address=$2
+
+	if [ -f "$devtree_file" ]; then
+		declare -a devtree_table=($(<"$devtree_file"))
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" "no devtree bus:$i2c_bus addr:$i2c_address"
+		echo ""
+		return
+	fi
+
+	for ((i=0; i<${#devtree_table[@]}; i+=4)); do
+		if [ "$i2c_bus" == "${devtree_table[i+2]}" ] && [ "$i2c_address" == "${devtree_table[i+1]}" ];
+		then
+			echo "${devtree_table[i]}"
+			return
+		fi
+	done
+
+	echo ""
 }
 
 find_dpu_slot_from_i2c_bus()
@@ -752,6 +1005,8 @@ create_hotplug_smart_switch_event_files()
 	local dpu2host_event_file="$1"
 	local dpu_event_file="$2"
 
+	print_function_call "$0" "${FUNCNAME[0]}" "dpu2host:$dpu2host_event_file dpu:$dpu_event_file"
+
 	declare -a dpu2host_event_table="($(< $dpu2host_event_file))"
 	declare -a dpu_event_table="($(< $dpu_event_file))"
 
@@ -774,7 +1029,59 @@ create_hotplug_smart_switch_event_files()
 	done
 }
 
-init_hotplug_events()
+# Link hotplug sysfs attribute and mirror active state to events
+#    1 - Creating symlink to target status file
+#    2 - Mirroring active state to event file
+# $1 - hwmon base path (no trailing slash)
+# $2 - sysfs attribute name (e.g. fan1, lc2_active)
+# $3 - status symlink target (thermal_path or system_path)
+# $4 - eventfile name under events_path
+# Returns 0 if sysfs attribute exists, 1 otherwise.
+init_hotplug_sysfs_event()
+{
+	local hwmon_path="$1"
+	local attr="$2"
+	local status_link="$3"
+	local event_name="$4"
+	local event
+	local src="${hwmon_path}/${attr}"
+
+	if [ ! -f "$src" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"missing $src attr:$attr event:$event_name"
+		return 1
+	fi
+	check_n_link "$src" "$status_link"
+	event=$(< "$status_link")
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"attr:$attr event:$event_name val:$event link:$status_link"
+	if [ "$event" -eq 1 ]; then
+		echo 1 > "$events_path/$event_name"
+	fi
+	return 0
+}
+
+# Unlink hotplug sysfs attribute and mirror active state from events.
+#    1 - Unlinking symlink to target status
+#    2 - Clearing event file
+# $1 - hwmon base path (no trailing slash)
+# $2 - sysfs attribute name (e.g. fan1, lc2_active)
+# $3 - status symlink target (thermal_path or system_path)
+# $4 - eventfile name under events_path
+# Returns 0 if sysfs attribute exists, 1 otherwise.
+deinit_hotplug_sysfs_event()
+{
+	local hwmon_path="$1"
+	local attr="$2"
+	local status_link="$3"
+	local event_name="$4"
+
+	print_function_call "$0" "${FUNCNAME[0]}" "attr:$attr event:$event_name"
+	check_n_unlink "$status_link"
+	echo 0 > "$events_path/$event_name"
+}
+
+init_hotplug_dpu_events()
 {
 	local event_file="$1"
 	local path="$2"
@@ -785,6 +1092,7 @@ init_hotplug_events()
 	local plat_drv_path="/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1"
 	local hwmon_path="mlxreg-hotplug.$slot_num/hwmon/hwmon*"
 
+	print_function_call "$0" "${FUNCNAME[0]}" "slot:$slot_num file:$event_file"
 	declare -a event_table="($(< $event_file))"
 
 	if [ $slot_num -ne 0 ]; then
@@ -810,12 +1118,13 @@ init_hotplug_events()
 	done
 }
 
-deinit_hotplug_events()
+deinit_hotplug_dpu_events()
 {
 	local event_file="$1"
 	local slot_num="$2"
 	local s_path
 
+	print_function_call "$0" "${FUNCNAME[0]}" "slot:$slot_num file:$event_file"
 	declare -a event_table="($(< $event_file))"
 
 	if [ $slot_num -ne 0 ]; then
@@ -833,7 +1142,9 @@ connect_underlying_devices()
 {
 	local bus="$1"
 
+	print_function_call "$0" "${FUNCNAME[0]}" "bus:$bus"
 	if [ ! -f $config_path/i2c_underlying_devices ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c_underlying_devices bus:$bus"
 		return
 	fi
 
@@ -852,7 +1163,9 @@ disconnect_underlying_devices()
 {
 	local bus="$1"
 
+	print_function_call "$0" "${FUNCNAME[0]}" "bus:$bus"
 	if [ ! -f $config_path/i2c_underlying_devices ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c_underlying_devices bus:$bus"
 		return
 	fi
 
@@ -872,7 +1185,9 @@ connect_dynamic_board_devices()
 	local board_name="$1"
 	local device_connect_retry=2
 
+	print_function_call "$0" "${FUNCNAME[0]}" "board:$board_name"
 	if [ ! -f "$dynamic_boards_path"/"$board_name" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: missing $dynamic_boards_path/$board_name"
 		return
 	fi
 
@@ -883,6 +1198,8 @@ connect_dynamic_board_devices()
 			connect_device "${board_connect_table[i]}" "${board_connect_table[i+1]}" \
 					"${board_connect_table[i+2]}"
 			if [ $? -eq 0 ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"ok ${board_connect_table[i]} ${board_connect_table[i+1]} bus:${board_connect_table[i+2]} tries:$((j+1))"
 				break;
 			fi
 			disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
@@ -894,7 +1211,9 @@ disconnect_dynamic_board_devices()
 {
 	local board_name="$1"
 
+	print_function_call "$0" "${FUNCNAME[0]}" "board:$board_name"
 	if [ ! -f "$dynamic_boards_path"/"$board_name" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: missing $dynamic_boards_path/$board_name"
 		return
 	fi
 
@@ -910,9 +1229,11 @@ load_dpu_sensors()
 	local dpu_num=$1
 	local dpu_ready
 
+	print_function_call "$0" "${FUNCNAME[0]}" "dpu:$dpu_num"
 	if [ -f $hw_management_path/system/dpu${dpu_num}_ready ]; then
 		dpu_ready=$(< $hw_management_path/system/dpu${dpu_num}_ready)
 		if [ ${dpu_ready} -eq 1 ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "dpu:$dpu_num ready, connecting"
 			if [ -e "$devtree_file" ]; then
 				connect_dynamic_board_devices "dpu_board""$dpu_num"
 			fi
@@ -944,4 +1265,725 @@ get_ui_tree_archive_file()
 		;;
 	esac
 	echo $ui_tree_archive
+}
+
+# Due to a very rare race condition in the kernel, mlxreg-dpu devices fail
+# to instantiate during the kernel initialization. This function will try
+# to re-instantiate if there was a failure. Needs to be invoked from
+# hw-management-start-post.sh
+check_and_recreate_dpu_devices()
+{
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+	for bus in {18..21}; do
+		if ! ls /sys/bus/i2c/devices/${bus}-0068/mlxreg-io* >/dev/null 2>&1; then
+			log_info "Device mlxreg-io* not found on i2c-$bus. Recreating device..."
+			# Delete the device on this bus with address 0x68
+			echo 0x68 > /sys/bus/i2c/devices/i2c-${bus}/delete_device >/dev/null 2>&1
+			# Create the device again
+			echo "mlxreg-dpu 0x68" > /sys/bus/i2c/devices/i2c-${bus}/new_device >/dev/null 2>&1
+		else
+			log_info "Found mlxreg-io on i2c-$bus"
+		fi
+	done
+}
+
+run_fixup_script()
+{
+	local status
+	local stage=$1
+
+	print_function_call "$0" "${FUNCNAME[0]}" "stage:$stage"
+	if [ -x ${fixup_hook_script} ] && [ -s ${fixup_hook_script} ]; then
+		${fixup_hook_script} $stage
+		status=$?
+		log_info "${stage}-init fixup hook completed with exit status $status"
+		echo $status > ${config_path}/fixup-status-${stage}
+	fi
+}
+
+check_asic_chipup_status()
+{
+	local chipup_status=0
+
+	if [ -f "$asic_chipup_status" ]; then
+		chipup_status=$(< "$asic_chipup_status")
+		print_function_call "$0" "${FUNCNAME[0]}" "status:$chipup_status"
+		if [ $chipup_status -eq 1 ]; then
+			return 0
+		fi
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" "missing $asic_chipup_status"
+	fi
+	return 1
+}
+
+# SODIMM temperatures (C) for setting in scale 1000
+SODIMM_TEMP_CRIT=95000
+SODIMM_TEMP_MAX=85000
+SODIMM_TEMP_MIN=0
+SODIMM_TEMP_HYST=6000
+
+set_sodimm_temp_limits()
+{
+	# SODIMM temp reading is not supported on Broadwell-DE Comex
+	# and on BF# Comex.
+	# Broadwell-DE Comex can be installed interchangeably with new
+	# Coffee Lake Comex on part of systems e.g. on SN3700.
+	# Thus check by CPU type and not by system type.
+	# JC42 driver is not relevant on systems with DDR5 DRAM
+	case $cpu_type in
+		$BDW_CPU|$BF3_CPU|$AMD_V3000_CPU|$AMD_FRNG_CPU)
+			print_function_call "$0" "${FUNCNAME[0]}" "skip cpu_type:$cpu_type"
+			return 0
+			;;
+		*)
+			;;
+	esac
+
+	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
+		modprobe jc42 > /dev/null 2>&1
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			while : ; do
+				sleep 1
+				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
+			done
+		else
+			print_function_call "$0" "${FUNCNAME[0]}" "jc42 modprobe failed rc:$rc"
+			return 1
+		fi
+	fi
+
+	for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*-*; do
+		# Skip if the sensor path does not exist or lacks a hwmon subdirectory
+		[[ -e "$temp_sens" && -d "$temp_sens/hwmon" ]] || continue
+
+		echo "$SODIMM_TEMP_CRIT" > "$temp_sens"/hwmon/hwmon*/temp1_crit
+		echo "$SODIMM_TEMP_MAX"  > "$temp_sens"/hwmon/hwmon*/temp1_max
+		echo "$SODIMM_TEMP_MIN"  > "$temp_sens"/hwmon/hwmon*/temp1_min
+		echo "$SODIMM_TEMP_HYST" > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
+	done
+
+	print_function_call "$0" "${FUNCNAME[0]}" "limits applied"
+	return 0
+}
+
+
+# Start i2c trace (ftrace i2c event class under tracefs).
+KERN_TRACE_FS="/sys/kernel/debug/tracing"
+I2C_TRACE_LOG="/var/log/hw-mgmt-i2c-trace.log"
+# Bound the per-CPU ftrace ring buffer so a stuck or looping bus cannot grow the
+# captured trace without limit. Applied to both the boot-wide tracer and the
+# chipup tracer. This is the primary size cap: it bounds every "cat trace" dump
+# regardless of how long the tracer runs.
+I2C_TRACE_BUF_SIZE_KB=1024
+start_i2c_trace() {
+	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c trace events"
+		return
+	fi
+
+	# Already running: do not reconfigure (another tool may have enabled it with
+	# different buffer/filters; re-applying could fight that consumer).
+	if [ "$(< "$KERN_TRACE_FS"/events/i2c/enable)" -eq 1 ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: already running"
+		return
+	fi
+
+	# Bound the ring buffer size (per-CPU) so the capture cannot grow unbounded.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$KERN_TRACE_FS"/buffer_size_kb 2>/dev/null || true
+	# reset i2c trace
+	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
+	# clear i2c trace buffer
+	echo 0 > "$KERN_TRACE_FS"/trace
+	# set i2c trace filter (only where the kernel exposes per-event filter files)
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_write/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_read/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_result/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter  2>/dev/null || true
+	# enable (start)i2c trace
+	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
+	print_function_call "$0" "${FUNCNAME[0]}" "started"
+}
+
+# Stop i2c trace
+stop_i2c_trace() {
+	# check if i2c trace available
+	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c enable"
+		return
+	fi
+	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
+	if [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable)" -eq 0 ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not running"
+		return
+	fi
+	# disable (stop) i2c trace
+	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
+	# save i2c trace to file
+	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG"
+	# clear i2c trace buffer
+	echo 0 > "$KERN_TRACE_FS"/trace
+	print_function_call "$0" "${FUNCNAME[0]}" "stopped saved:$I2C_TRACE_LOG"
+}
+
+# Snapshot the boot-wide (top-level) I2C trace buffer into the trace log, tagged
+# with the supplied reason, then clear the buffer so the tracer keeps running
+# with a fresh window.
+#
+# Unlike stop_i2c_trace this does NOT disable the tracer: it is meant to be
+# called mid-boot to preserve evidence for a device other than the ASIC
+# (mlxsw_minimal), e.g. a device that fails to connect in connect_platform, so
+# the failure context is not lost when the (now bounded) ring buffer wraps or
+# when the final stop_i2c_trace dump happens much later. The chipup path has its
+# own dedicated tracer (start/save/stop_chipup_i2c_trace) and does not use this.
+# $1 - human-readable reason written as a delimiter before the trace data.
+save_i2c_trace_on_failure() {
+	local reason="${1:-unspecified failure}"
+
+	# Only act when the boot-wide tracer is available and actually running.
+	[ -f "$KERN_TRACE_FS"/events/i2c/enable ] || return
+	[ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "1" ] || return
+
+	echo "# --- i2c trace saved on: ${reason} ($(date '+%Y-%m-%d %H:%M:%S')) ---" >> "$I2C_TRACE_LOG"
+	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG" 2>/dev/null
+	# Clear so the tracer continues with a fresh, bounded window (and the final
+	# stop_i2c_trace dump does not duplicate what we just saved).
+	echo 0 > "$KERN_TRACE_FS"/trace 2>/dev/null
+	print_function_call "$0" "${FUNCNAME[0]}" "saved reason:$reason"
+}
+
+# Chipup I2C tracer.
+#
+# The chipup tracer runs on its own ftrace instance so it never disturbs the
+# boot-wide tracer (start_i2c_trace/stop_i2c_trace), which uses the top-level
+# tracing instance. This matters because chipup is triggered asynchronously
+# (sx-core udev event) and may run while do_start's boot-wide tracer is active;
+# sharing the single top-level buffer/filter/enable would clobber it.
+#
+# start_chipup_i2c_trace stores the tracing directory in CHIPUP_TRACE_DIR
+# (empty when tracing could not be started). The ftrace instance name includes
+# the ASIC index so concurrent chipup on multi-ASIC platforms do not share one
+# buffer.
+# Default filter: capture all CPLD bridge child adapters (i2c-2 and up), not
+# just the ASIC bus, so bus-wide contention is visible. i2c-0 (CPU SMBus) and
+# i2c-1 (bridge parent) are excluded as noise.
+CHIPUP_I2C_TRACE_FILTER="adapter_nr>=2"
+CHIPUP_TRACE_DIR=""
+CHIPUP_I2C_TRACE_INSTANCE=""
+
+start_chipup_i2c_trace() {
+	local asic_index="${1:-0}"
+
+	CHIPUP_TRACE_DIR=""
+	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}"
+
+	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c events asic:$asic_index"
+		return
+	fi
+
+	# Preferred: dedicated, isolated ftrace instance per ASIC.
+	if [ -d "$KERN_TRACE_FS/instances" ] &&
+	   mkdir -p "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null &&
+	   [ -d "$CHIPUP_I2C_TRACE_INSTANCE/events/i2c" ]; then
+		CHIPUP_TRACE_DIR="$CHIPUP_I2C_TRACE_INSTANCE"
+	# Fallback: top-level instance, but only when the boot-wide tracer is not
+	# already running, otherwise skip entirely to avoid clobbering it.
+	elif [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "0" ]; then
+		CHIPUP_TRACE_DIR="$KERN_TRACE_FS"
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"skip: boot tracer busy asic:$asic_index"
+		return
+	fi
+
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU) so a stuck bus during chipup retries
+	# cannot grow the capture without limit.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$CHIPUP_TRACE_DIR"/buffer_size_kb 2>/dev/null || true
+	echo "$CHIPUP_I2C_TRACE_FILTER" > "$CHIPUP_TRACE_DIR"/events/i2c/filter 2>/dev/null || true
+	echo 1 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	print_function_call "$0" "${FUNCNAME[0]}" "started asic:$asic_index dir:$CHIPUP_TRACE_DIR"
+}
+
+# Append the current chipup trace buffer to the log and clear it (called
+# between retries so each attempt is recorded separately).
+# $1 - attempt number (optional, written as a delimiter before the trace data).
+save_chipup_i2c_trace() {
+	local attempt="${1:-}"
+
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "attempt:${attempt:-na} dir:$CHIPUP_TRACE_DIR"
+	if [ -n "$attempt" ]; then
+		echo "# --- chipup attempt ${attempt} ---" >> /var/log/chipup_i2c_trace_log
+	fi
+	cat "$CHIPUP_TRACE_DIR"/trace >> /var/log/chipup_i2c_trace_log 2>/dev/null
+	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
+}
+
+# Stop the chipup tracer and release the dedicated instance (if one was used).
+stop_chipup_i2c_trace() {
+	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "dir:$CHIPUP_TRACE_DIR"
+	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	if [ "$CHIPUP_TRACE_DIR" = "$CHIPUP_I2C_TRACE_INSTANCE" ]; then
+		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
+	fi
+	CHIPUP_TRACE_DIR=""
+}
+
+# Print function trace to the log file(s)
+# log file is in /var/log/hw-mgmt.trace.log. Log rotation: maximum 3 rotated files, 2 MiB each (see logrotate).
+# log rotation is implemented by logrotate. See configuration file /etc/logrotate.d/hw-mgmt-trace
+# Arguments:
+# $1 - script name
+# $2 - function name
+# $3 - arguments (optional). Type: string.
+print_function_call() {
+	local script_name
+	local function_name
+	local argument
+	local TS LOG_FILE
+	local PID
+
+	script_name="${1##*/}" # Script name
+	function_name="$2" # Function name
+	argument="$3" # Arguments
+	PID="$$" # Process ID
+	# TS format is %Y_%m_%d_%H-%M-%S.%3N (23 chars).
+	TS="$(date +'%Y_%m_%d_%H-%M-%S.%3N')" # Timestamp
+	LOG_FILE="/var/log/hw-mgmt.trace.log" # Log file
+
+	printf "%s(%s) [%s]: %s %s\n" \
+		"$script_name" \
+		"$PID" \
+		"$TS" \
+		"$function_name" \
+		"$argument" >> "$LOG_FILE"
+}
+
+# Check fan presence. fanX_status is linked to the CPLD hotplug attribute, so
+# it always reflects the current state, unlike the cached hotplug event.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# Return: 0 if the fan is present or presence can't be read, 1 if it is removed
+function is_fan_present()
+{
+	local attribute="$1"
+	local status_file="$thermal_path/${attribute}_status"
+	local status
+
+	if [ ! -e "$status_file" ]; then
+		return 0
+	fi
+	status=$(< "$status_file")
+	if [[ ! "$status" =~ ^[0-9]+$ ]]; then
+		return 0
+	fi
+	[ "$status" -ne 0 ]
+}
+
+# Allocate a new fan direction generation for a fan.
+# Each presence event gets its own generation, so a debounce started by an
+# older event can detect that it was superseded and leave fanX_dir alone.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# Return: allocated generation on stdout
+function fan_dir_generation_new()
+{
+	local attribute="$1"
+	local gen_file="$hw_management_path/.${attribute}_dir_generation"
+	local generation
+
+	(
+		/usr/bin/flock -x 9
+		generation=0
+		if [ -f "$gen_file" ]; then
+			generation=$(< "$gen_file")
+		fi
+		if [[ ! "$generation" =~ ^[0-9]+$ ]]; then
+			generation=0
+		fi
+		generation=$((generation + 1))
+		echo "$generation" > "$gen_file"
+		echo "$generation"
+	) 9>>"$fan_dir_lock_file"
+}
+
+# Check whether the caller still owns the last fan direction generation.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# $2 - "$generation" obtained from fan_dir_generation_new
+# Return: 0 if the generation is still the current one, 1 otherwise
+function fan_dir_generation_is_current()
+{
+	local attribute="$1"
+	local generation="$2"
+	local gen_file="$hw_management_path/.${attribute}_dir_generation"
+
+	if [ ! -f "$gen_file" ]; then
+		return 1
+	fi
+	[ "$(< "$gen_file")_" == "${generation}_" ]
+}
+
+# Store fan direction, unless a newer presence event was registered meanwhile.
+#
+# $1 - "$attribute" (fan1, fan2, ...)
+# $2 - "$fan_direction" (0 - Reverse, 1 - Forward, 2 - unknown)
+# $3 - "$generation" obtained from fan_dir_generation_new
+# Return: None
+function set_fan_dir_attr()
+{
+	local attribute="$1"
+	local fan_direction="$2"
+	local generation="$3"
+
+	(
+		/usr/bin/flock -x 9
+		if fan_dir_generation_is_current "$attribute" "$generation"; then
+			echo "$fan_direction" > "$thermal_path/${attribute}_dir"
+		else
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"$attribute gen:$generation superseded, dir:$fan_direction dropped"
+		fi
+	) 9>>"$fan_dir_lock_file"
+}
+
+# Set fan direction for a single fan
+#
+# Input parameters:
+# 1 - "$attribute" (fan1, fan2, fan3, fan4)
+# 2 - "$event" (1 - Present, 0 - Removed)
+# Return: None
+#
+# Example:
+# set_fan_direction "fan1" 1 # Set fan1 direction
+# set_fan_direction "fan1" 0 # Remove fan1 direction
+function set_fan_direction()
+{
+	local attribute="$1"
+	local event="$2"
+	local fan_debounce_timer
+	local fan_debounce_counter
+	local fan_dir
+	local fan_dir_old
+	local fan_index
+	local fan_direction
+	local generation
+	local __t0 __t1 __elapsed_ms
+
+	__t0=$(date +%s%3N 2>/dev/null || date +%s)
+	print_function_call "$0" "${FUNCNAME[0]}" "attr:$attribute evt:$event entering..."
+	case $attribute in
+	fan*)
+		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
+		fan_index=${attribute#fan}
+		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
+			return
+		fi
+		fan_index=$((fan_index - 1))
+
+		# Invalidate a debounce which may still be running for this fan on
+		# behalf of a previous event: the last event is the one which decides.
+		generation=$(fan_dir_generation_new "$attribute")
+
+		if [ "$event" -eq 0 ]; then
+			set_fan_dir_attr "$attribute" 2 "$generation"
+			__t1=$(date +%s%3N 2>/dev/null || date +%s)
+			__elapsed_ms=$((__t1 - __t0))
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"attr:$attribute evt:$event exiting... elapsed_ms:$__elapsed_ms"
+			return
+		fi
+		if [ -f "$config_path/fan_dir_eeprom" ]; then
+			return
+		fi
+		# Check if CPLD fan direction exists
+		if [ ! -f "$system_path/fan_dir" ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "./system/fan_dir not found"
+			return
+		fi
+		if [[ "$ui_tree_sku" == "HI117" ]]; then
+			return
+		fi
+		fan_dir=$(< "$system_path/fan_dir")
+		fan_debounce_counter=0
+		fan_dir_old=-1
+		fan_debounce_timer=$fan_debounce_timeout_ms
+		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
+		do
+			if [ "${fan_dir}_" == "${fan_dir_old}_" ];
+			then
+				fan_debounce_counter=$((fan_debounce_counter + 1))
+			else
+				fan_dir_old=$fan_dir
+				fan_debounce_counter=0
+			fi
+			fan_debounce_timer=$((fan_debounce_timer - fan_debounce_poll_ms))
+			# Sleep duration must track fan_debounce_poll_ms (was hardcoded 0.2).
+			sleep "$(awk -v ms="$fan_debounce_poll_ms" 'BEGIN { printf "%.3f", ms / 1000 }')"
+			if ! fan_dir_generation_is_current "$attribute" "$generation"; then
+				print_function_call "$0" "${FUNCNAME[0]}" \
+					"$attribute gen:$generation superseded by a newer event, aborting debounce"
+				return
+			fi
+			fan_dir=$(< "$system_path/fan_dir")
+		done
+
+		#  Debounce is not success. Set fan dir as not recognized value "2".
+		if (("$fan_debounce_counter" < 2)); then
+			fan_direction=2
+		else
+			# fan_dir is an integer bitfield; one bit per fan direction.
+			fan_direction=$(( (fan_dir >> fan_index) & 1 ))
+		fi
+
+		# fan_dir bits are not cleared on removal, so a stable bitfield alone
+		# does not prove the fan is still in the slot.
+		if ! is_fan_present "$attribute"; then
+			fan_direction=2
+		fi
+		print_function_call "$0" "${FUNCNAME[0]}" "$attribute $event. Debounce timer left: $fan_debounce_timer ms, fan_dir: $fan_dir, fan_index: $fan_index, fan_direction: $fan_direction"
+		set_fan_dir_attr "$attribute" "$fan_direction" "$generation"
+		__t1=$(date +%s%3N 2>/dev/null || date +%s)
+		__elapsed_ms=$((__t1 - __t0))
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"attr:$attribute evt:$event exiting... elapsed_ms:$__elapsed_ms"
+	;;
+	*)
+		;;
+	esac
+}
+
+# $1 - force (optional, default 1):
+#      1 = re-init fanX_dir for all present fans
+#      0 = only initialize fans whose fanX_dir file is missing
+function set_fan_direction_for_all_fans()
+{
+	local max_tachos
+	local i
+	local status
+
+	print_function_call "$0" "${FUNCNAME[0]}" "Starting..."
+	local force="$1"
+	if [ -z "$force" ]; then
+		force=1
+	fi
+
+	if [ ! -f "$config_path/max_tachos" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "max_tachos file not found - skipping"
+		return
+	fi
+
+	max_tachos=$(<"$config_path/max_tachos")
+	if ! [[ "$max_tachos" =~ ^[0-9]+$ ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "invalid max_tachos: '$max_tachos' - skipping"
+		return
+	fi
+	print_function_call "$0" "${FUNCNAME[0]}" "max_tachos: $max_tachos"
+
+	for ((i=1; i<="$max_tachos"; i+=1)); do
+		if [ -L "${thermal_path}"/fan"${i}"_status ]; then
+			# check if forse is not set and fan_dir present - skip
+			if [ "$force" -ne 1 ] && [ -f "$thermal_path/fan${i}_dir" ]; then
+				print_function_call "$0" "${FUNCNAME[0]}" "fan${i}_dir present and force is not set - skipping"
+				continue
+			fi
+			# check if fan status is set
+			status=$(< "${thermal_path}"/fan"${i}"_status)
+			print_function_call "$0" "${FUNCNAME[0]}" "fan${i}_status: $status"
+			if [ "$status" -eq 1 ]; then
+				set_fan_direction "fan${i}" "$status"
+			fi
+		fi
+	done
+	print_function_call "$0" "${FUNCNAME[0]}" "Finished"
+}
+
+# Normalize PCI BDF to bus:dev.func without domain (03:00.0).
+_hw_mgmt_pci_bdf_short()
+{
+	local pci_id="$1"
+
+	pci_id=$(echo "$pci_id" | tr -d '[:space:]')
+	pci_id="${pci_id#0000:}"
+	echo "$pci_id"
+}
+
+# Chipup callers mix 0-based and 1-based indexes. sxcore uses
+# "chipup 0 <pci_path>"; autochipup/hotplug use 1..N. Config files are
+# 1-based (asic1_pci_bus_id). Map 0/empty to 1.
+_hw_mgmt_normalize_asic_index()
+{
+	local idx="${1:-1}"
+
+	if [ -z "$idx" ] || [ "$idx" -eq 0 ] 2>/dev/null; then
+		echo 1
+		return
+	fi
+	echo "$idx"
+}
+
+# Extract a PCI BDF from a chipup argument: BDF, pci-BDF, or sysfs path
+# ending in 0000:bb:dd.f (sxcore passes %S/%p).
+_hw_mgmt_extract_pci_bdf()
+{
+	local arg="$1"
+	local base
+
+	[ -n "$arg" ] || return 1
+	base=$(basename "$arg")
+	base="${base#pci-}"
+	echo "$base" | grep -E -q '^([0-9A-Fa-f]{4}:)?[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}\.[0-9A-Fa-f]$' || return 1
+	_hw_mgmt_pci_bdf_short "$base"
+}
+
+# Resolve mlxreg -d target for ASIC index $1 (0- or 1-based).
+# Optional $2: explicit /dev/mst path (tests) or PCI BDF/sysfs path from
+# chipup $3. Match /sys/class/mst to config/asicN_pci_bus_id (1-based) so a
+# multi-ASIC chipup failure programs the ASIC that failed, not the first
+# pciconf0. If no mst node matches, pass the PCI BDF to mlxreg.
+get_asic_mlxreg_dev()
+{
+	local asic_index
+	local arg2="$2"
+	local pci_id pci_short mst_sysfs mst_devdir mst_name pci_link pci_tail extracted
+	local asic_num=1
+	local match=""
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+
+	if [ -n "$arg2" ]; then
+		if extracted=$(_hw_mgmt_extract_pci_bdf "$arg2"); then
+			pci_id=$extracted
+			pci_short=$extracted
+		else
+			echo "$arg2"
+			return 0
+		fi
+	fi
+
+	[ -f "$config_path/asic_num" ] && asic_num=$(< "$config_path/asic_num")
+
+	if [ -z "$pci_short" ] && [ -f "$config_path/asic${asic_index}_pci_bus_id" ]; then
+		pci_id=$(_hw_mgmt_pci_bdf_short "$(< "$config_path/asic${asic_index}_pci_bus_id")")
+		pci_short=$pci_id
+	fi
+
+	mst_sysfs="${HW_MGMT_MST_SYSFS:-/sys/class/mst}"
+	mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+
+	if [ -n "$pci_short" ] && [ -d "$mst_sysfs" ]; then
+		for mst_name in "$mst_sysfs"/*; do
+			[ -e "$mst_name" ] || continue
+			pci_link=$(readlink -f "$mst_name/device" 2>/dev/null)
+			if [ -z "$pci_link" ] && [ -f "$mst_name/uevent" ]; then
+				pci_link=$(sed -n 's/^PCI_SLOT_NAME=//p' "$mst_name/uevent")
+			fi
+			[ -n "$pci_link" ] || continue
+			pci_tail=$(_hw_mgmt_pci_bdf_short "$(basename "$pci_link")")
+			if [ "$pci_tail" = "$pci_short" ]; then
+				match="$mst_devdir/$(basename "$mst_name")"
+				break
+			fi
+		done
+	fi
+
+	if [ -n "$match" ]; then
+		echo "$match"
+		return 0
+	fi
+
+	# mlxreg accepts a PCI BDF when the mst char device is missing.
+	if [ -n "$pci_short" ]; then
+		echo "$pci_id"
+		return 0
+	fi
+
+	# Last resort for a single-ASIC system only. Never pick the first
+	# pciconf0 when more than one ASIC is present.
+	if [ "$asic_num" -eq 1 ]; then
+		match=$(find "$mst_devdir" -maxdepth 1 -name '*_pciconf0' 2>/dev/null | head -n 1)
+		if [ -n "$match" ]; then
+			echo "$match"
+			return 0
+		fi
+	fi
+
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"unresolved asic_index:$1 pci:$pci_short asic_num:$asic_num"
+	return 1
+}
+
+# After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
+# typically missing, so thermal control never latches emergency and never
+# calls write_pwm_mlxreg(). Force PWM 100% here:
+# - thermal/pwm1 if it still exists (CPLD or leftover ASIC hwmon)
+# - otherwise MFSC via mlxreg for the failed ASIC when tc_config enables
+#   ASIC PWM control
+# $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
+# $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+set_asic_pwm_full_speed_on_chipup_fail()
+{
+	local asic_index
+	local explicit_dev="$2"
+	local pwm_link="$thermal_path/pwm1"
+	local tc_cfg="$config_path/tc_config.json"
+	local mt_dev=""
+	local mlxreg_rc=0
+	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index dev:$explicit_dev"
+
+	if [ -e "$pwm_link" ]; then
+		echo 255 > "$pwm_link"
+		log_info "Set PWM to maximum speed via sysfs after chipup failure."
+		return 0
+	fi
+
+	if [ ! -f "$tc_cfg" ] || ! grep -q '"pwm_control"[[:space:]]*:[[:space:]]*true' "$tc_cfg"; then
+		log_info "Chipup failed and PWM sysfs is missing; ASIC PWM control is not configured."
+		return 1
+	fi
+
+	if ! command -v mlxreg >/dev/null 2>&1; then
+		log_err "mlxreg is not available; cannot set PWM after chipup failure."
+		return 1
+	fi
+
+	if [ -z "$explicit_dev" ] && [ ! -d "$mst_devdir" ] && \
+	   [ -z "${HW_MGMT_MST_DEVDIR:-}" ] && command -v mst >/dev/null 2>&1; then
+		mst start >/dev/null 2>&1
+		sleep 2
+	fi
+
+	mt_dev=$(get_asic_mlxreg_dev "$1" "$explicit_dev")
+	if [ -z "$mt_dev" ]; then
+		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM after chipup failure."
+		return 1
+	fi
+
+	# mlxreg prompts for confirmation; same pattern as thermal write_pwm_mlxreg().
+	if command -v timeout >/dev/null 2>&1; then
+		yes | timeout 3 mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+		mlxreg_rc=$?
+	else
+		yes | mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+		mlxreg_rc=$?
+	fi
+
+	if [ "$mlxreg_rc" -ne 0 ]; then
+		log_err "Failed to set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev rc=$mlxreg_rc)."
+		return 1
+	fi
+
+	log_info "Set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev)."
+	return 0
 }

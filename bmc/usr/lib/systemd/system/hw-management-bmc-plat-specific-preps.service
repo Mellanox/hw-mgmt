@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+[Unit]
+Description=Platform specific changes in filesystem
+DefaultDependencies=no
+# Run after both writable local fs and udevd to avoid sysinit ordering cycles
+# (e.g. local-fs / nvmefc-boot-connections / udevd). Udev rules are applied via
+# udevadm in hw-management-bmc-plat-specific-preps.sh after install.
+After=local-fs.target systemd-udevd.service
+Before=hw-management-bmc-early-config.service
+# Renders usb0 .network template from /usr/etc/systemd/network/ → /etc/systemd/network/
+# (networkd does not scan /usr/etc/...); must run before systemd-networkd consumes configs.
+Before=systemd-networkd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hw-management-bmc-plat-specific-preps.sh
+SyslogIdentifier=hw-management-bmc-plat-specific-preps
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

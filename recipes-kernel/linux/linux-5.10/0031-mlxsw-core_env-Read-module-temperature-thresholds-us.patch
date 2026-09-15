@@ -1,5 +1,5 @@
 From b99eea2d9ce7ba73de38b82a7ed2057a777d4893 Mon Sep 17 00:00:00 2001
-From: Mykola Kostenok <c_mykolak@nvidia.com>
+From: Mykola Kostenok <c_mykolak@mellanox.com>
 Date: Tue, 8 Jun 2021 15:44:12 +0300
 Subject: [PATCH backport 5.10 031/182] mlxsw: core_env: Read module
  temperature thresholds using MTMP register
@@ -18,7 +18,7 @@ thresholds through MTMP field 'max_operational_temperature' - if it is
 not zero, feature is supported. Otherwise fallback to old method and get
 the thresholds through MCIA.
 
-Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Signed-off-by: Mykola Kostenok <c_mykolak@mellanox.com>
 Acked-by: Vadim Pasternak <vadimp@nvidia.com>
 Signed-off-by: Ido Schimmel <idosch@nvidia.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>

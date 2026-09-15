@@ -1,0 +1,14 @@
+# Shell Testing Tools Requirements
+# This file documents the required tools for shell script testing
+# 
+# Installation instructions:
+# Run: ./tests/install-shell-test-tools.sh
+#
+# Tools:
+# - kcov: Code coverage tool for shell scripts (compiled binaries)
+# - shellspec: BDD testing framework for shell scripts
+# - shellcheck: Static analysis tool for shell scripts (optional but recommended)
+#
+# These tools cannot be installed via pip/requirements.txt as they are native binaries
+# See install-shell-test-tools.sh for automated installation
+

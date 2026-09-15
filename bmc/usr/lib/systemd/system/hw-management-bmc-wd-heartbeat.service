@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+[Unit]
+Description=BMC ABR Watchdog Heartbeat (MCTP to Bali/Caliptra)
+# Start only after the BMC has successfully booted, per the SONiC requirement
+# to disable/service the ABR watchdog once boot is complete.
+After=multi-user.target hw-management-bmc-boot-complete.service
+Wants=hw-management-bmc-boot-complete.service
+
+[Service]
+Type=simple
+# No EnvironmentFile: hw-management-bmc-wd-heartbeat.sh sources
+# /etc/hw-management-bmc-wd-heartbeat.conf itself (after applying its built-in
+# defaults), so injecting the same file into the environment here would be
+# shadowed by those defaults and never take effect. The script honors
+# HW_MANAGEMENT_BMC_WD_HEARTBEAT_CONF to relocate the config if needed.
+ExecStart=/usr/bin/hw-management-bmc-wd-heartbeat.sh
+# on-failure (not always): the script exits 0 when disabled or when mctp-client
+# is absent, and we do not want to restart-loop in those cases. A crash or the
+# invalid-EID exit(1) is retried after RestartSec.
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hw-management-bmc-wd-heartbeat
+
+# Resource limits: this is a tiny periodic requester.
+MemoryMax=50M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target

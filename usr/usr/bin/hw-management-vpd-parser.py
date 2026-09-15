@@ -1,4 +1,22 @@
 #!/usr/bin/python
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
 
 # pylint: disable=line-too-long
 # pylint: disable=C0103
@@ -38,7 +56,7 @@
 '''
 Created on Nov 05, 2020
 
-Author: Oleksandr Shamray <oleksandrs@mellanox.com>
+Author: Oleksandr Shamray <oleksandrs@nvidia.com>
 Version: 1.0
 
 Description: This util converting FRU data file and saving it to file
@@ -61,10 +79,15 @@ optional arguments:
 #############################
 import sys
 import argparse
+import os
 import os.path
+import subprocess
 import struct
 import binascii
 import zlib
+import tempfile
+import shutil
+import stat
 
 
 #############################
@@ -96,8 +119,9 @@ MLNX_BASE_BLK_FIELD_FORMAT = ["block_start", "block_type"]
 SUPPORTED_FRU_VER = [1]
 
 
-# 
+#
 MAX_VPD_DATA_SIZE = 4096
+
 
 class LC_ID(object):
     """
@@ -158,43 +182,44 @@ class MLNX_ID(object):
     GUIDS_2 = 0x81
     PORT_CFG_EXT = 0x82
     EKEYING_NEW = 0x83
-    
+
     MINOR_NEW_VER = 0x10
 
 
 # FRU fields description.
-SYSTEM_VPD = {"type":"ONIE",
-              LC_ID.PRODUCT_NAME : {'type_name':"PRODUCT_NAME_VPD_FIELD", "fn":"format_unpack", "format":"{}s"},
-              LC_ID.PN : {'type_name':"PN_VPD_FIELD", "fn":"format_unpack", "format":"{}s"},
-              LC_ID.SN : {'type_name':"SN_VPD_FIELD", "fn":"format_unpack", "format":"{}s"},
-              LC_ID.MFG_DATE : {'type_name':"MFG_DATE_FIELD", "fn":"format_unpack", "format":"{}s"},
-              LC_ID.SW_REV : {'type_name':"SW_REV_FIELD", "fn":"format_unpack", "format":"b"},
-              LC_ID.HW_REV : {'type_name':"HW_REV_FIELD", "fn":"format_unpack", "format":"b"},
-              LC_ID.PORT_NUM : {'type_name':"PORT_NUM_FIELD", "fn":"format_unpack", "format":"b"},
-              LC_ID.PORT_SPEED : {'type_name':"PORT_SPEED_FIELD", "fn":"format_unpack", "format":">i"},
-              LC_ID.MANUFACTURER : {'type_name':"MANUFACTURER_VPD_FIELD", "fn":"format_unpack", "format":"{}s"},
-              LC_ID.CHSUM : {'type_name':"CHSUM_FIELD", "fn":"format_unpack", "format":">I"},
-              ONIE_ID.PRODUCT_NAME : {'type_name':"Product Name", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.PN : {'type_name':"Part Number", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.SN : {'type_name':"Serial Number", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.BASE_MAC : {'type_name':"Base MAC Address", "fn":"format_unpack", "format":"{}s", "transform":"hex"},
-              ONIE_ID.MFG_DATE : {'type_name':"Manufacture Date", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.DEV_VER : {'type_name':"Device Version", "fn":"format_unpack", "format":"b"},
-              ONIE_ID.LABEL_REV : {'type_name':"Label Revision", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.PLATFORM_NAME : {'type_name':"Platform Name", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.ONIE_VER : {'type_name':"ONIE Version", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.MAC_ADDR : {'type_name':"MAC Addresses", "fn":"format_unpack", "format":">h"},
-              ONIE_ID.MANUFACTURER : {'type_name':"Manufacturer", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.VENDOR : {'type_name':"Vendor", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.SVC_TAG : {'type_name':"Service Tag", "fn":"format_unpack", "format":"{}s"},
-              ONIE_ID.VENDOR_BLK: {'type_name':"", "fn" : "onie_parse_vendor_blk"},
-              ONIE_ID.CHSUM: {'type_name':"CHSUM_FIELD", "fn":"format_unpack", "format":">I"}
-             }
+SYSTEM_VPD = {"type": "ONIE",
+              LC_ID.PRODUCT_NAME: {'type_name': "PRODUCT_NAME_VPD_FIELD", "fn": "format_unpack", "format": "{}s"},
+              LC_ID.PN: {'type_name': "PN_VPD_FIELD", "fn": "format_unpack", "format": "{}s"},
+              LC_ID.SN: {'type_name': "SN_VPD_FIELD", "fn": "format_unpack", "format": "{}s"},
+              LC_ID.MFG_DATE: {'type_name': "MFG_DATE_FIELD", "fn": "format_unpack", "format": "{}s"},
+              LC_ID.SW_REV: {'type_name': "SW_REV_FIELD", "fn": "format_unpack", "format": "b"},
+              LC_ID.HW_REV: {'type_name': "HW_REV_FIELD", "fn": "format_unpack", "format": "b"},
+              LC_ID.PORT_NUM: {'type_name': "PORT_NUM_FIELD", "fn": "format_unpack", "format": "b"},
+              LC_ID.PORT_SPEED: {'type_name': "PORT_SPEED_FIELD", "fn": "format_unpack", "format": ">i"},
+              LC_ID.MANUFACTURER: {'type_name': "MANUFACTURER_VPD_FIELD", "fn": "format_unpack", "format": "{}s"},
+              LC_ID.CHSUM: {'type_name': "CHSUM_FIELD", "fn": "format_unpack", "format": ">I"},
+              ONIE_ID.PRODUCT_NAME: {'type_name': "Product Name", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.PN: {'type_name': "Part Number", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.SN: {'type_name': "Serial Number", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.BASE_MAC: {'type_name': "Base MAC Address", "fn": "format_unpack", "format": "{}s", "transform": "hex"},
+              ONIE_ID.MFG_DATE: {'type_name': "Manufacture Date", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.DEV_VER: {'type_name': "Device Version", "fn": "format_unpack", "format": "b"},
+              ONIE_ID.LABEL_REV: {'type_name': "Label Revision", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.PLATFORM_NAME: {'type_name': "Platform Name", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.ONIE_VER: {'type_name': "ONIE Version", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.MAC_ADDR: {'type_name': "MAC Addresses", "fn": "format_unpack", "format": ">h"},
+              ONIE_ID.MANUFACTURER: {'type_name': "Manufacturer", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.VENDOR: {'type_name': "Vendor", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.SVC_TAG: {'type_name': "Service Tag", "fn": "format_unpack", "format": "{}s"},
+              ONIE_ID.VENDOR_BLK: {'type_name': "", "fn": "onie_parse_vendor_blk"},
+              ONIE_ID.CHSUM: {'type_name': "CHSUM_FIELD", "fn": "format_unpack", "format": ">I"}
+              }
 
 
 MLNX_IANA = 0x00008119
+# fmt: off
 MLNX_VENDOR_BLK = {"type": "MLNX",
-                    MLNX_ID.MFG : {'blk_type': "MFG", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.MFG: {'blk_type': "MFG", "fn": "mlnx_blk_unpack", "format": [
                             ["SN",  1,  8, 24,  "FIT_NORMAL", "FT_ASCII"],
                             ["PN",  1, 32, 20,  "FIT_NORMAL", "FT_ASCII"],
                             ["REV", 1, 52, 4,   "FIT_NORMAL", "FT_ASCII"],
@@ -206,14 +231,14 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["SW_MGT_ID",   3, 128, 4,  "FIT_NORMAL", "FT_NUM"],
                             ["SYS_DISPLAY", 3, 132, 16, "FIT_NORMAL", "FT_ASCII"]
                         ]},
-                    MLNX_ID.GUIDS : {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.GUIDS: {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",   1, 8,  1, "FIT_NORMAL", "FT_HEX"],
                             ["RESERVED",    2, 9, 7,  "FIT_NORMAL", "FT_RESERVED"],
                             ["UID",         1, 16, 8, "FIT_COMP",   "FT_NUM"]
                         ]},
-                    MLNX_ID.CPUDATA : {'blk_type': "CPUDATA"},
-                    MLNX_ID.OSBOOT : {'blk_type': "OSBOOT"},
-                    MLNX_ID.HWCHAR : {'blk_type': "HWCHAR", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.CPUDATA: {'blk_type': "CPUDATA"},
+                    MLNX_ID.OSBOOT: {'blk_type': "OSBOOT"},
+                    MLNX_ID.HWCHAR: {'blk_type': "HWCHAR", "fn": "mlnx_blk_unpack", "format": [
                             ["MAX_POWER",      1, 8,  2, "FIT_NORMAL", "FT_NUM"],
                             ["CRIT_AMB_TEMP",  1, 10, 1, "FIT_NORMAL", "FT_NUM"],
                             ["CRIT_IC_TEMP",   1, 11, 1, "FIT_NORMAL", "FT_NUM"],
@@ -224,32 +249,32 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["WIDTH",          3, 16, 1, "FIT_NORMAL", "FT_NUM"],
                             ["LED",            3, 17, 1, "FIT_NORMAL", "FT_NUM"]
                         ]},
-                    MLNX_ID.LIC : {'blk_type': "LIC", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.LIC: {'blk_type': "LIC", "fn": "mlnx_blk_unpack", "format": [
                             ["FEATURE_EN_", 1, 8, 1, "FIT_COMP", "FT_NUM"]
                         ]},
-                    MLNX_ID.EKEYING : {'blk_type': "EKEYING", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.EKEYING: {'blk_type': "EKEYING", "fn": "mlnx_blk_unpack", "format": [
                             ["RESERVED",          1, 8,  1,  "FIT_NORMAL", "FT_RESERVED"],
                             ["NUM_SCHEME",        1, 9,  1,  "FIT_NORMAL", "FT_NUM"],
                             ["EN_PORTS_NUM",      1, 10, 1,  "FIT_NORMAL", "FT_NUM"],
                             ["PORTS_INC_SCHEME",  1, 11, 1,  "FIT_NORMAL", "FT_NUM"],
                             ["PORTS_INC_ORDER_",  1, 12, 1, "FIT_COMP",   "FT_NUM"]
                         ]},
-                    MLNX_ID.MIN_FIT : {'blk_type': "MIN_FIT"},
-                    MLNX_ID.PORT_CFG :  {'blk_type': "PORT_CFG", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.MIN_FIT: {'blk_type': "MIN_FIT"},
+                    MLNX_ID.PORT_CFG:  {'blk_type': "PORT_CFG", "fn": "mlnx_blk_unpack", "format": [
                             ["PORT_CFG_", 1, 8, 1,  "FIT_COMP",   "FT_NUM"]
                         ]},
-                    MLNX_ID.VENDOR_ID : {'blk_type': "VENDOR_ID", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.VENDOR_ID: {'blk_type': "VENDOR_ID", "fn": "mlnx_blk_unpack", "format": [
                             ["VENDOR_ID", 1, 8, 8,  "FIT_NORMAL",   "FT_NUM"]
                         ]},
-                    MLNX_ID.MFG_INTERNAL : {'blk_type': "MFG_INTERNAL", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.MFG_INTERNAL: {'blk_type': "MFG_INTERNAL", "fn": "mlnx_blk_unpack", "format": [
                             ["MFG_INTERNAL", 2, 8, 1,  "FIT_COMP",   "FT_NUM"]
                         ]},
-                    MLNX_ID.PSU : {'blk_type': "PSU", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.PSU: {'blk_type': "PSU", "fn": "mlnx_blk_unpack", "format": [
                             ["MAX_PSU",     1, 8,  1,   "FIT_NORMAL", "FT_NUM"],
                             ["MIN_PSU",     1, 9,  1, "FIT_NORMAL", "FT_NUM"],
                             ["FACTORY_ASSMBL_PSU",  1, 10, 1, "FIT_NORMAL", "FT_NUM"]
                         ]},
-                    MLNX_ID.DPU : {'blk_type': "DPU", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.DPU: {'blk_type': "DPU", "fn": "mlnx_blk_unpack", "format": [
                             ["DPU_NUM",       1, 8,   1,   "FIT_NORMAL", "FT_NUM"],
                             ["DPU1_SN",       1, 9,   24,  "FIT_NORMAL", "FT_ASCII"],
                             ["DPU1_PN",       1, 33,  20,  "FIT_NORMAL", "FT_ASCII"],
@@ -268,10 +293,10 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["DPU4_REV",      1, 215, 4,   "FIT_NORMAL", "FT_ASCII"],
                             ["DPU4_BASE_MAC", 1, 219, 6,   "FIT_NORMAL", "FT_MAC"]
                         ]},
-                    MLNX_ID.PSID : {'blk_type': "PSID", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.PSID: {'blk_type': "PSID", "fn": "mlnx_blk_unpack", "format": [
                             ["PSID",  1,  8, 34,  "FIT_NORMAL", "FT_ASCII"]
                         ]},
-                    MLNX_ID.GUIDS_1 : {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.GUIDS_1: {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",    1, 8,  1,   "FIT_NORMAL", "FT_HEX"],
                             ["RESERVED",     2, 9,  7, "FIT_NORMAL", "FT_RESERVED"],
                             ["BASE_MAC_1",  16, 16, 6, "FIT_NORMAL", "FT_MAC"],
@@ -283,7 +308,7 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["BASE_MAC_4",  16, 40, 6, "FIT_NORMAL", "FT_MAC"],
                             ["MAC_RANGE_4", 16, 42, 2, "FIT_NORMAL", "FT_NUM_INV"]
                         ]},
-                    MLNX_ID.GUIDS_2 : {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.GUIDS_2: {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",    1, 8,  1, "FIT_NORMAL", "FT_HEX"],
                             ["RESERVED",     2, 9,  7, "FIT_NORMAL", "FT_RESERVED"],
                             ["BASE_MAC_1",  16, 16, 6, "FIT_NORMAL", "FT_MAC"],
@@ -299,10 +324,10 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["MAC_RANGE_4", 16, 70, 2, "FIT_NORMAL", "FT_HEX_INV"],
                             ["BASE_GUID_4", 17, 72, 8, "FIT_NORMAL", "FT_MAC"]
                         ]},
-                    MLNX_ID.PORT_CFG_EXT :  {'blk_type': "PORT_CFG", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.PORT_CFG_EXT:  {'blk_type': "PORT_CFG", "fn": "mlnx_blk_unpack", "format": [
                             ["PORT_CFG_", 2, 8, 2,  "FIT_COMP",   "FT_NUM"]
                         ]},
-                    MLNX_ID.EKEYING_NEW : {'blk_type': "EKEYING", "fn": "mlnx_blk_unpack", "format": [
+                    MLNX_ID.EKEYING_NEW: {'blk_type': "EKEYING", "fn": "mlnx_blk_unpack", "format": [
                             ["PORTS_LIC_SCHEME",  2, 8,  1,  "FIT_NORMAL", "FT_ASCII"],
                             ["NUM_SCHEME",        1, 9,  1,  "FIT_NORMAL", "FT_NUM"],
                             ["EN_PORTS_NUM",      1, 10, 1,  "FIT_NORMAL", "FT_NUM"],
@@ -311,17 +336,18 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["PORTS_LIC_ARRAY_",  1, 16, 1,  "FIT_COMP",   "FT_NUM"]
                         ]},
 }
+# fmt: on
 
 # FAN "fixed fileds" FRU fields description
 FIXED_FIELD_FAN_VPD = {"type": "FIXED_FILED_VPD",
-                           "blk_type": "FIXED_FIELD_FAN_VPD_BLK",
-                           "format" : [
-                               ["PN",  0, 16,  "FT_ASCII"],
-                               ["SN",  16, 16, "FT_ASCII"]
-                          ]}
+                       "blk_type": "FIXED_FIELD_FAN_VPD_BLK",
+                       "format": [
+                               ["PN", 0, 16, "FT_ASCII"],
+                               ["SN", 16, 16, "FT_ASCII"]
+                       ]}
 
 MLNX_VENDOR_BLK_FIELDS = ["name", "minor_version", "offset", "length", "info_type", "type"]
-FIXED_FIELD_BLK_FIELDS = ["name", "offset", "length",  "type"]
+FIXED_FIELD_BLK_FIELDS = ["name", "offset", "length", "type"]
 
 MLNX_CPU_VPD = MLNX_VENDOR_BLK
 MLNX_FAN_VPD = MLNX_VENDOR_BLK
@@ -329,9 +355,18 @@ MLNX_PDB_VPD = MLNX_VENDOR_BLK
 MLNX_CARTRIDGE_VPD = MLNX_VENDOR_BLK
 LC_VPD = SYSTEM_VPD
 
-bin_decode = lambda val: val.decode('ascii').rstrip('\x00') if isinstance(val, bytes) else val
-int_unpack_be = lambda val: sum([b * 2**(8*n) for (b, n) in zip(val, range(len(val))[::-1])])
-int_unpack_le = lambda val: sum([b * 2**(8*n) for (b, n) in zip(val, range(len(val)))])
+
+def bin_decode(val):
+    return val.decode('ascii').rstrip('\x00') if isinstance(val, bytes) else val
+
+
+def int_unpack_be(val):
+    return sum([b * 2**(8 * n) for (b, n) in zip(val, range(len(val))[::-1])])
+
+
+def int_unpack_le(val):
+    return sum([b * 2**(8 * n) for (b, n) in zip(val, range(len(val)))])
+
 
 def printv(message, verbosity):
     if verbosity:
@@ -377,7 +412,7 @@ def parse_fru_fixed_fields_bin(data, blk_hdr, verbose=False):
 
         printv("rec: {}".format(rec), verbose)
 
-        _data = data[rec_offset : rec_offset+rec_size]
+        _data = data[rec_offset: rec_offset + rec_size]
         rec_name = rec_dict["name"]
         if rec_type == "FT_ASCII":
             item_format = "{}s".format(rec_size)
@@ -406,7 +441,8 @@ def parse_fru_fixed_fields_bin(data, blk_hdr, verbose=False):
 
         rec_list.append([rec_name, bin_decode(val)])
 
-    return {'items' : rec_list}
+    return {'items': rec_list}
+
 
 def mlnx_blk_unpack(data, blk_hdr, size, verbose=False):
     if "format" not in blk_hdr.keys():
@@ -418,7 +454,7 @@ def mlnx_blk_unpack(data, blk_hdr, size, verbose=False):
         rec_dict = dict(list(zip(MLNX_VENDOR_BLK_FIELDS, rec)))
         rec_size = rec_dict["length"]
         rec_offset = rec_dict["offset"] - 8
-        if rec_offset+rec_size >= size:
+        if rec_offset + rec_size >= size:
             break
 
         rec_type = rec_dict["type"]
@@ -435,7 +471,7 @@ def mlnx_blk_unpack(data, blk_hdr, size, verbose=False):
 
         for idx in range(num_of_repeat):
             offset = rec_offset + idx * rec_size
-            _data = data[offset  : offset+rec_size]
+            _data = data[offset: offset + rec_size]
             if rec_type == "FT_ASCII":
                 item_format = "{}s".format(rec_size)
                 val = struct.unpack(item_format, _data)[0]
@@ -506,7 +542,7 @@ def onie_parse_vendor_blk(data, _data_format, _fields, verbose=False):
     if blk_IANA == MLNX_IANA:
         _data = data[4:]
         blk_header, hdr_size = parse_packed_data(_data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
-        _data = _data[hdr_size : hdr_size+blk_header['block_size']]
+        _data = _data[hdr_size: hdr_size + blk_header['block_size']]
         return parse_mlnx_blk(_data, blk_header, MLNX_VENDOR_BLK, verbose)
 
     return None
@@ -532,13 +568,13 @@ def parse_mlnx_blk(data, blk_header, FRU_ITEMS, verbose=False):
         fn_name = blk_item.get("fn", None)
         if fn_name:
             rec_list = globals()[fn_name](data, blk_item, blk_header['block_size'], verbose)
-            out_str += "=== MLNX_block: {}({}) ===\n".format(blk_item["blk_type"], blk_id, verbose) if verbose else  ""
+            out_str += "=== MLNX_block: {}({}) ===\n".format(blk_item["blk_type"], blk_id, verbose) if verbose else ""
             print_format = '{:<25}{}\n'
             for key, val in rec_list:
-                out_str += print_format.format(key+":", val)
+                out_str += print_format.format(key + ":", val)
     else:
         printv("Not supported block_type {}".format(blk_id), verbose)
-    return  out_str
+    return out_str
 
 
 def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
@@ -549,11 +585,11 @@ def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
     _data = data[hdr_size:]
     try:
         sanity_str = bin_decode(struct.unpack("4s", _data[:4])[0])
-    except:
+    except BaseException:
         sanity_str = ""
     if sanity_str != "MLNX":
         printv("MLNX Sanitiy check fail", verbose)
-        return fru_dict
+        return None
     printv("Sanitiy check is OK", verbose)
     out_str = ""
     base_pos = hdr_size + 4
@@ -570,7 +606,7 @@ def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
         printv("BLK data offset: {}".format(blk_data_off), verbose)
         blk_header, hdr_size = parse_packed_data(data[blk_data_off:], MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
         printv("BLK header: {}".format(blk_header), verbose)
-        out_str += parse_mlnx_blk(data[blk_data_off+hdr_size: ], blk_header, FRU_ITEMS, verbose)
+        out_str += parse_mlnx_blk(data[blk_data_off + hdr_size:], blk_header, FRU_ITEMS, verbose)
 
     fru_dict['items'].append(["", out_str])
     return fru_dict
@@ -582,25 +618,25 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
     @param data: binary data array
     @return: dictionary with parsed data.
       Output example:
-	{   'items': [   ['Product_Name', 'line card product name '],
-		         ['Partnumber', 'line card Part num'],
-		         ['Serialnumber', 'line card serail number'],
-		         ['MFGDate', '123456789abcdefghij'],
-		         ['device_sw_id', 0],
-		         ['device_hw_revision', 0],
-		         ['Manufacturer', 'Mellanox'],
-		         ['max_power', '10000000'],
-		         ['CRC32', '0x78563412']],
-	    'tlv_header': 'TlvInfo',
-	    'total_len': 167,
-	    'ver': 1}
+        {   'items': [   ['Product_Name', 'line card product name '],
+                         ['Partnumber', 'line card Part num'],
+                         ['Serialnumber', 'line card serail number'],
+                         ['MFGDate', '123456789abcdefghij'],
+                         ['device_sw_id', 0],
+                         ['device_hw_revision', 0],
+                         ['Manufacturer', 'NVIDIA'],
+                         ['max_power', '10000000'],
+                         ['CRC32', '0x78563412']],
+            'tlv_header': 'TlvInfo',
+            'total_len': 167,
+            'ver': 1}
     '''
     fru_dict, offset = parse_packed_data(data, FRU_SANITY_FORMAT, FRU_SANITY_FORMAT_FIELDS)
     try:
         tlv_header = bin_decode(fru_dict['tlv_header'])
-    except:
+    except BaseException:
         tlv_header = ""
-    if 'TlvInfo' not in tlv_header and fru_dict['ver'] not in SUPPORTED_FRU_VER:
+    if 'TlvInfo' not in tlv_header or fru_dict['ver'] not in SUPPORTED_FRU_VER:
         return None
 
     fru_dict['items'] = []
@@ -616,7 +652,7 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
         item = FRU_ITEMS[blk_header['type']]
         fn_name = item.get("fn", None)
         if fn_name:
-            _data = data[pos : pos+blk_header['size']]
+            _data = data[pos: pos + blk_header['size']]
             val = globals()[fn_name](_data, item, blk_header, verbose)
             if val:
                 fru_dict['items'].append([item['type_name'], val])
@@ -624,12 +660,47 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
 
         pos += blk_header['size']
 
-    if check_crc32(data[ : fru_dict['total_len']+7],
+    if check_crc32(data[: fru_dict['total_len'] + 7],
                    fru_dict['items_dict']['CHSUM_FIELD'][2:]):
         print("CRC32 error.")
         return None
 
     return fru_dict
+
+
+def parse_ipmi_fru_bin(data, verbose):
+    retcode = 1
+    ipmi_fru_exec_path_list = ["/usr/sbin/ipmi-fru", "/usr/bin/ipmi-fru"]
+    # Create a binary temporary file, read/write, not deleted automatically
+    with tempfile.NamedTemporaryFile(mode='w+b') as tmp:
+        # Write some binary data
+        tmp.write(data)
+        # Move cursor to the beginning for reading
+        tmp.seek(0)
+        ipmi_fru_path = shutil.which("ipmi-fru")
+        if not ipmi_fru_path:
+            for path in ipmi_fru_exec_path_list:
+                if os.path.exists(path):
+                    ipmi_fru_path = path
+                    break
+        print("ipmi_fru_path: {}".format(ipmi_fru_path))
+        if ipmi_fru_path:
+            cmd = [ipmi_fru_path, "--fru-file={}".format(tmp.name)]
+            print("cmd: {}".format(cmd))
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                output_str = result.stdout.strip()   # Command's standard output
+                retcode = result.returncode          # Command's return code
+                print("output_str: {}".format(output_str))
+            except Exception as e:
+                return None
+
+    if not retcode:
+        output_str = output_str.split("\n")[2:]
+        output_str = "\n".join(output_str)
+        return {'items': [["", output_str]]}
+    else:
+        return None
 
 
 def parse_fru_bin(data, VPD_TYPE, verbose):
@@ -649,6 +720,9 @@ def parse_fru_bin(data, VPD_TYPE, verbose):
         res = parse_fru_onie_bin(data, SYSTEM_VPD, verbose)
         if not res:
             res = parse_fru_mlnx_bin(data, MLNX_VENDOR_BLK, verbose)
+        if not res:
+            res = parse_ipmi_fru_bin(data, verbose)
+
     return res
 
 
@@ -660,7 +734,7 @@ def dump_fru(fru_dict):
     """
     for item in fru_dict['items']:
         if item[0]:
-            print("{:<25}{}".format(item[0]+":", str(item[1]).rstrip()))
+            print("{:<25}{}".format(item[0] + ":", str(item[1]).rstrip()))
         else:
             print("{}".format(str(item[1]).rstrip()))
 
@@ -672,19 +746,41 @@ def save_fru(fru_dict, out_filename):
     @param out_filename: output filename
     @return: None
     """
+    # Get the directory of the output file for the temporary file
+    out_dir = os.path.dirname(out_filename) or '.'
+    tmp_filename = None
+
     try:
-        out_file = open(out_filename, 'w+')
-    except IOError as err:
+        # Create a temporary file in the same directory as the target file
+        # This ensures the rename operation is atomic (same filesystem)
+        with tempfile.NamedTemporaryFile(mode='w', dir=out_dir, delete=False) as tmp_file:
+            tmp_filename = tmp_file.name
+
+            # Write all FRU data to the temporary file
+            for item in fru_dict['items']:
+                if item[0]:
+                    tmp_file.write("{:<25}{}\n".format(item[0] + ":", str(item[1]).rstrip()))
+                else:
+                    tmp_file.write("{}\n".format(str(item[1]).rstrip()))
+
+        # Set permissions on temporary file to allow read access for all users (rw-r--r--)
+        # This must be done before rename to maintain atomicity
+        os.chmod(tmp_filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+
+        # Atomically rename the temporary file to the target filename
+        # On POSIX systems, this is an atomic operation that preserves permissions
+        os.replace(tmp_filename, out_filename)
+
+    except (IOError, OSError) as err:
         print("I/O error({0}): {1} with log file {2}".format(err.errno,
                                                              err.strerror,
                                                              out_filename))
-    for item in fru_dict['items']:
-        if item[0]:
-            out_file.write("{:<25}{}\n".format(item[0]+":", str(item[1]).rstrip()))
-        else:
-            out_file.write("{}\n".format(str(item[1]).rstrip()))
-
-    out_file.close()
+        # Clean up temporary file if it exists
+        if tmp_filename and os.path.exists(tmp_filename):
+            try:
+                os.remove(tmp_filename)
+            except OSError:
+                pass
 
 
 def load_fru_bin(file_name):

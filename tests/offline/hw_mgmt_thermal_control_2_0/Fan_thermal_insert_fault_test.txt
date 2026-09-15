@@ -1,0 +1,96 @@
+root@r-bobcat-02:~# dmidecode -t1 -t2
+# dmidecode 3.4
+Getting SMBIOS data from sysfs.
+SMBIOS 3.2.1 present.
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+        Manufacturer: Nvidia
+        Product Name: SN4280
+        Version: V0-C*GeGdFdRiRaEg-S*GbGbFcRaRaRaRaA0RaTcEiFcEi-D*TfGeGdFaRaRa-F*Tc
+        Serial Number: MT2428XZ0JXV
+        UUID: b908e90a-a121-11ef-8000-b0cf0e209200
+        Wake-up Type: Power Switch
+        SKU Number: HI160
+        Family: Not Specified
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+        Manufacturer: Nvidia
+        Product Name: VMOD0019
+        Version: A2
+        Serial Number: MT2428XZ0HXA
+        Asset Tag: Not Specified
+        Features:
+                Board is a hosting board
+                Board is removable
+                Board is replaceable
+        Location In Chassis: Not Specified
+        Chassis Handle: 0x0003
+        Type: Motherboard
+        Contained Object Handles: 0
+
+root@r-bobcat-02:~# systemctl status hw-management-tc
+● hw-management-tc.service - Thermal control service (ver 2.0) of Mellanox systems
+     Loaded: loaded (/lib/systemd/system/hw-management-tc.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2025-07-11 08:05:32 UTC; 42s ago
+       Docs: man:hw-management-tc.service(8)
+   Main PID: 19259 (hw_management_t)
+      Tasks: 1 (limit: 153549)
+     Memory: 17.4M
+     CGroup: /system.slice/hw-management-tc.service
+             └─19259 /usr/bin/python /usr/bin/hw_management_thermal_control.py
+
+Jul 11 08:05:32 r-bobcat-02 systemd[1]: Started hw-management-tc.service - Thermal control service (ver 2.0) of Mellanox systems.
+Jul 11 08:05:33 r-bobcat-02 hw-management-tc[19259]: NOTICE - Preinit thermal control ver 2.1.0
+Jul 11 08:05:33 r-bobcat-02 hw-management-tc[19259]: NOTICE - Set FAN PWM 100
+Jul 11 08:05:33 r-bobcat-02 hw-management-tc[19259]: NOTICE - Additional delay defined in ./config/thermal_delay (35 sec).
+Jul 11 08:05:33 r-bobcat-02 hw-management-tc[19259]: NOTICE - Mellanox thermal control is waiting for configuration (60 sec).
+
+root@r-bobcat-02:~# cat /var/run/hw-management/thermal/pwm1 
+255
+
+root@r-gaur-01:/var/run/hw-management/thermal# dvs_start.sh --sdk_bridge_mode=HYBRID
+
+root@r-bobcat-02:/var/run/hw-management/thermal# cat asic
+64000
+
+root@r-bobcat-02:/var/run/hw-management/thermal# cat pwm1 
+76
+
+# TC: Simulate fan insertion and fault condition for Fan drawer 1
+root@r-bobcat-02:/var/run/hw-management/thermal# unlink fan1_fault 
+root@r-bobcat-02:/var/run/hw-management/thermal# unlink fan1_status
+root@r-bobcat-02:/var/run/hw-management/thermal# unlink fan1_speed_get 
+root@r-bobcat-02:/var/run/hw-management/thermal# echo 0  > fan1_speed_get; echo 1 > fan1_fault; echo 0 > fan1_status
+# Wait for sometime
+root@r-bobcat-02:/var/run/hw-management/thermal# echo 1 > fan1_status
+root@r-bobcat-02:/var/run/hw-management/thermal# cat pwm1
+127
+
+
+=======================Snippet from /var/log/tc_log======================================
+2025-07-11 08:20:34,765 - INFO - drwr1:[1] tacho1=0 out of RPM range 3100:11000
+2025-07-11 08:20:34,767 - WARNING - drwr1:[1] status 0. Set PWM 20
+2025-07-11 08:20:34,767 - WARNING - drwr1:[1] incorrect rpm [0]. Set PWM  20
+2025-07-11 08:20:39,804 - INFO - drwr1:[1] tacho1=0 out of RPM range 3100:11000
+2025-07-11 08:20:39,805 - WARNING - drwr1:[1] status 0. Set PWM 20
+2025-07-11 08:20:39,805 - WARNING - drwr1:[1] incorrect rpm [0]. Set PWM  20
+2025-07-11 08:20:44,805 - INFO - drwr1:[1] tacho1=0 out of RPM range 3100:11000
+2025-07-11 08:20:44,806 - WARNING - drwr1:[1] status 0. Set PWM 20
+2025-07-11 08:20:44,807 - WARNING - drwr1:[1] incorrect rpm [0]. Set PWM  20
+2025-07-11 08:20:49,808 - INFO - drwr1:[1] tacho1=0 out of RPM range 3100:11000
+2025-07-11 08:20:49,809 - WARNING - drwr1:[1] incorrect rpm [0]. Set PWM  20
+2025-07-11 08:20:54,823 - INFO - drwr1:[1] tacho1=0 out of RPM range 3100:11000
+2025-07-11 08:20:54,824 - WARNING - drwr1:[1] incorrect rpm [0]. Set PWM  20
+2025-07-11 08:20:55,825 - NOTICE - drwr1:[1] fan not started after insertion
+2025-07-11 08:20:55,825 - INFO - Attention fan insertion failed, trying to recover
+2025-07-11 08:20:55,825 - NOTICE - @syslog Attention fan not started after insertion: Setting pwm to 50% from 30%
+2025-07-11 08:20:55,825 - INFO - Update chassis FAN PWM 50
+2025-07-11 08:20:55,825 - INFO - Write drwr1:[1] PWM 50
+2025-07-11 08:20:55,825 - INFO - Write drwr2:[2] PWM 50
+2025-07-11 08:20:55,826 - INFO - Write drwr3:[3] PWM 50
+2025-07-11 08:20:55,826 - INFO - Write drwr4:[4] PWM 50
+2025-07-11 08:20:55,826 - INFO - Waiting 10s for newly inserted fan to stabilize
+2025-07-11 08:21:05,827 - INFO - Resuming normal operation: Setting pwm back to 30%
+2025-07-11 08:21:05,827 - INFO - Update chassis FAN PWM 30

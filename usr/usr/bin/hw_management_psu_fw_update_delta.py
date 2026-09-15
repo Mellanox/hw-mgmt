@@ -2,7 +2,8 @@
 # pylint: disable=line-too-long
 # pylint: disable=C0103
 ########################################################################
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -36,7 +37,7 @@
 '''
 Created on June 10, 2021
 
-Author: Mykola Kostenok <c_mykolak@nvidia.com>
+Author: Mykola Kostenok <c_mykolak@mellanox.com>
 
 Description:
 Delta and Acbel PSU FW update tool.
@@ -66,16 +67,17 @@ MFR_FW_REVISION_ACBEL_460 = 0xd9
 MFR_MODEL_500AB = "DPS-550AB"
 
 # Acbel 2000 PSU Models
-MFR_MODEL_ACBEL_2000_FWD="FSP016-9G0G"
-MFR_MODEL_ACBEL_2000_REV="FSP017-9G0G"
+MFR_MODEL_ACBEL_2000_FWD = "FSP016-9G0G"
+MFR_MODEL_ACBEL_2000_REV = "FSP017-9G0G"
 
 # Acbel 1100 PSU Models
-MFR_MODEL_ACBEL_1100_FWD="FSP007-9G0G"
-MFR_MODEL_ACBEL_1100_REV="FSN022-9G0G"
+MFR_MODEL_ACBEL_1100_FWD = "FSP007-9G0G"
+MFR_MODEL_ACBEL_1100_REV = "FSN022-9G0G"
 
 # Acbel 460 PSU Models
-MFR_MODEL_ACBEL_460_FWD="FSF008-9G0G"
-MFR_MODEL_ACBEL_460_REV="FSF007-9G0G"
+MFR_MODEL_ACBEL_460_FWD = "FSF008-9G0G"
+MFR_MODEL_ACBEL_460_REV = "FSF007-9G0G"
+
 
 def mfr_model_is_acbel(mfr_model):
     """
@@ -87,6 +89,7 @@ def mfr_model_is_acbel(mfr_model):
     else:
         return False
 
+
 def mfr_model_is_acbel_1100(mfr_model):
     """
     @summary: Check if PSU model is Acbel 1100
@@ -95,6 +98,7 @@ def mfr_model_is_acbel_1100(mfr_model):
         return True
     else:
         return False
+
 
 def mfr_model_is_acbel_2000(mfr_model):
     """
@@ -105,6 +109,7 @@ def mfr_model_is_acbel_2000(mfr_model):
     else:
         return False
 
+
 def mfr_model_is_acbel_460(mfr_model):
     """
     @summary: Check if PSU model is Acbel 460.
@@ -113,6 +118,7 @@ def mfr_model_is_acbel_460(mfr_model):
         return True
     else:
         return False
+
 
 def read_mfr_fw_revision(i2c_bus, i2c_addr):
     """
@@ -154,7 +160,7 @@ UPLOAD_STATUS_DICT = {
     1 << 3: "Full image received but image is bad or corrupt. Power supply can power ON and support full features.",
     1 << 4: "FW image not supported by PSU. If the PSU receives the image header and determines that the PSU HW does \
     not support the image being sent by the system; it shall not accept the image and it shall assert this bit.",
-    }
+}
 
 UPLOAD_STATUS_DICT_ACBEL_460 = {
     0x51: "ISP Mode Disabled",
@@ -165,7 +171,8 @@ UPLOAD_STATUS_DICT_ACBEL_460 = {
     0x35: "ISP Incorrect Image Checksum",
     0x36: "ISP Busy",
     0x37: "ISP Timeout",
-     }
+}
+
 
 def read_mfr_fw_upload_status(i2c_bus, i2c_addr):
     """
@@ -182,6 +189,7 @@ def read_mfr_fw_upload_status(i2c_bus, i2c_addr):
         print(upload_status)
         return upload_status
 
+
 def read_mfr_fw_upload_status_acbel_460(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_UPLOAD_STATUS.
@@ -191,10 +199,11 @@ def read_mfr_fw_upload_status_acbel_460(i2c_bus, i2c_addr):
         upload_status = UPLOAD_STATUS_DICT_ACBEL_460.get(int(ret, 16))
         return upload_status
 
+
 UPLOAD_MODE_DICT = {
     0: "Exit firmware upload mode.",
     1 << 0: "Enter Firmware upload mode."
-    }
+}
 
 
 def read_mfr_fw_upload_mode(i2c_bus, i2c_addr):
@@ -207,6 +216,7 @@ def read_mfr_fw_upload_mode(i2c_bus, i2c_addr):
         print(upload_mode)
         return upload_mode
 
+
 def read_mfr_fw_upload_mode_acbel_460(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_UPLOAD_MODE.
@@ -217,6 +227,7 @@ def read_mfr_fw_upload_mode_acbel_460(i2c_bus, i2c_addr):
         print(upload_mode)
         return upload_mode
 
+
 def write_mfr_fw_upload_mode(i2c_bus, i2c_addr, mode):
     """
     @summary: Write MFR_FW_UPLOAD_MODE.
@@ -224,6 +235,7 @@ def write_mfr_fw_upload_mode(i2c_bus, i2c_addr, mode):
     data = [MFR_FWUPLOAD_MODE]
     data.extend([mode])
     psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
+
 
 def write_mfr_fw_upload_mode_acbel_460(i2c_bus, i2c_addr, mode):
     """
@@ -233,6 +245,7 @@ def write_mfr_fw_upload_mode_acbel_460(i2c_bus, i2c_addr, mode):
     data.extend([mode])
     psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
+
 def write_mfr_fw_upload(i2c_bus, i2c_addr, data_in):
     """
     @summary: Write MFR_FW_UPLOAD.
@@ -240,6 +253,7 @@ def write_mfr_fw_upload(i2c_bus, i2c_addr, data_in):
     data = [MFR_FWUPLOAD]
     data.extend(data_in)
     psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
+
 
 def write_mfr_fw_upload_acbel_460(i2c_bus, i2c_addr, data_in):
     """
@@ -249,16 +263,17 @@ def write_mfr_fw_upload_acbel_460(i2c_bus, i2c_addr, data_in):
     data.extend(data_in)
     psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
+
 FW_HEADER = {
-    "model_name":"",
-    "fw_revision":[],
-    "hw_revision":"",
-    "block_size":64,
-    "write_time":120
-    }
+    "model_name": "",
+    "fw_revision": [],
+    "hw_revision": "",
+    "block_size": 64,
+    "write_time": 120
+}
 
 
-def parce_header_delta(data_list):
+def parse_header_delta(data_list):
     """
     @summary: Parse Delta FW file header.
     """
@@ -270,7 +285,7 @@ def parce_header_delta(data_list):
     print(FW_HEADER)
 
 
-def parce_header_acbel(data_list):
+def parse_header_acbel(data_list):
     """
     @summary: Parse Acbel FW file header.
     """
@@ -294,7 +309,7 @@ def delta_fw_file_burn(i2c_bus, i2c_addr, fw_filename):
                 byte_array.fromfile(fw_file, FW_HEADER["block_size"])
             except EOFError:
                 break
-            psu_upd_cmn.progress_bar((fw_file.tell()*100)/fw_filesize, 100)
+            psu_upd_cmn.progress_bar((fw_file.tell() * 100) / fw_filesize, 100)
 
             data_list = [FW_HEADER["block_size"]]
             data_list.extend(byte_array.tolist())
@@ -317,7 +332,7 @@ def acbel_460_fw_file_burn(i2c_bus, i2c_addr, fw_filename):
                 byte_array.fromfile(fw_file, 16)
             except EOFError:
                 break
-            psu_upd_cmn.progress_bar((fw_file.tell()*100)/fw_filesize, 100)
+            psu_upd_cmn.progress_bar((fw_file.tell() * 100) / fw_filesize, 100)
 
             data_list = [(offs & 0xff000000) >> 24, (offs & 0x00ff0000) >> 16, (offs & 0x0000ff00) >> 8, offs & 0x000000ff]
             data_list.extend(byte_array.tolist())
@@ -340,6 +355,7 @@ def acbel_460_fw_file_burn(i2c_bus, i2c_addr, fw_filename):
 
             offs += 16
         print("\nSend FW Done.")
+
 
 def update_delta(i2c_bus, i2c_addr, fw_filename):
     """
@@ -374,9 +390,9 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
             mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
             # Read FW image header for blocksize and delay time.
             if mfr_model_is_acbel(mfr_model):
-                parce_header_acbel(data_list)
+                parse_header_acbel(data_list)
             else:
-                parce_header_delta(data_list)
+                parse_header_delta(data_list)
 
             # Write FW
             delta_fw_file_burn(i2c_bus, i2c_addr, fw_filename)
@@ -425,8 +441,8 @@ def update_acbel_460(i2c_bus, i2c_addr, fw_filename):
         if read_mfr_fw_upload_status_acbel_460(i2c_bus, i2c_addr) == "ISP No Error":
             break
         if retry_cnt >= 2:
-                print("Failed to enter FW upload mode.")
-                exit(1)
+            print("Failed to enter FW upload mode.")
+            exit(1)
         retry_cnt += 1
 
     # Write FW
@@ -444,9 +460,9 @@ def update_acbel_460(i2c_bus, i2c_addr, fw_filename):
         if (status == "ISP Mode Disabled") or (status == "ISP No Error"):
             break
         if retry_cnt >= 2:
-                print("Failed to exit FW upload mode.")
-                print(status)
-                exit(1)
+            print("Failed to exit FW upload mode.")
+            print(status)
+            exit(1)
         retry_cnt += 1
 
     # Check FW revision changed. if no - fail.
@@ -459,6 +475,7 @@ def update_acbel_460(i2c_bus, i2c_addr, fw_filename):
         print("FW version not changed.")
         exit(1)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required arguments')
@@ -468,7 +485,7 @@ if __name__ == '__main__':
     parser.add_argument('-S', "--skip_redundancy_check", type=bool, nargs='?',
                         const=True, default=False)
     required.add_argument('-v', "--version", type=bool, nargs='?',
-                        const=True, default=False)
+                          const=True, default=False)
     args = parser.parse_args()
 
     if args.version:

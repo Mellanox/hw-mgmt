@@ -1,8 +1,8 @@
-.TH HW-MANAGEMENT.SH "1" "June 2020" "hw-management.sh " "User Commands"
+.TH HW-MANAGEMENT.SH "1" "September 2025" "hw-management.sh " "User Commands"
 .SH NAME
-hw-management.sh \- Chassis management for Mellanox systems
+hw-management.sh \- Chassis management for NVIDIA systems
 .SH SYNOPSIS
-Mellanox hw-management package uses a virtual file system provided by the Linux kernel
+NVIDIA hw-management package uses a virtual file system provided by the Linux kernel
 called sysfs.
 The sysfs file system enumerates the devices and buses attached to the system in a file
 system hierarchy that can be accessed from the user space.
@@ -34,12 +34,12 @@ Manual de\-activation of ASIC I2C driver.
 chipupen
 Set 'chipup_dis' attribute to zero.
 .TP
-chipupdis <n>
-Set 'chipup_dis' attribute to <n>, when <n>
+chipupdis [n]
+Set 'chipup_dis' attribute to n (default: 1 if n not specified)
 .TP
 thermsuspend
 Suspend thermal control (if thermal control is
-activated by hw\-management package.
+activated by hw\-management package).
 Not relevant for users who disable hw\-management
 thermal control.
 .TP
@@ -47,6 +47,16 @@ thermresume
 Resume thermal control.
 Not relevant for users who disable hw\-management
 thermal control.
-.IP
+.TP
 restart
-force\-reload    Performs hw\-management 'stop' and the 'start.
+force\-reload    Performs hw\-management 'stop' and then 'start'.
+.TP
+reset\-cause     Output system reset cause.
+.SH THERMAL CONTROL SERVICE
+The hw\-management package includes a separate thermal control service
+(hw\-management\-tc.service) that runs independently from the main
+hw\-management service. This service provides advanced thermal control
+algorithms and monitoring capabilities.
+.SH SEE ALSO
+\fBhw-management.service\fR(8)
+\fBhw-management-tc.service\fR(8)

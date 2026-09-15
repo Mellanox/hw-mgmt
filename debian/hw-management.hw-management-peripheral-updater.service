@@ -1,0 +1,19 @@
+[Unit]
+Description=Hw-management peripheral updater service (fans, BMC, leakage sensors)
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+
+StartLimitIntervalSec=1200
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/hw_management_peripheral_updater.py
+# systemd Type=simple already sends SIGTERM to MAINPID on stop
+TimeoutStopSec=15
+
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

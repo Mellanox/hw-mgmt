@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+[Unit]
+Description=Sync BMC FRU MAC to U-Boot ethaddr
+DefaultDependencies=no
+Requires=hw-management-bmc-early-i2c-init.service
+After=hw-management-bmc-early-i2c-init.service
+Before=hw-management-bmc-init.service hw-management-bmc-boot-complete.service
+ConditionPathExists=/usr/bin/hw-management-bmc-sync-ethaddr.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /usr/bin/hw-management-bmc-sync-ethaddr.sh
+SyslogIdentifier=hw-management-bmc-sync-ethaddr
+
+[Install]
+WantedBy=multi-user.target

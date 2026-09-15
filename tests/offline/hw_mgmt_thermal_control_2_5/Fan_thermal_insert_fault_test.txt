@@ -1,0 +1,150 @@
+root@r-gaur-01:~# dmidecode -t1 -t2
+# dmidecode 3.4
+Getting SMBIOS data from sysfs.
+SMBIOS 3.2.1 present.
+
+Handle 0x0001, DMI type 1, 27 bytes
+System Information
+        Manufacturer: Nvidia
+        Product Name: SN5610
+        Version: V0-C*RiRaGeGdS0Eg-F*Tb-K*G0EgEgJa-S*GbGbRgRgRgRgRgRgRgRgRgRgRgEiTbT0X0A0
+        Serial Number: MT2443X00646
+        UUID: 03000200-0400-0500-0006-000700080009
+        Wake-up Type: Power Switch
+        SKU Number: HI172
+        Family: Not Specified
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+        Manufacturer: Nvidia
+        Product Name: VMOD0022
+        Version: Not Specified
+        Serial Number: Not Specified
+        Asset Tag: Not Specified
+        Features:
+                Board is a hosting board
+                Board is removable
+                Board is replaceable
+        Location In Chassis: Not Specified
+        Chassis Handle: 0x0003
+        Type: Motherboard
+        Contained Object Handles: 0
+
+root@r-gaur-01:~# cat /var/run/hw-management/config/tc_config.json  | grep general_config
+	"general_config" :{"corner_fans" : ["drwr1", "drwr5"], "fan_steady_state_delay" : 10, "fan_steady_state_pwm" : 50},
+
+root@r-gaur-01:~# systemctl status hw-management-tc
+● hw-management-tc.service - Thermal control service (ver 2.5) of Mellanox systems
+     Loaded: loaded (/lib/systemd/system/hw-management-tc.service; disabled; preset: enabled)
+     Active: active (running) since Fri 2025-07-04 05:31:01 UTC; 2min 15s ago
+       Docs: man:hw-management-tc.service(8)
+   Main PID: 18108 (hw_management_t)
+      Tasks: 2 (limit: 37375)
+     Memory: 19.9M
+     CGroup: /system.slice/hw-management-tc.service
+             └─18108 /usr/bin/python /usr/bin/hw_management_thermal_control_2_5.py
+
+Jul 04 05:31:02 r-gaur-01 hw-management-tc[18108]: NOTICE - Set FAN PWM 100
+Jul 04 05:31:02 r-gaur-01 hw-management-tc[18108]: NOTICE - Additional delay defined in ./config/thermal_delay (35 sec).
+Jul 04 05:31:02 r-gaur-01 hw-management-tc[18108]: NOTICE - Mellanox thermal control is waiting for configuration (60 sec).
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - ********************************
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - Init thermal control ver: v.2.5.0
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - ********************************
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - Thermal control state changed UNCONFIGURED -> RUNNING reason:init
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - ********************************
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - Thermal control is running
+Jul 04 05:32:02 r-gaur-01 hw-management-tc[18108]: NOTICE - ********************************
+root@r-gaur-01:~# cat /var/run/hw-management/thermal/pwm1 
+255
+
+root@r-gaur-01:/var/run/hw-management/thermal# dvs_start.sh --sdk_bridge_mode=HYBRID
+
+root@r-gaur-01:/var/run/hw-management/thermal# cat asic
+49000
+root@r-gaur-01:/var/run/hw-management/thermal# cat pwm1 
+76
+
+#TC-1: Simulate fan insertion and fault condition for Fan drawer 1  (Corner fan)
+root@r-gaur-01:/var/run/hw-management/thermal# unlink fan1_fault 
+root@r-gaur-01:/var/run/hw-management/thermal# unlink fan2_fault 
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan1_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan2_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 0 > fan1_status
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan1_status
+root@r-gaur-01:/var/run/hw-management/thermal# cat pwm1 
+76
+root@r-gaur-01:/var/run/hw-management/thermal# cat pwm1 
+127
+
+
+
+=======================Snippet from /var/log/tc_log======================================
+2025-07-05 19:04:29,867 - WARNING - drwr1:[1, 2] status 0. Set PWM 20.0
+2025-07-05 19:04:41,973 - NOTICE - drwr1:[1, 2] fan not started after insertion
+2025-07-05 19:04:41,973 - INFO - Corner fan insertion failed, trying to recover
+2025-07-05 19:04:41,973 - NOTICE - @syslog Corner fan not started after insertion: Setting pwm to 50% from 20.0%
+2025-07-05 19:04:41,973 - INFO - Update chassis FAN PWM 50
+2025-07-05 19:04:41,973 - INFO - Write drwr1:[1, 2] PWM 50
+2025-07-05 19:04:41,973 - INFO - Write drwr2:[3, 4] PWM 50
+2025-07-05 19:04:41,974 - INFO - Write drwr3:[5, 6] PWM 50
+2025-07-05 19:04:41,974 - INFO - Write drwr4:[7, 8] PWM 50
+2025-07-05 19:04:41,974 - INFO - Write drwr5:[9, 10] PWM 50
+2025-07-05 19:04:41,974 - INFO - Waiting 10s for newly inserted fan to stabilize
+2025-07-05 19:04:51,975 - INFO - Resuming normal operation: Setting pwm back to 20.0%
+2025-07-05 19:04:51,975 - INFO - Update chassis FAN PWM 20.0
+2025-07-05 19:04:51,975 - INFO - Write drwr1:[1, 2] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr2:[3, 4] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr3:[5, 6] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr4:[7, 8] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr5:[9, 10] PWM 20.0
+
+
+
+#TC-2: Simulate fan insertion and fault condition for Fan drawer 2 (Not corner fan)
+root@r-gaur-01:/var/run/hw-management# cd thermal/
+root@r-gaur-01:/var/run/hw-management/thermal# unlink fan3_fault
+root@r-gaur-01:/var/run/hw-management/thermal# unlink fan4_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan3_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan4_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 0 > fan2_status
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan2_status
+root@r-gaur-01:/var/run/hw-management/thermal# cat pwm1 
+76
+
+=======================Snippet from /var/log/tc_log======================================
+<No change in TC>
+
+#TC-3: Simulate fan insertion and fault condition for Fan drawer 5  (Corner fan)
+root@r-gaur-01:/var/run/hw-management/thermal# unlink fan9_fault
+root@r-gaur-01:/var/run/hw-management/thermal# unlink fan10_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan9_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan10_fault
+root@r-gaur-01:/var/run/hw-management/thermal# echo 0 > fan5_status
+root@r-gaur-01:/var/run/hw-management/thermal# echo 1 > fan5_status
+root@r-gaur-01:/var/run/hw-management/thermal# cat pwm1 
+76
+root@r-gaur-01:/var/run/hw-management/thermal# cat pwm1 
+127
+
+
+=======================Snippet from /var/log/tc_log======================================
+2025-07-05 19:04:29,867 - WARNING - drwr5:[1, 2] status 0. Set PWM 20.0
+2025-07-05 19:04:41,973 - NOTICE - drwr5:[1, 2] fan not started after insertion
+2025-07-05 19:04:41,973 - INFO - Corner fan insertion failed, trying to recover
+2025-07-05 19:04:41,973 - NOTICE - @syslog Corner fan not started after insertion: Setting pwm to 50% from 20.0%
+2025-07-05 19:04:41,973 - INFO - Update chassis FAN PWM 50
+2025-07-05 19:04:41,973 - INFO - Write drwr1:[1, 2] PWM 50
+2025-07-05 19:04:41,973 - INFO - Write drwr2:[3, 4] PWM 50
+2025-07-05 19:04:41,974 - INFO - Write drwr3:[5, 6] PWM 50
+2025-07-05 19:04:41,974 - INFO - Write drwr4:[7, 8] PWM 50
+2025-07-05 19:04:41,974 - INFO - Write drwr5:[9, 10] PWM 50
+2025-07-05 19:04:41,974 - INFO - Waiting 10s for newly inserted fan to stabilize
+2025-07-05 19:04:51,975 - INFO - Resuming normal operation: Setting pwm back to 20.0%
+2025-07-05 19:04:51,975 - INFO - Update chassis FAN PWM 20.0
+2025-07-05 19:04:51,975 - INFO - Write drwr1:[1, 2] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr2:[3, 4] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr3:[5, 6] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr4:[7, 8] PWM 20.0
+2025-07-05 19:04:51,976 - INFO - Write drwr5:[9, 10] PWM 20.0
+
+

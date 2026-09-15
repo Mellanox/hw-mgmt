@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# MCTP over IRoT (mctpirot* net devices). RUN no-ops unless /usr/bin/mctp exists
+# and is executable. Installed to /lib/udev/rules.d/ by hw-management-bmc-plat-specific-preps.
+
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="mctpirot*", NAME="%E{INTERFACE}", RUN+="/bin/sh -c '[ -x /usr/bin/mctp ] && { /usr/bin/mctp link set $env{INTERFACE} up; /usr/bin/mctp addr add 230 dev $env{INTERFACE}; }'"

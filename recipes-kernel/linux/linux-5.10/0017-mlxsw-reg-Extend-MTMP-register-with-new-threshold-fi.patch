@@ -1,5 +1,5 @@
 From 91f0e76459d7a0e3156e7427d6ad347d345e2909 Mon Sep 17 00:00:00 2001
-From: Mykola Kostenok <c_mykolak@nvidia.com>
+From: Mykola Kostenok <c_mykolak@mellanox.com>
 Date: Tue, 8 Jun 2021 15:44:11 +0300
 Subject: [PATCH backport 5.10 017/182] mlxsw: reg: Extend MTMP register with
  new threshold field
@@ -12,7 +12,7 @@ providing high and maximum temperature thresholds. For modules, these
 thresholds correspond to critical and emergency thresholds that are read
 from the module's EEPROM.
 
-Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Signed-off-by: Mykola Kostenok <c_mykolak@mellanox.com>
 Acked-by: Vadim Pasternak <vadimp@nvidia.com>
 Signed-off-by: Ido Schimmel <idosch@nvidia.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>

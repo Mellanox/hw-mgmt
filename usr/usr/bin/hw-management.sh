@@ -1,6 +1,7 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -61,6 +62,8 @@ source hw-management-helpers.sh
 [ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 [ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
 source hw-management-devtree.sh
+# shellcheck source=/dev/null
+[ -f /usr/bin/hw-management-platform-json.sh ] && . /usr/bin/hw-management-platform-json.sh
 # Local constants and variables
 
 asic_control=1
@@ -86,6 +89,9 @@ hotplug_pwrs=2
 hotplug_pdbs=0
 hotplug_linecards=0
 erot_count=0
+vrot_count=0
+mcu_count=0
+cartridge_count=0
 health_events_count=0
 pwr_events_count=0
 dpu_count=0
@@ -99,8 +105,10 @@ i2c_freq_reg=0x2004
 spc3_pci_id=cf70
 spc4_pci_id=cf80
 spc5_pci_id=cf82
+spc6_pci_id=cf84
 quantum2_pci_id=d2f2
 quantum3_pci_id=d2f4
+quantum4_pci_id=d2f8
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
@@ -112,12 +120,21 @@ leakage_count=0
 leakage_rope_count=0
 asic_chipup_retry=2
 device_connect_retry=2
-chipup_log_size=4096
+chipup_log_size=65536
+chipup_log_archive_max=3
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
+sn58xx_reset_attr_num=15
+sn66xx_reset_attr_num=14
+sn6600_reset_attr_num=13
+sn68xx_reset_attr_num=14
+n61xx_reset_attr_num=17
+q3401_reset_attr_num=17
 chipup_retry_count=3
-fan_speed_tolerance=15
+
+# Set FAN speed tolerance based on spec +-30%
+fan_speed_tolerance=30
 minimal_unsupported=0
 dummy_psus_supported=0
 sed_pba_guid=0d1d8ac9-9958-4e34-aae6-5236e3232bb5
@@ -139,6 +156,7 @@ mctp_addr=""
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
 xdr_cpu_bus_offset=66
+q3401_cpu_bus_offset=67
 smart_switch_cpu_bus_offset=34
 
 connect_table=()
@@ -395,6 +413,11 @@ mqm97xx_pdb_connect_table=( raa228000 0x61 4 pdb_pwr_conv1 \
 			tmp451 0x4c 4 pdb_mos_amb \
 			tmp1075 0x4e 4 pdb_intel_amb \
 			24c02 0x50 4 pdb_eeprpm )
+
+q3401_pdb_connect_table=( raa228004 0x60 5 pdb_pwr_conv1 \
+			lm5066i	0x12 5 pdb_hotswap1 \
+			tmp451 0x4c 5 pdb_mos_amb \
+			24c02 0x50 5 pdb_eeprpm )
 	   
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
@@ -619,6 +642,12 @@ nso_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 	24c02 0x50 50 cable_cartridge2_eeprom)
 
+n61xxld_cartridge_eeprom_connect_table=( \
+	24c02 0x50 68 cable_cartridge1_eeprom \
+	24c02 0x50 69 cable_cartridge2_eeprom \
+	24c02 0x50 70 cable_cartridge3_eeprom \
+	24c02 0x50 71 cable_cartridge4_eeprom)
+
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
@@ -626,6 +655,7 @@ n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
+msn4700d_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
@@ -633,24 +663,24 @@ p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
 p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 q3200_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
+q3401_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
+n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cart1 68 cart2 69 cart3 70 cart4 71 cpu-vr 6)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
+sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
+sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
+sn6600_named_busses=(asic1 5 pwr 4 vr1 16 vr2 17 vpd 1 cpu-vr 6)
+sn68xxld_named_busses=(asic1 4 pwr1 6 vr1 15 vpd 1 cpu-vr 5)
 
 ACTION=$1
+print_function_call "$0" "main" "ACTION=$ACTION $2 $3"
 
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
 	psu1_i2c_addr=0x58
 	psu2_i2c_addr=0x58
 fi
-
-is_module()
-{
-    /sbin/lsmod | grep -w "$1" > /dev/null
-    RC=$?
-    return $RC
-}
 
 function get_i2c_bus_frequency_default()
 {
@@ -747,54 +777,6 @@ function find_regio_sysfs_path()
 	return 1
 }
 
-# SODIMM temperatures (C) for setting in scale 1000
-SODIMM_TEMP_CRIT=95000
-SODIMM_TEMP_MAX=85000
-SODIMM_TEMP_MIN=0
-SODIMM_TEMP_HYST=6000
-
-set_sodimm_temp_limits()
-{
-	# SODIMM temp reading is not supported on Broadwell-DE Comex
-	# and on BF# Comex.
-	# Broadwell-DE Comex can be installed interchangeably with new
-	# Coffee Lake Comex on part of systems e.g. on Anaconda.
-	# Thus check by CPU type and not by system type.
-	case $cpu_type in
-		$BDW_CPU|$BF3_CPU)
-			return 0
-			;;
-		*)
-			;;
-	esac
-
-	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
-		modprobe jc42 > /dev/null 2>&1
-		rc=$?
-		if [ $rc -eq 0 ]; then
-			while : ; do
-				sleep 1
-				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
-			done
-		else
-			return 1
-		fi
-	fi
-
-	if find /sys/bus/i2c/drivers/jc42/[0-9]*/ | grep -q hwmon ; then
-		for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*; do
-			echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
-			echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
-			echo $SODIMM_TEMP_MIN > "$temp_sens"/hwmon/hwmon*/temp1_min
-			echo $SODIMM_TEMP_HYST > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
-		done
-	else
-		return 1
-	fi
-
-	return 0
-}
-
 set_jtag_gpio()
 {
 	local export_unexport=$1
@@ -826,8 +808,40 @@ set_jtag_gpio()
 			jtag_tdo=89
 			;;
 		$AMD_SNW_CPU)
-			echo 0x2094 > $config_path/jtag_rw_reg
-			echo 0x2095 > $config_path/jtag_ro_reg
+			case $sku in
+			HI180|HI185)
+				echo 0x20e5 > $config_path/jtag_rw_reg
+				echo 0x20e6 > $config_path/jtag_ro_reg
+				;;
+			*)
+				echo 0x2094 > $config_path/jtag_rw_reg
+				echo 0x2095 > $config_path/jtag_ro_reg
+				;;
+			esac
+			;;
+		$AMD_V3000_CPU)
+			jtag_tdi=5
+			jtag_tck=132
+			jtag_tms=7
+			jtag_tdo=8
+			case $sku in
+			HI198)
+				echo 0x2094 > $config_path/jtag_rw_reg
+				echo 0x2095 > $config_path/jtag_ro_reg
+			;;
+			*)
+				echo 0x20e5 > $config_path/jtag_rw_reg
+				echo 0x20e6 > $config_path/jtag_ro_reg
+			;;
+			esac
+			;;
+		$AMD_FRNG_CPU)
+			jtag_tdi=40
+			jtag_tck=27
+			jtag_tms=7
+			jtag_tdo=6
+			echo 0x20e5 > $config_path/jtag_rw_reg
+			echo 0x20e6 > $config_path/jtag_ro_reg
 			;;
 		*)
 			return 0
@@ -931,10 +945,25 @@ set_gpios()
 			;;
 		$AMD_SNW_CPU)
 			set_jtag_gpio $1
-			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
 			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
+			;;
+		$AMD_V3000_CPU)
+			set_jtag_gpio $1
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(89 10 12 23)
+			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
+			if [ "$sku" == "HI198" ]; then
+				gpio_idx+=(9)
+				gpio_names+=("v3000_lpc_support")
+			fi
+			;;
+		$AMD_FRNG_CPU)
+			set_jtag_gpio $1
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(89 3 12 10)
+			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
 			return 1
@@ -984,7 +1013,7 @@ add_cpu_board_to_connection_table()
 			board=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $board in
 				MSN241*|MSN27*)
-					# Spider Panther removed A2D from SFF
+					# SN2410/SN2700 removed A2D from SFF
 					cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 					;;
 				*)
@@ -1010,8 +1039,8 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100|HI122|HI123|MSN3700|MSN3700C)
-							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
+						HI116|HI112|HI124|HI100|HI122|HI123|HI184|MSN3700|MSN3700C)
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700, SN4700d
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1025,7 +1054,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# Systems without A2D on COMEx
-				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175|HI178)
+				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175|HI178|HI179)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
@@ -1048,7 +1077,7 @@ add_cpu_board_to_connection_table()
 			;;
 		*)
 			log_err "$product is not supported"
-			exit 0
+			return 1
 			;;
 	esac
 
@@ -1064,7 +1093,7 @@ add_cpu_board_to_connection_table()
 	fi
 
 	connect_table+=(${cpu_connection_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${cpu_voltmon_connection_table[@]}"
+	add_i2c_dynamic_bus_dev_connection_table "${cpu_voltmon_connection_table[@]}" || return 1
 }
 
 add_i2c_dynamic_bus_dev_connection_table()
@@ -1072,7 +1101,9 @@ add_i2c_dynamic_bus_dev_connection_table()
 	connection_table=("$@")
 	dynamic_i2cbus_connection_table=()
 
-	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
+	if ! echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices; then
+		return 1
+	fi
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
 		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
 		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
@@ -1109,21 +1140,11 @@ add_come_named_busses()
 	named_busses+=(${come_named_busses[@]})
 }
 
-start_mst_for_spc1_port_cpld()
-{
-	if [ ! -d /dev/mst ]; then
-		lsmod | grep mst_pci >/dev/null 2>&1
-		if [  $? -ne 0 ]; then
-			mst start  >/dev/null 2>&1
-		fi
-	fi
-}
-
 set_spc1_port_cpld()
 {
 	cpld=$(< $config_path/cpld_port)
 	if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ]; then
-		ver_dec=$CPLD3_VER_DEF
+		ver_dec=${CPLD3_VER_DEF:-0}
 		# check if mlxreg exists
 		if [ -x "$(command -v mlxreg)" ]; then
 			if [ ! -d /dev/mst ]; then
@@ -1185,7 +1206,6 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	case $sku in
 		HI138)
 			# SGN2410_A1
@@ -1213,18 +1233,16 @@ msn24xx_specific()
 	echo cpld3 > $config_path/cpld_port
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
-	set_spc1_port_cpld
 	cpld=$(< $config_path/cpld_port)
 	echo 8 > $config_path/reset_attr_num
 }
 
 msn27xx_msb_msx_specific()
 {
-	start_mst_for_spc1_port_cpld
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
 		MSN27*|MSN241*)
-			# Panther Spider
+			# SN2700/SN2410
 			connect_table+=(${msn2700_base_connect_table[@]})
 			;;
 		*)
@@ -1234,11 +1252,11 @@ msn27xx_msb_msx_specific()
 	# Connect TC data table 
 	case $product in
 		MSN27*)
-			# Panther
+			# SN2700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
 			;;
 		MSN241*)
-			# Spider
+			# SN2410
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
 			;;
 		MSB78*|MSB77*)
@@ -1264,8 +1282,20 @@ msn27xx_msb_msx_specific()
 		*)
 			max_tachos=8
 			hotplug_fans=4
-			echo 25000 > $config_path/fan_max_speed
-			echo 1500 > $config_path/fan_min_speed
+
+			# Set according to front (inlet) fan max, 21800
+			echo 21000 > $config_path/fan_max_speed
+			# Set according to rear (outlet) fan min, 4600
+			echo 5400 > $config_path/fan_min_speed
+
+			# Set FAN front (inlet) speed limits
+			echo 21000 > $config_path/fan_front_max_speed
+			echo 6300 > $config_path/fan_front_min_speed
+
+			# Set FAN rear (outlet) speed limits 
+			echo 18000 > $config_path/fan_rear_max_speed
+			echo 5400 > $config_path/fan_rear_min_speed
+
 			echo 18000 > $config_path/psu_fan_max
 			echo 2000 > $config_path/psu_fan_min
 			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
@@ -1283,8 +1313,6 @@ msn27xx_msb_msx_specific()
 			echo cpld3 > $config_path/cpld_port
 		;;
 	esac
-
-	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
@@ -1364,7 +1392,7 @@ mqmxxx_msn37x_msn34x_specific()
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
 		HI110)
-			# Jaguar
+			# MQM8700 (HI110)
 			connect_table+=(${mqm8700_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_mqm8700.json"
@@ -1379,8 +1407,20 @@ mqmxxx_msn37x_msn34x_specific()
 	add_cpu_board_to_connection_table
 
 	max_tachos=12
-	echo 25000 > $config_path/fan_max_speed
-	echo 4500 > $config_path/fan_min_speed
+
+	# Set according to front (inlet) fan max, 21800
+	echo 23000 > $config_path/fan_max_speed
+	# Set according to rear (outlet) fan min, 4600
+	echo 4600 > $config_path/fan_min_speed
+
+	# Set FAN front (inlet) speed limits
+	echo 23000 > $config_path/fan_front_max_speed
+	echo 5400 > $config_path/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits
+	echo 20500 > $config_path/fan_rear_max_speed
+	echo 4800 > $config_path/fan_rear_min_speed
+
 	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
@@ -1562,11 +1602,76 @@ msn47xx_specific()
 
 	max_tachos=12
 	minimal_unsupported=1
-	echo 25000 > $config_path/fan_max_speed
-	echo 4500 > $config_path/fan_min_speed
+
+	# Set according to front fan max.
+	echo 23000 > "$config_path"/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 4800 > "$config_path"/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 23000 > "$config_path"/fan_front_max_speed
+	echo 5400 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 20500 > "$config_path"/fan_rear_max_speed
+	echo 4800 > "$config_path"/fan_rear_min_speed
+
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+}
+
+msn4700d_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		if [ "$sku" == "HI184" ]; then
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb-C*AaEeFdGeRcRcTb"
+		else
+			system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb-C*TlRkRaEe"
+		fi
+		devtr_check_smbios_device_description "$system_ver_str" "0" ""
+	fi
+	if [ "$sku" == "HI184" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700d_sensors.conf"
+	else
+		lm_sensors_config="$lm_sensors_configs_path/msn4700d1_sensors.conf"
+	fi
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700d.json"
+
+	max_tachos=12
+	hotplug_fans=6
+	hotplug_pwrs=1
+	hotplug_psus=0
+	hotplug_pdbs=1
+	psu_count=0
+	minimal_unsupported=1
+
+	echo 3 > "$config_path"/cpld_num
+	echo 6 > "$config_path"/fan_drwr_num
+
+	# Set according to front fan max.
+	echo 29700 > "$config_path"/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 5650 > "$config_path"/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 29700 > "$config_path"/fan_front_max_speed
+	echo 6150 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 27500 > "$config_path"/fan_rear_max_speed
+	echo 5650 > "$config_path"/fan_rear_min_speed
+
+	# Only reverse fans are supported
+	echo C2P > "$config_path"/system_flow_capability
+
+	named_busses+=("${msn4700d_named_busses[@]}")
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo 0 > "$config_path"/labels_ready
+	echo 17 > "$config_path"/reset_attr_num
+	echo -n "${named_busses[@]}" > "$config_path"/named_busses
 }
 
 msn46xx_specific()
@@ -1703,7 +1808,7 @@ mqm97xx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_mqm9701.json"
 		lm_sensors_config="$lm_sensors_configs_path/mqm9701_sensors.conf"
 		hotplug_psus=0
-		hotplug_pwrs=0
+		hotplug_pwrs=1
 		hotplug_pdbs=1
 		psu_count=0
 		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
@@ -1923,11 +2028,16 @@ msn_spc3_common()
 		HI142)
 			p4697_specific
 		;;
+		HI184|HI198)
+			msn4700d_specific
+		;;
 		*)
 			msn47xx_specific
 		;;
 	esac
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	if [ ! -f "$config_path/reset_attr_num" ]; then
+		echo "$reset_dflt_attr_num" > "$config_path/reset_attr_num"
+	fi
 }
 
 bf3_common()
@@ -2054,9 +2164,19 @@ sn5x00_specific()
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	# Set according to front fan max. Rear fan max is 13200
-	echo 13800 > $config_path/fan_max_speed
-	echo 2800 > $config_path/fan_min_speed
+
+	# Set according to fan min/max.
+	echo 13500 > "$config_path"/fan_max_speed
+	echo 3891 > "$config_path"/fan_min_speed
+
+	# Set FAN front (inlet) speed limits
+	echo 13500 > "$config_path"/fan_front_max_speed
+	echo 4143 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits
+	echo 12603 > "$config_path"/fan_rear_max_speed
+	echo 3891 > "$config_path"/fan_rear_min_speed
+
 	echo 32500 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
@@ -2070,6 +2190,9 @@ sn5x00_specific()
 		echo 5 > $config_path/cpld_num
 	else
 		echo 4 > $config_path/cpld_num
+	fi
+	if [ "$sku" == "HI144" ] || [ "$sku" == "HI147" ] ; then
+		echo 24c02 > $config_path/psu_eeprom_type
 	fi
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})
@@ -2092,7 +2215,7 @@ sn5600d_specific()
 	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
 	max_tachos=8
 	hotplug_fans=4
-	hotplug_pwrs=0
+	hotplug_pwrs=1
 	hotplug_psus=0
 	hotplug_pdbs=1
 	psu_count=0
@@ -2241,7 +2364,14 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3200.json"
 		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
-		psu_i2c_map=(4 59 4 58 4 5b 4 5a)
+		psu1_i2c_bus=4
+		psu1_i2c_addr=0x59
+		psu2_i2c_bus=4
+		psu2_i2c_addr=0x58
+		psu3_i2c_bus=4
+		psu3_i2c_addr=0x5b
+		psu4_i2c_bus=4
+		psu4_i2c_addr=0x5a
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI158" ]; then
 		# Set according to front fan max.
@@ -2264,7 +2394,25 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
-		psu_i2c_map=(4 59 4 58 3 5b 3 5a 4 5d 4 5c 3 5e 3 5f)
+
+		# Map I2C bus and address to psu number
+		psu1_i2c_bus=4
+		psu1_i2c_addr=0x59
+		psu2_i2c_bus=4
+		psu2_i2c_addr=0x58
+		psu3_i2c_bus=3
+		psu3_i2c_addr=0x5b
+		psu4_i2c_bus=3
+		psu4_i2c_addr=0x5a
+		psu5_i2c_bus=4
+		psu5_i2c_addr=0x5d
+		psu6_i2c_bus=4
+		psu6_i2c_addr=0x5c
+		psu7_i2c_bus=3
+		psu7_i2c_addr=0x5e
+		psu8_i2c_bus=3
+		psu8_i2c_addr=0x5f
+
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
 		# Set according to front fan max.
@@ -2290,6 +2438,52 @@ qm3xxx_specific()
 	add_come_named_busses $xdr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo 0 > "$config_path"/labels_ready
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+}
+
+qm3xx1_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${q3400_base_connect_table[@]})
+		add_cpu_board_to_connection_table $q3401_cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
+	fi
+	i2c_comex_mon_bus_default=$((q3401_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((q3401_cpu_bus_offset+6))
+	minimal_unsupported=1
+
+	# Set according to front fan max.
+	echo 13500 > $config_path/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 2741 > $config_path/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 13500 > $config_path/fan_front_max_speed
+	echo 2842 > $config_path/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 12603 > $config_path/fan_rear_max_speed
+	echo 2741 > $config_path/fan_rear_min_speed
+
+	echo C2P > $config_path/system_flow_capability
+
+	max_tachos=16
+	hotplug_fans=8
+	hotplug_pwrs=1
+	hotplug_psus=0
+	psu_count=0
+	hotplug_pdbs=1
+	echo 6 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/q3401_sensors.conf"
+	lm_sensors_labels="$lm_sensors_configs_path/q3401_sensors_labels.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_q3401.json"
+	named_busses+=(${q3401_named_busses[@]})
+	asic_i2c_buses=(2 18 34 50)
+	add_come_named_busses $xdr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo 0 > "$config_path"/labels_ready
+	echo $q3401_reset_attr_num > $config_path/reset_attr_num
 }
 
 qm_qm3_common()
@@ -2304,15 +2498,18 @@ qm_qm3_common()
 		HI175|HI178)	# Q3450/Q3451
 			qm3xxx_specific
 		;;
+		HI179)	# Q3401
+			qm3xx1_specific
+		;;
 		*)
 			qm3xxx_specific
 		;;
 	esac
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 smart_switch_common()
 {
+	modprobe mlxreg-dpu
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
@@ -2341,6 +2538,24 @@ smart_switch_common()
 
 n51xxld_specific()
 {
+	# Report I2C bus ownership for VMOD0021 systems at early initialization
+	bmc_to_cpu_ctrl_path=$(ls /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl 2>/dev/null | head -n1)
+	if [ -f "$bmc_to_cpu_ctrl_path" ]; then
+		bus_ownership=$(< "$bmc_to_cpu_ctrl_path")
+		if [ "$bus_ownership" = "0" ]; then
+			log_info "I2C bus ownership: CPU (bmc_to_cpu_ctrl=0)"
+		elif [ "$bus_ownership" = "1" ]; then
+			log_info "I2C bus ownership: BMC (bmc_to_cpu_ctrl=1)"
+			# Try to enforce ownership to CPU
+			echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+		else
+			# Should never happen as driver represents CPLD bit
+			log_err "I2C bus ownership: Unknown value (bmc_to_cpu_ctrl=$bus_ownership)"
+		fi
+	else
+		log_err "I2C bus ownership: bmc_to_cpu_ctrl file not found"
+	fi
+
 	local cpu_bus_offset=55
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${n5110ld_base_connect_table[@]})
@@ -2350,17 +2565,17 @@ n51xxld_specific()
 	else
 		# Adding Cable Cartridge support which is not included to BOM string.
 		case $sku in
-		HI166)	# Juliet SO.
+		HI166)	# N5110_LD (HI166).
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
 			;;
-		HI169)	# Juliet Ariel.
+		HI169)	# N5112_LD (HI169).
 			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
 			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 2 > $config_path/cartridge_counter
 			;;
-		HI167|HI170)	# Juliet NSO
+		HI167|HI170)	# N5100_LD (HI167/HI170)
 			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
 			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
@@ -2369,11 +2584,12 @@ n51xxld_specific()
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
+			echo 2 > $config_path/cpld_num
 			;;
 		HI177)	# Kyber
 			echo 0 > $config_path/cartridge_counter
 			;;
-		*)	# According Juliet SO.
+		*)	# Default N5110_LD cartridge layout.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
@@ -2393,7 +2609,7 @@ n51xxld_specific()
 
 	cpld_num=4
 	max_tachos=8
-    leakage_count=4
+	leakage_count=6
 	erot_count=3
 
 	case $sku in
@@ -2402,7 +2618,7 @@ n51xxld_specific()
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
-		HI166|HI169)	# TTM, ARIEL
+		HI166|HI169)	# N5110_LD TTM (HI166), N5112_LD (HI169)
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
 		;;
@@ -2413,7 +2629,9 @@ n51xxld_specific()
 		HI176)	# gb300
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
+			echo 18 > $config_path/i2c_swb_bus
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			lm_sensors_config="$lm_sensors_configs_path/n5500ld_sensors.conf"
 			leakage_count=2
 			cpld_num=3
 		;;
@@ -2458,7 +2676,6 @@ n51xxld_specific()
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
-	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 n51xxld_specific_cleanup()
@@ -2469,8 +2686,69 @@ n51xxld_specific_cleanup()
 	if check_simx; then
 		echo ${n5110ld_virtual_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/delete_device
 	fi
+}
 
+n61xxld_specific()
+{
+	case $sku in
+	# N6100_LD
+	HI180)
+		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
+		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		echo 4 > $config_path/cartridge_counter
 
+		asic_i2c_buses=(5 21 37 53)
+		echo 1 > $config_path/global_wp_wait_step
+		echo 20 > $config_path/global_wp_timeout
+		echo 0 > $config_path/i2c_bus_offset
+		echo 53 > $config_path/i2c_swb_bus
+		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+		cpld_num=2
+		leakage_count=2
+		erot_count=1
+		hotplug_pdbs=1
+		;;
+	# N6300_LD
+	HI185)
+		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
+		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		echo 4 > $config_path/cartridge_counter
+
+		asic_i2c_buses=(5 21 37 53)
+		echo 1 > $config_path/global_wp_wait_step
+		echo 20 > $config_path/global_wp_timeout
+		echo 0 > $config_path/i2c_bus_offset
+		lm_sensors_config="$lm_sensors_configs_path/n63xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+		cpld_num=3
+		leakage_count=2
+		erot_count=1
+		hotplug_pdbs=2
+		;;
+	esac
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	pwr_events_count=1
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=6
+	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
+	named_busses+=(${n61xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 sn5640_specific()
@@ -2479,10 +2757,20 @@ sn5640_specific()
 		connect_table+=(${sn5640_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
+
 	# Set according to front (inlet) fan max, 21800
 	echo 21800 > $config_path/fan_max_speed
 	# Set at 30% of rear (outlet) fan max, 20500 (according to fan vendor table)
 	echo 6468 > $config_path/fan_min_speed
+
+	# Set FAN front (inlet) speed limits
+	echo 21800 > $config_path/fan_front_max_speed
+	echo 6879 > $config_path/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 20500 > $config_path/fan_rear_max_speed
+	echo 6468 > $config_path/fan_rear_min_speed
+	
 	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
@@ -2499,10 +2787,10 @@ sn5640_specific()
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
 
 	case $sku in
-		HI172)	# Gaur
+		HI172)	# SN5610 (HI172)
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
 		;;
-		HI171)	# Bison
+		HI171)	# SN5640 (HI171)
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 		;;
 		*)
@@ -2510,12 +2798,199 @@ sn5640_specific()
 		;;
 	esac
 
-	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
 	named_busses+=(${sn5640_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 	echo 0 > "$config_path"/labels_ready
+}
+
+sn58xxld_specific()
+{
+	case $sku in
+	# SN5810_LD
+	HI181)
+		cpld_num=4
+		leakage_count=2
+		i2c_asic_bus_default=6
+		hotplug_pdbs=1
+		;;
+	# SN5800_LD
+	HI182)
+		cpld_num=10
+		leakage_count=5
+		asic_i2c_buses=(6 22 38 54)
+		hotplug_pdbs=4
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	if [[ $(uname -r) == 6.1.* ]]; then
+		lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors_6.1.conf"
+	else
+		lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors.conf"
+	fi
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=69
+	named_busses+=(${sn58xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$sn58xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
+sn66xx_specific()
+{
+	case $sku in
+	# SN6600_LD
+	HI193)
+		leakage_count=2
+		i2c_asic_bus_default=5
+		hotplug_pdbs=2
+		hotplug_psus=0
+		hotplug_pwrs=0
+		hotplug_fans=0
+		psu_count=0
+		max_fans=0
+		max_tachos=0
+		echo 5.333 > $config_path/pdb_hotswap_scale
+		echo 0 > $config_path/fan_drwr_num
+		named_busses+=(${sn66xxld_named_busses[@]})
+		echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
+		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+		;;
+	# SN6600 (Air cooled)
+	HI186)
+		leakage_count=0
+		i2c_asic_bus_default=5
+		hotplug_psus=4
+		hotplug_pwrs=4
+		hotplug_fans=5
+		max_tachos=10
+		max_fans=5
+		psu_count=4
+
+		# Set according to front (inlet) fan max, 18700
+		echo 18700 > $config_path/fan_max_speed
+		# Set to rear (outlet) fan min, 3650 (according to fan vendor table)
+		echo 3650 > $config_path/fan_min_speed
+
+		# Set FAN front (inlet) speed limits
+		echo 18700 > $config_path/fan_front_max_speed
+		echo 4500 > $config_path/fan_front_min_speed
+
+		# Set FAN rear (outlet) speed limits
+		echo 15100 > $config_path/fan_rear_max_speed
+		echo 3650 > $config_path/fan_rear_min_speed
+
+		echo 27500 > $config_path/psu_fan_max
+		# Set as 20% of max speed
+		echo 5500 > $config_path/psu_fan_min
+
+		echo C2P > $config_path/system_flow_capability
+
+		# PSU I2C bus and address
+		psu1_i2c_bus=6
+		psu1_i2c_addr=0x59
+		psu2_i2c_bus=6
+		psu2_i2c_addr=0x58
+		psu3_i2c_bus=6
+		psu3_i2c_addr=0x5b
+		psu4_i2c_bus=6
+		psu4_i2c_addr=0x5a
+
+		# Add PSU to devtree. It needed for PSU hotplug handler
+		psu_devtree_str=""
+		devtree_file_data=()
+		if [ -f "$devtree_file" ]; then
+			devtree_file_data=($(< "$devtree_file"))
+		fi
+		for ((psu_idx=1; psu_idx<=4; psu_idx++)); do
+			# Add psu to devtree if not already present
+			if ! [[ " ${devtree_file_data[*]} " =~ " psu${psu_idx} " ]]; then
+				psu_i2c_addr_var="psu${psu_idx}_i2c_addr"
+				psu_i2c_bus_var="psu${psu_idx}_i2c_bus"
+				psu_devtree_str+=" dps460 ${!psu_i2c_addr_var} ${!psu_i2c_bus_var} psu${psu_idx}"
+			fi
+		done
+		echo -n "${psu_devtree_str}" >> "$devtree_file"
+
+		echo 5 > $config_path/fan_drwr_num
+		named_busses+=(${sn6600_named_busses[@]})
+		echo "$sn6600_reset_attr_num" > $config_path/reset_attr_num
+		lm_sensors_config="$lm_sensors_configs_path/sn66xx_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_sn6600.json"
+		led_control_type=(fan "$LED_CONTROL_SW" psu "$LED_CONTROL_SW" status "$LED_CONTROL_SW")
+		;;
+	esac
+
+	cpld_num=4
+	asic_control=0
+    echo 0 > $config_path/i2c_bus_offset
+	echo $cpld_num > $config_path/cpld_num
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
+sn68xxld_specific()
+{
+	case $sku in
+	# SN6810_LD
+	HI183)
+		cpld_num=4
+		leakage_count=2
+		i2c_asic_bus_default=4
+		hotplug_pdbs=1
+		;;
+	# SN6800_LD
+	HI187|HI188)
+		cpld_num=10
+		leakage_count=5
+		asic_i2c_buses=(4 20 36 52)
+		hotplug_pdbs=4
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	lm_sensors_config="$lm_sensors_configs_path/sn68xxld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	echo 5.333 > $config_path/pdb_hotswap_scale
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	named_busses+=(${sn68xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$sn68xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 system_cleanup_specific()
@@ -2529,8 +3004,56 @@ system_cleanup_specific()
 	esac
 }
 
-check_system()
+check_system_reset_attr_num()
 {
+	if [ -f "$config_path/reset_attr_num" ]; then
+		rm -f "$config_path"/reset_attr_num
+	fi
+}
+
+check_system_write_i2c_defaults()
+{
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default || return 1
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu || return 1
+}
+
+check_system_bmc_redfish_login()
+{
+	# Obtain/rotate the BMC password and log in over Redfish only on platforms
+	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
+	# CPU<->BMC communication, so hw-management must not drive this flow.
+	if check_bmc_is_supported && ! check_host_os_is_sonic; then
+		pushd /usr/bin
+		for ((i=1; i<=5; i++)); do
+			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
+				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+				break
+			fi
+			echo "Pinging BMC failed, i=$i"
+			sleep 3
+		done
+		popd
+	fi
+}
+
+check_system_json()
+{
+	local json_file="$1"
+
+	[ -n "$json_file" ] || return 1
+	if [ ! -f "$json_file" ]; then
+		log_err "platform JSON missing: ${json_file}"
+		return 1
+	fi
+	check_system_reset_attr_num
+	platform_json_apply_config "$json_file" || return 1
+	check_system_write_i2c_defaults || return 1
+}
+
+check_system_internal()
+{
+	check_system_reset_attr_num
 	# Check ODM
 	case $board_type in
 		VMOD0001)
@@ -2586,6 +3109,18 @@ check_system()
 			;;
 		VMOD0022)
 			sn5640_specific
+			;;
+		VMOD0023)
+			n61xxld_specific
+			;;
+		VMOD0024)
+			sn58xxld_specific
+			;;
+		VMOD0025)
+			sn66xx_specific
+			;;
+		VMOD0027)
+			sn68xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2658,7 +3193,7 @@ check_system()
 								;;
 							*)
 								log_err "$product is not supported"
-								exit 0
+								return 1
 								;;
 						esac
 					else
@@ -2669,7 +3204,7 @@ check_system()
 								;;
 							*)
 								log_err "$product is not supported"
-								exit 0
+								return 1
 								;;
 						esac
 					fi
@@ -2677,8 +3212,28 @@ check_system()
 			esac
 			;;
 	esac
-	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
-	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
+	check_system_write_i2c_defaults || return 1
+}
+
+check_system()
+{
+	local json_file
+
+	# restart runs do_stop then do_start in one process; both call
+	# check_system which appends to these globals. Reset so devices are
+	# not connected or disconnected twice.
+	connect_table=()
+	named_busses=()
+
+	print_function_call "$0" "${FUNCNAME[0]}" "sku:$sku board:$board_type"
+	if json_file=$(find_platform_json_config "$sku"); then
+		print_function_call "$0" "${FUNCNAME[0]}" "json:$json_file"
+		check_system_json "$json_file" || return 1
+	else
+		print_function_call "$0" "${FUNCNAME[0]}" "no json, using check_system_internal"
+		check_system_internal || return 1
+	fi
+	check_system_bmc_redfish_login || true
 }
 
 create_event_files()
@@ -2758,16 +3313,17 @@ enable_vpd_wp()
 
 load_modules()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "cpu:$cpu_type sku:$sku"
 	# Some modules are not present in all the kernel
 	# versions. Use this function to load those modules
 	# which need to be loaded based on their availability
-	if ! lsmod | grep -q "drivetemp"; then
+	if ! is_module "drivetemp"; then
 		if [ -f /lib/modules/`uname -r`/kernel/drivers/hwmon/drivetemp.ko ]; then
 			modprobe drivetemp
 		fi
 	fi
 	case $cpu_type in
-		$AMD_SNW_CPU|$BF3_CPU)
+		$AMD_SNW_CPU|$AMD_V3000_CPU|$AMD_FRNG_CPU|$BF3_CPU)
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
@@ -2778,7 +3334,7 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# Juliet
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# N51XX_LD
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
@@ -2787,9 +3343,35 @@ load_modules()
 	esac
 }
 
+# Run depmod only when modules.dep/modules.alias are missing or older
+# than any .ko* module. Avoids multi-second cost on weak CPUs when
+# depmod outputs are already current.
+run_depmod_if_needed()
+{
+	local modules_dir="/lib/modules/$(uname -r)"
+	local modules_dep="${modules_dir}/modules.dep"
+	local modules_alias="${modules_dir}/modules.alias"
+
+	if [ ! -f "$modules_dep" ] || [ ! -f "$modules_alias" ] || \
+	   find "$modules_dir" \( -name '*.ko' -o -name '*.ko.*' \) \
+		\( -newer "$modules_dep" -o -newer "$modules_alias" \) \
+		-print -quit 2>/dev/null | grep -q .; then
+		depmod -a 2>/dev/null
+	fi
+}
+
 set_config_data()
 {
+	local asic_num=0
 	for ((idx=1; idx<=psu_count; idx+=1)); do
+		# if psuX_i2c_bus variable is set - add file .psuX_i2c_bus to config_path
+		local psu_i2c_bus=psu"$idx"_i2c_bus
+		if [ ${!psu_i2c_bus} ]; then
+			# Add psu i2c bus configuration for user. This file can be removed in PSU unplug event.
+		    echo ${!psu_i2c_bus} > $config_path/psu"$idx"_i2c_bus
+			# Add hidden psu i2c bus configuration for internal hw-management use (static file)
+			echo ${!psu_i2c_bus} > $config_path/.psu"$idx"_i2c_bus
+		fi
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
@@ -2812,18 +3394,37 @@ set_config_data()
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
 	echo $leakage_count > $config_path/leakage_counter
+	if [ "${#led_control_type[@]}" -gt 0 ]; then
+		echo "${led_control_type[@]}" > "$config_path"/led_control_type
+	fi
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
-	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
+	if [ -f $thermal_control_configs_path/tc_config_user.json ]; then
 		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
 	fi
+	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
+	for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
+		# If SDK already started during hw-mgmt init we should update asic_ready to 1
+		# Use temperature label file as flag to check if SDK already started
+		sdk_asic_idx=$((asic_id-1))
+		if [ -f "/sys/module/sx_core/asic${sdk_asic_idx}/temperature/label" ]; then
+			asic_ready_status=1
+		else
+			asic_ready_status=0
+		fi
+		echo "$asic_ready_status" > "$config_path"/asic"$asic_id"_ready
+		if [ $asic_id -eq 1 ]; then
+			echo "$asic_ready_status" > "$config_path"/asic_ready
+		fi
+	done
 }
 
 connect_platform()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	find_i2c_bus
 	# Check if it's new or old format of connect table
 	if [ -e "$devtree_file" ]; then
@@ -2836,14 +3437,29 @@ connect_platform()
 	fi
 
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
+		local dev_connected=0
 		for ((j=0; j<${device_connect_retry}; j++)); do
 			connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 					"${connect_table[i+2]}"
 			if [ $? -eq 0 ]; then
+				dev_connected=1
 				break;
 			fi
 			disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 		done
+		# A device (other than the ASIC/mlxsw_minimal, which has its own chipup
+		# tracer) failed to bind after all retries. Preserve the current I2C
+		# trace so the bus activity leading to the failure is captured, not just
+		# ASIC chipup failures.
+		if [ "$dev_connected" -eq 0 ]; then
+			log_err "Failed to connect device ${connect_table[i]} ${connect_table[i+1]} on bus ${connect_table[i+2]} after ${device_connect_retry} attempts"
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"FAIL ${connect_table[i]} ${connect_table[i+1]} bus:${connect_table[i+2]}"
+			save_i2c_trace_on_failure "device connect failed: ${connect_table[i]} ${connect_table[i+1]} bus ${connect_table[i+2]}"
+		else
+			print_function_call "$0" "${FUNCNAME[0]}" \
+				"ok ${connect_table[i]} ${connect_table[i+1]} bus:${connect_table[i+2]} tries:$((j+1))"
+		fi
 	done
 	if [ ! -z $mctp_addr ]; then
 		echo $mctp_addr > $config_path/mctp_addr
@@ -2854,6 +3470,7 @@ connect_platform()
 
 disconnect_platform()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	if [ -f $config_path/i2c_bus_offset ]; then
 		i2c_bus_offset=$(<$config_path/i2c_bus_offset)
 	fi
@@ -2999,9 +3616,15 @@ set_asic_pci_id()
 		echo $minimal_unsupported > "$config_path"/minimal_unsupported
 	fi
 
+	if find_platform_json_config "$sku" >/dev/null && \
+	   [ -n "$platform_json_asic_pci_id" ]; then
+		set_asic_pci_id_from_json
+		return
+	fi
+
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)
@@ -3020,17 +3643,26 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178|HI179)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
 		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
 		;;
-	HI171)
+	HI171|HI181|HI182)
 		asic_pci_id=$spc5_pci_id
 		;;
 	HI172)
 		asic_pci_id=$spc4_pci_id
+		;;
+	HI180|HI185)
+		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
+		;;
+	HI193|HI186)
+		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
+		;;
+	HI183|HI187|HI188)
+		asic_pci_id="${spc6_pci_id}"
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num
@@ -3088,7 +3720,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI158)
+	HI158|HI179)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $3}'`
@@ -3114,6 +3746,45 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
+	HI180|HI185)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
+	HI182)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $3}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
+	HI187)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -3132,6 +3803,12 @@ set_dpu_pci_id()
 	local idx=0
 	local element
 	local dpu_detected_num=0
+
+	if find_platform_json_config "$sku" >/dev/null && \
+	   [ -n "$platform_json_dpu_pci_id" ]; then
+		set_dpu_pci_id_from_json
+		return
+	fi
 
 	# Get DPU PCI Ids.
 	case $sku in
@@ -3193,7 +3870,7 @@ set_sodimms()
 		return 0
 	fi
 
-	if ! lsmod | grep -q i2c_designware_platform; then
+	if ! is_module "i2c_designware_platform"; then
 		modprobe i2c_designware_platform
 		sleep 0.5
 	fi
@@ -3221,6 +3898,21 @@ set_sodimms()
 
 pre_devtr_init()
 {
+	local json_file
+
+	if json_file=$(find_platform_json_config "$sku"); then
+		if ! source_hw_platform_json_parser; then
+			log_err "platform JSON parser not found, cannot apply board config"
+			return 1
+		fi
+		if ! json_validate "$json_file"; then
+			log_err "platform JSON invalid: ${json_file}"
+			return 1
+		fi
+		platform_json_apply_board "$json_file" || return 1
+		return 0
+	fi
+
 	case $board_type in
 	VMOD0009)
 		case $sku in
@@ -3246,15 +3938,26 @@ pre_devtr_init()
 		echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	VMOD0018)
+		cpu_bus_offset=$xdr_cpu_bus_offset
 		case $sku in
-		HI158|HI175|HI178)
+		HI158)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
 			;;
+		HI175|HI178)
+			echo 2 > "$config_path"/swb_brd_num
+			echo 32 > "$config_path"/swb_brd_bus_offset
+			echo 1 > "$config_path"/swb_brd_pdb_bus_offset
+			;;
+		HI179)
+			echo 2 > "$config_path"/swb_brd_num
+			echo 32 > "$config_path"/swb_brd_bus_offset
+			cpu_bus_offset=$q3401_cpu_bus_offset
+			;;	
 		*)
 			;;
 		esac
-		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+		echo $cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	VMOD0019)
 		case $sku in
@@ -3282,7 +3985,61 @@ pre_devtr_init()
 		HI171|HI172)
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
-		*)
+		esac
+		;;
+	VMOD0024)
+		case $sku in
+		HI181)
+			echo 1 >  "$config_path"/swb_brd_num
+			echo 1 >  "$config_path"/pwr_brd_num
+			echo 11 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		HI182)
+			echo 4  > "$config_path"/swb_brd_num
+			echo 4  > "$config_path"/pwr_brd_num
+			echo 16 > "$config_path"/swb_brd_bus_offset
+			echo 16 > "$config_path"/pwr_brd_bus_offset
+			echo 11 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		esac
+		;;
+	VMOD0025)
+		case $sku in
+		HI193)
+			echo 2 >  "$config_path"/pwr_brd_num
+			echo 1 >  "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		esac
+		;;
+	VMOD0027)
+		case $sku in
+		HI183)
+			echo 1 >  "$config_path"/swb_brd_num
+			echo 16 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_num
+			echo 1 >  "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		HI187|HI188)
+			echo 4 >  "$config_path"/swb_brd_num
+			echo 16 > "$config_path"/swb_brd_bus_offset
+			echo 16 > "$config_path"/swb_brd_vr_num
+			echo 4 >  "$config_path"/pwr_brd_num
+			echo 16 > "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
 			;;
 		esac
 		;;
@@ -3336,14 +4093,22 @@ map_dummy_psus()
 		return
 	fi
 
-	for ((i=0; i < "${#psu_i2c_map[@]}"; i+=2)); do
-		psu_bus=${psu_i2c_map[$i]}
-		psu_addr=${psu_i2c_map[$i+1]}
-		psu_num=$(((i/2)+1))
-		psu_present=$(< $thermal_path/psu${psu_num}_status)
+	for ((psu_idx=1; psu_idx <= psu_count; psu_idx+=1)); do
+		# Bus/addr from set_config_data() in hw-management.sh
+		psu_bus=$(< "${config_path}/.psu${psu_idx}_i2c_bus")
+		psu_addr=$(< "${config_path}/psu${psu_idx}_i2c_addr")
+
+		# psuX_i2c_bus is optional; set_config_data() writes it only when set
+		if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
+			continue
+		fi
+		# Normalize to 2-digit hex (strip "0x"), matching sysfs i2c naming
+		psu_addr=$(printf "%02x" "$psu_addr")
+
+		psu_present=$(< $thermal_path/psu${psu_idx}_status)
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
 		if [ ${psu_present} -eq 1 ] && [ ! -d ${psu_dev_path} ]; then
-			touch ${config_path}/psu${psu_num}_is_dummy
+			touch ${config_path}/psu${psu_idx}_is_dummy
 		fi
 	done
 }
@@ -3351,10 +4116,21 @@ map_dummy_psus()
 report_sed_pba_ver()
 {
     if command -v sedutil-cli &> /dev/null; then
-        if sedutil-cli --query /dev/nvme0 | grep -q "MBREnabled = Y"; then
-            if [ -f /sys/firmware/efi/efivars/SedPbaVer-"$sed_pba_guid" ]; then
-                sed_pba_ver=$(efivar -p -n "$sed_pba_guid"-SedPbaVer | \
-                awk '/Value:/ {found=1; next} found {split($0, a, "|"); split(a[2], b, " "); print b[1]; found=0}')
+		# Scan for OPAL2 compliant drives
+		opal_drive=$(sedutil-cli --scan 2>/dev/null | \
+		awk '/^\/dev\/(sda|nvme[0-9]+)/ && $2 == "2" {print $1; exit}')
+
+		if [ -n "$opal_drive" ]; then
+			# Check if MBREnabled is Y for the detected OPAL2 drive
+			if sedutil-cli --query "$opal_drive" 2>/dev/null | grep -q "MBREnabled = Y"; then
+				if [ -f "/sys/firmware/efi/efivars/SedPbaVer-$sed_pba_guid" ]; then
+					# Use dd to directly read variable data, skipping first 4 bytes (attributes)
+					raw_data=$(dd if="/sys/firmware/efi/efivars/SedPbaVer-$sed_pba_guid" bs=1 skip=4 2>/dev/null | tr -d '\0')
+					# Extract just version without build date
+					sed_pba_ver=$(echo "$raw_data" | awk '{print $1}')
+				else
+					sed_pba_ver="N/A"
+				fi
             else
                 sed_pba_ver="N/A"
             fi
@@ -3369,15 +4145,28 @@ report_sed_pba_ver()
 
 do_start()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+	# start i2c bus trace recording
+	start_i2c_trace
 	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
+	run_fixup_script pre
 	check_cpu_type
-	pre_devtr_init
+	print_function_call "$0" "do_start" "cpu_type:$cpu_type"
+	pre_devtr_init || {
+		print_function_call "$0" "do_start" "pre_devtr_init failed"
+		exit 1
+	}
 	load_modules
 	devtr_check_smbios_device_description
-	check_system
+	check_system || {
+		print_function_call "$0" "do_start" "check_system failed sku:$sku"
+		exit 1
+	}
+	print_function_call "$0" "do_start" "check_system done"
 	set_asic_pci_id
+	set_dpu_pci_id
 	set_sodimms
 	set_config_data
 
@@ -3385,19 +4174,23 @@ do_start()
 		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
 	fi
 	asic_control=$(< $config_path/asic_control) 
+	print_function_call "$0" "do_start" "asic_control:$asic_control"
 	if [[ $asic_control -ne 0 ]]; then
 		set_asic_i2c_bus
 	fi
 	touch $udev_ready
-	depmod -a 2>/dev/null
-	
+	run_depmod_if_needed
+
+	print_function_call "$0" "do_start" "udevadm trigger add"
 	udevadm trigger --action=add
 	udevadm settle
+	print_function_call "$0" "do_start" "udevadm settle done"
 	set_sodimm_temp_limits
 	set_gpios "export"
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
+	print_function_call "$0" "do_start" "connect_platform done"
 	sleep 1
 	enable_vpd_wp
 	echo 0 > $config_path/events_ready
@@ -3417,16 +4210,16 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
-	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		cp $thermal_control_config $config_path/tc_config.json
-	else
-		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
-	fi
+	/usr/bin/hw-management-exec-parser.sh
+	print_function_call "$0" "do_start" "completed"
 	log_info "Init completed."
 }
 
 do_stop()
 {
+	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+	rm -f /var/run/hw-management/exec 2>/dev/null
+	rm -fR /var/run/hw-management/exec.d 2>/dev/null
 	check_cpu_type
 	# There is no need to perform extra work of check_system during
 	# hw-management stop in case of devtree exist. Directly init connect_table.
@@ -3446,6 +4239,7 @@ do_stop()
 		sleep 1
 		rm -fR /var/run/hw-management
 	fi
+	print_function_call "$0" "do_stop" "completed"
 }
 
 function find_asic_hwmon_path()
@@ -3464,6 +4258,8 @@ do_chip_up_down()
 	local asic_pci_bus=$3
 	local asic_i2c_bus
 
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"action:$action asic:$asic_index pci:$asic_pci_bus"
 	if [ -f "$config_path"/asic_control ]; then
 		asic_control=$(< $config_path/asic_control)
 	fi
@@ -3547,16 +4343,22 @@ do_chip_up_down()
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/delete_device
 			restore_i2c_bus_frequency_default
 		else
+			print_function_call "$0" "do_chip_up_down" \
+				"chipdown skip asic:$asic_index bus:$asic_i2c_bus addr:$i2c_asic_addr_name minimal:${minimal_unsupported:-0}"
 			unlock_service_state_change
 			return 0
 		fi
 		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		asic_chipup_completed=$(< $config_path/asic_chipup_completed)
+		print_function_call "$0" "do_chip_up_down" \
+			"chipdown done asic:$asic_index bus:$asic_i2c_bus completed:$asic_chipup_completed"
 		;;
 	1)
 		lock_service_state_change
 		[ -f "$config_path/chipup_dis" ] && disable=$(< $config_path/chipup_dis)
 		if [ "$disable" ] && [ "$disable" -gt 0 ]; then
+			print_function_call "$0" "do_chip_up_down" \
+				"chipup skipped chipup_dis:$disable asic:$asic_index"
 			disable=$((disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
@@ -3573,8 +4375,14 @@ do_chip_up_down()
 			retry_helper find_asic_hwmon_path "$chipup_test_time" "$chipup_retry_count" "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
 			if [ $? -ne 0 ]; then
 				# chipup command failed.
+				print_function_call "$0" "do_chip_up_down" \
+					"chipup failed asic:$asic_index bus:$asic_i2c_bus"
 				unlock_service_state_change
 				return 1
+			fi
+
+			if [ -f "$config_path/cpld_port" ]; then
+				set_spc1_port_cpld
 			fi
 
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
@@ -3585,6 +4393,8 @@ do_chip_up_down()
 				echo "$str" > $system_path/cpld
 			fi
 		else
+			print_function_call "$0" "do_chip_up_down" \
+				"chipup skip already-present or minimal asic:$asic_index bus:$asic_i2c_bus addr:$i2c_asic_addr_name minimal:${minimal_unsupported:-0}"
 			unlock_service_state_change
 			return 0
 		fi
@@ -3609,6 +4419,20 @@ do_chip_down()
 	# Delete ASIC device
 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
 }
+
+# Temporary trap for i2c trace started in do_start. Installed only from the start and
+# restart|force-reload case branches. While hw-management-sysfs-monitor.service is active
+# it owns teardown; otherwise stop_i2c_trace runs from the trap. Not used for chipup or
+# other actions: chipup uses the top-level i2c tracer and may exit while it stays on.
+_hw_management_install_i2c_trace_exit_trap()
+{
+	trap '
+		if ! systemctl is-active --quiet hw-management-sysfs-monitor.service 2>/dev/null; then
+			stop_i2c_trace
+		fi
+	' EXIT ERR QUIT TERM
+}
+
 
 __usage="
 Usage: $(basename "$0") [Options]
@@ -3650,10 +4474,27 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
+		# TEMPORARY hw-management mockup values for SIMX
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
+						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
+						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
+			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			log_info "Created mock hw management tree, exiting."
+			exit 0
+		fi
+		_hw_management_install_i2c_trace_exit_trap
 		do_start
+		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
+		# of asic chipup for the restart scenario.
+		check_asic_chipup_status && do_chip_up_down 1 1
 	;;
 	stop)
 		if [ -d /var/run/hw-management ]; then
+			# In SPC1/SPC2 switches that uses minimal driver, storing the state
+			# of asic chipup for the restart scenario.
+			if [ -f "$config_path/asic_chipup_completed" ]; then
+				cp "$config_path/asic_chipup_completed" $asic_chipup_status
+			fi
 			echo 1 > $config_path/stopping
 			if [ ! -f "$config_path/asic_num" ]; then
 				asic_num=1
@@ -3670,40 +4511,62 @@ case $ACTION in
 		if [ -d /var/run/hw-management ]; then
 			asic_retry="$asic_chipup_retry"
 			asic_chipup_rc=1
+			asic_index="$2"
+			chipup_trace_attempt=1
+
+			# Rotate the trace log at invocation start so all retries within one
+			# chipup run stay in the same file (rotation at the end could split
+			# attempts across chipup_i2c_trace_log and chipup_i2c_trace_log.*).
+			if [ -f /var/log/chipup_i2c_trace_log ]; then
+				file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
+				if [ $file_size -gt $chipup_log_size ]; then
+					timestamp=`date +%s`
+					mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
+					touch /var/log/chipup_i2c_trace_log
+					# Cap the number of per-run archives so repeated chipup
+					# failures cannot fill the disk.
+					ls -1t /var/log/chipup_i2c_trace_log.* 2>/dev/null | \
+						tail -n +$((chipup_log_archive_max + 1)) | \
+						xargs -r rm -f
+				fi
+			fi
+
+			# Start the chipup I2C tracer on a dedicated ftrace instance
+			# (isolated from the boot-wide tracer). Enabled before the first
+			# attempt so every retry - including the first - is captured, and
+			# scoped to all CPLD bridge adapters so bus-wide contention is
+			# visible, not just the ASIC bus.
+			start_chipup_i2c_trace "$asic_index"
 
 			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
+				print_function_call "$0" "chipup" \
+					"attempt:$chipup_trace_attempt retry_left:$asic_retry asic:$asic_index"
 				do_chip_up_down 1 "$2" "$3"
 				asic_chipup_rc=$?
-				asic_index="$2"
-				if [ "$asic_chipup_rc" -ne 0 ];then
+				if [ "$asic_chipup_rc" -ne 0 ]; then
 					do_chip_up_down 0 "$2" "$3"
+					# Save this attempt's I2C trace and clear the buffer
+					# before the next retry.
+					save_chipup_i2c_trace "$chipup_trace_attempt"
+					chipup_trace_attempt=$((chipup_trace_attempt + 1))
 				else
 					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
+					stop_chipup_i2c_trace
+					print_function_call "$0" "chipup" "success asic:$asic_index"
 					exit 0
 				fi
 
 				asic_retry=$(< $config_path/asic_chipup_counter)
-				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
-					# Start I2C tracer.
-					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
-					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
-				else
-					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_trace_log
-					echo 0>/sys/kernel/debug/tracing/trace
-				fi
-
 				change_file_counter $config_path/asic_chipup_counter -1
 			done
-			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
+			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
-
-			# Check log size in (bytes) and rotate if necessary.
-			file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
-			if [ $file_size -gt $chipup_log_size ]; then
-				timestamp=`date +%s`
-				mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
-				touch /var/log/chipup_i2c_trace_log
-			fi
+			# thermal/pwm1 and thermal/asic are not created when
+			# mlxsw_minimal probe fails, so TC will not enforce
+			# full speed. Set PWM 100% on the ASIC that failed
+			# chipup via sysfs or mlxreg MFSC. Pass $3 (PCI path
+			# from sxcore) so index 0 still resolves a target.
+			set_asic_pwm_full_speed_on_chipup_fail "$asic_index" "$3"
 		fi
 	;;
 	chipdown)
@@ -3734,7 +4597,23 @@ case $ACTION in
 	restart|force-reload)
 		do_stop
 		sleep 3
+		# TEMPORARY hw-management mockup values for SIMX
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
+						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
+						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
+			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			log_info "Created mock hw management tree, exiting."
+			exit 0
+		fi
+		_hw_management_install_i2c_trace_exit_trap
 		do_start
+		# Restart does not chipdown, so do_chip_up_down below returns early.
+		if [ -f "$config_path/cpld_port" ]; then
+			set_spc1_port_cpld
+		fi
+		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
+		# of asic chipup for the restart scenario.
+		check_asic_chipup_status && do_chip_up_down 1 1
 	;;
 	reset-cause)
 		for f in $system_path/reset_*;

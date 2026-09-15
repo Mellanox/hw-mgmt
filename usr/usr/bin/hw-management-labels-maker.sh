@@ -1,6 +1,7 @@
 #!/bin/bash
 ########################################################################
-# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,6 +35,7 @@ source hw-management-helpers.sh
 set -x
 sku=$(< $sku_file)
 ui_path=$hw_management_path/ui 
+cache_path=$hw_management_path/.cache
 
 # Obtain label file (/var/run/hw-management/config/lm_sensors_labels).
 json_file=$hw_management_path/config/lm_sensors_labels
@@ -43,8 +45,9 @@ if [ ! -f $json_file ]; then
 fi
 
 # Check if the dictionary has already been loaded
-if [ ! -f "/tmp/sensor_labels_dictionary.pkl" ]; then
+if [ ! -f "$cache_path/sensor_labels_dictionary.pkl" ]; then
 	lock_service_state_change
+	mkdir -p "$cache_path"
 	# Call the Python program to load the JSON file and store the dictionary
 	hw_management_parse_labels.py --json_file "$json_file" --sku "$sku" 
 	unlock_service_state_change
@@ -136,35 +139,35 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	voltmon1_in*|voltmon2_in*|voltmon3_in*|voltmon4_in*|voltmon5_in*|voltmon6_in*|voltmon7_in*|voltmon8_in*|voltmon9_in*|voltmon10_in*|voltmon11_in*|voltmon12_in*)
+	voltmon1_in*|voltmon2_in*|voltmon3_in*|voltmon4_in*|voltmon5_in*|voltmon6_in*|voltmon7_in*|voltmon8_in*|voltmon9_in*|voltmon10_in*|voltmon11_in*|voltmon12_in*|voltmon13_in*|voltmon14_in*|voltmon15_in*|voltmon16_in*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	sbw1_voltmon1_in*|sbw1_voltmon2_in*|sbw1_voltmon3_in*|sbw1_voltmon4_in*|sbw1_voltmon5_in*|sbw1_voltmon6_in*|sbw2_voltmon1_in*|sbw2_voltmon2_in*|sbw2_voltmon3_in*|sbw2_voltmon4_in*|sbw2_voltmon5_in*|sbw2_voltmon6_in*)
+	swb1_voltmon1_in*|swb1_voltmon2_in*|swb1_voltmon3_in*|swb1_voltmon4_in*|swb1_voltmon5_in*|swb1_voltmon6_in*|swb2_voltmon1_in*|swb2_voltmon2_in*|swb2_voltmon3_in*|swb2_voltmon4_in*|swb2_voltmon5_in*|swb2_voltmon6_in*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	voltmon1_power*|voltmon2_power*|voltmon3_power*|voltmon4_power*|voltmon5_power*|voltmon6_power*|voltmon7_power*|voltmon8_power*|voltmon9_power*|voltmon10_power*|voltmon11_power*|voltmon12_power*)
+	voltmon1_power*|voltmon2_power*|voltmon3_power*|voltmon4_power*|voltmon5_power*|voltmon6_power*|voltmon7_power*|voltmon8_power*|voltmon9_power*|voltmon10_power*|voltmon11_power*|voltmon12_power*|voltmon13_power*|voltmon14_power*| voltmon15_power*|voltmon16_power*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	sbw1_voltmon1_power*|sbw1_voltmon2_power*|sbw1_voltmon3_power*|sbw1_voltmon4_power*|sbw1_voltmon5_power*|sbw1_voltmon6_power*|sbw2_voltmon1_power*|sbw2_voltmon2_power*|sbw2_voltmon3_power*|sbw2_voltmon4_power*|sbw2_voltmon5_power*|sbw2_voltmon6_power*)
+	swb1_voltmon1_power*|swb1_voltmon2_power*|swb1_voltmon3_power*|swb1_voltmon4_power*|swb1_voltmon5_power*|swb1_voltmon6_power*|swb2_voltmon1_power*|swb2_voltmon2_power*|swb2_voltmon3_power*|swb2_voltmon4_power*|swb2_voltmon5_power*|swb2_voltmon6_power*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	voltmon1_curr*|voltmon2_curr*|voltmon3_curr*|voltmon4_curr*|voltmon5_curr*|voltmon6_curr*|voltmon7_curr*|voltmon8_curr*|voltmon9_curr*|voltmon10_curr*|voltmon11_curr*|voltmon12_curr*)
+	voltmon1_curr*|voltmon2_curr*|voltmon3_curr*|voltmon4_curr*|voltmon5_curr*|voltmon6_curr*|voltmon7_curr*|voltmon8_curr*|voltmon9_curr*|voltmon10_curr*|voltmon11_curr*|voltmon12_curr*|voltmon13_curr*|voltmon14_curr*|voltmon15_curr*|voltmon16_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	sbw1_voltmon1_curr*|sbw1_voltmon2_curr*|sbw1_voltmon3_curr*|sbw1_voltmon4_curr*|sbw1_voltmon5_curr*|sbw1_voltmon6_curr*|sbw2_voltmon1_curr*|sbw2_voltmon2_curr*|sbw2_voltmon3_curr*|sbw2_voltmon4_curr*|sbw2_voltmon5_curr*|sbw2_voltmon6_curr*)
+	swb1_voltmon1_curr*|swb1_voltmon2_curr*|swb1_voltmon3_curr*|swb1_voltmon4_curr*|swb1_voltmon5_curr*|swb1_voltmon6_curr*|swb2_voltmon1_curr*|swb2_voltmon2_curr*|swb2_voltmon3_curr*|swb2_voltmon4_curr*|swb2_voltmon5_curr*|swb2_voltmon6_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	voltmon1_temp*|voltmon2_temp*|voltmon3_temp*|voltmon4_temp*|voltmon5_temp*|voltmon6_temp*|voltmon7_temp*|voltmon8_temp*|voltmon9_temp*|voltmon10_temp*|voltmon11_temp*|voltmon12_temp*)
+	voltmon1_temp*|voltmon2_temp*|voltmon3_temp*|voltmon4_temp*|voltmon5_temp*|voltmon6_temp*|voltmon7_temp*|voltmon8_temp*|voltmon9_temp*|voltmon10_temp*|voltmon11_temp*|voltmon12_temp*|voltmon13_temp*|voltmon14_temp*|voltmon15_temp*|voltmon16_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	sbw1_voltmon1_temp*|sbw1_voltmon2_temp*|sbw1_voltmon3_temp*|sbw1_voltmon4_temp*|sbw1_voltmon5_temp*|sbw1_voltmon6_temp*|sbw2_voltmon1_temp*|sbw2_voltmon2_temp*|sbw2_voltmon3_temp*|sbw2_voltmon4_temp*|sbw2_voltmon5_temp*|sbw2_voltmon6_temp*)
+	swb1_voltmon1_temp*|swb1_voltmon2_temp*|swb1_voltmon3_temp*|swb1_voltmon4_temp*|swb1_voltmon5_temp*|swb1_voltmon6_temp*|swb2_voltmon1_temp*|swb2_voltmon2_temp*|swb2_voltmon3_temp*|swb2_voltmon4_temp*|swb2_voltmon5_temp*|swb2_voltmon6_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
@@ -244,6 +247,23 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
+	fan_hotswap1_in*|fan_hotswap2_in*|fan_hotswap3_in*|fan_hotswap4_in*)
+		subfolder="voltage"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	fan_hotswap1_curr*|fan_hotswap2_curr*|fan_hotswap3_curr*|fan_hotswap4_curr*)
+		subfolder="current"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	fan_hotswap1_power*|fan_hotswap2_power*|fan_hotswap3_power*|fan_hotswap4_power*)
+		subfolder="power"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	fan_hotswap1_temp*|fan_hotswap2_temp*|fan_hotswap3_temp*|fan_hotswap4_temp*)
+		subfolder="temperature"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+		
 	port_amb|fan_amb|swb_asic*|fpga|mng_amb|pdb_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)

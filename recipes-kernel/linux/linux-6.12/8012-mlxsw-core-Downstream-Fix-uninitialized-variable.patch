@@ -1,0 +1,46 @@
+From 46aa0cc6f4dbbc0e7c01920dd0932469eda5fdb5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 18 Nov 2024 17:57:43 +0200
+Subject: [PATCH 68/78] mlxsw: core: Downstream: Fix uninitialized variable
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Set variable "status" to zero in function mlxsw_cmd_exec() to prevent
+garbage value to be passed from underling functions.
+
+In case of transaction failure due to some hardware problem,
+uninitialized 'status' may be returned with some garbage value.
+This garbage can be interpreted as some special status, like
+MLXSW_CMD_STATUS_FW_ISSU (0x27) or MLXSW_CMD_STATUS_RUNNING_RESET
+(0x26).
+Such codes are considered by the driver as a special flow, which is
+ended up with driver removing.
+When such code is received - all the next transactions to ASIC are
+blocked.
+
+In case this code is received unintentionally, driver will stop control
+PWM and stop monitor ASIC and receivers’ sensors and system may end up
+with thermal shutdown.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index 4a79c0d7..0338cb5 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -3235,7 +3235,7 @@ int mlxsw_cmd_exec(struct mlxsw_core *mlxsw_core, u16 opcode, u8 opcode_mod,
+ 		   char *in_mbox, size_t in_mbox_size,
+ 		   char *out_mbox, size_t out_mbox_size)
+ {
+-	u8 status;
++	u8 status = 0;
+ 	int err;
+ 
+ 	BUG_ON(in_mbox_size % sizeof(u32) || out_mbox_size % sizeof(u32));
+-- 
+2.8.4
+

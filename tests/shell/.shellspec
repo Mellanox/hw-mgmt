@@ -1,0 +1,25 @@
+# ShellSpec configuration file
+#
+# This configuration file controls how shellspec runs tests
+# See: https://github.com/shellspec/shellspec
+
+# Shell to use for testing (bash, sh, zsh, etc.)
+--shell bash
+
+# Default options
+--format documentation
+
+# Enable kcov coverage (requires kcov to be installed)
+# Uncomment the following lines to enable coverage:
+# --kcov
+# --kcov-options "--exclude-pattern=/usr,/lib"
+
+# Mute skip/pending messages (options: verbose, moderate, quiet)
+--skip-message moderate
+
+# Fail fast (stop on first failure)
+# --fail-fast
+
+# Parallel execution (number of jobs)
+# --jobs 4
+
