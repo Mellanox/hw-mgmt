@@ -173,6 +173,10 @@ FAST_SYSFS_MONITOR_LABELS_JSON="/etc/hw-management-fast-sysfs-monitor/fast_sysfs
 FAST_SYSFS_MONITOR_PID_FILE="/tmp/fast_sysfs_monitor.pid"
 FAST_SYSFS_MONITOR_RDY_FILE=$hw_management_path/fast_sysfs_labels_rdy
 
+# Switch mlxsw asic ready flag file. Indication for module/asic/fan/pwm ready on SPC1 systems
+# applicable only for SPC1 systems.
+SYSFS_MONITOR_MLXSW_RDY_FILE=$hw_management_path/sysfs_mlxsw_rdy
+
 log_err()
 {
     logger -t hw-management -p daemon.err "$@"
