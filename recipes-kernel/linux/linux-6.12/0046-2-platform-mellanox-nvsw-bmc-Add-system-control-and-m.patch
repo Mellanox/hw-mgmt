@@ -20,6 +20,12 @@ The driver is probed from the device tree and runs on the BMC SoC, so it
 depends on OF and is excluded from the x86 host builds, which enable OF
 for other devices.
 
+mlxreg-io treats .bit as the 1-based LSB of a field, not the MSB of
+GENMASK(hi, lo). The bios_status, bios_status_ro, cpu_spi_ctrl, psu_qty,
+asic_clk_brd_hw_id, and config1 descriptors used the high bit, shifting
+their sysfs values; for example, psu_qty returned 2147483648 instead of
+2 on a two-PSU system. Set .bit to the field's low bit plus one.
+
 Upstream-Status: Pending
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
