@@ -1,3 +1,6 @@
+From ace9be4aecf7ea296cc1621b7b8961605491ce80 Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Sun, 16 Aug 2026 14:17:39 +0300
 Subject: [PATCH] nvme-pci: try PCIe FLR when controller disable/shutdown hangs
 
 The kernel upstream patch ("nvme-pci: try function level reset on
@@ -48,11 +51,17 @@ Safety:
     path will not double-FLR.
   - nvme_dev_disable() returns void, so a failed FLR is only logged.
 
+Upstream-Status: Downstream accepted
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 ---
-diff -Nur a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
+ drivers/nvme/host/pci.c | 24 +++++++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
+index 2bddc9f..b63b3ad 100644
 --- a/drivers/nvme/host/pci.c
 +++ b/drivers/nvme/host/pci.c
-@@ -2787,9 +2787,31 @@
+@@ -2787,8 +2787,30 @@ static void nvme_dev_disable(struct nvme_dev *dev, bool shutdown)
  	nvme_quiesce_io_queues(&dev->ctrl);
  
  	if (!dead && dev->ctrl.queue_count > 0) {
@@ -84,7 +93,5 @@ diff -Nur a/drivers/nvme/host/pci.c b/drivers/nvme/host/pci.c
  		nvme_poll_irqdisable(&dev->queues[0]);
  	}
  	nvme_suspend_io_queues(dev);
- 	nvme_suspend_queue(dev, 0);
- 	pci_free_irq_vectors(pdev);
 -- 
 2.34.1
