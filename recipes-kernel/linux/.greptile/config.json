@@ -1,0 +1,40 @@
+{
+  "strictness": 2,
+  "triggerOnUpdates": true,
+  "statusCheck": true,
+  "statusCommentsEnabled": true,
+  "rules": [
+    {
+      "id": "kernel-patch-description",
+      "rule": "For every added or modified .patch file, verify that the embedded commit-message body is self-contained and accurately explains the problem, the behavior before the change, what the patch changes, and the user-visible, kernel, or hardware impact. Flag generic summaries that merely repeat the subject.",
+      "scope": [
+        "**/*.patch"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "kernel-patch-payload-description-sync",
+      "rule": "When the functional diff payload inside an existing .patch file changes, require the embedded commit-message body to describe every newly introduced behavior or fix. Treat an unchanged description accompanying a functional payload change as a high-severity defect.",
+      "scope": [
+        "**/*.patch"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "kernel-patch-public-context",
+      "rule": "Patch descriptions must be understandable to an external community reviewer. Internal Jira, NVBug, or other private references may supplement the explanation but must never be its sole justification.",
+      "scope": [
+        "**/*.patch"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "kernel-patch-provenance",
+      "rule": "Every patch must have attributable git-format-patch provenance: commit From line, author From header, Date, meaningful Subject, Signed-off-by, and Upstream-Status. Do not accept invented or packaging-only authorship unless the patch author explicitly owns the change.",
+      "scope": [
+        "**/*.patch"
+      ],
+      "severity": "high"
+    }
+  ]
+}

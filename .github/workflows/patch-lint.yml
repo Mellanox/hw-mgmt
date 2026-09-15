@@ -1,0 +1,40 @@
+name: Kernel patch policy
+
+on:
+  pull_request:
+    paths:
+      - "recipes-kernel/linux/**/*.patch"
+      - "recipes-kernel/linux/check_patch_headers.py"
+      - "recipes-kernel/linux/PATCH_METADATA.md"
+      - "recipes-kernel/linux/.greptile/**"
+      - "tests/offline/test_check_patch_headers.py"
+      - ".github/workflows/patch-lint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  patch-headers:
+    name: Patch header lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install test dependency
+        run: python3 -m pip install pytest
+
+      - name: Test patch checker
+        run: python3 -m pytest -q tests/offline/test_check_patch_headers.py
+
+      - name: Check changed kernel patches
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 recipes-kernel/linux/check_patch_headers.py \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA"
