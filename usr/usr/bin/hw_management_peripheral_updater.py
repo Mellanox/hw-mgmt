@@ -479,13 +479,19 @@ def run_power_button_event(argv, val):
     @param argv: Unused argument list (for interface compatibility)
     @param val: Event value (1=pressed/triggered, 0=released/cleared)
     """
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
-    os.system(cmd)
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event GRACEFUL_PWR_OFF {}".format(val)
-    os.system(cmd)
+    # BMC handshake first: do not spend the REBOOT_TO window on
+    # chassis-events / logger before nvme-ready.sh starts its budget.
+    # HW_MGMT_NVME_READY=0: chassis-events still records hotplug nodes
+    # but must not start a second helper.
     if str(val) == "1":
         cmd = """logger -t hw-management-peripheral-updater -p daemon.info "Graceful CPU power off request " """
         os.system(cmd)
+        cmd = "/usr/bin/hw-management-bmc-nvme-ready.sh"
+        os.system(cmd)
+    cmd = "HW_MGMT_NVME_READY=0 /usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
+    os.system(cmd)
+    cmd = "HW_MGMT_NVME_READY=0 /usr/bin/hw-management-chassis-events.sh hotplug-event GRACEFUL_PWR_OFF {}".format(val)
+    os.system(cmd)
 
 # ----------------------------------------------------------------------
 
