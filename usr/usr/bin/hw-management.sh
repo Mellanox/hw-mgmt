@@ -649,6 +649,17 @@ n61xxld_cartridge_eeprom_connect_table=( \
 	24c02 0x50 70 cable_cartridge3_eeprom \
 	24c02 0x50 71 cable_cartridge4_eeprom)
 
+n7xxxld_cartridge_eeprom_connect_table=( \
+	24c02 0x50 67 swb1_cable_cartridge1_eeprom \
+	24c02 0x50 68 swb1_cable_cartridge2_eeprom \
+	24c02 0x50 69 swb1_cable_cartridge3_eeprom \
+	24c02 0x50 70 swb1_cable_cartridge4_eeprom \
+	24c02 0x50 83 swb2_cable_cartridge1_eeprom \
+	24c02 0x50 84 swb2_cable_cartridge2_eeprom \
+	24c02 0x50 85 swb2_cable_cartridge3_eeprom \
+	24c02 0x50 86 swb2_cable_cartridge4_eeprom \
+)
+
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
@@ -2752,6 +2763,9 @@ n7xxxld_specific()
 	HI194)
 		asic_i2c_buses=(4 20 36 52)
 		cpld_num=3
+		add_i2c_dynamic_bus_dev_connection_table "${n7xxxld_cartridge_eeprom_connect_table[@]}"
+		echo -n "${n7xxxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		cartridge_count=8
 		;;
 	esac
 
@@ -2774,7 +2788,7 @@ n7xxxld_specific()
 
 	echo $cpld_num > $config_path/cpld_num
 	echo 0 > $config_path/fan_drwr_num
-	echo 0 > $config_path/cartridge_counter
+	echo $cartridge_count > $config_path/cartridge_counter
 	echo 0 > $config_path/i2c_bus_offset
 	echo -n "${n7xxx_power_events[@]}" > "$power_events_file"
 	echo "$n7xxx_reset_attr_num" > $config_path/reset_attr_num
