@@ -293,7 +293,10 @@ lock_service_state_change()
 {
     exec {LOCKFD}>${LOCKFILE}
     /usr/bin/flock -x ${LOCKFD}
-    trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+    # This replaces any EXIT trap, including the chipup tracer cleanup.
+    # Keep stop_chipup_i2c_trace here so chipup_dis / signals still
+    # disable and remove the ftrace instance (no-op when idle).
+    trap "/usr/bin/flock -u ${LOCKFD}; stop_chipup_i2c_trace" EXIT SIGINT SIGQUIT SIGTERM
 }
 
 unlock_service_state_change()
@@ -1329,26 +1332,78 @@ save_i2c_trace_on_failure() {
 #
 # start_chipup_i2c_trace stores the tracing directory in CHIPUP_TRACE_DIR
 # (empty when tracing could not be started). The ftrace instance name includes
-# the ASIC index so concurrent chipup on multi-ASIC platforms do not share one
-# buffer.
+# the ASIC index and PID so concurrent chipup invocations do not share one
+# buffer. sx-core always passes ASIC index 0, so index alone is not unique.
+# Use BASHPID (not $$) so background subshells also get distinct instances.
 # Default filter: capture all CPLD bridge child adapters (i2c-2 and up), not
 # just the ASIC bus, so bus-wide contention is visible. i2c-0 (CPU SMBus) and
 # i2c-1 (bridge parent) are excluded as noise.
 CHIPUP_I2C_TRACE_FILTER="adapter_nr>=2"
 CHIPUP_TRACE_DIR=""
 CHIPUP_I2C_TRACE_INSTANCE=""
+CHIPUP_TRACE_LOCKFD=""
+
+_chipup_trace_log_file()
+{
+	echo "${HW_MGMT_CHIPUP_TRACE_LOG:-/var/log/chipup_i2c_trace_log}"
+}
+
+_chipup_trace_log_lock()
+{
+	local lock_file="${HW_MGMT_CHIPUP_TRACE_LOCK:-/var/run/hw-management-chipup-trace.lock}"
+
+	CHIPUP_TRACE_LOCKFD=""
+	if exec {CHIPUP_TRACE_LOCKFD}>"$lock_file" 2>/dev/null; then
+		/usr/bin/flock -x "${CHIPUP_TRACE_LOCKFD}"
+	fi
+}
+
+_chipup_trace_log_unlock()
+{
+	if [ -n "${CHIPUP_TRACE_LOCKFD:-}" ]; then
+		/usr/bin/flock -u "${CHIPUP_TRACE_LOCKFD}"
+		CHIPUP_TRACE_LOCKFD=""
+	fi
+}
+
+# $1 max size in bytes (default chipup_log_size / 4096)
+# $2 max archived copies (default chipup_log_archive_max / 3)
+rotate_chipup_i2c_trace_log()
+{
+	local max_size="${1:-4096}"
+	local archive_max="${2:-3}"
+	local log_file
+	local file_size timestamp
+
+	log_file=$(_chipup_trace_log_file)
+	_chipup_trace_log_lock
+	if [ -f "$log_file" ]; then
+		file_size=`du -b "$log_file" | tr -s '\t' ' ' | cut -d' ' -f1`
+		if [ "$file_size" -gt "$max_size" ]; then
+			timestamp=`date +%s`
+			mv "$log_file" "$log_file.$timestamp"
+			touch "$log_file"
+			ls -1t "$log_file".* 2>/dev/null | \
+				tail -n +$((archive_max + 1)) | \
+				xargs -r rm -f
+		fi
+	fi
+	_chipup_trace_log_unlock
+}
 
 start_chipup_i2c_trace() {
 	local asic_index="${1:-0}"
 
 	CHIPUP_TRACE_DIR=""
-	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}"
+	# BASHPID makes concurrent chipup 0/... events use separate instances
+	# ($$ is the parent shell, so subshells would otherwise collide).
+	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}_${BASHPID}"
 
 	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
 		return
 	fi
 
-	# Preferred: dedicated, isolated ftrace instance per ASIC.
+	# Preferred: dedicated, isolated ftrace instance per invocation.
 	if [ -d "$KERN_TRACE_FS/instances" ] &&
 	   mkdir -p "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null &&
 	   [ -d "$CHIPUP_I2C_TRACE_INSTANCE/events/i2c" ]; then
@@ -1375,16 +1430,21 @@ start_chipup_i2c_trace() {
 # $1 - attempt number (optional, written as a delimiter before the trace data).
 save_chipup_i2c_trace() {
 	local attempt="${1:-}"
+	local log_file
 
 	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	log_file=$(_chipup_trace_log_file)
+	_chipup_trace_log_lock
 	if [ -n "$attempt" ]; then
-		echo "# --- chipup attempt ${attempt} ---" >> /var/log/chipup_i2c_trace_log
+		echo "# --- chipup attempt ${attempt} pid:${BASHPID} ---" >> "$log_file"
 	fi
-	cat "$CHIPUP_TRACE_DIR"/trace >> /var/log/chipup_i2c_trace_log 2>/dev/null
+	cat "$CHIPUP_TRACE_DIR"/trace >> "$log_file" 2>/dev/null
+	_chipup_trace_log_unlock
 	echo 0 > "$CHIPUP_TRACE_DIR"/trace 2>/dev/null
 }
 
 # Stop the chipup tracer and release the dedicated instance (if one was used).
+# Idempotent so EXIT traps and explicit callers can both invoke it.
 stop_chipup_i2c_trace() {
 	[ -n "$CHIPUP_TRACE_DIR" ] || return
 	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
@@ -1796,7 +1856,8 @@ is_spc1_system()
 	esac
 
 	if [ -f "$config_path/cpu_type" ] && \
-	   grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor 2>/dev/null; then
+	   grep -q "Mellanox Technologies" \
+		"${HW_MGMT_CHASSIS_VENDOR_FILE:-/sys/devices/virtual/dmi/id/chassis_vendor}" 2>/dev/null; then
 		cpu=$(< "$config_path/cpu_type")
 		case $cpu in
 		"$IVB_CPU"|"$RNG_CPU")
@@ -1819,7 +1880,7 @@ _hw_mgmt_reset_attr_is_set()
 		return 0
 	fi
 
-	for f in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/"$name"; do
+	for f in "${HW_MGMT_MLXREG_IO_HWMON:-/sys/devices/platform/mlxplat/mlxreg-io/hwmon}"/hwmon*/"$name"; do
 		[ -e "$f" ] || continue
 		if [ "$(cat "$f" 2>/dev/null)" = "1" ]; then
 			return 0
