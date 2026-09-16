@@ -10,9 +10,9 @@ Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  10 +
  drivers/platform/mellanox/Makefile         |   1 +
- drivers/platform/mellanox/nvsw-host-nvl7.c | 664 +++++++++++++++++++++
+ drivers/platform/mellanox/nvsw-host-nvl7.c | 665 +++++++++++++++++++++
  drivers/platform/mellanox/nvsw.h           |   1 +
- 4 files changed, 676 insertions(+)
+ 4 files changed, 677 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-host-nvl7.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -48,10 +48,10 @@ index 0230613a9..b30b4808b 100644
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl7.c b/drivers/platform/mellanox/nvsw-host-nvl7.c
 new file mode 100644
-index 000000000..acdde1a76 100644
+index 000000000..2855f0546 100644
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-nvl7.c
-@@ -0,0 +1,664 @@
+@@ -0,0 +1,665 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia NVL7 host platform driver
@@ -86,7 +86,8 @@ index 000000000..acdde1a76 100644
 +	18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
 +	33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
 +	48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,
-+	63, 64, 65, 66, 67,
++	63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77,
++	78, 79, 80, 81, 82, 83,
 +};
 +
 +/* Platform mux data */
