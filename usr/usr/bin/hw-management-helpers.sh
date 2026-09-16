@@ -1364,7 +1364,9 @@ _chipup_trace_log_lock()
 _chipup_trace_log_unlock()
 {
 	if [ -n "${CHIPUP_TRACE_LOCKFD:-}" ]; then
-		/usr/bin/flock -u "${CHIPUP_TRACE_LOCKFD}"
+		/usr/bin/flock -u "${CHIPUP_TRACE_LOCKFD}" 2>/dev/null || true
+		# Close the dynamically allocated FD; flock -u does not.
+		exec {CHIPUP_TRACE_LOCKFD}>&-
 		CHIPUP_TRACE_LOCKFD=""
 	fi
 }
@@ -1376,7 +1378,7 @@ rotate_chipup_i2c_trace_log()
 	local max_size="${1:-4096}"
 	local archive_max="${2:-3}"
 	local log_file
-	local file_size timestamp
+	local file_size timestamp archive n
 
 	log_file=$(_chipup_trace_log_file)
 	_chipup_trace_log_lock
@@ -1384,7 +1386,16 @@ rotate_chipup_i2c_trace_log()
 		file_size=`du -b "$log_file" | tr -s '\t' ' ' | cut -d' ' -f1`
 		if [ "$file_size" -gt "$max_size" ]; then
 			timestamp=`date +%s`
-			mv "$log_file" "$log_file.$timestamp"
+			# Second-resolution timestamps collide if two chipup
+			# runs rotate in the same second; include BASHPID and
+			# never overwrite an existing archive.
+			archive="${log_file}.${timestamp}.${BASHPID}"
+			n=0
+			while [ -e "$archive" ]; do
+				n=$((n + 1))
+				archive="${log_file}.${timestamp}.${BASHPID}.${n}"
+			done
+			mv "$log_file" "$archive"
 			touch "$log_file"
 			ls -1t "$log_file".* 2>/dev/null | \
 				tail -n +$((archive_max + 1)) | \
