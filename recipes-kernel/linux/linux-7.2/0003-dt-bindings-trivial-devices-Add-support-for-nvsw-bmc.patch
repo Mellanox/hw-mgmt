@@ -1,0 +1,38 @@
+From acf6e13badec745c4b5811748e4e32f61c562d7d Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 24 May 2026 19:12:12 +0300
+Subject: [PATCH 3/3] dt-bindings: trivial-devices: Add support for nvsw-bmc
+ control and monitoring driver
+
+Add nvsw-bmc control and monitoring driver compatibles to the trivial
+device list.
+
+Signed-off-by: Aaron Komisar <akomisar@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ Documentation/devicetree/bindings/trivial-devices.yaml | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/trivial-devices.yaml b/Documentation/devicetree/bindings/trivial-devices.yaml
+index 9bf0fb17a05e..fccad53b07f8 100644
+--- a/Documentation/devicetree/bindings/trivial-devices.yaml
++++ b/Documentation/devicetree/bindings/trivial-devices.yaml
+@@ -305,6 +305,15 @@ properties:
+           - national,lm85
+             # I2C ±0.33°C Accurate, 12-Bit + Sign Temperature Sensor and Thermal Window Comparator
+           - national,lm92
++            # Nvidia BMC platform CPLD control
++          - nvidia,hid162
++          - nvidia,hid176
++          - nvidia,hid177
++          - nvidia,hid180
++          - nvidia,hid181
++          - nvidia,hid189
++          - nvidia,hid191
++          - nvidia,hid193
+             # Nuvoton Temperature Sensor
+           - nuvoton,w83773g
+             # OKI ML86V7667 video decoder
+-- 
+2.34.1
+
