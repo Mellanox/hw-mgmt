@@ -355,6 +355,55 @@ stop_chipup_i2c_trace
     assert "i2c_write sample" in text
 
 
+def test_chipup_trace_lock_fd_is_closed_after_unlock(tmp_path):
+    lock_file = tmp_path / "chipup-trace.lock"
+    script = """
+source "{helpers}"
+export HW_MGMT_CHIPUP_TRACE_LOCK="{lock}"
+_chipup_trace_log_lock
+fd=$CHIPUP_TRACE_LOCKFD
+echo FD:$fd
+target=$(readlink /proc/$$/fd/$fd 2>/dev/null || true)
+echo BEFORE:$target
+_chipup_trace_log_unlock
+after=$(readlink /proc/$$/fd/$fd 2>/dev/null || true)
+echo AFTER:$after
+echo EMPTY:$CHIPUP_TRACE_LOCKFD
+""".format(helpers=HELPERS, lock=lock_file)
+    result = _run_bash(script, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "BEFORE:" in result.stdout
+    assert str(lock_file) in result.stdout.split("BEFORE:")[1].splitlines()[0]
+    after = result.stdout.split("AFTER:")[1].splitlines()[0]
+    assert str(lock_file) not in after
+    assert result.stdout.split("EMPTY:")[1].splitlines()[0] == ""
+
+
+def test_rotate_chipup_trace_log_does_not_overwrite_archive(tmp_path):
+    log_file = tmp_path / "chipup_i2c_trace_log"
+    lock_file = tmp_path / "chipup-trace.lock"
+    script = """
+source "{helpers}"
+export HW_MGMT_CHIPUP_TRACE_LOG="{log}"
+export HW_MGMT_CHIPUP_TRACE_LOCK="{lock}"
+pid=$BASHPID
+now=$(date +%s)
+for t in $now $((now+1)) $((now+2)); do
+	printf 'keep-me-%s\\n' "$t" > "{log}.$t.$pid"
+done
+{{ printf 'payload\\n'; dd if=/dev/zero bs=1 count=32; }} > "{log}"
+rotate_chipup_i2c_trace_log 10 10
+""".format(helpers=HELPERS, log=log_file, lock=lock_file)
+    result = _run_bash(script, tmp_path)
+    assert result.returncode == 0, result.stderr
+    archives = list(tmp_path.glob("chipup_i2c_trace_log.*"))
+    keep = [p for p in archives if p.read_bytes().startswith(b"keep-me-")]
+    payload = [p for p in archives if b"payload" in p.read_bytes()]
+    assert len(keep) == 3, result.stdout
+    assert len(payload) == 1, result.stdout
+    assert payload[0] not in keep
+
+
 def test_is_spc1_system_by_vmod_and_product(tmp_path):
     script = _helpers_preamble(tmp_path, board="VMOD0001", product="x") + """
 is_spc1_system; echo VMOD:$?
