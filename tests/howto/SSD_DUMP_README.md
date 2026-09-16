@@ -1,7 +1,9 @@
 # SSD dump collection (hw-management)
 
-Unified NVMe nandlog collector. Vendor binaries are **not** in hw-mgmt;
-NOS puts them on `PATH`.
+Unified NVMe nandlog collector. Vendor binaries and
+`ssd-dump-config.json` are **not** in hw-mgmt; the dump-tools
+`.deb` puts tools on `PATH` and JSON under
+`/usr/share/ssd-dump-tools/`.
 
 Dump-tools (NOS 1.0 ELFs + SMI `smi/`, `tools/README.txt`):
 `ssh://git@gitlab-master.nvidia.com:12051/nbu-sws/bsp/bsp_ssd_fw_update.git`
@@ -14,10 +16,10 @@ This package: https://github.com/Mellanox/hw-mgmt.git
 
 | Path | Role |
 |------|------|
-| `/usr/bin/hw-management-ssd-dump.py` | Collector CLI (`#!/usr/bin/env python3`; Debian `Depends: python3`) |
-| `/etc/hw-management-tools/ssd-dump-config.json` | Vendor / model / tool |
-| `/var/log/ssd-dump/` | Work dir (CLI pack removes it on `status: ok`; generate-dump copies then removes it) |
-| `/var/log/ssd-dump.tar.gz` | Packed dump (standalone CLI only; replaced on `status: ok`) |
+| `/usr/bin/hw-management-ssd-dump.py` | Collector CLI (`#!/usr/bin/env python3`) |
+| `/usr/share/ssd-dump-tools/ssd-dump-config.json` | Vendor / model / tool (dump-tools `.deb`) |
+| `/var/log/ssd-dump/` | Work dir (collect always rmtree's it first; CLI pack removes it on `status: ok`; generate-dump copies then removes it) |
+| `/var/log/ssd-dump.tar.gz` | Packed dump (standalone CLI; deleted at the start of every collect, then written on `status: ok`) |
 | `/usr/bin/hw-management-ssd-dump-collect.sh` | generate-dump helper (via `dump_cmd`) |
 | `hw-management-generate-dump.sh` | `dump_cmd` the helper; helper copies leftover `$SSD_LOG_DIR` as `ssd-dump/` |
 
@@ -29,9 +31,10 @@ There is no separate `dump.sh`. `dump.sh` in older notes means
 - **One caller at a time.** Do not run the CLI, `--verify`, and
   generate-dump together, and do not overlap two collects. There is
   **no lock**; overlapping runs can clobber `/var/log/ssd-dump`.
-- **Real paths only.** `--outdir`, `--device`, `$DUMP_FOLDER`,
-  `$SSD_LOG_DIR` must be real directories or device
-  nodes. Symlinks (any path component) are refused.
+- **Real paths only.** `--outdir` basename must be `ssd-dump`
+  (default `/var/log/ssd-dump`). The leaf and its parent must not
+  be symlinks. `--device`, `$DUMP_FOLDER`, `$SSD_LOG_DIR` must
+  be real directories or device nodes (no symlink leaf).
 
 ## How to invoke
 
@@ -72,14 +75,20 @@ sudo hw-management-ssd-dump.py
 sudo hw-management-ssd-dump.py --device /dev/nvme0
 ```
 
-Default `--outdir` is **`/var/log/ssd-dump`**. Each run **recreates**
-that directory. The parent of `--outdir` must be writable
-(rmtree + mkdir). On a sticky parent (`/tmp`), an existing
-`--outdir` must be owned by this uid (non-root cannot rmtree
-a foreign dir). If `status: ok` and **not** `--no-tar`, the tool
-packs it to **`/var/log/ssd-dump.tar.gz`** and **deletes** the
-directory. generate-dump passes `--no-tar`, copies the dir into
-the hw-mgmt tar, then **removes** `/var/log/ssd-dump`.
+Default `--outdir` is **`/var/log/ssd-dump`**. The basename must
+be **`ssd-dump`** (so `--outdir /srv/data` is refused). Each
+collect **removes** that directory **and** the adjacent
+**`ssd-dump.tar.gz`** (operator copies old results if needed),
+then recreates an empty dir. `--verify` does **not** wipe. The
+parent of `--outdir` must be a real directory (no symlink
+parent; the `ssd-dump` leaf must not be a symlink) and
+writable. On a sticky parent (`/tmp`), an existing `--outdir`
+must be owned by this uid. If `status: ok` and **not**
+`--no-tar`, the tool packs it to **`/var/log/ssd-dump.tar.gz`**
+and **deletes** the directory.
+`--no-tar` still deletes a leftover tarball so dir and tar are
+never both present. generate-dump passes `--no-tar`, copies the
+dir into the hw-mgmt tar, then **removes** `/var/log/ssd-dump`.
 `--device` must be a char or block node under `/dev` (`/dev/nvme0`
 or `/dev/nvme0n1`), not a symlink or a regular file. A path
 outside `/dev` or a missing node is a warning. Virtium
@@ -178,9 +187,10 @@ from sysfs (`/sys/class/nvme/...`). Not the `nvme` CLI.
 
 Work dir:
 
-- Python CLI: packed and removed only when **`status: ok`** and
-  not `--no-tar`. Warning/skip leave the dir and do **not**
-  replace the last good `.tar.gz`.
+- Python CLI: every collect starts by deleting the work dir and
+  `<outdir>.tar.gz`. Packed again only when **`status: ok`** and
+  not `--no-tar`. Warning/skip leave the new dir and **no**
+  previous tarball.
 - generate-dump helper: runs Python `--quiet --no-tar`. Copies
   leftover `$SSD_LOG_DIR` as **`ssd-dump/`**, then removes
   `/var/log/ssd-dump`. Does **not** put `ssd-dump.tar.gz` inside
@@ -231,10 +241,9 @@ token, including `-…`):
 Optional absolute `stage_from`, `stage_cfg` (cwd
 name `one_button.cfg`),
 `keep_dirs` (default `["one_button"]` when staging). Do not ship
-the vendor binary or `smi/` tree in hw-mgmt. RPM:
-`%config(noreplace)` so a local JSON edit is kept on upgrade
-(new file as `.rpmnew`). Debian: `/etc` is a conffile (local
-kept; new as `.dpkg-dist`).
+the vendor binary, `smi/` tree, or JSON in hw-mgmt. Missing
+`/usr/share/ssd-dump-tools/ssd-dump-config.json` is a
+**warning**. JSON lives in the dump-tools `.deb`.
 
 HLD / operator CLI are ECR notes (`SSD-dump-collector-HLD.md`,
 `SSD-dump-collector-CLI.md`), not this package.

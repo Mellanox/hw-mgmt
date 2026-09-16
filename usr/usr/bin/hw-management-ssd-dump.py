@@ -52,8 +52,9 @@ import sys
 import syslog
 import tarfile
 
-DEFAULT_CONFIG = "/etc/hw-management-tools/ssd-dump-config.json"
-DEFAULT_OUTDIR = "/var/log/ssd-dump"
+DEFAULT_CONFIG = "/usr/share/ssd-dump-tools/ssd-dump-config.json"
+OUTDIR_NAME = "ssd-dump"
+DEFAULT_OUTDIR = "/var/log/" + OUTDIR_NAME
 # generate-dump helper timeout is 195 s; JSON vendor budget <= this.
 TIMEOUT_SEC_JSON_MAX = 120
 STATUS_NAME = "ssd-dump-status.log"
@@ -238,6 +239,13 @@ def discard_unused_tool_log(outdir, fields):
         except OSError:
             pass
     return True
+
+
+def resolve_config_path(path):
+    """Dump-tools ships JSON under /usr/share/ssd-dump-tools."""
+    if path:
+        return path
+    return DEFAULT_CONFIG
 
 
 def load_config(path):
@@ -656,22 +664,25 @@ def sticky_parent_blocks_rmdir(path, parent):
 
 
 def check_outdir(path):
-    """Same refusals as recreate_outdir, without creating or deleting."""
+    """Same refusals as recreate_outdir, without creating or deleting.
+
+    Only a directory named ssd-dump may be wiped or created, so a
+    typo such as --outdir /srv/data cannot rmtree unrelated files.
+    Refuse a symlink leaf or a symlink parent; do not follow links.
+    """
     path = os.path.abspath(path)
-    if os.path.realpath(path) != path:
+    if os.path.basename(path) != OUTDIR_NAME:
         raise DumpError(
-            "refusing to recreate path with symlink component: %s" % path
+            "outdir must be named %s: %s" % (OUTDIR_NAME, path)
         )
     if path in PROTECTED_OUTDIRS:
         raise DumpError("refusing to recreate protected path: %s" % path)
-    if os.path.islink(path):
-        raise DumpError("refusing to recreate symlink path: %s" % path)
+    parent = os.path.dirname(path) or "/"
+    if os.path.realpath(parent) != os.path.abspath(parent):
+        raise DumpError("refusing outdir with symlink parent: %s" % path)
+    if os.path.lexists(path) and os.path.islink(path):
+        raise DumpError("refusing outdir symlink: %s" % path)
     if os.path.isdir(path):
-        default = os.path.abspath(DEFAULT_OUTDIR)
-        if path != default and os.listdir(path):
-            raise DumpError(
-                "refusing to recreate non-empty directory: %s" % path
-            )
         if not os.access(path, os.W_OK | os.X_OK):
             raise DumpError("outdir not writable: %s" % path)
         parent = os.path.dirname(path) or "/"
@@ -709,8 +720,29 @@ def check_pack_parent(outdir):
     return tar_path
 
 
+def remove_previous_results(outdir):
+    """Drop leftover outdir.tar.gz so a run never leaves both dir and tar."""
+    outdir = os.path.abspath(outdir)
+    tar_path = outdir + ".tar.gz"
+    tmp_tar_path = tar_path + ".tmp"
+    parent = os.path.dirname(outdir) or "/"
+    for p in (tmp_tar_path, tar_path):
+        if not os.path.lexists(p):
+            continue
+        if os.path.islink(p):
+            raise DumpError("refusing to remove symlink path: %s" % p)
+        if not os.path.isfile(p):
+            raise DumpError("refusing to remove non-file path: %s" % p)
+        if not os.access(parent, os.W_OK | os.X_OK):
+            raise DumpError(
+                "cannot remove archive %s: parent not writable" % p
+            )
+        os.remove(p)
+
+
 def recreate_outdir(path):
     path = check_outdir(path)
+    remove_previous_results(path)
     if os.path.isdir(path):
         shutil.rmtree(path)
     os.makedirs(path)
@@ -720,11 +752,11 @@ def recreate_outdir(path):
 def pack_outdir(outdir):
     """Tar outdir to <outdir>.tar.gz and remove the directory.
 
-    Write a .tmp archive first and replace the previous .tar.gz
-    only after success. On tar failure, drop the .tmp; keep the old
-    archive and the leftover dir. After os.replace the new archive
-    is committed: rmtree failure does not roll it back or change
-    status to warning.
+    Write a .tmp archive first and replace <outdir>.tar.gz only
+    after success. The previous archive was already removed at
+    recreate. On tar failure, drop the .tmp and keep the leftover
+    dir. After os.replace the new archive is committed: rmtree
+    failure does not roll it back or change status to warning.
     """
     outdir = os.path.abspath(outdir)
     tar_path = outdir + ".tar.gz"
@@ -995,11 +1027,11 @@ def parse_args(argv):
     p.add_argument(
         "--outdir",
         default=DEFAULT_OUTDIR,
-        help="directory for dump files (default: %s)" % DEFAULT_OUTDIR,
+        help="work dir named %s (default: %s)" % (OUTDIR_NAME, DEFAULT_OUTDIR),
     )
     p.add_argument(
         "--config",
-        default=DEFAULT_CONFIG,
+        default=None,
         help="JSON config (default: %s)" % DEFAULT_CONFIG,
     )
     p.add_argument(
@@ -1065,9 +1097,8 @@ def run_verify(args):
         rc = 1
     if outdir_ok:
         path = os.path.abspath(args.outdir)
-        # Custom --outdir is only checked. Writing a status file
-        # there would leave a nonempty dir and block collect, or
-        # would require collect to delete a name the user may own.
+        # Custom --outdir is only checked. Collect recreates it;
+        # do not plant a status file the operator did not ask for.
         if path == os.path.abspath(DEFAULT_OUTDIR):
             try:
                 if not os.path.isdir(path):
@@ -1091,6 +1122,7 @@ def run_verify(args):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
+    args.config = resolve_config_path(args.config)
     try:
         syslog.openlog(SYSLOG_IDENT, syslog.LOG_PID | syslog.LOG_CONS, syslog.LOG_USER)
     except Exception:
