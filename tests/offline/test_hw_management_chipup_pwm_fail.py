@@ -200,6 +200,36 @@ def test_lock_trap_stops_chipup_trace():
 def test_trace_instance_name_includes_pid():
     helpers = HELPERS.read_text()
     assert "hwmgmt_chipup_${asic_index}_${BASHPID}" in helpers
+    assert 'CHIPUP_TRACE_DIR="$KERN_TRACE_FS"' not in helpers
+
+
+def test_skip_tracing_does_not_clobber_top_level_ftrace(tmp_path):
+    """No dedicated instance (no events/i2c under it): leave top-level alone."""
+    tracefs = _make_tracefs(tmp_path / "tracefs")
+    (tracefs / "events" / "i2c" / "enable").write_text("0\n")
+    (tracefs / "events" / "i2c" / "filter").write_text("adapter_nr==9\n")
+    (tracefs / "buffer_size_kb").write_text("42\n")
+    (tracefs / "trace").write_text("KEEPME\n")
+    script = """
+source "{helpers}"
+KERN_TRACE_FS="{tracefs}"
+start_chipup_i2c_trace 0
+echo DIR:$CHIPUP_TRACE_DIR
+echo ENABLE:$(cat "$KERN_TRACE_FS/events/i2c/enable")
+echo FILTER:$(cat "$KERN_TRACE_FS/events/i2c/filter")
+echo BUF:$(cat "$KERN_TRACE_FS/buffer_size_kb")
+echo TRACE:$(cat "$KERN_TRACE_FS/trace")
+""".format(helpers=HELPERS, tracefs=tracefs)
+    result = _run_bash(script, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "DIR:" in result.stdout
+    assert result.stdout.split("DIR:")[1].splitlines()[0] == ""
+    assert "ENABLE:0" in result.stdout
+    assert "FILTER:adapter_nr==9" in result.stdout
+    assert "BUF:42" in result.stdout
+    assert "TRACE:KEEPME" in result.stdout
+    leftover = list((tracefs / "instances").glob("hwmgmt_chipup_*"))
+    assert leftover == []
 
 
 def test_exit_while_locked_disables_and_removes_trace(tmp_path):
