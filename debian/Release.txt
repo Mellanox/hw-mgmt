@@ -1,4 +1,41 @@
 ================================================================================
+- V.7.0072.1011
+- Wed, 16 Sep 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: scripts: unified NVMe SSD dump collector, c3b6c83
+    o #N/A, hw-mgmt: kernel: patch 6.1: Split the nvsw platform driver patch per driver, 82b046e
+    o #N/A, hw-mgmt: kernel: patch 6.12: Split the nvsw platform driver patch per driver, 8701a9a
+    o #5225696, hw-mgmt: scripts: Run ifup from a service and retry on lock conflicts, e586b93
+    o #N/A, Update changelog and release notes for V.7.0072.1010, 12e195b
+    o #N/A, hw-mgmt: scripts: Add unified NVMe SSD dump collector (#2886), 85a63ad
+    o #5269665, hw-mgmt: scripts: Fix reset attributes counter initialization, 659de1d
+    o #5269629, hw-mgmt: sensors: Fix MP2975 DDR voltage regulator current labels, bfbae11
+    o #5100061, hw-mgmt: scripts: Fix SN2700 port CPLD read race on boot (#2898), 1412454
+    o #5064006, hw-mgmt: scripts: Prefer HTTP for NOS-BMC Redfish communication, 473f763
+    o #N/A, hw-mgmt: docs: Note reset causes that cannot be triggered on SN56xx / SN68XX_LD (#2905), 52c0596
+    o #5245926, hw-mgmt: thermal: Make FAN relax time configurable per platform, 1d0876a
+    o #5037522, hw-mgmt: kernel: patch 6.1/6.12: Fix duplicate /dev/i2c-N node creation, 9f94204
+    o #5125814, hw-mgmt: sensors: ignore PSU hotspot temperatures on SN5640 and SN5610., 1ee3071
+    o #N/A, hw-mgmt: docs: Fix N5500_LD reset causes for comex_wd and from_comex (#2881), 8ba9ef6
+    o #N/A, hw-mgmt: scripts: add function-call traces for start and udev debug, 4a4bd21
+    o #N/A, hw-mgmt: thermal: Fix thermal data for SN2201_M, d07dc4c
+    o #N/A, hw-mgmt: scripts: Add support for SN6600 (initial commit), 84dff6d
+    o #N/A, hw-mgmt: kernel: patch 6.1/6.12: Add new system platform driver HI186, 1581385
+    o #N/A, hw-mgmt: scripts: update jtag CPLD registers for HI198 system., af2e6eb
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0072.1011/recipes-kernel/linux/Patch_Status_Table.txt
+
+
+
+================================================================================
 - V.7.0072.1010
 - Tue, 15 Sep 2026
 --------------------------------------------------------------------------------
