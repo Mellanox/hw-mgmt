@@ -106,10 +106,10 @@ declare -A a2d_arr=( \
 )
 
 # Values are the prefixes of the keys of the components in the alternatives
-# arrays, not necessarily the device names. A device that can be used both as a
-# power converter and as a voltage regulator needs distinct prefixes, otherwise
-# its entries collide, as the keys are built from the prefix and the per
-# category index of the component in the SMBIOS BOM string.
+# arrays. A device that can be used both as a power converter and as a voltage
+# regulator needs distinct prefixes, otherwise its entries collide, as the keys
+# are built from the prefix and the per category index of the component in the
+# SMBIOS BOM string.
 declare -A pwr_conv_arr=( \
 	["0"]="dummy" \
 	["a"]="pmbus" \
@@ -118,7 +118,7 @@ declare -A pwr_conv_arr=( \
 	["d"]="raa228000" \
 	["e"]="mp29502" \
 	["f"]="raa228004" \
-	["g"]="xdpe1a2g7_pwr_conv" \
+	["g"]="xdpe1a2g7c" \
 )
 
 declare -A hotswap_arr=( \
