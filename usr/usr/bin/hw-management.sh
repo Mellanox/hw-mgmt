@@ -3491,7 +3491,10 @@ do_chip_up_down()
 			disable=$((disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
-			exit 0
+			# Return to the chipup caller so it can disable and
+			# remove the ftrace instance. Leaving the process here
+			# leaked the tracer.
+			return 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
 		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
@@ -3604,22 +3607,16 @@ case $ACTION in
 			asic_index="$2"
 			chipup_trace_attempt=1
 
+			# Always stop/remove the tracer, including chipup_dis
+			# (which used to exit from do_chip_up_down) and signals.
+			# lock_service_state_change replaces this trap; it also
+			# invokes stop_chipup_i2c_trace.
+			trap 'stop_chipup_i2c_trace' EXIT
+
 			# Rotate the trace log at invocation start so all retries within one
 			# chipup run stay in the same file (rotation at the end could split
 			# attempts across chipup_i2c_trace_log and chipup_i2c_trace_log.*).
-			if [ -f /var/log/chipup_i2c_trace_log ]; then
-				file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
-				if [ $file_size -gt $chipup_log_size ]; then
-					timestamp=`date +%s`
-					mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
-					touch /var/log/chipup_i2c_trace_log
-					# Cap the number of per-run archives so repeated chipup
-					# failures cannot fill the disk.
-					ls -1t /var/log/chipup_i2c_trace_log.* 2>/dev/null | \
-						tail -n +$((chipup_log_archive_max + 1)) | \
-						xargs -r rm -f
-				fi
-			fi
+			rotate_chipup_i2c_trace_log "$chipup_log_size" "$chipup_log_archive_max"
 
 			# Start the chipup I2C tracer on a dedicated ftrace instance
 			# (isolated from the boot-wide tracer). Enabled before the first
