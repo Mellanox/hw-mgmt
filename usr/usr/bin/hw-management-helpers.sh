@@ -1331,10 +1331,13 @@ save_i2c_trace_on_failure() {
 # sharing the single top-level buffer/filter/enable would clobber it.
 #
 # start_chipup_i2c_trace stores the tracing directory in CHIPUP_TRACE_DIR
-# (empty when tracing could not be started). The ftrace instance name includes
-# the ASIC index and PID so concurrent chipup invocations do not share one
-# buffer. sx-core always passes ASIC index 0, so index alone is not unique.
-# Use BASHPID (not $$) so background subshells also get distinct instances.
+# (empty when tracing could not be started). Never use the top-level
+# tracing instance as a fallback: another consumer may own its buffer,
+# size, and filters even when i2c events happen to be disabled.
+# The ftrace instance name includes the ASIC index and PID so concurrent
+# chipup invocations do not share one buffer. sx-core always passes ASIC
+# index 0, so index alone is not unique. Use BASHPID (not $$) so
+# background subshells also get distinct instances.
 # Default filter: capture all CPLD bridge child adapters (i2c-2 and up), not
 # just the ASIC bus, so bus-wide contention is visible. i2c-0 (CPU SMBus) and
 # i2c-1 (bridge parent) are excluded as noise.
@@ -1403,16 +1406,16 @@ start_chipup_i2c_trace() {
 		return
 	fi
 
-	# Preferred: dedicated, isolated ftrace instance per invocation.
+	# Dedicated ftrace instance only. Do not fall back to the top-level
+	# tracing directory: another tracer may still be collecting other
+	# events or preserving data even when i2c enable is 0. Clearing
+	# buffer/filter/size there would destroy that consumer's state.
 	if [ -d "$KERN_TRACE_FS/instances" ] &&
 	   mkdir -p "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null &&
 	   [ -d "$CHIPUP_I2C_TRACE_INSTANCE/events/i2c" ]; then
 		CHIPUP_TRACE_DIR="$CHIPUP_I2C_TRACE_INSTANCE"
-	# Fallback: top-level instance, but only when the boot-wide tracer is not
-	# already running, otherwise skip entirely to avoid clobbering it.
-	elif [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "0" ]; then
-		CHIPUP_TRACE_DIR="$KERN_TRACE_FS"
 	else
+		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
 		return
 	fi
 
