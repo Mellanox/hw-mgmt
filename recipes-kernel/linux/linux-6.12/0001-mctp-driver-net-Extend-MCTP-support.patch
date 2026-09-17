@@ -11558,7 +11558,7 @@ index d9c8e5a5f..a62788b09 100644
  
  	skb->next = NULL;
  	skb->sk = NULL;
-@@ -371,14 +660,137 @@
+@@ -371,14 +660,151 @@
  	key->reasm_head->len += skb->len;
  	key->reasm_head->truesize += skb->truesize;
  
@@ -11672,6 +11672,15 @@ index d9c8e5a5f..a62788b09 100644
 +	if (!report_skb)
 +		return;
 +
++	/* Pin the reassembly skb across the window where key->lock is
++	 * dropped below: without a reference, key expiry, socket close,
++	 * MCTP_IOCTL_TAG_DROP or a duplicate SOM on another CPU can steal
++	 * key->reasm_head and free it while we are still reading its MCTP
++	 * header. Neither mctp_lookup_sock_for_error() nor mctp_queue_error()
++	 * consumes the skb, so a plain reference is enough.
++	 */
++	skb_get(report_skb);
++
 +	/* CRITICAL: Release key->lock BEFORE error reporting to avoid deadlock.
 +	 * mctp_queue_error() needs to acquire keys_lock for TX key lookup, but
 +	 * correct lock order is keys_lock → key->lock. We currently hold key->lock,
@@ -11690,6 +11699,11 @@ index d9c8e5a5f..a62788b09 100644
 +				 mctp_get_binding_type(dev), key);
 +		sock_put(sk);
 +	}
++
++	/* Drop our reference now that reporting is done; doing it before
++	 * re-acquiring key->lock keeps the free out of the locked section.
++	 */
++	kfree_skb(report_skb);
 +
 +	/* Re-acquire key->lock for caller */
 +	spin_lock_irqsave(&key->lock, *flags);
