@@ -578,13 +578,11 @@ class RedfishClient:
             # Note that 'curl' returns 0 and empty response
             # in case of invalid user/password
             if len(response) == 0:
-                msg = 'Incorrect username or password\n'
                 ret = RedfishClient.ERR_CODE_BAD_CREDENTIAL
             else:
                 try:
                     json_response = json.loads(response)
                     if 'error' in json_response:
-                        msg = json_response['error']['message']
                         ret = RedfishClient.ERR_CODE_GENERIC_ERROR
                     elif 'token' in json_response:
                         token = json_response['token']
@@ -593,13 +591,10 @@ class RedfishClient:
                             self.__token = token
                             self.__password = password
                         else:
-                            msg = 'Empty "token" field found\n'
                             ret = RedfishClient.ERR_CODE_UNEXPECTED_RESPONSE
                     else:
-                        msg = 'No "token" field found\n'
                         ret = RedfishClient.ERR_CODE_UNEXPECTED_RESPONSE
-                except Exception as e:
-                    msg = 'Invalid json format\n'
+                except Exception:
                     ret = RedfishClient.ERR_CODE_INVALID_JSON_FORMAT
 
         return ret
@@ -758,8 +753,6 @@ class BMCAccessor(object):
         while attempt <= max_attempts:
             if attempt > 1:
                 const = f"1300NVOS-BMC-USER-Const-{attempt}"
-                mess = f"Password did not meet criteria; retrying with const: {const}"
-                # print(mess)
                 tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
                 try:
                     result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)

@@ -127,7 +127,7 @@ def dump_device(bus: int, addr: int, pages: int, script_path: str, output_file) 
 
         # Always log stderr if present (warnings and errors)
         if result.stderr:
-            print(f"  Output from device dump (stderr):", file=sys.stderr)
+            print("  Output from device dump (stderr):", file=sys.stderr)
             for line in result.stderr.strip().split('\n'):
                 print(f"    {line}", file=sys.stderr)
 
@@ -137,7 +137,7 @@ def dump_device(bus: int, addr: int, pages: int, script_path: str, output_file) 
 
         return True
     except subprocess.TimeoutExpired:
-        print(f"  ERROR: Timeout while dumping device", file=sys.stderr)
+        print("  ERROR: Timeout while dumping device", file=sys.stderr)
         return False
     except Exception as e:
         print(f"  ERROR: {e}", file=sys.stderr)
@@ -269,7 +269,7 @@ Examples:
             # User requested force overwrite - check if it's a symlink
             if os.path.islink(args.output):
                 print(f"ERROR: Output file '{args.output}' is a symlink. Refusing to overwrite for security reasons.", file=sys.stderr)
-                print(f"       Please remove the symlink manually or choose a different path.", file=sys.stderr)
+                print("       Please remove the symlink manually or choose a different path.", file=sys.stderr)
                 sys.exit(1)
             # Not a symlink, safe to remove
             try:
@@ -281,15 +281,15 @@ Examples:
         else:
             # File exists and --force not specified
             print(f"Warning: Output file '{args.output}' already exists.", file=sys.stderr)
-            print(f"         The script will fail when attempting to create the output file.", file=sys.stderr)
-            print(f"         Please remove the file, choose a different path with -o, or use --force to overwrite.", file=sys.stderr)
+            print("         The script will fail when attempting to create the output file.", file=sys.stderr)
+            print("         Please remove the file, choose a different path with -o, or use --force to overwrite.", file=sys.stderr)
 
     # Security check: Warn if writing to /tmp with elevated privileges
     # This helps prevent symlink attacks where a malicious symlink in /tmp
     # could redirect output to an arbitrary file with root privileges
     if args.output.startswith('/tmp/') and os.geteuid() == 0:
-        print(f"Warning: Writing to /tmp with root privileges may be unsafe due to symlink attacks", file=sys.stderr)
-        print(f"         Consider using a more secure location like /var/log/ or /root/", file=sys.stderr)
+        print("Warning: Writing to /tmp with root privileges may be unsafe due to symlink attacks", file=sys.stderr)
+        print("         Consider using a more secure location like /var/log/ or /root/", file=sys.stderr)
 
     # Open output file
     try:
@@ -339,10 +339,10 @@ DEVICE {i + 1}: Bus {bus}, Address 0x{addr:02X}, Pages {pages}
 
             # Dump the device
             if dump_device(bus, addr, pages, script_path, output_file):
-                print(f"  SUCCESS")
+                print("  SUCCESS")
                 success_count += 1
             else:
-                print(f"  FAILED")
+                print("  FAILED")
 
             output_file.flush()
 

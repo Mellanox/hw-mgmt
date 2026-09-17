@@ -880,7 +880,7 @@ class RepeatedTimer:
             self._thread.join(timeout=self.THREAD_STOP_TIMEOUT)
             # Verify thread actually stopped
             if self._thread.is_alive():
-                print(f"Warning: RepeatedTimer thread still alive after stop timeout")
+                print("Warning: RepeatedTimer thread still alive after stop timeout")
                 return False
             self._thread = None
         return True
@@ -1193,7 +1193,7 @@ def _format_comparison_text(comparison: Dict[str, Any],
     print("=" * 80)
 
     # Summary
-    print(f"\nSUMMARY:")
+    print("\nSUMMARY:")
     print(f"  Total Growth:    {comparison['total_growth']:,} bytes ({comparison['total_growth'] / 1024:.2f} KB)")
     print(f"  Total Shrink:    {comparison['total_shrink']:,} bytes ({comparison['total_shrink'] / 1024:.2f} KB)")
     print(f"  Growing Objects: {len(comparison['growing'])}")
