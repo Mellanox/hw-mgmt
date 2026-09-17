@@ -568,7 +568,7 @@ def parse_mlnx_blk(data, blk_header, FRU_ITEMS, verbose=False):
         fn_name = blk_item.get("fn", None)
         if fn_name:
             rec_list = globals()[fn_name](data, blk_item, blk_header['block_size'], verbose)
-            out_str += "=== MLNX_block: {}({}) ===\n".format(blk_item["blk_type"], blk_id, verbose) if verbose else ""
+            out_str += "=== MLNX_block: {}({}) ===\n".format(blk_item["blk_type"], blk_id) if verbose else ""
             print_format = '{:<25}{}\n'
             for key, val in rec_list:
                 out_str += print_format.format(key + ":", val)
@@ -692,7 +692,7 @@ def parse_ipmi_fru_bin(data, verbose):
                 output_str = result.stdout.strip()   # Command's standard output
                 retcode = result.returncode          # Command's return code
                 print("output_str: {}".format(output_str))
-            except Exception as e:
+            except Exception:
                 return None
 
     if not retcode:

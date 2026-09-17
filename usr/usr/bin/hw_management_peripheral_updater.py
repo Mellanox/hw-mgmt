@@ -52,7 +52,6 @@ try:
         current_milli_time,
         run_shell_cmd
     )
-    from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
 except ImportError as e:
@@ -285,7 +284,7 @@ def monitor_asic_chipup_status(arg, _dummy):
                 # Try to read temperature to verify ASIC is actually ready
                 # (not just that the file exists)
                 with open(f_src_input, 'r', encoding="utf-8") as f:
-                    val = f.read()
+                    f.read()
                 # Successfully read - ASIC is ready
                 # Count unique source paths (same ASIC may appear multiple times)
                 if f_asic_src_path not in asic_src_list:
@@ -1013,7 +1012,7 @@ def main():
         try:
             with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
                 product_sku = f.read()
-        except OSError as e:
+        except OSError:
             product_sku = ""
     else:
         product_sku = args["system_type"]

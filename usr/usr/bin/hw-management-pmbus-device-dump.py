@@ -377,7 +377,7 @@ def dump_pmbus_command(bus: int, addr: int, cmd: int, name: str, data_type: str,
 def dump_all_commands(bus: int, addr: int, num_pages: int, verbose: bool = False):
     """Dump all PMBus commands for all pages."""
     print("=" * 80)
-    print(f"PMBus Register Dump")
+    print("PMBus Register Dump")
     print(f"I2C Bus: {bus}")
     print(f"Slave Address: 0x{addr:02X}")
     print(f"Number of Pages: {num_pages}")
@@ -429,7 +429,7 @@ def dump_all_commands(bus: int, addr: int, num_pages: int, verbose: bool = False
         print(f"\nPage {page} Summary: {success_count} commands successfully read")
 
         # Also try to read some unknown manufacturer-specific commands
-        print(f"\nScanning unknown manufacturer-specific commands (0xD0-0xFF excluding defined commands):")
+        print("\nScanning unknown manufacturer-specific commands (0xD0-0xFF excluding defined commands):")
         print("-" * 80)
         mfr_success = 0
         for cmd in range(0xD0, 0x100):

@@ -62,8 +62,7 @@ try:
     )
     from collections import Counter
     from hw_management_platform_config import (
-        PLATFORM_CONFIG,
-        get_module_count
+        PLATFORM_CONFIG
     )
     # Note: ASIC chipup status tracking is now handled independently by
     # peripheral_updater using monitor_asic_chipup_status() function.
@@ -678,7 +677,7 @@ def main():
         try:
             with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
                 product_sku = f.read()
-        except OSError as e:
+        except OSError:
             product_sku = ""
     else:
         product_sku = args["system_type"]
