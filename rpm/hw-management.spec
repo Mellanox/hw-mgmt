@@ -7,6 +7,7 @@ Distribution: Centos
 Group: Converted/utils
 BuildArch: x86_64
 AutoReq: no
+Requires: python3
 
 Provides:      config(hw-management) = %{version}
 Provides:      hw-management = %{version}
@@ -118,6 +119,8 @@ install -m 0755 usr/usr/bin/hw-management-check-bios-update.sh $RPM_BUILD_ROOT/u
 install -m 0755 usr/usr/bin/hw-management-devtree-check.sh $RPM_BUILD_ROOT/usr/bin/hw-management-devtree-check.sh
 install -m 0755 usr/usr/bin/hw-management-devtree.sh $RPM_BUILD_ROOT/usr/bin/hw-management-devtree.sh
 install -m 0755 usr/usr/bin/hw-management-generate-dump.sh $RPM_BUILD_ROOT/usr/bin/hw-management-generate-dump.sh
+install -m 0755 usr/usr/bin/hw-management-ssd-dump-collect.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ssd-dump-collect.sh
+install -m 0755 usr/usr/bin/hw-management-ssd-dump.py $RPM_BUILD_ROOT/usr/bin/hw-management-ssd-dump.py
 install -m 0755 usr/usr/bin/hw-management-global-wp.sh $RPM_BUILD_ROOT/usr/bin/hw-management-global-wp.sh
 install -m 0755 usr/usr/bin/hw-management-helpers.sh $RPM_BUILD_ROOT/usr/bin/hw-management-helpers.sh
 install -m 0755 usr/usr/bin/hw-management-i2c-gpio-expander.sh $RPM_BUILD_ROOT/usr/bin/hw-management-i2c-gpio-expander.sh
@@ -225,6 +228,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 #%dir %attr(0755, root, root) "/usr/local/bin"
 %attr(0755, root, root) "/usr/bin/hw-management-chassis-events.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-generate-dump.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-ssd-dump-collect.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-ssd-dump.py"
 %attr(0755, root, root) "/usr/bin/hw-management-global-wp.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-helpers.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-i2c-gpio-expander.sh"
