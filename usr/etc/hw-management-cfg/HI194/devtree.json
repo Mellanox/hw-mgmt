@@ -63,27 +63,27 @@
         },
         {
             "key": "xdpe1a2g7_0",
-            "spec": "xdpe1a2g7 0x66 7 voltmon1"
+            "spec": "xdpe1a2g7b 0x66 7 voltmon1"
         },
         {
             "key": "xdpe1a2g7_1",
-            "spec": "xdpe1a2g7 0x68 7 voltmon2"
+            "spec": "xdpe1a2g7b 0x68 7 voltmon2"
         },
         {
             "key": "xdpe1a2g7_2",
-            "spec": "xdpe1a2g7 0x6c 7 voltmon3"
+            "spec": "xdpe1a2g7b 0x6c 7 voltmon3"
         },
         {
             "key": "xdpe1a2g7_3",
-            "spec": "xdpe1a2g7 0x66 23 voltmon4"
+            "spec": "xdpe1a2g7b 0x66 23 voltmon4"
         },
         {
             "key": "xdpe1a2g7_4",
-            "spec": "xdpe1a2g7 0x68 23 voltmon5"
+            "spec": "xdpe1a2g7b 0x68 23 voltmon5"
         },
         {
             "key": "xdpe1a2g7_5",
-            "spec": "xdpe1a2g7 0x6c 23 voltmon6"
+            "spec": "xdpe1a2g7b 0x6c 23 voltmon6"
         }
     ],
     "platform": [
