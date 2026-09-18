@@ -312,7 +312,11 @@ CONFIG_GPIO_ASPEED_SGPIO=y
 CONFIG_ASPEED_LPC_SNOOP=y
 #CONFIG_ASPEED_LPC_CTRL=y
 #CONFIG_ASPEED_LPC_PCC=y
+# CONFIG_AST2700_ESPI is not a real symbol - the live one is CONFIG_ASPEED_ESPI
+# (drivers/soc/aspeed/espi/Kconfig), so the driver was never built. Old name
+# kept, it is inert.
 CONFIG_AST2700_ESPI=y
+CONFIG_ASPEED_ESPI=y
 CONFIG_MISC_DEVICES=y
 CONFIG_ASPEED_UART_ROUTING=y
 # Ethernet
