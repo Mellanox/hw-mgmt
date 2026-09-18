@@ -1107,6 +1107,8 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
+		# sxcore uses 0-based ASIC index; chipup maps 0 to asic1_* and
+		# uses $3 (%S/%p PCI path) to identify the failed ASIC.
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
 	fi
 	if [ "$2" == "nvme_temp" ]; then

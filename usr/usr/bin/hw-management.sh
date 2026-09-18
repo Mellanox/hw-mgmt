@@ -3467,6 +3467,14 @@ case $ACTION in
 			done
 			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
+			# PWM 100% fallback is only for SPC1 after a warm
+			# (COMEX/CPU) reboot. Cold reboot recovery is another
+			# reboot; other chipup paths must not write MFSC.
+			# Pass $3 (PCI path from sxcore) so index 0 still
+			# resolves a target.
+			if is_spc1_warm_reboot; then
+				set_asic_pwm_full_speed_on_chipup_fail "$asic_index" "$3"
+			fi
 		fi
 	;;
 	chipdown)
