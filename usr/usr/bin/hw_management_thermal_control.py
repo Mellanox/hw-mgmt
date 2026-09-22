@@ -2624,6 +2624,17 @@ class fan_sensor(system_device):
         return debug_str
 
     # ----------------------------------------------------------------------
+    def _is_pwm_stabilized_for_trend(self, pwm_curr):
+        """
+        TC 2.0 uses integer PWM percent from sysfs; dmin/set_pwm may still pass
+        float setpoints (e.g. 65.0). Treat read vs set as settled when equal
+        as integers.
+        """
+        if pwm_curr is None or self.pwm_set is None:
+            return False
+        return abs(int(pwm_curr) - int(round(self.pwm_set))) < 1
+
+    # ----------------------------------------------------------------------
     def _validate_rpm(self):
         """
         Validate FAN RPM against expected speed for current PWM.
@@ -2635,9 +2646,10 @@ class fan_sensor(system_device):
             False: PWM read error; or fan speed abnormal (out of range or
                    wrong vs calculated); or PWM stabilized but speed wrong.
             Previous state (cached fan_tacho_state): when PWM not yet
-            stabilized (relax time not elapsed or read PWM != set PWM) —
-            applies only to the trend check (step 2). Out-of-range RPM (step 1)
-            is an immediate fault and does not use the cache during stabilisation.
+            stabilized (relax time not elapsed or read PWM vs set PWM differ
+            by >= 1% as integers) — applies only to the trend check (step 2).
+            Out-of-range RPM (step 1) is an immediate fault and does not use
+            the cache during stabilisation.
         """
         # FAN tacho state. True - ok, False - error
         fan_tacho_state = True
@@ -2683,7 +2695,7 @@ class fan_sensor(system_device):
             # 2. Check fan trend
             if pwm_curr >= pwm_min:
                 # if FAN speed stabilized after the last change
-                if self.rpm_relax_timestamp <= current_milli_time() and pwm_curr == self.pwm_set:
+                if self.rpm_relax_timestamp <= current_milli_time() and self._is_pwm_stabilized_for_trend(pwm_curr):
                     # calculate speed
                     slope = int(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
@@ -2712,8 +2724,10 @@ class fan_sensor(system_device):
                         fan_tacho_state = False
                         break
                 else:
-                    # If FAN not stabilized yet - use cached state
-                    fan_tacho_state = self.fan_tacho_state
+                    # Not stabilized on this tacho: latch prior fault only; do not
+                    # clear a tacho that already passed trend earlier in this loop.
+                    if fan_tacho_state:
+                        fan_tacho_state = self.fan_tacho_state
             else:
                 # pwm_curr < pwm_min: skip trend for this tacho only; do not set
                 # fan_tacho_state here (earlier tachos may have set False, e.g.
@@ -2746,12 +2760,19 @@ class fan_sensor(system_device):
         @param pwm_val: PWM level value <= 100%
         """
         self.log.info("Write {} PWM {}".format(self.name, pwm_val))
-        pwm_val = max(pwm_val, CONST.PWM_MIN)
+        pwm_val = int(max(int(pwm_val), CONST.PWM_MIN))
 
-        if pwm_val == self.pwm_set and not force:
+        if pwm_val == int(self.pwm_set) and not force:
             return
 
-        pwm_jump = abs(pwm_val - self.pwm_set)
+        pwm_asic_control = self.sensors_config.get("is_pwm_asic_control", False)
+        if pwm_asic_control:
+            asic_ready = self._get_asic_ready()
+            if not asic_ready:
+                self.log.notice(None, id="{} ASIC not ready".format(self.name))
+                return
+
+        pwm_jump = abs(pwm_val - int(self.pwm_set))
 
         # For big PWM jumps - use longer FAN relax timeout
         # For small PWM jumps - use zero FAN relax timeout
@@ -2763,13 +2784,6 @@ class fan_sensor(system_device):
             relax_time = 0
         self.rpm_relax_timestamp = max(current_milli_time() + relax_time, self.rpm_relax_timestamp)
         self.log.debug("{} pwm jump by:{} relax_time:{} timestamp {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestamp))
-
-        pwm_asic_control = self.sensors_config.get("is_pwm_asic_control", False)
-        if pwm_asic_control:
-            asic_ready = self._get_asic_ready()
-            if not asic_ready:
-                self.log.notice(None, id="{} ASIC not ready".format(self.name))
-                return
 
         self.pwm_set = pwm_val
 
