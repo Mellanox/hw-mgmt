@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "Patch_Status_Table.txt",
+      "description": "Host kernel patch registry. Every deployable patch under linux-X.Y/ must have a row in the matching Kernel-X.Y section, or deploy_kernel_patches.py silently skips it."
+    },
+    {
+      "path": "Patch_BMC_Status_Table.txt",
+      "description": "BMC kernel patch registry, same format. Its Legend section at the bottom is the authoritative definition of every legal status value and of the os[]/take[]/skip[] modifiers."
+    },
+    {
+      "path": "deploy_kernel_patches.py",
+      "description": "The consumer of both status tables. Defines what the status column actually means: see class CONST for PATCH_OS_SUBFOLDERS and the take/skip/os token names, and parse_status for how modifiers are tokenized."
+    }
+  ]
+}

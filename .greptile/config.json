@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "id": "no-ai-attribution",
+      "severity": "high",
+      "rule": "Authorship must always be a real person with a real name and work email. An AI tool is never an author, co-author or signer.",
+      "instruction": "Flag any Author, From:, Signed-off-by:, Co-Authored-By: or Co-Developed-by: line that names an AI assistant or bot instead of a person - Claude, Anthropic, Copilot, ChatGPT, OpenAI, Gemini, Cursor, Devin, Codex, Aider and the like - or that uses a machine address such as noreply@anthropic.com, noreply@github.com, an *@users.noreply address, bot@, or a name ending in [bot]. Also flag 'Generated with', 'Co-authored with' or similar tool footers in a commit message or PR description. Check the PR's own commits and description as well as the From:/Signed-off-by: trailers inside .patch files. Every one of these must be a real human name and a real work email; the fix is to amend the commit and drop the line."
+    }
+  ]
+}

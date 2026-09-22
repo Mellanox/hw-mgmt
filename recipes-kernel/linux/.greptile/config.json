@@ -1,0 +1,92 @@
+{
+  "strictness": 3,
+  "autoReview": ["open", "push"],
+  "commentTypes": ["logic", "syntax"],
+  "rules": [
+    {
+      "id": "patch-header-block-order",
+      "severity": "high",
+      "scope": ["**/*.patch"],
+      "rule": "A kernel .patch file must open with the mailbox header block in this exact order: the 'From <40-hex-sha> Mon Sep 17 00:00:00 2001' magic line, then 'From: Name <email>', then 'Date: <RFC2822>', then 'Subject: ...'. No field may be missing, reordered, or appear after the commit body.",
+      "instruction": "Read the first ~12 lines of every added or modified .patch file. Flag: a missing magic line (the file starts straight at 'From:' or 'Subject:'); any of From:/Date:/Subject: absent; the three appearing in any order other than From, Date, Subject. An 'Upstream-Status: Pending' or 'Upstream-Status: Backport [<sha>]' preamble before the magic line is permitted - skip it before judging. MIME-Version/Content-Type/Content-Transfer-Encoding and X-NVConfidentiality may follow the Subject; they must never precede it. The fix is to regenerate the file with 'git format-patch' rather than hand-editing a header."
+    },
+    {
+      "id": "patch-author-identity",
+      "severity": "high",
+      "scope": ["**/*.patch"],
+      "rule": "The 'From:' line must carry a real human identity as 'Display Name <local@domain>'. Both the name and the email must be present and plausible.",
+      "instruction": "Flag a bare email with no display name, a missing angle-bracketed address, or a placeholder identity: 'root', 'user', 'your name', 'unknown', 'localhost', 'root@localhost', 'noreply@', '@example.com', '@example.org'. A non-NVIDIA author is entirely legitimate and must NOT be flagged - most of this tree is cherry-picked from upstream maintainers and the original author's attribution is required. Only the shape and plausibility of the identity is at issue, never which company it belongs to."
+    },
+    {
+      "id": "patch-signoff-and-separator",
+      "severity": "high",
+      "scope": ["**/*.patch"],
+      "rule": "Every patch must carry a 'Signed-off-by: Name <email>' trailer, and every trailer must sit above the '---' separator line that divides the commit message from the diff.",
+      "instruction": "Locate the separator as the last line consisting of exactly three hyphens before the first diff line. Flag a patch with no Signed-off-by at all (DCO requirement - there is no valid fix other than adding it), and flag any trailer (Signed-off-by, Reviewed-by, Acked-by, Tested-by, Fixes:, Link:, Cc:) that has fallen below the separator, where git will silently discard it. Do not confuse the separator with a unified-diff '--- a/path' line."
+    },
+    {
+      "id": "patch-subject-form",
+      "severity": "medium",
+      "scope": ["**/*.patch"],
+      "rule": "The Subject must be a non-empty, subsystem-prefixed one-line summary. If it carries a bracket tag, the tag must spell '[PATCH'.",
+      "instruction": "Unfold RFC822 continuation lines (subsequent lines beginning with whitespace) into the Subject before judging it. Flag: the literal misspelling '[PATH' - it appears in legacy files and must not spread to new ones; an empty title after the tag; a title with no 'subsystem: ' prefix, which this tree uses consistently (e.g. 'hwmon: pmbus: ...', 'platform/mellanox: ...'); a trailing period; a title over 100 characters. Also flag a Subject containing a nested mail header or the string 'Mon Sep 17 00:00:00 2001', which always means paste corruption."
+    },
+    {
+      "id": "patch-description-substance",
+      "severity": "high",
+      "scope": ["**/*.patch"],
+      "rule": "The commit body - the prose between the Subject and the first trailer - must explain WHY the change is needed, not merely restate WHAT it does.",
+      "instruction": "This is the rule that matters most; spend your judgment here. Flag a body that is empty, that is under roughly 8 words, that only rephrases the Subject line, or that is pure boilerplate ('fix bug', 'update driver', 'cosmetic changes', 'see commit message'). Also flag any unresolved TMP/TODO/WIP/FIXME marker in the body. IMPORTANT EXEMPTION: if the patch is cherry-picked from upstream (see patch-upstream-provenance), the body is the upstream author's wording and must be left verbatim - do not ask for it to be expanded, and do not flag it under this rule. A genuinely trivial one-line fix with a short but complete explanation is acceptable; length alone is not the test. The test is whether a reviewer who did not write the patch can tell from the body what problem it solves."
+    },
+    {
+      "id": "patch-upstream-provenance",
+      "severity": "high",
+      "scope": ["**/*.patch"],
+      "rule": "A patch taken from upstream must declare its provenance, and a patch claiming upstream status must actually carry an upstream commit id.",
+      "instruction": "Accept any of these provenance forms: '(cherry picked from commit <40-hex>)', 'commit <sha> upstream', 'upstream commit <sha>', 'Upstream-Status: Backport [<sha>]', or a Link: to lore.kernel.org. Flag a patch whose status-table row says 'Feature upstream' or 'Bugfix upstream' but which carries no commit id in the table and no provenance marker in the body - that combination means nobody can trace where the code came from. Conversely flag a row marked 'Downstream' that nonetheless claims an upstream commit id."
+    },
+    {
+      "id": "patch-downstream-context",
+      "severity": "medium",
+      "scope": ["**/*.patch"],
+      "rule": "A patch authored downstream at NVIDIA - status 'Downstream' or 'Downstream accepted' - must explain the motivation, name the affected hardware or SKU, and say why the change is carried downstream instead of being sent upstream.",
+      "instruction": "Apply this only to patches whose status-table row begins with 'Downstream'; never to cherry-picked upstream work. These are the patches this repository owns forever, so their commit message is the only documentation that will ever exist. Ask: does the body name a concrete system, board, ASIC or SKU (SN4800, SPC6, AST2700, DPU, QM3200...)? Does it state the observed failure or the missing capability? Does it indicate whether upstreaming was attempted or why it is inapplicable? Missing hardware context is the most common and most costly gap - raise it as a comment rather than a hard objection, and phrase it as a specific question about the missing detail."
+    },
+    {
+      "id": "patch-status-registration",
+      "severity": "high",
+      "scope": ["**/*.patch", "**/Patch_Status_Table.txt", "**/Patch_BMC_Status_Table.txt"],
+      "rule": "Every added or renamed .patch file at the root of a linux-X.Y/ directory must gain a matching row in a status table, under the 'Kernel-X.Y' section matching its directory. Every deleted patch must have its row removed.",
+      "instruction": "BMC patches are registered in Patch_BMC_Status_Table.txt; all others in Patch_Status_Table.txt. Cross-check the PR in both directions: a new .patch with no table row will be silently skipped by deploy_kernel_patches.py and never reach a build - this is the single highest-value check in this file. A removed .patch that left its row behind will make the deploy tool fail. Also verify the row's 4-digit ordinal keeps the section in non-decreasing order, and that the row's filename cell matches the file on disk byte for byte."
+    },
+    {
+      "id": "patch-status-vocabulary",
+      "severity": "high",
+      "scope": ["**/Patch_Status_Table.txt", "**/Patch_BMC_Status_Table.txt"],
+      "rule": "The status cell must be non-empty and drawn from the vocabulary deploy_kernel_patches.py accepts, with modifiers written exactly as os[...], take[...] or skip[...].",
+      "instruction": "Legal base statuses: 'Feature upstream', 'Feature accepted', 'Feature pending', 'Bugfix upstream', 'Bugfix accepted', 'Bugfix pending', 'Downstream', 'Downstream accepted', 'Rejected'. Modifiers are semicolon-separated and the only legal keys are os, take and skip. Legal OS values inside the brackets are sonic, opt, cumulus, nvos, dvs and ALL. Flag any other key or OS name, and flag whitespace inside the brackets - the parser matches these literally, so a typo like 'take[ sonic ]' or 'skip[SONIC]' is not rejected, it is silently ignored, and the patch then ships to an OS that was meant to exclude it. An os[...] modifier must name a subfolder that actually contains a copy of that patch."
+    },
+    {
+      "id": "patch-filename-subject-match",
+      "severity": "medium",
+      "scope": ["**/*.patch"],
+      "rule": "The filename must be NNNN-slug.patch (or NNNN-N-slug.patch for a sub-numbered series) and the slug must agree with the Subject title.",
+      "instruction": "The slug is the Subject title with non-alphanumeric runs collapsed to single hyphens, usually truncated. Flag a clear mismatch - most often a patch copied from another and renamed without its Subject being updated, or vice versa. Minor truncation differences are fine; only raise this when the slug and the Subject describe different changes."
+    },
+    {
+      "id": "patch-rebase-rationale",
+      "severity": "medium",
+      "scope": ["**/*.patch"],
+      "rule": "When an existing .patch is modified rather than added - a rebase, refresh or context fixup - the PR description must say what changed in it and why.",
+      "instruction": "Modified patches are where silent regressions enter this tree: a dropped hunk during a kernel-minor rebase looks identical to a deliberate removal. For each modified .patch, check the PR description names that patch and states what was dropped, kept or reworked. Hunks that disappeared because the fix landed in the new base must be called out explicitly as such. A PR that rebases several patches and says only 'rebase to 6.12.x' should be asked to itemise per patch."
+    },
+    {
+      "id": "patch-table-integrity",
+      "severity": "medium",
+      "scope": ["**/Patch_Status_Table.txt", "**/Patch_BMC_Status_Table.txt"],
+      "rule": "The status tables are fixed-width, pipe-delimited and parsed positionally. Their structure must stay intact.",
+      "instruction": "Flag: a row with other than 6 pipe characters; a dashed delimiter line that was shortened or removed; any stray line inside a Kernel-X.Y section that is not a row; and web-UI paste artifacts such as a trailing 'GitHub, Inc.' line or smart quotes replacing ASCII quotes. One such artifact already exists at the end of Patch_BMC_Status_Table.txt and should be removed when that file is next touched."
+    }
+  ],
+  "disabledRules": []
+}
