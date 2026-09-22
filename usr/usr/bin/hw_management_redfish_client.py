@@ -562,6 +562,27 @@ class RedfishClient:
     Login Redfish server and get bearer token
     '''
 
+    def __apply_login_response(self, response, password):
+        '''Map POST /login body to ERR_CODE_* and store token on success.'''
+        if len(response) == 0:
+            return RedfishClient.ERR_CODE_BAD_CREDENTIAL
+
+        try:
+            json_response = json.loads(response)
+        except Exception:
+            return RedfishClient.ERR_CODE_INVALID_JSON_FORMAT
+
+        if 'error' in json_response:
+            return RedfishClient.ERR_CODE_GENERIC_ERROR
+
+        token = json_response.get('token')
+        if token is None:
+            return RedfishClient.ERR_CODE_UNEXPECTED_RESPONSE
+
+        self.__token = token
+        self.__password = password
+        return RedfishClient.ERR_CODE_OK
+
     def login(self, password=None):
         if self.has_login():
             return RedfishClient.ERR_CODE_OK
@@ -572,32 +593,10 @@ class RedfishClient:
         curl_cfg = self.__build_login_cmd(password)
         ret, response, error = self.exec_curl_cmd(curl_cfg)
 
-        if (ret != 0):  # cURL execution error
-            ret = RedfishClient.ERR_CODE_CURL_FAILURE
-        else:
-            # Note that 'curl' returns 0 and empty response
-            # in case of invalid user/password
-            if len(response) == 0:
-                ret = RedfishClient.ERR_CODE_BAD_CREDENTIAL
-            else:
-                try:
-                    json_response = json.loads(response)
-                    if 'error' in json_response:
-                        ret = RedfishClient.ERR_CODE_GENERIC_ERROR
-                    elif 'token' in json_response:
-                        token = json_response['token']
-                        if token is not None:
-                            ret = RedfishClient.ERR_CODE_OK
-                            self.__token = token
-                            self.__password = password
-                        else:
-                            ret = RedfishClient.ERR_CODE_UNEXPECTED_RESPONSE
-                    else:
-                        ret = RedfishClient.ERR_CODE_UNEXPECTED_RESPONSE
-                except Exception:
-                    ret = RedfishClient.ERR_CODE_INVALID_JSON_FORMAT
+        if ret != 0:
+            return RedfishClient.ERR_CODE_CURL_FAILURE
 
-        return ret
+        return self.__apply_login_response(response, password)
 
     def build_get_cmd(self, uri):
         return self.__build_get_cmd(uri)
@@ -666,8 +665,14 @@ class BMCAccessor(object):
                 def redfish_api_wrapper(*args, **kwargs):
                     ret, data = api_func(*args, **kwargs)
                     if ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
-                        # Trigger credential restore flow
-                        restored = self.restore_tpm_credential()
+                        # Optional hook; do not read self.restore_tpm_credential
+                        # directly — missing attr recurses __getattr__.
+                        restore_fn = getattr(
+                            self, 'restore_tpm_credential', None)
+                        if callable(restore_fn):
+                            restored = restore_fn()
+                        else:
+                            restored = False
                         if restored:
                             # Execute again
                             ret, data = api_func(*args, **kwargs)
@@ -868,57 +873,68 @@ class BMCAccessor(object):
 
     def try_rf_login(self, user, password):
         self.rf_client.update_credentials(user, password)
-        ret = self.rf_client.login()
-        return ret
+        return self.rf_client.login()
+
+    @staticmethod
+    def _report_bmc_login_flow(flow_steps):
+        failed = any("'" in step for step in flow_steps)
+        status = 'Fail' if failed else 'Pass'
+        print(f'-- BMC Login {status}, Flow: {"->".join(flow_steps)}')
 
     def login(self, password=None):
-        print("Login to BMC")
-        cp = []
+        '''Establish a Redfish session as BMC_NOS_ACCOUNT (multi-step fallback).'''
+        print('Login to BMC')
+        flow = []
+        tpm_password = (
+            password if password is not None else self.get_login_password())
+        ret = RedfishClient.ERR_CODE_GENERIC_ERROR
+
         try:
-            cp.append("A")  # try with BMC_NOS_ACCOUNT and TPM password")
-            ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+            flow.append('A')
+            ret = self.try_rf_login(
+                BMCAccessor.BMC_NOS_ACCOUNT, tpm_password)
             if ret == RedfishClient.ERR_CODE_OK:
-                cp.append("Z1")
+                flow.append('Z1')
                 return ret
 
-            cp.append("B")  # try with BMC_NOS_ACCOUNT and bmc account default password")
-            ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
+            flow.append('B')
+            ret = self.try_rf_login(
+                BMCAccessor.BMC_NOS_ACCOUNT,
+                BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
             if ret == RedfishClient.ERR_CODE_OK:
-                cp.append("Z2")
-                ret = self.reset_user_password(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+                ret = self.reset_user_password(
+                    BMCAccessor.BMC_NOS_ACCOUNT, tpm_password)
                 if ret == RedfishClient.ERR_CODE_OK:
-                    cp.append("Z2")
+                    flow.append('Z2')
                 else:
-                    cp.append("Z'1")
+                    flow.append("Z'1")
                 return ret
 
-            cp.append("C")  # login as admin and tpm pwd")
-            ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, self.get_login_password())
+            flow.append('C')
+            ret = self.try_rf_login(
+                BMCAccessor.BMC_ADMIN_ACCOUNT, tpm_password)
             if ret != RedfishClient.ERR_CODE_OK:
-                cp.append("C1")  # login as admin and default pwd")
-                ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
+                flow.append('C1')
+                ret = self.try_rf_login(
+                    BMCAccessor.BMC_ADMIN_ACCOUNT,
+                    BMCAccessor.BMC_DEFAULT_PASSWORD)
                 if ret != RedfishClient.ERR_CODE_OK:
-                    cp.append("Z'2")
+                    flow.append("Z'2")
                     return ret
 
-            cp.append("D")  # add BMC_NOS_ACCOUNT with tpm pwd")
-            self.rf_client.update_credentials(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
-            ret = self.rf_client.login()
+            flow.append('D')
+            self.rf_client.update_credentials(
+                BMCAccessor.BMC_ADMIN_ACCOUNT,
+                BMCAccessor.BMC_DEFAULT_PASSWORD)
+            self.rf_client.login()
 
-            ret = self.create_user(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+            ret = self.create_user(BMCAccessor.BMC_NOS_ACCOUNT, tpm_password)
             if ret == RedfishClient.ERR_CODE_OK:
-                ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
-                if ret == RedfishClient.ERR_CODE_OK:
-                    cp.append("Z3")
-                    return ret
-                else:
-                    cp.append("Z'3")
-                    return ret
+                ret = self.try_rf_login(
+                    BMCAccessor.BMC_NOS_ACCOUNT, tpm_password)
+                flow.append('Z3' if ret == RedfishClient.ERR_CODE_OK else "Z'3")
             else:
-                cp.append("Z'4")
-                return ret
+                flow.append("Z'4")
+            return ret
         finally:
-            if any("'" in item for item in cp):
-                print(f"-- BMC Login Fail, Flow: {'->'.join(cp)}")
-            else:
-                print(f"-- BMC Login Pass, Flow: {'->'.join(cp)}")
+            self._report_bmc_login_flow(flow)
