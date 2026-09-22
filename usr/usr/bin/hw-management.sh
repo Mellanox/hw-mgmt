@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -113,7 +113,8 @@ leakage_count=0
 leakage_rope_count=0
 asic_chipup_retry=2
 device_connect_retry=2
-chipup_log_size=4096
+chipup_log_size=65536
+chipup_log_archive_max=3
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=17
@@ -3490,7 +3491,10 @@ do_chip_up_down()
 			disable=$((disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
-			exit 0
+			# Return to the chipup caller so it can disable and
+			# remove the ftrace instance. Leaving the process here
+			# leaked the tracer.
+			return 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
 		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
@@ -3600,39 +3604,54 @@ case $ACTION in
 		if [ -d /var/run/hw-management ]; then
 			asic_retry="$asic_chipup_retry"
 			asic_chipup_rc=1
+			asic_index="$2"
+			chipup_trace_attempt=1
+
+			# Always stop/remove the tracer, including chipup_dis
+			# (which used to exit from do_chip_up_down) and signals.
+			# lock_service_state_change replaces this trap; it also
+			# invokes stop_chipup_i2c_trace.
+			trap 'stop_chipup_i2c_trace' EXIT
+
+			# Rotate the trace log at invocation start so all retries within one
+			# chipup run stay in the same file (rotation at the end could split
+			# attempts across chipup_i2c_trace_log and chipup_i2c_trace_log.*).
+			rotate_chipup_i2c_trace_log "$chipup_log_size" "$chipup_log_archive_max"
+
+			# Start the chipup I2C tracer on a dedicated ftrace instance
+			# (isolated from the boot-wide tracer). Enabled before the first
+			# attempt so every retry - including the first - is captured, and
+			# scoped to all CPLD bridge adapters so bus-wide contention is
+			# visible, not just the ASIC bus.
+			start_chipup_i2c_trace "$asic_index"
 
 			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
 				do_chip_up_down 1 "$2" "$3"
 				asic_chipup_rc=$?
-				asic_index="$2"
-				if [ "$asic_chipup_rc" -ne 0 ];then
+				if [ "$asic_chipup_rc" -ne 0 ]; then
 					do_chip_up_down 0 "$2" "$3"
+					# Save this attempt's I2C trace and clear the buffer
+					# before the next retry.
+					save_chipup_i2c_trace "$chipup_trace_attempt"
+					chipup_trace_attempt=$((chipup_trace_attempt + 1))
 				else
 					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
+					stop_chipup_i2c_trace
 					exit 0
 				fi
 
 				asic_retry=$(< $config_path/asic_chipup_counter)
-				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
-					# Start I2C tracer.
-					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
-					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
-				else
-					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_trace_log
-					echo 0>/sys/kernel/debug/tracing/trace
-				fi
-
 				change_file_counter $config_path/asic_chipup_counter -1
 			done
-			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
+			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
-
-			# Check log size in (bytes) and rotate if necessary.
-			file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
-			if [ $file_size -gt $chipup_log_size ]; then
-				timestamp=`date +%s`
-				mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
-				touch /var/log/chipup_i2c_trace_log
+			# PWM 100% fallback is only for SPC1 after a warm
+			# (COMEX/CPU) reboot. Cold reboot recovery is another
+			# reboot; other chipup paths must not write MFSC.
+			# Pass $3 (PCI path from sxcore) so index 0 still
+			# resolves a target.
+			if is_spc1_warm_reboot; then
+				set_asic_pwm_full_speed_on_chipup_fail "$asic_index" "$3"
 			fi
 		fi
 	;;

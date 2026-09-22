@@ -1,7 +1,8 @@
 #!/bin/bash
 
-###########################################################################
-# Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+########################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -1139,6 +1140,8 @@ if [ "$1" == "add" ]; then
 		if [ ${minimal_unsupported} -eq 0 ] && [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
+		# sxcore uses 0-based ASIC index; chipup maps 0 to asic1_* and
+		# uses $3 (%S/%p PCI path) to identify the failed ASIC.
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
 	fi
 	if [ "$2" == "nvme_temp" ]; then
