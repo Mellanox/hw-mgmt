@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -42,6 +42,8 @@ leakage_map[3]="0x20ff:2"
 leakage_map[4]="0x20ff:3"
 leakage_map[5]="0x20ff:4"
 leakage_map[aggr]="0x20fe:0"
+# RJ45/LSC path (Tray_Leak_L / Small_Leak_L)
+leakage_map[rj45]="0x20fe:1"
 
 function usage() {
     cat <<EOF
@@ -76,6 +78,12 @@ EXAMPLES:
     # Revert leakage on sensor 2
     $0 -r 2
 
+    # Assert Tray_Leak_L on the RJ45 leakage connector
+    $0 -s rj45
+
+    # Revert Tray_Leak_L on the RJ45 leakage connector
+    $0 -r rj45
+
     # Clear all simulated leakages
     $0 -c
 
@@ -86,6 +94,7 @@ NOTES:
     - This tool only works on supported NVIDIA switch systems (N5-N9 series)
     - Requires iorw utility for hardware register access
     - Leakage state: 0 = leakage detected, 1 = no leakage detected
+    - RJ45 (id "rj45") drives 0x20fe bit 1; BMC leak_rj45_en must be enabled
     - Use with caution as it directly modifies hardware registers
 
 EOF
