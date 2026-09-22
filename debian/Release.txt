@@ -1,4 +1,43 @@
 ================================================================================
+- V.7.0050.3010
+- Tue, 22 Sep 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4966961, hw-mgmt: thermal: Close chipup trace lock FD and uniquify archives, cc8eaa2
+    o #4966961, hw-mgmt: thermal: Skip chipup I2C trace if instance is unavailable, 8e03eec
+    o #4966961, hw-mgmt: thermal: Fix chipup trace cleanup and serialize captures, 37ca77e
+    o #4966961, hw-mgmt: thermal: Limit chipup PWM fallback to SPC1 warm reboot, 6115aef
+    o #4966961, hw-mgmt: thermal: SPC1: Add fallback in case if I2C ASIC driver failure, 73e806e
+    o #N/A, hw-mgmt: Fix chipup I2C trace collection on mlxsw_minimal failure, 0ed8e06
+    o #N/A, Update changelog and release notes for V.7.0050.3009, b6aac7d
+    o #4929286, hw-mgmt: thermal: drive TC version from tc_config.json (3 commits) (#2697), 773663f
+    o #N/A, Update changelog and release notes for V.7.0050.3008, 5c1036d
+    o #4964651, hw-mgmt: thermal: Add module configuration for Tmax limitation (#2690), d34f93d
+    o #N/A, Update changelog and release notes for V.7.0050.3007, 10443af
+    o #N/A, hw-mgmt: scripts: Fix potential issues caused by system datetime changes, d8b4d03
+    o #4966264, hw-mgmt: scripts: Fix thermal/chassis updater service scheduler, 6bc8b60
+    o #4946747, hw-mgmt: service: Fix thermal-updater stop Failed with result timeout, fad7d91
+    o #N/A, Update changelog and release notes for V.7.0050.3006, 92a3fb7
+    o #N/A, Update changelog and release notes for V.7.0050.3005, 08ba90f
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.3010/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0050.3009
 - Thu, 16 Jul 2026
 --------------------------------------------------------------------------------
