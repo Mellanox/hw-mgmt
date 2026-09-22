@@ -1,5 +1,3 @@
-Upstream-Status: Pending
-
 From be1f98335672645dee6b12c9c9eeed513838bc33 Mon Sep 17 00:00:00 2001
 From: Howard Tang <howardt@nvidia.com>
 Date: Wed, 17 Jul 2024 03:21:48 +0000
@@ -10,7 +8,12 @@ ADC. The voltage reference can be one of four supported modes based on
 the datasheet.  For internal references, the scale will automatically
 update based on the internal reference voltage.
 
-Fixes JIRA https://jirasw.nvidia.com/browse/DGXOPENBMC-12962
+Leakage A2D sensors on these platforms use Vdd (about 3.28 V) as the
+ADC reference. The driver's fixed 2.048 V internal reference saturates
+higher inputs, so userspace must be able to select Vdd and update the
+scale.
+
+Upstream-Status: Pending
 
 Signed-off-by: Howard Tang <howardt@nvidia.com>
 ---
