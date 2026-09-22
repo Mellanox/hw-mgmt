@@ -151,6 +151,27 @@ def test_validate_rpm_read_pwm_mismatch_uses_cached_false(module_name, tc_mod, t
 
 
 @pytest.mark.parametrize("tacho_idx", [1, 2])
+def test_validate_rpm_dmin_float_pwm_set_clears_cached_fault_tc20(tacho_idx):
+    """TC 2.0: dmin may supply float setpoint (65.0) while read_pwm is int 65."""
+    import hw_management_thermal_control as tc
+
+    slope = int(_DRWR["slope"])
+    rpm_max = _DRWR["rpm_max"]
+    rpm_at_65 = slope * 65 + (rpm_max - slope * 100)
+    with patch.object(tc, "current_milli_time", return_value=1_000_000):
+        h = _ValidateRpmHarness(
+            read_pwm_val=65,
+            pwm_set=65.0,
+            rpm_relax_ts=0,
+            fan_tacho_state=False,
+            rpm_read=rpm_at_65,
+            tacho_idx=tacho_idx,
+        )
+        assert tc.fan_sensor._validate_rpm(h) is True
+        assert h.fan_tacho_state is True
+
+
+@pytest.mark.parametrize("tacho_idx", [1, 2])
 def test_validate_rpm_pwm_quantization_clears_cached_fault_2_5(tacho_idx):
     """2.5 float PWM round-trip (50 vs 50.2) is settled; trend can clear a cached tacho fault."""
     import hw_management_thermal_control_2_5 as tc25
@@ -217,7 +238,7 @@ def test_validate_rpm_pwm_below_pwm_min_skips_trend_true(module_name, tc_mod, ta
 def test_validate_rpm_multi_first_not_stabilized_false_second_ok_stays_false(
     module_name, tc_mod, tacho_idx
 ):
-    """Tacho0 not stabilized -> cached False; tacho1 stabilized OK does not clear it."""
+    """Tacho0 not stabilized -> cached False; tacho1 stabilized OK does not clear drawer fault."""
     with patch.object(tc_mod, "current_milli_time", return_value=1_000_000):
         h = _ValidateRpmHarness(
             50,
