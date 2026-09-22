@@ -1,4 +1,30 @@
 ================================================================================
+- V.7.0040.2305
+- Tue, 22 Sep 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4966961, hw-mgmt: thermal: SPC1: Add fallback in case if I2C ASIC driver failure (#2890), 0c6bf9d
+    o #N/A, hw-mgmt: Fix chipup I2C trace collection on mlxsw_minimal failure, e9b90fc
+    o #N/A, Update version V.7.0040.2304, 044ab35
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.2305/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0040.2303
 - Thu, 03 Jul 2025
 --------------------------------------------------------------------------------
