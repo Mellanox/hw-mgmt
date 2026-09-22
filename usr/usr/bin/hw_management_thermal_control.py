@@ -2717,8 +2717,10 @@ class fan_sensor(system_device):
                         fan_tacho_state = False
                         break
                 else:
-                    # If FAN not stabilized yet - use cached state
-                    fan_tacho_state = self.fan_tacho_state
+                    # Not stabilized on this tacho: latch prior fault only; do not
+                    # clear a tacho that already passed trend earlier in this loop.
+                    if fan_tacho_state:
+                        fan_tacho_state = self.fan_tacho_state
             else:
                 # pwm_curr < pwm_min: skip trend for this tacho only; do not set
                 # fan_tacho_state here (earlier tachos may have set False, e.g.
