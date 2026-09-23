@@ -311,6 +311,11 @@ class TestStatusFormat:
         assert ssd.completion_message({"status": "skipped"}) == (
             "SSD dump tool skipped"
         )
+        assert ssd.completion_message(
+            {"status": "skipped", "warning": "no NVMe controller found"}
+        ) == (
+            "SSD dump tool skipped: no NVMe controller found"
+        )
 
     def test_results_message_dir_or_tar(self, ssd, tmp_path):
         out = str(tmp_path / "ssd-dump")
@@ -1105,7 +1110,7 @@ class TestEndToEnd:
         captured = capsys.readouterr()
         assert rc == 0
         assert "status: skipped" in captured.out
-        assert "SSD dump tool skipped" in captured.err
+        assert "SSD dump tool skipped: no NVMe controller found" in captured.err
 
     def test_verify_config_missing_no_duplicate_warning(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -1517,7 +1522,7 @@ class TestEndToEnd:
         assert rc == 0
         assert "status: skipped" in status
         assert "Status: skipped" in status
-        assert not any(ln.startswith("warning:") for ln in status.splitlines())
+        assert "warning: no NVMe controller found" in status
         assert "not enough free space" not in status
         assert seen == []
         assert not (tmp_path / "ssd-dump.tar.gz").exists()
