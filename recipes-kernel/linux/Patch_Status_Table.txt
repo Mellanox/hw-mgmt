@@ -845,6 +845,7 @@ Kernel-6.12
 |9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+|9010-platform-mellanox-mlx-platform-Extend-Kconfig-help-te.patch |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:

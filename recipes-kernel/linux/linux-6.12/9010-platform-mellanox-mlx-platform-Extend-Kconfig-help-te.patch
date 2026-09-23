@@ -1,0 +1,21 @@
+From: Mellanox Platform Team <root@localhost>
+Subject: [PATCH platform 1/1] platform: mellanox: mlx-platform: Extend Kconfig help text.
+
+---
+ drivers/platform/mellanox/Kconfig | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
+index 6b83a9b45..9c1d2e7f8 100644
+--- a/drivers/platform/mellanox/Kconfig
++++ b/drivers/platform/mellanox/Kconfig
+@@ -34,6 +34,9 @@ config MLX_PLATFORM
+ 	  This driver provides support for the Mellanox systems platform
+ 	  features, such as hotplug events, LED control and thermal
+ 	  monitoring on Nvidia switch systems.
++
++	  Say Y here if you are building a kernel for an Nvidia switch
++	  system. Otherwise say N.
+ 
+ config MLXBF_TMFIFO
+ 	tristate "Mellanox BlueField SoC TmFifo platform driver"
