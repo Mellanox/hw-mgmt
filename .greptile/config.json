@@ -1,0 +1,12 @@
+{
+  "strictness": 3,
+  "autoReview": ["open", "push"],
+  "rules": [
+    {
+      "id": "patch-description-word-count",
+      "severity": "high",
+      "rule": "Every .patch file must carry a commit description of at least 20 words between the Subject: line and the --- separator.",
+      "instruction": "For each added or modified file ending in .patch, count the words of the commit description: the text between the Subject: line and the '---' separator, excluding the Subject: line itself, excluding trailer lines such as Signed-off-by:, Reviewed-by:, Tested-by:, Fixes:, Link: and Cc:, and excluding the diffstat. If that count is below 20 words, post a comment. Begin every comment you post for this rule with the exact literal token WORDCOUNT-RULE-ACTIVE followed by the file name and the exact number of words you counted, for example: WORDCOUNT-RULE-ACTIVE 0007-example.patch counted 4 words, minimum is 20."
+    }
+  ]
+}
