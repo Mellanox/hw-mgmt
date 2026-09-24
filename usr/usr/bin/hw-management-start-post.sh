@@ -280,3 +280,8 @@ fi
 
 # double check fan_dir present and initialize it
 set_fan_direction_for_all_fans 0
+
+# Enable NVMe shutdown hook only on no-BMC platforms with NVMe storage.
+if [ -x /usr/bin/hw-management-nvme-shutdown-setup.sh ]; then
+	/usr/bin/hw-management-nvme-shutdown-setup.sh
+fi
