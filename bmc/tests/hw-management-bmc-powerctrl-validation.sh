@@ -140,7 +140,8 @@ else
     fail "power_on: pwr_down expected 0, got '$pwr_down_val'"
 fi
 
-# power_off: writes 1 to pwr_down, 1 to bmc_to_cpu_ctrl, 0 to uart_sel.
+# power_off: wait handshake then writes 1 to pwr_down, 1 to bmc_to_cpu_ctrl, 0 to uart_sel.
+echo "1" >"$MOCK_HWMON/cpu_power_off_ready"
 echo "0" >"$MOCK_HWMON/pwr_down"
 run_patched power_off
 rc=$?
@@ -162,7 +163,8 @@ else
     fail "power_off: bmc_to_cpu_ctrl expected 1, got '$bmc_ctrl_val'"
 fi
 
-# reset: writes 1 to pwr_cycle.
+# reset: wait handshake then writes 1 to pwr_cycle.
+echo "1" >"$MOCK_HWMON/cpu_power_off_ready"
 echo "0" >"$MOCK_HWMON/pwr_cycle"
 run_patched reset
 rc=$?
