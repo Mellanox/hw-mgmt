@@ -16,44 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-
-
 # pylint: disable=line-too-long
 # pylint: disable=C0103
 
-##################################################################################
-# Copyright (c) 2018 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
-
-'''
+"""
 Created on Nov 05, 2020
 
 Author: Oleksandr Shamray <oleksandrs@nvidia.com>
@@ -71,8 +37,7 @@ optional arguments:
   -o OUTPUT, --output_file OUTPUT
                         File to output parsed FRU fields
   -v, --version         show version
-
-'''
+"""
 
 #############################
 # Global imports
@@ -306,7 +271,7 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["BASE_MAC_3",  16, 32, 6, "FIT_NORMAL", "FT_MAC"],
                             ["MAC_RANGE_3", 16, 38, 2, "FIT_NORMAL", "FT_NUM_INV"],
                             ["BASE_MAC_4",  16, 40, 6, "FIT_NORMAL", "FT_MAC"],
-                            ["MAC_RANGE_4", 16, 42, 2, "FIT_NORMAL", "FT_NUM_INV"]
+                            ["MAC_RANGE_4", 16, 46, 2, "FIT_NORMAL", "FT_NUM_INV"]
                         ]},
                     MLNX_ID.GUIDS_2: {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",    1, 8,  1, "FIT_NORMAL", "FT_HEX"],
@@ -454,7 +419,7 @@ def mlnx_blk_unpack(data, blk_hdr, size, verbose=False):
         rec_dict = dict(list(zip(MLNX_VENDOR_BLK_FIELDS, rec)))
         rec_size = rec_dict["length"]
         rec_offset = rec_dict["offset"] - 8
-        if rec_offset + rec_size >= size:
+        if rec_offset + rec_size > size:
             break
 
         rec_type = rec_dict["type"]
@@ -580,23 +545,29 @@ def parse_mlnx_blk(data, blk_header, FRU_ITEMS, verbose=False):
 def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
     fru_dict = {}
     fru_dict['items'] = []
-    blk_header, hdr_size = parse_packed_data(data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
+    try:
+        dir_header, dir_hdr_size = parse_packed_data(data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
+    except struct.error:
+        return None
 
-    _data = data[hdr_size:]
+    _data = data[dir_hdr_size:]
     try:
         sanity_str = bin_decode(struct.unpack("4s", _data[:4])[0])
-    except BaseException:
+    except (struct.error, UnicodeDecodeError, ValueError):
         sanity_str = ""
     if sanity_str != "MLNX":
         printv("MLNX Sanitiy check fail", verbose)
         return None
     printv("Sanitiy check is OK", verbose)
     out_str = ""
-    base_pos = hdr_size + 4
-    while base_pos <= (blk_header["block_size"]):
+    base_pos = dir_hdr_size + 4
+    while base_pos <= (dir_header["block_size"]):
         printv("BLK offset: {}".format(base_pos), verbose)
         base_data = data[base_pos:]
-        rec_header, rec_size = parse_packed_data(base_data, MLNX_BASE_BLK_FIELD, MLNX_BASE_BLK_FIELD_FORMAT)
+        try:
+            rec_header, rec_size = parse_packed_data(base_data, MLNX_BASE_BLK_FIELD, MLNX_BASE_BLK_FIELD_FORMAT)
+        except struct.error:
+            break
         printv("BLK header: {}".format(rec_header), verbose)
         base_pos += rec_size
         if rec_header["block_type"] == 0:
@@ -604,7 +575,10 @@ def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
 
         blk_data_off = rec_header["block_start"] * 16
         printv("BLK data offset: {}".format(blk_data_off), verbose)
-        blk_header, hdr_size = parse_packed_data(data[blk_data_off:], MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
+        try:
+            blk_header, hdr_size = parse_packed_data(data[blk_data_off:], MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
+        except struct.error:
+            break
         printv("BLK header: {}".format(blk_header), verbose)
         out_str += parse_mlnx_blk(data[blk_data_off + hdr_size:], blk_header, FRU_ITEMS, verbose)
 
@@ -631,10 +605,13 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
             'total_len': 167,
             'ver': 1}
     '''
-    fru_dict, offset = parse_packed_data(data, FRU_SANITY_FORMAT, FRU_SANITY_FORMAT_FIELDS)
+    try:
+        fru_dict, offset = parse_packed_data(data, FRU_SANITY_FORMAT, FRU_SANITY_FORMAT_FIELDS)
+    except struct.error:
+        return None
     try:
         tlv_header = bin_decode(fru_dict['tlv_header'])
-    except BaseException:
+    except (struct.error, UnicodeDecodeError, ValueError):
         tlv_header = ""
     if 'TlvInfo' not in tlv_header or fru_dict['ver'] not in SUPPORTED_FRU_VER:
         return None
@@ -660,8 +637,8 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
 
         pos += blk_header['size']
 
-    if check_crc32(data[: fru_dict['total_len'] + 7],
-                   fru_dict['items_dict']['CHSUM_FIELD'][2:]):
+    chsum = fru_dict['items_dict'].get('CHSUM_FIELD')
+    if not chsum or check_crc32(data[: fru_dict['total_len'] + 7], chsum[2:]):
         print("CRC32 error.")
         return None
 
@@ -692,7 +669,8 @@ def parse_ipmi_fru_bin(data, verbose):
                 output_str = result.stdout.strip()   # Command's standard output
                 retcode = result.returncode          # Command's return code
                 print("output_str: {}".format(output_str))
-            except Exception as e:
+            except (OSError, subprocess.SubprocessError) as err:
+                print("ipmi-fru failed: {}".format(err), file=sys.stderr)
                 return None
 
     if not retcode:
@@ -703,10 +681,10 @@ def parse_ipmi_fru_bin(data, verbose):
         return None
 
 
-def parse_fru_bin(data, VPD_TYPE, verbose):
+def parse_fru_bin(data, vpd_type, verbose):
     res = None
-    if VPD_TYPE in globals().keys():
-        FRU_ITEMS = globals()[args.vpd_type]
+    if vpd_type in globals():
+        FRU_ITEMS = globals()[vpd_type]
     else:
         FRU_ITEMS = {"type": None}
 
@@ -744,7 +722,7 @@ def save_fru(fru_dict, out_filename):
     @summary: Save to file contents of FRU
     @param fru_dict: parsed fru dictionary
     @param out_filename: output filename
-    @return: None
+    @return: True on success, False on I/O error
     """
     # Get the directory of the output file for the temporary file
     out_dir = os.path.dirname(out_filename) or '.'
@@ -770,6 +748,7 @@ def save_fru(fru_dict, out_filename):
         # Atomically rename the temporary file to the target filename
         # On POSIX systems, this is an atomic operation that preserves permissions
         os.replace(tmp_filename, out_filename)
+        return True
 
     except (IOError, OSError) as err:
         print("I/O error({0}): {1} with log file {2}".format(err.errno,
@@ -781,6 +760,7 @@ def save_fru(fru_dict, out_filename):
                 os.remove(tmp_filename)
             except OSError:
                 pass
+        return False
 
 
 def load_fru_bin(file_name):
@@ -801,8 +781,8 @@ def load_fru_bin(file_name):
     if not os.path.isfile(file_name):
         return None
 
-    fru_file = open(file_name, 'rb')
-    data_bin = fru_file.read(MAX_VPD_DATA_SIZE)
+    with open(file_name, 'rb') as fru_file:
+        data_bin = fru_file.read(MAX_VPD_DATA_SIZE)
 
     return data_bin
 
@@ -848,7 +828,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if args.output:
-        save_fru(fru_data_dict, args.output)
+        if not save_fru(fru_data_dict, args.output):
+            sys.exit(1)
     else:
         dump_fru(fru_data_dict)
     sys.exit(0)
