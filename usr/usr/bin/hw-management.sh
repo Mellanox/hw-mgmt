@@ -1529,8 +1529,16 @@ msn27002_msb78002_specific()
 
 	max_tachos=8
 	hotplug_fans=4
-	echo 25000 > $config_path/fan_max_speed
-	echo 1500 > $config_path/fan_min_speed
+	# Set according to front (inlet) fan max, 21000
+	echo 21000 > $config_path/fan_max_speed
+	echo 21000 > $config_path/fan_front_max_speed
+	echo 18000 > $config_path/fan_rear_max_speed
+	
+	# Set according to rear (outlet) fan min, 5400
+	echo 5400 > $config_path/fan_min_speed
+	echo 6300 > $config_path/fan_front_min_speed
+	echo 5400 > $config_path/fan_rear_min_speed
+
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
