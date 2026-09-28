@@ -67,23 +67,23 @@ def _ensure_peripheral_dependency_mocks():
         sys.modules["psutil"] = MagicMock()
 
 
-def _load_peripheral_updater_module(module_suffix, sonic_check_available):
+def _load_peripheral_updater_module(module_suffix, feature_request_available):
     """
-    Load peripheral_updater in isolation with controlled SONiC helper presence.
+    Load peripheral_updater in isolation with controlled feature helper presence.
 
     @param module_suffix: unique suffix for importlib module name
-    @param sonic_check_available: True = inject mock sonic_check; False = simulate missing module
+    @param feature_request_available: True = inject mock feature_request; False = simulate missing module
     """
     _ensure_peripheral_dependency_mocks()
     mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
     sys.modules.pop(mod_name, None)
 
-    if sonic_check_available:
-        sonic_mock = MagicMock()
-        sonic_mock.is_sonic_os = MagicMock(return_value=True)
-        sys.modules["hw_management_sonic_check"] = sonic_mock
+    if feature_request_available:
+        feature_mock = MagicMock()
+        feature_mock.feature_request = MagicMock(return_value=False)
+        sys.modules["hw_management_feature"] = feature_mock
     else:
-        sys.modules.pop("hw_management_sonic_check", None)
+        sys.modules.pop("hw_management_feature", None)
 
     spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
     module = importlib.util.module_from_spec(spec)
@@ -91,11 +91,11 @@ def _load_peripheral_updater_module(module_suffix, sonic_check_available):
     real_import = builtins.__import__
 
     def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if not sonic_check_available and name == "hw_management_sonic_check":
-            raise ImportError("hw_management_sonic_check missing (test)")
+        if not feature_request_available and name == "hw_management_feature":
+            raise ImportError("hw_management_feature missing (test)")
         return real_import(name, globals, locals, fromlist, level)
 
-    if sonic_check_available:
+    if feature_request_available:
         spec.loader.exec_module(module)
     else:
         with patch("builtins.__import__", side_effect=guarded_import):
@@ -104,53 +104,60 @@ def _load_peripheral_updater_module(module_suffix, sonic_check_available):
     return module
 
 
-class TestSonicCheckImportFallback(unittest.TestCase):
-    """SONiC detector import must be optional so daemon startup cannot hard-fail."""
+class TestFeatureRequestImportFallback(unittest.TestCase):
+    """feature_request import must be optional so daemon startup cannot hard-fail."""
 
-    def test_module_loads_when_sonic_check_missing(self):
-        """Missing hw_management_sonic_check falls back to non-SONiC behavior."""
-        module = _load_peripheral_updater_module("no_sonic", sonic_check_available=False)
+    def test_module_loads_when_feature_request_missing(self):
+        """Missing hw_management_feature keeps Redfish enabled."""
+        module = _load_peripheral_updater_module("no_feature", feature_request_available=False)
 
-        self.assertFalse(module.SONIC_CHECK_AVAILABLE)
-        self.assertFalse(module.is_sonic_os())
+        self.assertFalse(module.FEATURE_REQUEST_AVAILABLE)
+        self.assertFalse(module.feature_request("get", "is_redfish_disabled"))
 
-    def test_module_uses_sonic_check_when_present(self):
-        """When helper exists, peripheral_updater delegates to is_sonic_os()."""
-        module = _load_peripheral_updater_module("with_sonic", sonic_check_available=True)
+    def test_module_uses_feature_request_when_present(self):
+        """When the helper imports, main() queries is_redfish_disabled."""
+        module = _load_peripheral_updater_module("with_feature", feature_request_available=True)
 
-        self.assertTrue(module.SONIC_CHECK_AVAILABLE)
-        self.assertTrue(module.is_sonic_os())
-        sys.modules["hw_management_sonic_check"].is_sonic_os.assert_called()
+        self.assertTrue(module.FEATURE_REQUEST_AVAILABLE)
+        self._init_fns_from_main(module, redfish_disabled=False)
 
-    @staticmethod
-    def _apply_sonic_redfish_filter(attrs, is_sonic):
-        """Mirror main() SONiC gating for peripheral attribute list."""
-        if is_sonic:
-            return [attr for attr in attrs if attr.get("fn") != "redfish_get_sensor"]
-        return list(attrs)
+    def _init_fns_from_main(self, module, redfish_disabled):
+        """Run main() and return the fn names passed to init_attr.
 
-    def test_sonic_host_strips_redfish_monitor_entries(self):
-        """SONiC hosts must not keep redfish_get_sensor peripheral entries."""
-        attrs = [
-            {"fn": "redfish_get_sensor", "arg": ["path", "sensor", 1000], "poll": 5, "ts": 0},
-            {"fn": "monitor_asic_chipup_status", "arg": {}, "poll": 1, "ts": 0},
-        ]
+        HI162 carries a redfish_get_sensor entry. init_attr, the module-counter
+        write, and the poll loop are stubbed so only the Redfish gate in main()
+        decides whether that entry is kept.
+        """
+        seen = []
+        module.feature_request = MagicMock(return_value=redfish_disabled)
+        argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
+        with patch.object(sys, "argv", argv), \
+                patch.object(module, "init_attr", side_effect=lambda attr: seen.append(attr.get("fn"))), \
+                patch.object(module, "write_module_counter"), \
+                patch.object(module, "update_peripheral_attr"), \
+                patch.object(module, "exit_wait", side_effect=lambda *_a, **_k: module.EXIT.set()), \
+                patch.object(module.signal, "signal"):
+            module.main()
+        module.feature_request.assert_called_with("get", "is_redfish_disabled")
+        return seen
 
-        filtered = self._apply_sonic_redfish_filter(attrs, is_sonic=True)
+    def test_redfish_disabled_host_strips_redfish_monitor_entries(self):
+        """A Redfish-disabled host drops redfish_get_sensor peripheral entries."""
+        module = _load_peripheral_updater_module("redfish_off", feature_request_available=True)
 
-        self.assertEqual(len(filtered), 1)
-        self.assertEqual(filtered[0]["fn"], "monitor_asic_chipup_status")
+        seen = self._init_fns_from_main(module, redfish_disabled=True)
 
-    def test_non_sonic_host_keeps_redfish_monitor_entries(self):
-        """Non-SONiC hosts keep redfish_get_sensor entries unchanged."""
-        attrs = [
-            {"fn": "redfish_get_sensor", "arg": ["path", "sensor", 1000], "poll": 5, "ts": 0},
-            {"fn": "monitor_asic_chipup_status", "arg": {}, "poll": 1, "ts": 0},
-        ]
+        self.assertIn("monitor_asic_chipup_status", seen)
+        self.assertNotIn("redfish_get_sensor", seen)
 
-        filtered = self._apply_sonic_redfish_filter(attrs, is_sonic=False)
+    def test_redfish_enabled_host_keeps_redfish_monitor_entries(self):
+        """While is_redfish_disabled is false, redfish_get_sensor entries stay."""
+        module = _load_peripheral_updater_module("redfish_on", feature_request_available=True)
 
-        self.assertEqual(len(filtered), 2)
+        seen = self._init_fns_from_main(module, redfish_disabled=False)
+
+        self.assertIn("monitor_asic_chipup_status", seen)
+        self.assertIn("redfish_get_sensor", seen)
 
 
 class TestMonitorAsicChipupStatusLogic(unittest.TestCase):
