@@ -32,7 +32,7 @@ print_function_call() { echo "TRACE: $3"; }
 log_info() { echo "INFO: $*"; }
 log_err() { echo "ERR: $*"; }
 check_bmc_is_supported() { return "${STUB_BMC_SUPPORTED:-0}"; }
-check_host_os_is_sonic() { return "${STUB_SONIC:-1}"; }
+check_host_os_is_redfish_disabled() { return "${STUB_REDFISH_DISABLED:-1}"; }
 """
 
 # Reports the address written to $STUB_ADDR_FILE, and behaves like the real one
@@ -241,11 +241,11 @@ def test_platform_without_a_bmc_does_not_wait(tmp_path):
     assert "not applicable" in r.stdout
 
 
-def test_sonic_is_left_to_drive_the_bmc_itself(tmp_path):
-    """On SONiC, SONiC owns CPU<->BMC communication, as it did when the login
-    ran from hw-management.sh."""
+def test_a_nos_with_redfish_disabled_is_left_to_drive_the_bmc_itself(tmp_path):
+    """When the NOS reports Redfish as disabled, it owns CPU<->BMC
+    communication, as SONiC did when the login ran from hw-management.sh."""
     login, env = _login_env(tmp_path, address="10.0.1.2", interface_exists=True)
-    r, attempts = _run_login(login, env, extra={"STUB_SONIC": "0"}, timeout=3)
+    r, attempts = _run_login(login, env, extra={"STUB_REDFISH_DISABLED": "0"}, timeout=3)
 
     assert r.returncode == 0
     assert attempts == 0

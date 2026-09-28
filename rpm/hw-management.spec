@@ -150,6 +150,7 @@ install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
 install -m 0755 usr/usr/bin/hw-management.sh $RPM_BUILD_ROOT/usr/bin/hw-management.sh
 install -m 0755 usr/usr/bin/hw_management_nvl_temperature_get.py $RPM_BUILD_ROOT/usr/bin/hw_management_nvl_temperature_get.py
+install -m 0755 usr/usr/bin/hw_management_os_api.py $RPM_BUILD_ROOT/usr/bin/hw_management_os_api.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_common.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
@@ -161,7 +162,6 @@ install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/
 install -m 0755 usr/usr/bin/hw-management-bmc-login.sh $RPM_BUILD_ROOT/usr/bin/hw-management-bmc-login.sh
 install -m 0755 usr/usr/bin/hw-management-ifupdown.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ifupdown.sh
 install -m 0755 usr/usr/bin/hw_management_redfish_client.py $RPM_BUILD_ROOT/usr/bin/hw_management_redfish_client.py
-install -m 0755 usr/usr/bin/hw_management_sonic_check.py $RPM_BUILD_ROOT/usr/bin/hw_management_sonic_check.py
 install -m 0755 usr/usr/bin/iorw $RPM_BUILD_ROOT/usr/bin/iorw
 install -m 0755 usr/usr/bin/sxd_read_cpld_ver.py $RPM_BUILD_ROOT/usr/bin/sxd_read_cpld_ver.py
 install -m 0755 usr/usr/local/bin/hw-management-process-blacklist.sh $RPM_BUILD_ROOT/usr/local/bin/hw-management-process-blacklist.sh
@@ -266,6 +266,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
 %attr(0755, root, root) "/usr/bin/hw_management_nvl_temperature_get.py"
+%attr(0755, root, root) "/usr/bin/hw_management_os_api.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_common.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_delta.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_murata.py"
@@ -284,7 +285,6 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-bmc-login.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ifupdown.sh"
 %attr(0755, root, root) "/usr/bin/hw_management_redfish_client.py"
-%attr(0755, root, root) "/usr/bin/hw_management_sonic_check.py"
 %attr(0755, root, root) "/usr/local/bin/hw-management-process-blacklist.sh"
 %attr(0755, root, root) "/lib/systemd/system/hw-management.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-tc.service"

@@ -157,9 +157,9 @@ sys.exit(0 if ret == RedfishClient.ERR_CODE_OK else 1)
 
 print_function_call "$0" "${TRACE_FN}" "Checking BMC Redfish login started"
 
-# On SONiC, SONiC owns CPU<->BMC communication, so hw-management must not drive
-# this flow.
-if ! check_bmc_is_supported || check_host_os_is_sonic; then
+# is_redfish_disabled is a temporary stand-in (Bug 5272044) and currently always
+# returns false, so this login runs on every NOS that has a BMC.
+if ! check_bmc_is_supported || check_host_os_is_redfish_disabled; then
 	print_function_call "$0" "${TRACE_FN}" "BMC Redfish login not applicable"
 	exit 0
 fi
