@@ -67,9 +67,9 @@ SONIC_VERSION_FILE = "/etc/sonic/sonic_version.yml"
 def is_sonic_os():
     """
     @summary: Check whether the host is running SONiC.
-    @return: True if the SONiC version manifest exists, False otherwise.
+    @return:
     """
-    return os.path.isfile(SONIC_VERSION_FILE)
+    return False
 
 
 def main():
