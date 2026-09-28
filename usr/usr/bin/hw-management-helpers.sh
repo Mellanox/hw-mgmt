@@ -376,22 +376,33 @@ check_bmc_is_supported()
 	esac
 }
 
-# This function checks if the host NOS is SONiC.
-# On SONiC, SONiC itself owns CPU<->BMC communication, so hw-management must
-# skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
+# This function checks if the host NOS is Redfish disabled.
+# On Redfish disabled, hw-management must skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
 # polling). On any other host OS the behavior is unchanged.
-# Returns 0 if the host runs SONiC, 1 otherwise (single source of truth:
-# hw_management_sonic_check.py).
-check_host_os_is_sonic()
+# Returns 0 if the host runs Redfish disabled, 1 otherwise (single source of truth:
+# hw_management_os_api.py).
+check_host_os_is_redfish_disabled()
 {
-	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
+	# Return stdout string: True or False 
+	local result=$(/usr/bin/hw_management_os_api.py is_redfish_disabled)
+	if [ "$result" == "True" ]; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 # Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
-# Requires SONiC plus a host-side contract file (same well-known paths as on the BMC).
+# Requires the SONiC manifest (is_usb0_managed_by_nos) plus a host-side contract
+# file (same well-known paths as on the BMC).
 check_host_usb0_managed_by_nos()
 {
-	check_host_os_is_sonic || return 1
+	# stdout is True when /etc/sonic/sonic_version.yml exists, False otherwise.
+	local result
+	result=$(/usr/bin/hw_management_os_api.py is_usb0_managed_by_nos)
+	if [ "$result" != "True" ]; then
+		return 1
+	fi
 	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
 }
 

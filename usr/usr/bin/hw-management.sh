@@ -2891,10 +2891,11 @@ check_system_write_i2c_defaults()
 
 check_system_bmc_redfish_login()
 {
-	# Obtain/rotate the BMC password and log in over Redfish only on platforms
-	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
-	# CPU<->BMC communication, so hw-management must not drive this flow.
-	if check_bmc_is_supported && ! check_host_os_is_sonic; then
+	# Obtain/rotate the BMC password and log in over Redfish on platforms with
+	# a BMC when Redfish is enabled. is_redfish_disabled is a temporary
+	# stand-in (Bug 5272044) and currently always returns false, so this login
+	# runs on every NOS that has a BMC.
+	if check_bmc_is_supported && ! check_host_os_is_redfish_disabled; then
 		pushd /usr/bin
 		for ((i=1; i<=5; i++)); do
 			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)

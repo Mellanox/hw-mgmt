@@ -174,5 +174,5 @@ BMC, **`ifup`** on the host where **`/etc/network/interfaces`** defines **usb0**
 | **`bmc/usr/usr/bin/hw-management-bmc-ready-common.sh`** | **`usb_net_config()`** |
 | **`usr/usr/bin/hw-management-ifupdown.sh`** | Host udev **`ifup`** (skips **usb0** when SONiC + contract file) |
 | **`usr/usr/bin/hw-management-helpers.sh`** | **`check_host_usb0_managed_by_nos()`** |
-| **`usr/usr/bin/hw_management_sonic_check.py`** | SONiC host detection |
+| **`usr/usr/bin/hw_management_os_api.py`** | Host OS checks (usb0 ownership, Redfish) |
 | **`bmc/README.md`** | Full BMC package and **usb0** documentation |
