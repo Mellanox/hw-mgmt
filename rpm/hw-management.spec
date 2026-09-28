@@ -136,6 +136,7 @@ install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
 install -m 0755 usr/usr/bin/hw-management.sh $RPM_BUILD_ROOT/usr/bin/hw-management.sh
 install -m 0755 usr/usr/bin/hw_management_nvl_temperature_get.py $RPM_BUILD_ROOT/usr/bin/hw_management_nvl_temperature_get.py
+install -m 0755 usr/usr/bin/hw_management_os_api.py $RPM_BUILD_ROOT/usr/bin/hw_management_os_api.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_common.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
@@ -243,6 +244,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
 %attr(0755, root, root) "/usr/bin/hw_management_nvl_temperature_get.py"
+%attr(0755, root, root) "/usr/bin/hw_management_os_api.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_common.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_delta.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_murata.py"

@@ -115,9 +115,11 @@ ip -4 addr show dev usb0
    networkd, init script, CONFIG_DB, etc.). Do **not** rely on **`/etc/network/interfaces`**
    + hw-management udev **`ifup`** on SONiC.
 
-4. **BMC communication** — on SONiC, hw-management does **not** drive CPU↔BMC Redfish /
-   password sync; SONiC owns that path. **usb0** must be reachable using SONiC’s
-   addressing plan.
+4. **BMC communication** — **usb0** must be reachable using SONiC’s addressing plan.
+   hw-management still drives CPU↔BMC Redfish login, BMC password rotation, and BMC
+   temperature polling on SONiC, the same as on any other NOS. **`is_redfish_disabled`**
+   in **`hw_management_os_api.py`** is a temporary stand-in (Bug 5272044) and always
+   returns false until the NOS API is available.
 
 ### What hw-management does on the host
 
@@ -127,6 +129,8 @@ ip -4 addr show dev usb0
 - Other interfaces / missing **`/etc/network/interfaces`**: unchanged defensive behavior
   (**`log_err`** and **exit 1** when **`ifquery`** does not define the interface).
 - Does **not** assign a host **usb0** IP when the NOS contract file is present (SONiC owns it).
+- Drives BMC Redfish login, password rotation, and BMC temperature polling on SONiC.
+  **`is_redfish_disabled`** always returns false (Bug 5272044) until the NOS API exists.
 
 ### Host verification
 
@@ -152,6 +156,7 @@ ip -4 addr show dev usb0
 | **`/etc/bmc-network-sonic.conf`** (or alt) on **host** when using NOS mode | N/A | Required |
 | No static **usb0** for hw-mgmt **`ifup`** on host | N/A | Only when host contract file present |
 | Agreed BMC / host IP plan | Required | Required |
+| Redfish login, BMC password sync, BMC temp polling | N/A | hw-management drives these (Bug 5272044, temporary) |
 
 ---
 
@@ -174,5 +179,5 @@ BMC, **`ifup`** on the host where **`/etc/network/interfaces`** defines **usb0**
 | **`bmc/usr/usr/bin/hw-management-bmc-ready-common.sh`** | **`usb_net_config()`** |
 | **`usr/usr/bin/hw-management-ifupdown.sh`** | Host udev **`ifup`** (skips **usb0** when SONiC + contract file) |
 | **`usr/usr/bin/hw-management-helpers.sh`** | **`check_host_usb0_managed_by_nos()`** |
-| **`usr/usr/bin/hw_management_sonic_check.py`** | SONiC host detection |
+| **`usr/usr/bin/hw_management_os_api.py`** | Host OS checks (usb0 ownership, Redfish) |
 | **`bmc/README.md`** | Full BMC package and **usb0** documentation |
