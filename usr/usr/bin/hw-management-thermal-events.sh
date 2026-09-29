@@ -982,20 +982,20 @@ if [ "$1" == "add" ]; then
 		if [ -f $config_path/psu_fan_max ]; then
 			cat $config_path/psu_fan_max > "$thermal_path"/"$psu_name"_fan_max
 		fi
-		# PSU VPD
+		# PSU VPD. Own ftrace instance: do not start/stop the boot-wide tracer.
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		print_function_call "$0" "add" "starting $psu_name VPD read i2c trace"
-		start_i2c_trace
+		start_psu_vpd_i2c_trace "$psu_name" "$bus"
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
 		res=$?
-		stop_i2c_trace
+		stop_psu_vpd_i2c_trace "$psu_name bus:$bus pmbus res:$res"
 		print_function_call "$0" "add" "stopped $psu_name VPD read i2c trace"
 		if [ $res -ne 0 ]; then
 			# PS EEPROM VPD.
-			start_i2c_trace
+			start_psu_vpd_i2c_trace "$psu_name" "$bus"
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info >> $eeprom_path/"$psu_name"_vpd
 			res=$?
-			stop_i2c_trace
+			stop_psu_vpd_i2c_trace "$psu_name bus:$bus eeprom res:$res"
 			if [ $res -ne 0 ]; then
 				# EEPROM failed.
 				if is_virtual_machine; then

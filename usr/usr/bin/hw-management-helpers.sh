@@ -1561,6 +1561,82 @@ stop_chipup_i2c_trace() {
 	CHIPUP_TRACE_DIR=""
 }
 
+# PSU VPD I2C tracer.
+#
+# PSU VPD reads run from udev and can overlap the boot-wide tracer and a chipup
+# tracer. Each read gets its own ftrace instance (instances/hwmgmt_psu_<name>_<pid>)
+# so start/stop never change the top-level events/i2c enable, filter, or buffer.
+# There is no top-level fallback: if instances are unavailable the read is not
+# traced, rather than taking a tracer another path still owns.
+#
+# start_psu_vpd_i2c_trace stores the instance directory in PSU_VPD_TRACE_DIR
+# (empty when tracing was not started). stop_psu_vpd_i2c_trace dumps that buffer
+# to I2C_TRACE_LOG and removes the instance.
+# $1 - PSU name, used in the instance directory name.
+# $2 - I2C adapter number. Only this adapter is recorded (adapter_nr==bus).
+PSU_VPD_TRACE_DIR=""
+
+start_psu_vpd_i2c_trace() {
+	local psu_name="$1"
+	local bus="$2"
+	local tag instance
+
+	PSU_VPD_TRACE_DIR=""
+
+	if [ ! -d "$KERN_TRACE_FS/instances" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no trace instances psu:$psu_name"
+		return
+	fi
+	if [[ ! "$bus" =~ ^[0-9]+$ ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: bad bus psu:$psu_name bus:$bus"
+		return
+	fi
+
+	tag=$(printf '%s' "$psu_name" | tr -c '[:alnum:]' '_')
+	instance="$KERN_TRACE_FS/instances/hwmgmt_psu_${tag}_$$"
+	if ! mkdir -p "$instance" 2>/dev/null || [ ! -d "$instance/events/i2c" ]; then
+		rmdir "$instance" 2>/dev/null || true
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: instance failed psu:$psu_name"
+		return
+	fi
+
+	echo 0 > "$instance"/events/i2c/enable 2>/dev/null
+	echo 0 > "$instance"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU), same cap as the boot-wide tracer.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$instance"/buffer_size_kb 2>/dev/null || true
+	echo "adapter_nr==$bus" > "$instance"/events/i2c/filter 2>/dev/null || true
+	if ! echo 1 > "$instance"/events/i2c/enable 2>/dev/null; then
+		rmdir "$instance" 2>/dev/null || true
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: enable failed psu:$psu_name"
+		return
+	fi
+	PSU_VPD_TRACE_DIR="$instance"
+	print_function_call "$0" "${FUNCNAME[0]}" "started psu:$psu_name bus:$bus dir:$instance"
+}
+
+# Dump the PSU VPD instance buffer into the I2C trace log and remove the instance.
+# A flock on the log keeps concurrent PSU reads from interleaving lines.
+# $1 - reason written into the log banner (PSU name, bus, result).
+stop_psu_vpd_i2c_trace() {
+	local reason="${1:-psu vpd}"
+
+	[ -n "$PSU_VPD_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "dir:$PSU_VPD_TRACE_DIR reason:$reason"
+	echo 0 > "$PSU_VPD_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	(
+		/usr/bin/flock -x 9 || true
+		echo "================================================" >&9
+		echo "PSU VPD $(date '+%Y-%m-%d %H:%M:%S') ${reason}" >&9
+		echo "================================================" >&9
+		cat "$PSU_VPD_TRACE_DIR"/trace >&9 2>/dev/null
+		echo "================================================" >&9
+		echo "PSU VPD $(date '+%Y-%m-%d %H:%M:%S') end" >&9
+		echo "================================================" >&9
+	) 9>>"$I2C_TRACE_LOG"
+	rmdir "$PSU_VPD_TRACE_DIR" 2>/dev/null || true
+	PSU_VPD_TRACE_DIR=""
+}
+
 # Print function trace to the log file(s)
 # log file is in /var/log/hw-mgmt.trace.log. Log rotation: maximum 3 rotated files, 2 MiB each (see logrotate).
 # log rotation is implemented by logrotate. See configuration file /etc/logrotate.d/hw-mgmt-trace
