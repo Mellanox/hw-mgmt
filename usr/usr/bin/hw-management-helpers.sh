@@ -1383,7 +1383,7 @@ I2C_TRACE_LOG="/var/log/hw-mgmt-i2c-trace.log"
 I2C_TRACE_BUF_SIZE_KB=1024
 start_i2c_trace() {
 	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
-		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c trace events"
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not enabled in kernel"
 		return
 	fi
 
@@ -1408,14 +1408,17 @@ start_i2c_trace() {
 	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter  2>/dev/null || true
 	# enable (start)i2c trace
 	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
-	print_function_call "$0" "${FUNCNAME[0]}" "started"
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	echo "Trace "`date '+%Y-%m-%d %H:%M:%S'`" start" >> "$I2C_TRACE_LOG"
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	print_function_call "$0" "${FUNCNAME[0]}" "start"
 }
 
 # Stop i2c trace
 stop_i2c_trace() {
 	# check if i2c trace available
 	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
-		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c enable"
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not enabled in kernel"
 		return
 	fi
 	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
@@ -1429,7 +1432,11 @@ stop_i2c_trace() {
 	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG"
 	# clear i2c trace buffer
 	echo 0 > "$KERN_TRACE_FS"/trace
-	print_function_call "$0" "${FUNCNAME[0]}" "stopped saved:$I2C_TRACE_LOG"
+	print_function_call "$0" "${FUNCNAME[0]}" "stop, saved:$I2C_TRACE_LOG"
+
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	echo "Trace "`date '+%Y-%m-%d %H:%M:%S'`" end" >> "$I2C_TRACE_LOG"
+	echo "================================================" >> "$I2C_TRACE_LOG"
 }
 
 # Snapshot the boot-wide (top-level) I2C trace buffer into the trace log, tagged
