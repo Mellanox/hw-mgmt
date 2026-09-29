@@ -250,6 +250,7 @@ check_cpu_type()
 		if [ "$cpu_pn" == "$BF3_CPU" ] || [ "$cpu_pn" == "$ARMv7_CPU" ]; then
 			cpu_type=$cpu_pn
 			echo $cpu_type > $config_path/cpu_type
+			print_function_call "$0" "${FUNCNAME[0]}" "cpu_type:$cpu_type"
 			return 0
 		fi
 
@@ -1279,12 +1280,14 @@ I2C_TRACE_LOG="/var/log/hw-mgmt-i2c-trace.log"
 I2C_TRACE_BUF_SIZE_KB=1024
 start_i2c_trace() {
 	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not enabled in kernel"
 		return
 	fi
 
 	# Already running: do not reconfigure (another tool may have enabled it with
 	# different buffer/filters; re-applying could fight that consumer).
 	if [ "$(< "$KERN_TRACE_FS"/events/i2c/enable)" -eq 1 ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: already running"
 		return
 	fi
 
@@ -1302,16 +1305,22 @@ start_i2c_trace() {
 	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter  2>/dev/null || true
 	# enable (start)i2c trace
 	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	echo "Trace "`date '+%Y-%m-%d %H:%M:%S'`" start" >> "$I2C_TRACE_LOG"
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	print_function_call "$0" "${FUNCNAME[0]}" "start"
 }
 
 # Stop i2c trace
 stop_i2c_trace() {
 	# check if i2c trace available
 	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not enabled in kernel"
 		return
 	fi
 	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
 	if [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable)" -eq 0 ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not running"
 		return
 	fi
 	# disable (stop) i2c trace
@@ -1320,6 +1329,11 @@ stop_i2c_trace() {
 	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG"
 	# clear i2c trace buffer
 	echo 0 > "$KERN_TRACE_FS"/trace
+	print_function_call "$0" "${FUNCNAME[0]}" "stop, saved:$I2C_TRACE_LOG"
+
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	echo "Trace "`date '+%Y-%m-%d %H:%M:%S'`" end" >> "$I2C_TRACE_LOG"
+	echo "================================================" >> "$I2C_TRACE_LOG"
 }
 
 # Snapshot the boot-wide (top-level) I2C trace buffer into the trace log, tagged
@@ -1345,6 +1359,7 @@ save_i2c_trace_on_failure() {
 	# Clear so the tracer continues with a fresh, bounded window (and the final
 	# stop_i2c_trace dump does not duplicate what we just saved).
 	echo 0 > "$KERN_TRACE_FS"/trace 2>/dev/null
+	print_function_call "$0" "${FUNCNAME[0]}" "saved reason:$reason"
 }
 
 # Chipup I2C tracer.
@@ -1373,6 +1388,7 @@ start_chipup_i2c_trace() {
 	CHIPUP_I2C_TRACE_INSTANCE="$KERN_TRACE_FS/instances/hwmgmt_chipup_${asic_index}"
 
 	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c events asic:$asic_index"
 		return
 	fi
 
@@ -1386,6 +1402,8 @@ start_chipup_i2c_trace() {
 	elif [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable 2>/dev/null)" = "0" ]; then
 		CHIPUP_TRACE_DIR="$KERN_TRACE_FS"
 	else
+		print_function_call "$0" "${FUNCNAME[0]}" \
+			"skip: boot tracer busy asic:$asic_index"
 		return
 	fi
 
@@ -1396,6 +1414,7 @@ start_chipup_i2c_trace() {
 	echo "$I2C_TRACE_BUF_SIZE_KB" > "$CHIPUP_TRACE_DIR"/buffer_size_kb 2>/dev/null || true
 	echo "$CHIPUP_I2C_TRACE_FILTER" > "$CHIPUP_TRACE_DIR"/events/i2c/filter 2>/dev/null || true
 	echo 1 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	print_function_call "$0" "${FUNCNAME[0]}" "started asic:$asic_index dir:$CHIPUP_TRACE_DIR"
 }
 
 # Append the current chipup trace buffer to the log and clear it (called
@@ -1405,6 +1424,7 @@ save_chipup_i2c_trace() {
 	local attempt="${1:-}"
 
 	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "attempt:${attempt:-na} dir:$CHIPUP_TRACE_DIR"
 	if [ -n "$attempt" ]; then
 		echo "# --- chipup attempt ${attempt} ---" >> /var/log/chipup_i2c_trace_log
 	fi
@@ -1415,11 +1435,88 @@ save_chipup_i2c_trace() {
 # Stop the chipup tracer and release the dedicated instance (if one was used).
 stop_chipup_i2c_trace() {
 	[ -n "$CHIPUP_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "dir:$CHIPUP_TRACE_DIR"
 	echo 0 > "$CHIPUP_TRACE_DIR"/events/i2c/enable 2>/dev/null
 	if [ "$CHIPUP_TRACE_DIR" = "$CHIPUP_I2C_TRACE_INSTANCE" ]; then
 		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
 	fi
 	CHIPUP_TRACE_DIR=""
+}
+
+# PSU VPD I2C tracer.
+#
+# PSU VPD reads run from udev and can overlap the boot-wide tracer and a chipup
+# tracer. Each read gets its own ftrace instance (instances/hwmgmt_psu_<name>_<pid>)
+# so start/stop never change the top-level events/i2c enable, filter, or buffer.
+# There is no top-level fallback: if instances are unavailable the read is not
+# traced, rather than taking a tracer another path still owns.
+#
+# start_psu_vpd_i2c_trace stores the instance directory in PSU_VPD_TRACE_DIR
+# (empty when tracing was not started). stop_psu_vpd_i2c_trace dumps that buffer
+# to I2C_TRACE_LOG and removes the instance.
+# $1 - PSU name, used in the instance directory name.
+# $2 - I2C adapter number. Only this adapter is recorded (adapter_nr==bus).
+PSU_VPD_TRACE_DIR=""
+
+start_psu_vpd_i2c_trace() {
+	local psu_name="$1"
+	local bus="$2"
+	local tag instance
+
+	PSU_VPD_TRACE_DIR=""
+
+	if [ ! -d "$KERN_TRACE_FS/instances" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no trace instances psu:$psu_name"
+		return
+	fi
+	if [[ ! "$bus" =~ ^[0-9]+$ ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: bad bus psu:$psu_name bus:$bus"
+		return
+	fi
+
+	tag=$(printf '%s' "$psu_name" | tr -c '[:alnum:]' '_')
+	instance="$KERN_TRACE_FS/instances/hwmgmt_psu_${tag}_$$"
+	if ! mkdir -p "$instance" 2>/dev/null || [ ! -d "$instance/events/i2c" ]; then
+		rmdir "$instance" 2>/dev/null || true
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: instance failed psu:$psu_name"
+		return
+	fi
+
+	echo 0 > "$instance"/events/i2c/enable 2>/dev/null
+	echo 0 > "$instance"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU), same cap as the boot-wide tracer.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$instance"/buffer_size_kb 2>/dev/null || true
+	echo "adapter_nr==$bus" > "$instance"/events/i2c/filter 2>/dev/null || true
+	if ! echo 1 > "$instance"/events/i2c/enable 2>/dev/null; then
+		rmdir "$instance" 2>/dev/null || true
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: enable failed psu:$psu_name"
+		return
+	fi
+	PSU_VPD_TRACE_DIR="$instance"
+	print_function_call "$0" "${FUNCNAME[0]}" "started psu:$psu_name bus:$bus dir:$instance"
+}
+
+# Dump the PSU VPD instance buffer into the I2C trace log and remove the instance.
+# A flock on the log keeps concurrent PSU reads from interleaving lines.
+# $1 - reason written into the log banner (PSU name, bus, result).
+stop_psu_vpd_i2c_trace() {
+	local reason="${1:-psu vpd}"
+
+	[ -n "$PSU_VPD_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "dir:$PSU_VPD_TRACE_DIR reason:$reason"
+	echo 0 > "$PSU_VPD_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	(
+		/usr/bin/flock -x 9 || true
+		echo "================================================" >&9
+		echo "PSU VPD $(date '+%Y-%m-%d %H:%M:%S') ${reason}" >&9
+		echo "================================================" >&9
+		cat "$PSU_VPD_TRACE_DIR"/trace >&9 2>/dev/null
+		echo "================================================" >&9
+		echo "PSU VPD $(date '+%Y-%m-%d %H:%M:%S') end" >&9
+		echo "================================================" >&9
+	) 9>>"$I2C_TRACE_LOG"
+	rmdir "$PSU_VPD_TRACE_DIR" 2>/dev/null || true
+	PSU_VPD_TRACE_DIR=""
 }
 
 # Print function trace to the log file(s)
@@ -1823,6 +1920,7 @@ set_asic_pwm_full_speed_on_chipup_fail()
 	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
 
 	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index dev:$explicit_dev"
 
 	if [ -e "$pwm_link" ]; then
 		echo 255 > "$pwm_link"
