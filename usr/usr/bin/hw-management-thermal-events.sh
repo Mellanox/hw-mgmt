@@ -984,11 +984,19 @@ if [ "$1" == "add" ]; then
 		fi
 		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
+		print_function_call "$0" "add" "starting $psu_name VPD read i2c trace"
+		start_i2c_trace
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
-		if [ $? -ne 0 ]; then
+		res=$?
+		stop_i2c_trace
+		print_function_call "$0" "add" "stopped $psu_name VPD read i2c trace"
+		if [ $res -ne 0 ]; then
 			# PS EEPROM VPD.
+			start_i2c_trace
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info >> $eeprom_path/"$psu_name"_vpd
-			if [ $? -ne 0 ]; then
+			res=$?
+			stop_i2c_trace
+			if [ $res -ne 0 ]; then
 				# EEPROM failed.
 				if is_virtual_machine; then
 					if [ -f $vm_vpd_path/psu_vpd ]; then
