@@ -1145,7 +1145,7 @@ devtr_check_supported_system_init_alternatives()
 		$AMD_V3000_CPU)
 			sku=$(< $sku_file)
 			case "$sku" in
-			HI198)
+			HI198|HI202)
 				for key in "${!comex_amd_v3000_alternatives[@]}"; do
 						comex_alternatives["$key"]="${comex_amd_v3000_alternatives["$key"]}"
 				done
@@ -1241,6 +1241,14 @@ devtr_check_supported_system_init_alternatives()
 				done
 				for key in "${!q3401_pwr_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${q3401_pwr_alternatives["$key"]}"
+				done
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+				done
+				;;
+			HI202)	# MSN4700-A1, SN4700 switch board with AMD V3000 COMEX
+				for key in "${!msn4700_msn4600_alternatives[@]}"; do
+					swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
 				done
 				for key in "${!port_type0_alternatives[@]}"; do
 					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
