@@ -825,7 +825,7 @@ set_jtag_gpio()
 			jtag_tms=7
 			jtag_tdo=8
 			case $sku in
-			HI198)
+			HI198|HI202)
 				echo 0x2094 > $config_path/jtag_rw_reg
 				echo 0x2095 > $config_path/jtag_ro_reg
 			;;
@@ -954,7 +954,7 @@ set_gpios()
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 10 12 23)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
-			if [ "$sku" == "HI198" ]; then
+			if [ "$sku" == "HI198" ] || [ "$sku" == "HI202" ]; then
 				gpio_idx+=(9)
 				gpio_names+=("v3000_lpc_support")
 			fi
@@ -1630,6 +1630,41 @@ msn47xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+# SN4700-A1 is SN4700 switch board combined with AMD V3000 COMEX.
+msn4700a1_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*Tb-O*Tb-C*TlRkRaEe"
+		devtr_check_smbios_device_description "$system_ver_str" "0" ""
+	fi
+	lm_sensors_config="$lm_sensors_configs_path/msn4700a1_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700_mps.json"
+
+	max_tachos=12
+	minimal_unsupported=1
+
+	# Set according to front fan max.
+	echo 23000 > "$config_path"/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 4800 > "$config_path"/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 23000 > "$config_path"/fan_front_max_speed
+	echo 5400 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits
+	echo 20500 > "$config_path"/fan_rear_max_speed
+	echo 4800 > "$config_path"/fan_rear_min_speed
+
+	echo 23000 > "$config_path"/psu_fan_max
+	echo 4600 > "$config_path"/psu_fan_min
+	echo 3 > "$config_path"/cpld_num
+
+	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+}
+
 msn4700d_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
@@ -2038,6 +2073,9 @@ msn_spc3_common()
 		;;
 		HI184|HI198)
 			msn4700d_specific
+		;;
+		HI202)
+			msn4700a1_specific
 		;;
 		*)
 			msn47xx_specific
@@ -3632,7 +3670,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198|HI202)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)
