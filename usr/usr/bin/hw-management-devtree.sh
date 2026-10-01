@@ -736,9 +736,6 @@ declare -A sn66xx_swb_alternatives=( \
 	["mp29816_15"]="mp29816 0x60 16 voltmon16" \
 	["mp29816_16"]="mp29816 0x67 16 voltmon17" \
 	["mp29816_17"]="mp29816 0x68 16 voltmon18" \
-	["tmp102_0"]="tmp102 0x48 24 port_amb" \
-	["adt75_0"]="adt75 0x48 24 port_amb" \
-	["stts751_0"]="stts751 0x48 24 port_amb" \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
@@ -805,9 +802,9 @@ declare -A sn66xx_port_alternatives=( \
 	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
-	["tmp102_0"]="tmp102 0x48 26 port_amb" \
-	["adt75_0"]="adt75 0x48 26 port_amb" \
-	["stts751_0"]="stts751 0x48 26 port_amb" \
+	["tmp102_0"]="tmp102 0x48 17 port_amb" \
+	["adt75_0"]="adt75 0x48 17 port_amb" \
+	["stts751_0"]="stts751 0x48 17 port_amb" \
 )
 
 # Devices located on SN66XX_LD power board
