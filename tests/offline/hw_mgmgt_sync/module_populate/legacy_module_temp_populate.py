@@ -223,10 +223,10 @@ class TestModuleTempPopulate(unittest.TestCase):
                         print(f"[+] Module {module_name}: FW control, present - actual values "
                               f"(temp={expected_temp}, crit={expected_crit})")
 
-            # Note: module_counter file is now written by write_module_counter() during initialization,
-            # not by module_temp_populate(). This is a design change to improve reliability.
-            # self._verify_module_counter()  # Disabled - module_counter now handled separately
-            print("[+] Test completed (Note: module_counter now written by write_module_counter() during init)")
+            # module_counter is refreshed by peripheral_updater.module_temp_populate
+            # on its poll. This thermal_updater function does not write that file.
+            # self._verify_module_counter()
+            print("[+] Test completed (module_counter is refreshed by peripheral_updater)")
 
     def _verify_files_not_created(self, module_name, written_files):
         """Verify that thermal files are not created for SW control modules"""

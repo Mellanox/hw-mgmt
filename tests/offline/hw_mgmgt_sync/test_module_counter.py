@@ -91,101 +91,92 @@ class TestModuleCounterReliability(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
+    def _notice_messages(self, mock_logger):
+        """Return string messages passed to LOGGER.notice."""
+        messages = []
+        for call in mock_logger.notice.call_args_list:
+            if call[0] and isinstance(call[0][0], str):
+                messages.append(call[0][0])
+        return messages
+
     def test_01_module_counter_written_by_peripheral_updater(self):
         """
-        Test that peripheral_updater writes module_counter correctly.
+        Test that peripheral_updater writes module_counter from the poll arg.
 
-        Critical Test: Verifies the core functionality.
+        A missing file is created with the configured module count.
         """
         print("\n[TEST 1] Testing module_counter writing by peripheral_updater")
 
         peripheral_module = self._load_peripheral_module()
 
-        # Mock LOGGER to avoid initialization issues
         mock_logger = MagicMock()
         peripheral_module.LOGGER = mock_logger
 
-        # Test with a platform that has modules (simulate HI162 with 36 modules)
-        with patch('builtins.open', create=True) as mock_open:
+        with patch('os.path.isfile', return_value=False), \
+                patch('builtins.open', create=True) as mock_open:
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 
-            # Call write_module_counter with HI162 SKU (has 36 modules)
-            peripheral_module.write_module_counter("HI162")
+            peripheral_module.module_temp_populate({"module_count": 36}, None)
 
-            # Verify file was opened for writing
-            mock_open.assert_called_once_with("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
-
-            # Verify correct count was written (HI162 has 36 modules in thermal_config)
-            mock_file.write.assert_called_once()
-            written_value = mock_file.write.call_args[0][0]
-
-            # HI162 should have modules
-            self.assertIn("36", written_value, "HI162 platform should write 36 modules")
-
-            # Verify logger was called
-            mock_logger.notice.assert_called()
-            log_message = mock_logger.notice.call_args[0][0]
-            self.assertIn("module_counter initialized", log_message)
+            mock_open.assert_called_once_with(
+                "/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
+            mock_file.write.assert_called_once_with("36\n")
+            self.assertIn("Module count updated to 36", self._notice_messages(mock_logger))
 
         print("[PASS] module_counter written correctly by peripheral_updater")
 
     def test_02_module_counter_zero_for_platform_without_modules(self):
         """
-        Test that module_counter is written as 0 for platforms without modules.
-
-        Critical Test: Ensures file is always created even with 0 modules.
+        Test that module_counter is written as 0 when the poll arg has no modules.
         """
         print("\n[TEST 2] Testing module_counter=0 for platforms without modules")
 
         peripheral_module = self._load_peripheral_module()
 
-        # Mock LOGGER
         mock_logger = MagicMock()
         peripheral_module.LOGGER = mock_logger
 
-        # Test with a supported platform that has 0 modules (write 0). Unknown
-        # platforms (not in PLATFORM_CONFIG) are intentionally skipped now
-        # (commit 1496432d), so resolve the SKU as supported with 0 modules.
-        with patch.object(peripheral_module, 'get_platform_config', return_value=[{'fn': 'asic_temp_populate'}]), \
-                patch.object(peripheral_module, 'get_module_count', return_value=0), \
+        with patch('os.path.isfile', return_value=False), \
                 patch('builtins.open', create=True) as mock_open:
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 
-            # Call write_module_counter for a supported, module-less platform
-            peripheral_module.write_module_counter("ZERO_MODULE_PLATFORM")
+            peripheral_module.module_temp_populate({"module_count": 0}, None)
 
-            # Verify file was opened for writing
-            mock_open.assert_called_once_with("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
-
-            # Verify 0 was written
+            mock_open.assert_called_once_with(
+                "/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
             mock_file.write.assert_called_once_with("0\n")
-
-            # Verify logger message mentions 0 modules
-            mock_logger.notice.assert_called()
-            log_message = mock_logger.notice.call_args[0][0]
-            self.assertIn("0 - no modules", log_message)
+            self.assertIn("Module count updated to 0", self._notice_messages(mock_logger))
 
         print("[PASS] module_counter=0 written for platforms without modules")
 
+    def test_02b_module_counter_refreshed_after_reset(self):
+        """
+        A later reset of module_counter (for example to 0) is corrected on the next poll.
+        """
+        print("\n[TEST 2b] Testing module_counter refresh after an external reset")
+
+        peripheral_module = self._load_peripheral_module()
+        peripheral_module.LOGGER = MagicMock()
+
+        with patch('os.path.isfile', return_value=True), \
+                patch('builtins.open', unittest.mock.mock_open(read_data="0\n")) as mock_open:
+            peripheral_module.module_temp_populate({"module_count": 36}, None)
+            mock_open().write.assert_called_with("36\n")
+
+        print("[PASS] stale module_counter refreshed to the configured count")
+
     def test_03_module_counter_with_thermal_updater_disabled(self):
         """
-        TEST CRITICAL SCENARIO: Thermal updater is disabled/killed by customer.
-
-        This test simulates a customer disabling hw_management_thermal_updater.
-        The peripheral_updater must still write module_counter correctly.
-
-        Stakeholder Protection: Ensures dependent services still work.
+        Thermal updater disabled: peripheral_updater still refreshes module_counter.
         """
         print("\n[TEST 3] Testing module_counter when thermal_updater is DISABLED")
         print("[INFO] Simulating customer disabling thermal_updater service...")
 
-        # Remove thermal_updater from sys.modules to simulate it being unavailable
         if 'hw_management_thermal_updater' in sys.modules:
             del sys.modules['hw_management_thermal_updater']
 
-        # Reload peripheral_updater module to verify it works independently
         script_dir = os.path.dirname(os.path.abspath(__file__))
         repo_root = os.path.join(script_dir, '..', '..', '..')
         hw_mgmt_dir = os.path.join(repo_root, 'usr', 'usr', 'bin')
@@ -194,108 +185,90 @@ class TestModuleCounterReliability(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_peripheral_updater_test", hw_mgmt_path)
         peripheral_module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
         sys.modules["hw_management_redfish_client"] = MagicMock()
         sys.modules["hw_management_lib"] = MagicMock()
 
-        # Mock platform_config module with proper return values
         mock_platform_config = MagicMock()
-        mock_platform_config.get_module_count = MagicMock(return_value=0)  # Return actual int
-        # Supported platform: get_platform_config must be truthy or
-        # write_module_counter skips the write (commit 1496432d).
-        mock_platform_config.get_platform_config = MagicMock(return_value=[{'fn': 'asic_temp_populate'}])
+        mock_platform_config.get_platform_config = MagicMock(return_value=[])
+        saved_platform_config = sys.modules.get("hw_management_platform_config")
         sys.modules["hw_management_platform_config"] = mock_platform_config
 
-        # This should NOT raise an error
         try:
             spec.loader.exec_module(peripheral_module)
             print("[PASS] peripheral_updater loaded successfully without thermal_updater")
         except ImportError as e:
             self.fail(f"peripheral_updater should handle missing dependencies gracefully: {e}")
+        finally:
+            if saved_platform_config is None:
+                sys.modules.pop("hw_management_platform_config", None)
+            else:
+                sys.modules["hw_management_platform_config"] = saved_platform_config
 
-        # Verify platform config functions are available (new architecture)
+        self.assertTrue(hasattr(peripheral_module, 'module_temp_populate'))
+        self.assertTrue(callable(peripheral_module.module_temp_populate))
         self.assertTrue(hasattr(peripheral_module, 'get_module_count'))
         self.assertTrue(callable(peripheral_module.get_module_count))
 
-        # Mock LOGGER
-        mock_logger = MagicMock()
-        peripheral_module.LOGGER = mock_logger
+        peripheral_module.LOGGER = MagicMock()
 
-        # Test write_module_counter still works
-        with patch('builtins.open', create=True) as mock_open, \
-                patch.object(peripheral_module, 'get_platform_config', return_value=[{}]):
+        with patch('os.path.isfile', return_value=False), \
+                patch('builtins.open', create=True) as mock_open:
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 
-            # Call write_module_counter - should work with platform config
-            peripheral_module.write_module_counter("ANY_PLATFORM")
+            peripheral_module.module_temp_populate({"module_count": 36}, None)
 
-            # Verify file was opened for writing
-            mock_open.assert_called_once_with("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
+            mock_open.assert_called_once_with(
+                "/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
+            mock_file.write.assert_called_once_with("36\n")
 
-            # Verify something was written (at least 0)
-            mock_file.write.assert_called_once()
-            written_value = mock_file.write.call_args[0][0]
-            self.assertIn("\n", written_value, "Should write newline-terminated value")
-
-        print("[PASS] CRITICAL: module_counter still written when platform config is used")
-        print("[INFO] All stakeholders protected - using centralized platform configuration")
+        print("[PASS] CRITICAL: module_counter still written when thermal_updater is disabled")
 
     def test_04_module_counter_error_handling(self):
         """
-        Test that write_module_counter handles errors gracefully.
-
-        Critical Test: Ensures daemon doesn't crash on filesystem errors.
+        module_temp_populate logs a warning and does not raise on filesystem errors.
         """
         print("\n[TEST 4] Testing module_counter error handling")
 
         peripheral_module = self._load_peripheral_module()
 
-        # Mock LOGGER
         mock_logger = MagicMock()
         peripheral_module.LOGGER = mock_logger
 
-        # Test with file write error (permission denied)
-        with patch('builtins.open', side_effect=OSError("Permission denied")):
-            # Should not raise exception
+        with patch('os.path.isfile', return_value=False), \
+                patch('builtins.open', side_effect=OSError("Permission denied")):
             try:
-                peripheral_module.write_module_counter("HI162")
+                peripheral_module.module_temp_populate({"module_count": 36}, None)
                 print("[PASS] Handled permission error gracefully")
             except Exception as e:
-                self.fail(f"write_module_counter should handle errors gracefully: {e}")
+                self.fail(f"module_temp_populate should handle errors gracefully: {e}")
 
-            # Verify warning was logged
             mock_logger.warning.assert_called()
             warning_message = mock_logger.warning.call_args[0][0]
-            self.assertIn("Failed to write module_counter", warning_message)
+            self.assertIn("/var/run/hw-management/config/module_counter", warning_message)
+            self.assertIn("Permission denied", warning_message)
 
         print("[PASS] Error handling works correctly")
 
     def test_05_module_counter_integration_peripheral_always_runs(self):
         """
-        Integration test: Verify peripheral_updater is the right place for module_counter.
-
-        Validates architectural decision:
-        - peripheral_updater runs core services (fans, BMC, etc.)
-        - Customer less likely to disable it
-        - Therefore module_counter is more reliable here
+        module_counter refresh lives on peripheral_updater, which keeps running
+        when thermal_updater is disabled.
         """
         print("\n[TEST 5] Integration test - architectural validation")
 
         peripheral_module = self._load_peripheral_module()
 
-        # Verify write_module_counter exists in peripheral_updater
-        self.assertTrue(hasattr(peripheral_module, 'write_module_counter'))
-        self.assertTrue(callable(peripheral_module.write_module_counter))
+        self.assertTrue(hasattr(peripheral_module, 'module_temp_populate'))
+        self.assertTrue(callable(peripheral_module.module_temp_populate))
+        self.assertFalse(hasattr(peripheral_module, 'write_module_counter'))
 
-        # Verify it's documented
-        docstring = peripheral_module.write_module_counter.__doc__
+        docstring = peripheral_module.module_temp_populate.__doc__
         self.assertIsNotNone(docstring)
-        self.assertIn("peripheral_updater", docstring.lower())
-        self.assertIn("thermal_updater is disabled", docstring.lower())
+        self.assertIn("module counter", docstring.lower())
 
         print("[PASS] Architectural decision validated")
-        print("[INFO] module_counter correctly placed in peripheral_updater")
+        print("[INFO] module_counter refresh lives in peripheral_updater")
 
 
 def main():
