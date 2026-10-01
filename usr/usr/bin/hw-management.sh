@@ -1634,7 +1634,7 @@ msn47xx_specific()
 msn4700a1_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
-		system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-F*Tb-O*Tb-C*TlRkRaEe"
+		system_ver_str="V0-S*RaRaRaR0RaR0RaT0Ee-F*Tb-O*Tb-C*TlRkRa"
 		devtr_check_smbios_device_description "$system_ver_str" "0" ""
 	fi
 	lm_sensors_config="$lm_sensors_configs_path/msn4700a1_sensors.conf"
@@ -1660,6 +1660,10 @@ msn4700a1_specific()
 	echo 23000 > "$config_path"/psu_fan_max
 	echo 4600 > "$config_path"/psu_fan_min
 	echo 3 > "$config_path"/cpld_num
+
+	# PSU I2C bus, addresses are taken from the defaults: 0x59, 0x58.
+	psu1_i2c_bus=4
+	psu2_i2c_bus=4
 
 	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
