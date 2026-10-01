@@ -70,12 +70,9 @@ except ImportError:
 
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
-    from hw_management_platform_config import get_module_count, get_platform_config
+    from hw_management_platform_config import get_platform_config
 except ImportError:
     # Fallback if platform config not available
-    def get_module_count(sku):
-        return 0
-
     def get_platform_config(sku):
         return []
 
@@ -160,6 +157,70 @@ def _build_attrib_list():
 
 # Build peripheral configuration dynamically from centralized platform config
 attrib_list = _build_attrib_list()
+
+
+# ----------------------------------------------------------------------
+# MODULE COUNT MANAGEMENT
+# ----------------------------------------------------------------------
+def get_module_count(product_sku):
+    """
+    Get the number of optical modules for a given platform.
+
+    Uses regex matching to find the platform config, then extracts module_count
+    from the module_temp_populate entry.
+
+    @param product_sku: Platform SKU identifier (e.g., "HI144")
+    @return: Number of modules, or 0 if not found
+    """
+    # Use get_platform_config which handles regex matching
+    config = get_platform_config(product_sku)
+    if not config:
+        return 0
+    if isinstance(config, list):
+        for entry in config:
+            if entry.get("fn") == "module_temp_populate":
+                arg = entry.get("arg", {})
+                if isinstance(arg, dict):
+                    return arg.get("module_count", 0)
+        return 0
+    return config.get("module_count", 0)
+
+# ----------------------------------------------------------------------
+# MODULE TEMP POPULATE MANAGEMENT
+# overloaded function. Used to update module counter
+# ----------------------------------------------------------------------
+
+
+def module_temp_populate(arg, _dummy):
+    """
+    @summary: Overloaded function. Updating module counter
+    @param arg: Dictionary containing module configuration
+    @param _dummy: Unused parameter (for interface compatibility)
+    """
+    module_count_config = 0
+    currnt_module_count = 0
+    if isinstance(arg, dict):
+        module_count_config = arg.get("module_count", 0)
+
+    module_count_fname = "/var/run/hw-management/config/module_count"
+    try:
+        # read current module count
+        if os.path.isfile(module_count_fname):
+            with open(module_count_fname, 'r', encoding="utf-8") as f:
+                currnt_module_count = f.read().rstrip('\n')
+                currnt_module_count = int(currnt_module_count)
+        else:
+            currnt_module_count = -1
+
+        if currnt_module_count != module_count_config:
+            with open(module_count_fname, 'w', encoding="utf-8") as f:
+                f.write(str(module_count_config) + "\n")
+            LOGGER.notice("Module count updated to {}".format(module_count_config))
+    except (OSError, ValueError) as e:
+        error_message = str(e)
+        LOGGER.warning("{} {}".format(module_count_fname, error_message), id="module_count_read_fail")
+    else:
+        LOGGER.notice(None, id="module_count_invalid_argument")
 
 
 # ----------------------------------------------------------------------
@@ -840,42 +901,6 @@ def init_attr(attr_prop):
         attr_prop["hwmon"] = _resolve_hwmon(path)
 
 
-def write_module_counter(product_sku):
-    """
-    @summary: Write module_counter configuration file during initialization
-
-    Gets module_count from centralized platform configuration and writes it to
-    /var/run/hw-management/config/module_counter for use by other services.
-    This is done in peripheral_updater to ensure availability even if
-    thermal_updater is disabled by the customer.
-
-    If product_sku does not match any entry in PLATFORM_CONFIG, the file is not
-    created or modified (unsupported platform — leave existing content intact).
-
-    @param product_sku: Platform SKU identifier to load correct config
-    """
-    if not get_platform_config(product_sku):
-        LOGGER.notice(
-            "hw-management-peripheral-updater: module_counter skipped (platform not in config)"
-        )
-        return
-
-    # Get module count from centralized platform configuration
-    # This is the SINGLE SOURCE OF TRUTH for module counts
-    module_count = get_module_count(product_sku)
-
-    # Write module_counter (including 0) for supported platforms only
-    try:
-        with open("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8") as f:
-            f.write("{}\n".format(module_count))
-        if module_count > 0:
-            LOGGER.notice("hw-management-peripheral-updater: module_counter initialized ({})".format(module_count))
-        else:
-            LOGGER.notice("hw-management-peripheral-updater: module_counter initialized (0 - no modules on this platform)")
-    except OSError as e:
-        LOGGER.warning("Failed to write module_counter: {}".format(e))
-
-
 def show_full_thread_report(pid=None):
     """
     @summary: Show full thread report
@@ -1031,11 +1056,6 @@ def main():
     if feature_request("get", "is_redfish_disabled"):
         sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
         LOGGER.notice("hw-management-peripheral-updater: Redfish disabled host detected, BMC Redfish sync disabled")
-
-    # Write module_counter for other services (must be done before they start)
-    # This is done here in peripheral_updater to ensure it's written even if
-    # thermal_updater is disabled by the customer
-    write_module_counter(product_sku)
 
     LOGGER.notice("hw-management-peripheral-updater: init attributes")
     for attr in sys_attr:
