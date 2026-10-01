@@ -124,16 +124,15 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
     def _init_fns_from_main(self, module, redfish_disabled):
         """Run main() and return the fn names passed to init_attr.
 
-        HI162 carries a redfish_get_sensor entry. init_attr, the module-counter
-        write, and the poll loop are stubbed so only the Redfish gate in main()
-        decides whether that entry is kept.
+        HI162 carries a redfish_get_sensor entry. init_attr and the poll loop
+        are stubbed so only the Redfish gate in main() decides whether that
+        entry is kept. module_counter is refreshed from that poll, not at init.
         """
         seen = []
         module.feature_request = MagicMock(return_value=redfish_disabled)
         argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
         with patch.object(sys, "argv", argv), \
                 patch.object(module, "init_attr", side_effect=lambda attr: seen.append(attr.get("fn"))), \
-                patch.object(module, "write_module_counter"), \
                 patch.object(module, "update_peripheral_attr"), \
                 patch.object(module, "exit_wait", side_effect=lambda *_a, **_k: module.EXIT.set()), \
                 patch.object(module.signal, "signal"):
@@ -479,19 +478,6 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertIsInstance(config, dict)
         # Should have entries for different platforms
         self.assertGreater(len(config), 0)
-
-
-class TestModuleCounterFallback(unittest.TestCase):
-    """Test module_counter fallback when platform_config is unavailable"""
-
-    def test_get_module_count_fallback_returns_zero(self):
-        """Test fallback get_module_count returns 0"""
-        import hw_management_peripheral_updater as peripheral_module
-
-        # If import failed, get_module_count should be the fallback that returns 0
-        # This is tested by the import at module level
-        # Just verify the function exists
-        self.assertTrue(hasattr(peripheral_module, 'get_module_count'))
 
 
 class TestMonitorAsicChipup(unittest.TestCase):
@@ -952,7 +938,7 @@ class TestUpdatePeripheralAttr(unittest.TestCase):
 
 
 class TestInitAndWriteFunctions(unittest.TestCase):
-    """Test init_attr and write_module_counter functions"""
+    """Test init_attr and module_temp_populate module_counter refresh"""
 
     def setUp(self):
         """Setup test fixtures"""
@@ -962,23 +948,40 @@ class TestInitAndWriteFunctions(unittest.TestCase):
         """Clean up"""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_write_module_counter(self):
-        """Test write_module_counter writes file correctly"""
+    def test_module_temp_populate_writes_counter_when_missing(self):
+        """A missing module_counter file is created from the poll argument."""
         import hw_management_peripheral_updater as peripheral_module
 
-        config_dir = os.path.join(self.temp_dir, "config")
-        os.makedirs(config_dir)
-        module_counter_file = os.path.join(config_dir, "module_counter")
-
-        with patch('hw_management_peripheral_updater.get_module_count', return_value=64):
-            with patch('hw_management_peripheral_updater.LOGGER'):
-                # Mock builtins.open to write to our test directory
+        with patch('hw_management_peripheral_updater.LOGGER'):
+            with patch('os.path.isfile', return_value=False):
                 with patch('builtins.open', unittest.mock.mock_open()) as mock_file:
-                    peripheral_module.write_module_counter("HI123")
+                    peripheral_module.module_temp_populate({"module_count": 64}, None)
 
-                    # Check open was called with correct path and write was called
-                    mock_file.assert_called_with("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
+                    mock_file.assert_called_with(
+                        "/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
                     mock_file().write.assert_called_with("64\n")
+
+    def test_module_temp_populate_refreshes_stale_counter(self):
+        """A counter reset to 0 is rewritten to the configured module count."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.LOGGER'):
+            with patch('os.path.isfile', return_value=True):
+                with patch('builtins.open', unittest.mock.mock_open(read_data="0\n")) as mock_file:
+                    peripheral_module.module_temp_populate({"module_count": 64}, None)
+
+                    mock_file().write.assert_called_with("64\n")
+
+    def test_module_temp_populate_skips_write_when_counter_matches(self):
+        """An already-correct module_counter file is left unchanged."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.LOGGER'):
+            with patch('os.path.isfile', return_value=True):
+                with patch('builtins.open', unittest.mock.mock_open(read_data="64\n")) as mock_file:
+                    peripheral_module.module_temp_populate({"module_count": 64}, None)
+
+                    mock_file().write.assert_not_called()
 
     def test_init_attr_with_hwmon(self):
         """Test init_attr with hwmon path"""
@@ -1110,25 +1113,23 @@ class TestRedfishPostErrorHandling(unittest.TestCase):
             self.assertIsNone(result)
 
 
-class TestWriteModuleCounterError(unittest.TestCase):
-    """Test write_module_counter error handling"""
+class TestModuleCounterRefreshError(unittest.TestCase):
+    """Test module_temp_populate module_counter error handling"""
 
-    def test_write_module_counter_logs_error_on_failure(self):
-        """Test write_module_counter logs error when file write fails"""
+    def test_module_temp_populate_logs_error_on_write_failure(self):
+        """A failed module_counter write is logged and does not raise."""
         import hw_management_peripheral_updater as peripheral_module
 
         mock_logger = MagicMock()
-        # write_module_counter early-returns for platforms not in PLATFORM_CONFIG
-        # (commit 1496432d), so make the SKU resolve as supported to reach the
-        # file write that we force to fail.
-        with patch('hw_management_peripheral_updater.get_platform_config', return_value=[{'fn': 'asic_temp_populate'}]):
-            with patch('hw_management_peripheral_updater.get_module_count', return_value=32):
-                with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
-                    with patch('builtins.open', side_effect=OSError("Permission denied")):
-                        peripheral_module.write_module_counter("TEST_SKU")
+        with patch('os.path.isfile', return_value=False):
+            with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
+                with patch('builtins.open', side_effect=OSError("Permission denied")):
+                    peripheral_module.module_temp_populate({"module_count": 32}, None)
 
-                        # Should log warning about failure
-                        mock_logger.warning.assert_called()
+                    mock_logger.warning.assert_called()
+                    warning_message = mock_logger.warning.call_args[0][0]
+                    self.assertIn("module_counter", warning_message)
+                    self.assertIn("Permission denied", warning_message)
 
 
 class TestPlatformChipupCoverage(unittest.TestCase):

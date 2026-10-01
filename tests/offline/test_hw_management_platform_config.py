@@ -8,7 +8,7 @@
 # Validates:
 # - PLATFORM_CONFIG structure and data integrity
 # - _build_thermal_config() filtering logic
-# - Helper functions (get_platform_config, get_module_count, etc.)
+# - Helper functions (get_platform_config, get_all_platform_skus, etc.)
 # - Architecture independence (thermal_updater can be disabled)
 #
 ########################################################################
@@ -279,8 +279,7 @@ class TestPlatformConfigHelperFunctions(unittest.TestCase):
     """
     Test suite for platform_config helper functions.
 
-    Tests get_platform_config(), get_module_count(), get_all_platform_skus()
-    including edge cases.
+    Tests get_platform_config() and get_all_platform_skus(), including edge cases.
     """
 
     @classmethod
@@ -326,28 +325,6 @@ class TestPlatformConfigHelperFunctions(unittest.TestCase):
 
         print(f"[PASS] get_platform_config('INVALID_SKU') returns empty list")
 
-    def test_03_get_module_count_valid_sku(self):
-        """Test get_module_count() with valid SKU."""
-        print("\n[TEST 3] Testing get_module_count() with valid SKU")
-
-        result = self.config_module.get_module_count("HI162")
-
-        self.assertIsInstance(result, int, "get_module_count() should return integer")
-        self.assertEqual(result, 36, "HI162 should have 36 modules")
-
-        print(f"[PASS] get_module_count('HI162') returns {result}")
-
-    def test_04_get_module_count_unknown_sku(self):
-        """Test get_module_count() with unknown SKU."""
-        print("\n[TEST 4] Testing get_module_count() with unknown SKU")
-
-        result = self.config_module.get_module_count("UNKNOWN_SKU")
-
-        self.assertIsInstance(result, int, "get_module_count() should return integer")
-        self.assertEqual(result, 0, "Unknown SKU should return 0 modules")
-
-        print(f"[PASS] get_module_count('UNKNOWN_SKU') returns 0")
-
     def test_05_get_all_platform_skus(self):
         """Test get_all_platform_skus() returns all SKUs."""
         print("\n[TEST 5] Testing get_all_platform_skus()")
@@ -362,24 +339,6 @@ class TestPlatformConfigHelperFunctions(unittest.TestCase):
         self.assertIn("def", result, "Should include 'def'")
 
         print(f"[PASS] get_all_platform_skus() returns {len(result)} SKUs")
-
-    def test_06_get_module_count_edge_cases(self):
-        """Test get_module_count() with various edge cases."""
-        print("\n[TEST 6] Testing get_module_count() edge cases")
-
-        # Test with different platforms
-        test_cases = [
-            ("HI162", 36, "Platform with modules"),
-            ("def", 0, "Default platform"),
-        ]
-
-        for sku, expected_count, description in test_cases:
-            result = self.config_module.get_module_count(sku)
-            self.assertEqual(result, expected_count,
-                             f"{description}: get_module_count('{sku}') should return {expected_count}")
-            print(f"  ✓ {description}: {sku} → {result} modules")
-
-        print(f"[PASS] All edge cases handled correctly")
 
 
 class TestArchitectureIndependence(unittest.TestCase):
@@ -482,11 +441,6 @@ class TestPlatformConfigRegexMatching(unittest.TestCase):
         config = self.config_module.get_platform_config("HI144")
         self.assertIsNotNone(config)
         self.assertIsInstance(config, list)
-
-    def test_get_module_count_regex(self):
-        """Test get_module_count with regex keys"""
-        count = self.config_module.get_module_count("HI144")
-        self.assertEqual(count, 65)
 
 
 def main():

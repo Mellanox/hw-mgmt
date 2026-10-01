@@ -26,7 +26,7 @@ These tests verify ALL peripheral monitoring functions on actual hardware:
 - Leakage sensor monitoring (run_cmd)
 - Power button events (run_power_button_event)
 - BMC sensor monitoring via Redfish (redfish_get_sensor)
-- Module counter initialization (write_module_counter)
+- Module counter refresh (module_temp_populate)
 
 Tests are designed to run on hardware with DVS (Device Virtualization System).
 """
@@ -488,9 +488,9 @@ class PeripheralSensorsComprehensiveTest(unittest.TestCase):
 
     def test_06_module_counter_initialization(self):
         """
-        Test 6: Module Counter Initialization (write_module_counter)
+        Test 6: Module Counter Refresh (module_temp_populate)
 
-        Validates that peripheral_updater writes module_counter during init
+        Validates that peripheral_updater writes module_counter on its poll
         so other services can read module count even if thermal_updater is disabled.
         """
         print("\n" + "-" * 70)

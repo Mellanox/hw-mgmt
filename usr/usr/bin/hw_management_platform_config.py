@@ -280,30 +280,6 @@ def get_platform_config(product_sku):
     return config
 
 
-def get_module_count(product_sku):
-    """
-    Get the number of optical modules for a given platform.
-
-    Uses regex matching to find the platform config, then extracts module_count
-    from the module_temp_populate entry.
-
-    @param product_sku: Platform SKU identifier (e.g., "HI144")
-    @return: Number of modules, or 0 if not found
-    """
-    # Use get_platform_config which handles regex matching
-    config = get_platform_config(product_sku)
-    if not config:
-        return 0
-    if isinstance(config, list):
-        for entry in config:
-            if entry.get("fn") == "module_temp_populate":
-                arg = entry.get("arg", {})
-                if isinstance(arg, dict):
-                    return arg.get("module_count", 0)
-        return 0
-    return config.get("module_count", 0)
-
-
 def get_all_platform_skus():
     """Get a list of all supported platform SKUs."""
     return list(PLATFORM_CONFIG.keys())
