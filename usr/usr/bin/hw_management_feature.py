@@ -69,10 +69,13 @@ Usage:
 """
 
 import argparse
+import fcntl
+import json
 import os
 import re
+import stat
 import sys
-import json
+import tempfile
 from hw_management_lib import str2bool, run_shell_cmd
 
 # Action -> feature name -> handler function name and help text.
@@ -211,13 +214,11 @@ def feature_request(action, feature_name, *args):
     @param args: Optional arguments forwarded to the handler.
     @return: (retcode, result string). retcode 0 is success.
 
-    Get fails if the database file exists but cannot be read or is not a
-    JSON object. Set still runs: load already left an empty in-memory
-    database, so the setter can replace the file.
+    Set runs load, handler, and save under one exclusive lock so concurrent
+    setters cannot clobber each other's keys. Get does not take the lock
+    and does not write the database, so a reader cannot erase a concurrent
+    set and does not need write access to a valid features file.
     """
-    ret = load_hw_management_db(HW_MANAGEMENT_DB_FILE)
-    if ret != 0 and action != "set":
-        return ret, ""
     command = COMMANDS.get(action)
     if command is None:
         raise ValueError("Unknown action: %s" % action)
@@ -228,7 +229,19 @@ def feature_request(action, feature_name, *args):
     handler = globals().get(handler_name)
     if handler is None:
         raise ValueError("Unknown feature: %s" % feature_name)
-    return handler(*args)
+    lock_fd = None
+    if action == "set":
+        lock_fd = _lock_hw_management_db(HW_MANAGEMENT_DB_FILE)
+        if lock_fd is None:
+            return 1, ""
+    try:
+        ret = load_hw_management_db(
+            HW_MANAGEMENT_DB_FILE, repair=(action == "set"))
+        if ret != 0:
+            return ret, ""
+        return handler(*args)
+    finally:
+        _unlock_hw_management_db(lock_fd)
 
 
 def print_feature_help(parser, action):
@@ -305,6 +318,93 @@ def set_hw_management_db(path, val):
     return 0
 
 
+def _lock_hw_management_db(db_file):
+    """
+    @summary: Take an exclusive advisory lock for db_file.
+    @param db_file: Database JSON path. The lock file is db_file + ".lock".
+    @return: Open lock fd, or None on I/O error.
+    """
+    lock_path = db_file + ".lock"
+    lock_dir = os.path.dirname(lock_path)
+    try:
+        if lock_dir and not os.path.isdir(lock_dir):
+            os.makedirs(lock_dir)
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o644)
+    except (OSError, IOError):
+        return None
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    except (OSError, IOError):
+        try:
+            os.close(lock_fd)
+        except (OSError, IOError):
+            pass
+        return None
+    return lock_fd
+
+
+def _unlock_hw_management_db(lock_fd):
+    """
+    @summary: Release and close a lock fd from _lock_hw_management_db.
+    @param lock_fd: Open lock fd. Ignored if None.
+    """
+    if lock_fd is None:
+        return
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    except (OSError, IOError):
+        pass
+    try:
+        os.close(lock_fd)
+    except (OSError, IOError):
+        pass
+
+
+def _write_hw_management_db_file(db_file, data):
+    """
+    @summary: Atomically replace db_file with JSON for data.
+              Each call uses a unique temporary file in the same directory.
+              The published file keeps the previous mode, or 0644 if it is
+              new, so other users can still read the shared database.
+    @param db_file: Destination JSON path.
+    @param data: Object to serialize.
+    @return: 0 on success, 1 on I/O error.
+    """
+    db_dir = os.path.dirname(db_file)
+    fd = None
+    tmp = None
+    try:
+        if db_dir and not os.path.isdir(db_dir):
+            os.makedirs(db_dir)
+        fd, tmp = tempfile.mkstemp(
+            dir=db_dir or ".", prefix=".tmp_hw_mgmt_features_")
+        with os.fdopen(fd, "w") as f:
+            fd = None
+            json.dump(data, f)
+            f.write("\n")
+        try:
+            mode = stat.S_IMODE(os.stat(db_file).st_mode)
+        except OSError:
+            mode = 0o644
+        os.chmod(tmp, mode)
+        os.replace(tmp, db_file)
+        tmp = None
+    except (OSError, IOError):
+        return 1
+    finally:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except (OSError, IOError):
+                pass
+        if tmp is not None:
+            try:
+                os.unlink(tmp)
+            except (OSError, IOError):
+                pass
+    return 0
+
+
 def save_hw_management_db(db_file):
     """
     @summary: Write the in-memory hw-management database to db_file.
@@ -314,26 +414,19 @@ def save_hw_management_db(db_file):
     global HW_MANAGEMENT_DB
     if not HW_MANAGEMENT_DB:
         return 0
-    db_dir = os.path.dirname(db_file)
-    try:
-        if db_dir and not os.path.isdir(db_dir):
-            os.makedirs(db_dir)
-        tmp = db_file + ".tmp"
-        with open(tmp, 'w') as f:
-            json.dump(HW_MANAGEMENT_DB, f)
-            f.write("\n")
-        os.rename(tmp, db_file)
-    except (OSError, IOError):
-        return 1
-    return 0
+    return _write_hw_management_db_file(db_file, HW_MANAGEMENT_DB)
 
 
-def load_hw_management_db(db_file):
+def load_hw_management_db(db_file, repair=False):
     """
     @summary: Load the hw-management database from db_file.
     @param db_file: Source JSON path.
+    @param repair: When True, a corrupt or non-object file is treated as
+                   empty so a setter can overwrite it. The file is not
+                   written here.
     @return: 0 on success or when the file is missing. 1 if the file
-             exists but cannot be read or is not a JSON object.
+             exists but cannot be read or is not a JSON object, and
+             repair is False. Getters must not rewrite the file.
     """
     global HW_MANAGEMENT_DB
     HW_MANAGEMENT_DB = {}
@@ -342,12 +435,14 @@ def load_hw_management_db(db_file):
     try:
         with open(db_file, 'r') as f:
             loaded = json.load(f)
+        if isinstance(loaded, dict):
+            HW_MANAGEMENT_DB = loaded
+            return 0
     except (ValueError, OSError, IOError):
-        return 1
-    if not isinstance(loaded, dict):
-        return 1
-    HW_MANAGEMENT_DB = loaded
-    return 0
+        pass
+    if repair:
+        return 0
+    return 1
 
 
 def main():
