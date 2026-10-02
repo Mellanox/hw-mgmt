@@ -73,7 +73,7 @@ class DumpError(Exception):
 
 
 class DumpSkip(Exception):
-    """Quiet skip (no NVMe / no model); not a warning."""
+    """Skip (no NVMe / no model); exit 0. Reason is in status warning and the skipped line."""
 
 
 def syslog_warn(msg):
@@ -101,6 +101,9 @@ def completion_message(fields):
         err = (fields.get("warning") or "").strip() or "error"
         return "SSD dump tool failed: %s" % err
     if status == "skipped":
+        err = (fields.get("warning") or "").strip()
+        if err:
+            return "SSD dump tool skipped: %s" % err
         return "SSD dump tool skipped"
     return "SSD dump tool succeeded"
 
@@ -1080,7 +1083,7 @@ def run_verify(args):
         rc = run_collect(args, logf, fields)
     except DumpSkip as exc:
         fields["status"] = "skipped"
-        fields["warning"] = ""
+        fields["warning"] = str(exc)
         log_print(logf, "skipped: %s" % exc)
         rc = 0
     except DumpError as exc:
@@ -1175,7 +1178,7 @@ def run_dump(args):
                     rc = run_collect(args, logf, fields)
                 except DumpSkip as exc:
                     fields["status"] = "skipped"
-                    fields["warning"] = ""
+                    fields["warning"] = str(exc)
                     log_print(logf, "skipped: %s" % exc)
                     rc = 0
                 except DumpError as exc:
