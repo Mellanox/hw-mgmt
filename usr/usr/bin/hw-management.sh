@@ -3028,9 +3028,7 @@ check_system_write_i2c_defaults()
 check_system_bmc_redfish_login()
 {
 	# Obtain/rotate the BMC password and log in over Redfish on platforms with
-	# a BMC when Redfish is enabled. is_redfish_disabled is a temporary
-	# stand-in (Bug 5272044) and currently always returns false, so this login
-	# runs on every NOS that has a BMC.
+	# a BMC when Redfish is enabled.
 	print_function_call "$0" "${FUNCNAME[0]}" "Checking BMC Redfish login started"
 	if check_bmc_is_supported && ! check_host_os_is_redfish_disabled; then
 		pushd /usr/bin

@@ -52,21 +52,13 @@ try:
         current_milli_time,
         run_shell_cmd
     )
+    from hw_management_feature import feature_request
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-# Optional feature_request import: keep the daemon operational if this helper
-# is temporarily missing during partial upgrades or rollback.
-try:
-    from hw_management_feature import feature_request
-    FEATURE_REQUEST_AVAILABLE = True
-except ImportError:
-    FEATURE_REQUEST_AVAILABLE = False
 
-    def feature_request(_action, _feature_name, *_args):
-        return False
 
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
@@ -1005,9 +997,6 @@ def main():
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
     LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
 
-    if not FEATURE_REQUEST_AVAILABLE:
-        LOGGER.warning("hw-management-peripheral-updater: feature_request unavailable, assuming Redfish enabled host")
-
     if args["system_type"] is None:
         try:
             with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
@@ -1027,8 +1016,13 @@ def main():
 
     # On Redfish disabled hosts, drop the BMC Redfish
     # entries so this daemon never logs in to the BMC or polls BMC sensors over
-    # Redfish. On any other host OS the configuration is left unchanged.
-    if feature_request("get", "is_redfish_disabled"):
+    # Redfish. A failed read leaves the configuration unchanged, so Redfish
+    # stays enabled.
+    retcode, ret_str = feature_request("get", "is_redfish_disabled")
+    if retcode != 0:
+        LOGGER.warning(
+            "hw-management-peripheral-updater: is_redfish_disabled failed ({}), assuming Redfish enabled host".format(retcode))
+    elif ret_str == "True":
         sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
         LOGGER.notice("hw-management-peripheral-updater: Redfish disabled host detected, BMC Redfish sync disabled")
 

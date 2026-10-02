@@ -7,7 +7,7 @@ Distribution: Centos
 Group: Converted/utils
 BuildArch: x86_64
 AutoReq: no
-Requires: python3
+Requires: python3 >= 3.7
 
 Provides:      config(hw-management) = %{version}
 Provides:      hw-management = %{version}
@@ -137,6 +137,7 @@ install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-manag
 install -m 0755 usr/usr/bin/hw-management.sh $RPM_BUILD_ROOT/usr/bin/hw-management.sh
 install -m 0755 usr/usr/bin/hw_management_nvl_temperature_get.py $RPM_BUILD_ROOT/usr/bin/hw_management_nvl_temperature_get.py
 install -m 0755 usr/usr/bin/hw_management_feature.py $RPM_BUILD_ROOT/usr/bin/hw_management_feature.py
+install -m 0755 usr/usr/bin/hw_management_lib.py $RPM_BUILD_ROOT/usr/bin/hw_management_lib.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_common.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
@@ -245,6 +246,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
 %attr(0755, root, root) "/usr/bin/hw_management_nvl_temperature_get.py"
 %attr(0755, root, root) "/usr/bin/hw_management_feature.py"
+%attr(0755, root, root) "/usr/bin/hw_management_lib.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_common.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_delta.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_murata.py"

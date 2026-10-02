@@ -587,6 +587,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: Feature Get/Set',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_feature.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Platform Config',
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_platform_config.py', '--tb=short'],
                 'cwd': self.tests_dir
