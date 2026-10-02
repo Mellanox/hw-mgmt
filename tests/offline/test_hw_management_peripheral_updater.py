@@ -32,7 +32,6 @@ Focus on testing the critical business logic:
 import unittest
 import sys
 import os
-import builtins
 import tempfile
 import shutil
 import importlib.util
@@ -67,58 +66,33 @@ def _ensure_peripheral_dependency_mocks():
         sys.modules["psutil"] = MagicMock()
 
 
-def _load_peripheral_updater_module(module_suffix, feature_request_available):
+def _load_peripheral_updater_module(module_suffix):
     """
-    Load peripheral_updater in isolation with controlled feature helper presence.
+    Load peripheral_updater in isolation with a mock feature_request.
 
     @param module_suffix: unique suffix for importlib module name
-    @param feature_request_available: True = inject mock feature_request; False = simulate missing module
     """
     _ensure_peripheral_dependency_mocks()
     mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
     sys.modules.pop(mod_name, None)
 
-    if feature_request_available:
-        feature_mock = MagicMock()
-        feature_mock.feature_request = MagicMock(return_value=False)
-        sys.modules["hw_management_feature"] = feature_mock
-    else:
-        sys.modules.pop("hw_management_feature", None)
+    feature_mock = MagicMock()
+    feature_mock.feature_request = MagicMock(return_value=(0, "False"))
+    sys.modules["hw_management_feature"] = feature_mock
 
     spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
     module = importlib.util.module_from_spec(spec)
-
-    real_import = builtins.__import__
-
-    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if not feature_request_available and name == "hw_management_feature":
-            raise ImportError("hw_management_feature missing (test)")
-        return real_import(name, globals, locals, fromlist, level)
-
-    if feature_request_available:
-        spec.loader.exec_module(module)
-    else:
-        with patch("builtins.__import__", side_effect=guarded_import):
-            spec.loader.exec_module(module)
-
+    spec.loader.exec_module(module)
     return module
 
 
-class TestFeatureRequestImportFallback(unittest.TestCase):
-    """feature_request import must be optional so daemon startup cannot hard-fail."""
-
-    def test_module_loads_when_feature_request_missing(self):
-        """Missing hw_management_feature keeps Redfish enabled."""
-        module = _load_peripheral_updater_module("no_feature", feature_request_available=False)
-
-        self.assertFalse(module.FEATURE_REQUEST_AVAILABLE)
-        self.assertFalse(module.feature_request("get", "is_redfish_disabled"))
+class TestRedfishDisabledFeature(unittest.TestCase):
+    """is_redfish_disabled controls whether BMC Redfish sensor polling stays."""
 
     def test_module_uses_feature_request_when_present(self):
         """When the helper imports, main() queries is_redfish_disabled."""
-        module = _load_peripheral_updater_module("with_feature", feature_request_available=True)
+        module = _load_peripheral_updater_module("with_feature")
 
-        self.assertTrue(module.FEATURE_REQUEST_AVAILABLE)
         self._init_fns_from_main(module, redfish_disabled=False)
 
     def _init_fns_from_main(self, module, redfish_disabled):
@@ -129,7 +103,8 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
         decides whether that entry is kept.
         """
         seen = []
-        module.feature_request = MagicMock(return_value=redfish_disabled)
+        value = "True" if redfish_disabled else "False"
+        module.feature_request = MagicMock(return_value=(0, value))
         argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
         with patch.object(sys, "argv", argv), \
                 patch.object(module, "init_attr", side_effect=lambda attr: seen.append(attr.get("fn"))), \
@@ -143,7 +118,7 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
 
     def test_redfish_disabled_host_strips_redfish_monitor_entries(self):
         """A Redfish-disabled host drops redfish_get_sensor peripheral entries."""
-        module = _load_peripheral_updater_module("redfish_off", feature_request_available=True)
+        module = _load_peripheral_updater_module("redfish_off")
 
         seen = self._init_fns_from_main(module, redfish_disabled=True)
 
@@ -152,12 +127,97 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
 
     def test_redfish_enabled_host_keeps_redfish_monitor_entries(self):
         """While is_redfish_disabled is false, redfish_get_sensor entries stay."""
-        module = _load_peripheral_updater_module("redfish_on", feature_request_available=True)
+        module = _load_peripheral_updater_module("redfish_on")
 
         seen = self._init_fns_from_main(module, redfish_disabled=False)
 
         self.assertIn("monitor_asic_chipup_status", seen)
         self.assertIn("redfish_get_sensor", seen)
+
+    def test_stored_flag_is_read_by_updater(self):
+        """A flag written through the feature API is used by updater main()."""
+        temp_dir = tempfile.mkdtemp()
+        db_file = os.path.join(temp_dir, "config", "hw_management_features.json")
+        os.makedirs(os.path.dirname(db_file), exist_ok=True)
+        try:
+            module, feature = _load_peripheral_updater_with_real_feature("stored_flag")
+            with patch.object(feature, "HW_MANAGEMENT_DB_FILE", db_file):
+                feature.HW_MANAGEMENT_DB = {}
+                ret, _text = feature.feature_request("set", "is_redfish_disabled", "True")
+                self.assertEqual(ret, 0)
+                self.assertTrue(os.path.isfile(db_file))
+
+                feature.HW_MANAGEMENT_DB = {}
+                seen = []
+                argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
+                with patch.object(sys, "argv", argv), \
+                        patch.object(module, "init_attr",
+                                     side_effect=lambda attr: seen.append(attr.get("fn"))), \
+                        patch.object(module, "write_module_counter"), \
+                        patch.object(module, "update_peripheral_attr"), \
+                        patch.object(module, "exit_wait",
+                                     side_effect=lambda *_a, **_k: module.EXIT.set()), \
+                        patch.object(module.signal, "signal"):
+                    module.main()
+
+            self.assertIn("monitor_asic_chipup_status", seen)
+            self.assertNotIn("redfish_get_sensor", seen)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _load_real_feature_module():
+    """Load hw_management_feature without importing hw_management_lib."""
+    import types
+
+    lib = types.ModuleType("hw_management_lib")
+
+    def str2bool(val):
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, int) and not isinstance(val, bool):
+            return bool(val)
+        try:
+            text = val.lower()
+        except AttributeError:
+            return None
+        if text in ("yes", "true", "t", "y", "1"):
+            return True
+        if text in ("no", "false", "f", "n", "0"):
+            return False
+        return None
+
+    def run_shell_cmd(*_args, **_kwargs):
+        return 1, ""
+
+    lib.str2bool = str2bool
+    lib.run_shell_cmd = run_shell_cmd
+    sys.modules["hw_management_lib"] = lib
+    sys.modules.pop("hw_management_feature", None)
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    feature_path = os.path.join(
+        script_dir, "..", "..", "usr", "usr", "bin", "hw_management_feature.py")
+    spec = importlib.util.spec_from_file_location("hw_management_feature", feature_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["hw_management_feature"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_peripheral_updater_with_real_feature(module_suffix):
+    """Load peripheral_updater using a real hw_management_feature module."""
+    feature = _load_real_feature_module()
+    _ensure_peripheral_dependency_mocks()
+    sys.modules["hw_management_feature"] = feature
+    mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
+    sys.modules.pop(mod_name, None)
+    spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module, feature
 
 
 class TestMonitorAsicChipupStatusLogic(unittest.TestCase):
