@@ -2792,7 +2792,13 @@ sn5640_specific()
 	psu_count=4
 	minimal_unsupported=1
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	# Kernels 5.10 and 6.1 carry a backported mp2891 driver which reports
+	# PMBUS_READ_PIN on rail 1 only, shifting the power attribute numbering.
+	if [[ $(uname -r) == 5.10.* || $(uname -r) == 6.1.* ]]; then
+		lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors_6.1.conf"
+	else
+		lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	fi
 
 	case $sku in
 		HI172)	# SN5610 (HI172)
