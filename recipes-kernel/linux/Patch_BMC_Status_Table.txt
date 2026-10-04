@@ -15,6 +15,22 @@ Kernel-6.12
 |0011-arm64-dts-aspeed-spc6-bmc-fix-sgmii-phy-names.patch         |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; mac2 phy-names match ftgmac100 "sgmii"    |
 |0012-usb-ehci-Add-Aspeed-AST2700-support.patch                   | 274f2232a94f       | Bugfix upstream;skip[ALL];take[sonic]    |            | BMC; AST2700 ehci1 probe ENOMEM - 64-bit DMA   |
 |0013-watchdog-aspeed-Set-WDT_RESET_MASK1-bit-1-on-AST2700.patch  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; AST2700 errata 9 - MBus hang on WDT reset |
+|0014-i2c-ast2600-change-the-remove-driver-call-back-func.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 d3c1f3c5 (chain dep)     |
+|0015-i2c-ast2600-update-sync-with-upstream.patch                 |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 dcf9307a; MR!1037        |
+|0016-i2c-ast2600-update-align-with-upstream.patch                |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 7008c441; MR!1037        |
+|0017-i2c-ast2600-use-function-point.patch                        |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 f2506b80; MR!1037        |
+|0018-i2c-ast2600-fix-update.patch                                |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 a2667718; MR!1037        |
+|0019-i2c-ast2600-refine-bus-mode-logic.patch                     |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 d2bd9991; MR!1037        |
+|0020-i2c-ast2600-refine-the-code-style-and-arrange.patch         |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 8fbe029e; MR!1037        |
+|0021-i2c-ast2600-introduce-buffer-transferring-support-t.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 a678e9cc; AST2700 buff   |
+|0022-i2c-ast2600-arrange-the-transfer-judgement-rule.patch       |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 c737310e; MR!1037        |
+|0023-drivers-i2c-update-the-ast2700-debounce-maximum-val.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.03 2da726d5; MR!1037        |
+|0024-i2c-i2c-ast2600-avoid-I2C-target-reads-with-zero-le.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 f6ed00ca; MR!1037        |
+|0025-i2c-ast2600-update-the-i2c-transfer-mode-as-buffer-.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 d71de0f0; buff default   |
+|0026-i2c-ast2600-add-set-DMA-enable-flag-for-AST2700.patch       |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 a5ec4651; MR!1037        |
+|0027-i2c-i2c-ast2600-add-zero-length-read-quirk.patch            |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 f0469844; MR!1037        |
+|0028-i2c-ast2600-revert-back-AST2700-obtains-data-buffer.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 20bfd2bf; MR!1037        |
+|0029-i2c-ast2600-fix-NULL-deref-in-the-AST2700-buffer-mo.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; dgx 0684fbc5; buff-mode target IRQ NULL   |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
