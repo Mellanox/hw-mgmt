@@ -1,4 +1,28 @@
 ================================================================================
+- V.7.0060.1006
+- Sun, 04 Oct 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - 
+
+- Bug fixes
+    - #5221586, hw-mgmt: scripts: Fix updater service stop timeout, a18ec3a
+
+- Kernel Patches for New Features:
+    - 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1006/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    - Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    - Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    - Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+
+================================================================================
 - V.7.0060.1005
 - Wed, 27 May 2026
 --------------------------------------------------------------------------------
