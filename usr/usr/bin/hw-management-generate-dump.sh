@@ -186,8 +186,14 @@ dump_cpld_swb_cartridge
 # SSD vendor dump. Recreate $SSD_LOG_DIR; copy as ssd-dump/,
 # then remove $SSD_LOG_DIR (Python --no-tar; no nested gzip).
 # Extra logic is in hw-management-ssd-dump-collect.sh (dump_cmd).
+# 380 = up to 120 s waiting for a standalone SSD dump to finish
+# (this dump has priority, so the helper waits instead of
+# giving up) + 25 for reusing that dump and failing + 195+5 for
+# the collect that then has to happen + 25 to copy or unpack.
+# The helper bounds each of those itself, so reaching this
+# timeout means it was wedged, not merely slow.
 dump_cmd "hw-management-ssd-dump-collect.sh $DUMP_FOLDER $SSD_LOG_DIR" \
-	"ssd-dump-collect.log" "210"
+	"ssd-dump-collect.log" "380"
 
 # Kill all the leftout child processes before creating the dump archive
 pkill -P "$dump_process_pid" 2>/dev/null || true
