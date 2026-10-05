@@ -139,8 +139,11 @@ dump_cmd "ip addr" "ip_addr" "5"
 # SSD vendor dump. Recreate $SSD_LOG_DIR; copy as ssd-dump/,
 # then remove $SSD_LOG_DIR (Python --no-tar; no nested gzip).
 # Extra logic is in hw-management-ssd-dump-collect.sh (dump_cmd).
+# 330 = up to 120 s waiting for a standalone SSD dump to finish
+# (this dump has priority, so the helper waits instead of
+# giving up) + 195+5 for the collect + ~10 to copy or unpack.
 dump_cmd "hw-management-ssd-dump-collect.sh $DUMP_FOLDER $SSD_LOG_DIR" \
-	"ssd-dump-collect.log" "210"
+	"ssd-dump-collect.log" "330"
 
 # Kill all the leftout child processes before creating the dump archive
 pkill -P "$dump_process_pid" 2>/dev/null || true
