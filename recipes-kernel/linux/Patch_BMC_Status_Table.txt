@@ -31,6 +31,7 @@ Kernel-6.12
 |0027-i2c-i2c-ast2600-add-zero-length-read-quirk.patch            |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 f0469844; MR!1037        |
 |0028-i2c-ast2600-revert-back-AST2700-obtains-data-buffer.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; Aspeed v00.07.04 20bfd2bf; MR!1037        |
 |0029-i2c-ast2600-fix-NULL-deref-in-the-AST2700-buffer-mo.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; dgx 0684fbc5; buff-mode target IRQ NULL   |
+|0068-iio-adc-max1363-Add-ability-to-set-scale-of-the-ADC.patch   |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; MAX1363 Vdd reference for leakage A2D     |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
