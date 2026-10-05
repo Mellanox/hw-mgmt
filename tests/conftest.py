@@ -151,6 +151,21 @@ def reset_logging():
         logging.root.removeHandler(handler)
 
 
+@pytest.fixture(autouse=True)
+def restore_hw_mgmt_modules():
+    """Put the real hw_management_* modules back into sys.modules after a test.
+
+    Several test modules stub their dependencies by assigning MagicMocks
+    straight into sys.modules and never restore them. A later test module then
+    patches attributes on the leftover MagicMock instead of the real module, so
+    its mocks silently do nothing and the code under test runs for real.
+    """
+    saved = {name: module for name, module in sys.modules.items()
+             if name.startswith('hw_management')}
+    yield
+    sys.modules.update(saved)
+
+
 @pytest.fixture
 def capture_logs(caplog):
     """Fixture to easily capture and check log messages"""
