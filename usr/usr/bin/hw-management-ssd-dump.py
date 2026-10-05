@@ -39,6 +39,8 @@
 from __future__ import print_function
 
 import argparse
+import errno
+import fcntl
 import fnmatch
 import io
 import json
@@ -57,6 +59,10 @@ OUTDIR_NAME = "ssd-dump"
 DEFAULT_OUTDIR = "/var/log/" + OUTDIR_NAME
 # generate-dump helper timeout is 195 s; JSON vendor budget <= this.
 TIMEOUT_SEC_JSON_MAX = 120
+# --timeout is the FAE override and may exceed the JSON budget,
+# but it also decides how long the SSD dump lock is held, so it
+# is capped: a typo must not lock out generate-dump for hours.
+TIMEOUT_SEC_CLI_MAX = 600
 STATUS_NAME = "ssd-dump-status.log"
 LOG_NAME = "ssd-dump-tool.log"
 # Live collector/vendor log during the run; renamed to LOG_NAME after.
@@ -66,6 +72,24 @@ SYSLOG_IDENT = "hw-management-ssd-dump"
 PROTECTED_OUTDIRS = frozenset(("/", "/var", "/var/log", "/tmp", "/usr", "/etc"))
 NVME_CTL_RE = re.compile(r"^nvme(\d+)$")
 NVME_DEV_RE = re.compile(r"^nvme(\d+)(n\d+)?$")
+# Locks the SSD dump collection only, never the rest of
+# generate-dump. /run, not the world writable /run/lock, so a
+# local user cannot hold it and block root from collecting.
+LOCK_PATH = "/run/hw-management-ssd-dump.lock"
+# Set by hw-management-ssd-dump-collect.sh, which holds the lock
+# across its own rm and copy. Without it this collector would
+# refuse the collect the helper is calling it to do. The second
+# names the open descriptor the helper holds it on, which it
+# passes down: the claim is checked against that descriptor, so
+# the variables alone buy nothing.
+LOCK_ENV = "HW_MGMT_SSD_DUMP_LOCK_HELD"
+LOCK_FD_ENV = "HW_MGMT_SSD_DUMP_LOCK_FD"
+# Exit codes. 2 is argparse usage, so a busy lock is 3: nothing
+# was collected and nothing was touched, so the caller may retry
+# instead of reporting a failed dump.
+RC_OK = 0
+RC_WARNING = 1
+RC_LOCKED = 3
 
 
 class DumpError(Exception):
@@ -73,7 +97,16 @@ class DumpError(Exception):
 
 
 class DumpSkip(Exception):
-    """Quiet skip (no NVMe / no model); not a warning."""
+    """Skip (no NVMe / no model); exit 0. Reason is in status warning and the skipped line."""
+
+
+class DumpLocked(DumpError):
+    """Another SSD dump collection holds the lock (RC_LOCKED).
+
+    A DumpError subclass so every existing handler still treats
+    it as a warning; the callers that return an exit code catch
+    it first to report RC_LOCKED instead of RC_WARNING.
+    """
 
 
 def syslog_warn(msg):
@@ -84,8 +117,147 @@ def syslog_warn(msg):
         pass
 
 
+def busy_warning(pid, path):
+    """Reason text for a refused caller; names the holder if known."""
+    where = "pid %s" % pid if pid else path
+    return "another SSD dump collection is already running (%s)" % where
+
+
+class DumpLock(object):
+    """Exclusive advisory lock for one SSD dump collection.
+
+    Scope is the SSD dump only. Two reasons to serialize: every
+    collect rmtree's --outdir, so a parallel caller would delete
+    the directory the first one is still writing into, and a
+    vendor dump tool supports only one instance at a time, so the
+    SSD must not be driven twice at once either.
+    Non-blocking on purpose: a standalone
+    SSD dump yields to the full system dump, so it is refused at
+    once rather than queueing behind it (the generate-dump helper
+    is the side that waits).
+    """
+
+    def __init__(self, path=None):
+        self.path = path or LOCK_PATH
+        self.fd = None
+
+    def acquire(self):
+        """None once nothing else can collect, else why not.
+
+        A reason means this run is serialized against nothing, so
+        the caller decides: collect must not proceed, --verify
+        may, since it drives no vendor tool. DumpLocked is the
+        different case of the lock working and being taken.
+        """
+        if os.environ.get(LOCK_ENV) == "1" and self.held_by_caller():
+            return None
+        try:
+            fd = os.open(
+                self.path,
+                os.O_RDWR | os.O_CREAT | os.O_CLOEXEC,
+                0o644,
+            )
+        except OSError as exc:
+            # Staying quiet on a permission denial keeps a
+            # non-root run, which fields["uid_warning"] already
+            # flags, from adding syslog noise of its own.
+            reason = "cannot create lock %s: %s" % (self.path, exc)
+            if exc.errno not in (errno.EACCES, errno.EPERM):
+                syslog_warn(reason)
+            return reason
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            os.close(fd)
+            if exc.errno in (errno.EACCES, errno.EAGAIN, errno.EWOULDBLOCK):
+                raise DumpLocked(busy_warning(self.holder_pid(), self.path))
+            reason = "cannot lock %s: %s" % (self.path, exc)
+            syslog_warn(reason)
+            return reason
+        self.fd = fd
+        self._write_pid()
+        return None
+
+    def held_by_caller(self):
+        """True when a descriptor we inherited holds the lock.
+
+        The generate-dump helper collects under its own lock and
+        passes the descriptor down, which saves this run from
+        refusing the collect it was started to do. Check the
+        claim rather than trust it, and against that descriptor
+        alone: a lock held by an unrelated collection is exactly
+        the case that must not be waved through, and a stray
+        HW_MGMT_SSD_DUMP_LOCK_HELD=1 left in an environment must
+        not buy the right to skip locking, drive a second vendor
+        tool instance and remove the work dir of whoever does
+        hold the lock.
+        """
+        try:
+            fd = int(os.environ.get(LOCK_FD_ENV, ""))
+        except ValueError:
+            return False
+        try:
+            inherited = os.fstat(fd)
+            lock_file = os.stat(self.path)
+        except OSError:
+            return False
+        if (inherited.st_dev, inherited.st_ino) != (
+            lock_file.st_dev,
+            lock_file.st_ino,
+        ):
+            return False
+        try:
+            # Ours already: locking the same open file
+            # description twice changes nothing. Held by anyone
+            # else and this fails, which is the answer wanted.
+            # Held by nobody and it is taken here, on a
+            # descriptor the helper closes when it exits, so
+            # either way the collect ahead is serialized.
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return False
+        return True
+
+    def holder_pid(self):
+        """Pid written by the holder; "" if unreadable or stale."""
+        try:
+            with open(self.path, "r") as f:
+                text = f.read(32).strip()
+        except OSError:
+            return ""
+        return text if text.isdigit() else ""
+
+    def _write_pid(self):
+        """Let a refused caller name the collection that blocked it."""
+        try:
+            os.ftruncate(self.fd, 0)
+            os.lseek(self.fd, 0, os.SEEK_SET)
+            os.write(self.fd, ("%d\n" % os.getpid()).encode())
+        except OSError:
+            pass
+
+    def release(self):
+        if self.fd is None:
+            return
+        fd, self.fd = self.fd, None
+        try:
+            os.ftruncate(fd, 0)
+        except OSError:
+            pass
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
 MSG_STARTED = "SSD dump tool started"
 MSG_RESULTS = "SSD dump tool results: "
+MSG_BUSY = "SSD dump tool busy: "
+MSG_SUCCEEDED = "SSD dump tool succeeded"
 
 
 def emit_always(msg):
@@ -96,13 +268,30 @@ def emit_always(msg):
 
 
 def completion_message(fields):
+    """Last console line.
+
+    MSG_SUCCEEDED is reserved for a collect whose result was
+    confirmed on disk, so --verify (which creates nothing) and a
+    busy lock each get their own wording.
+    """
     status = fields.get("status")
+    verify = fields.get("verify") == "yes"
+    if fields.get("locked") == "yes":
+        err = (fields.get("warning") or "").strip() or "already running"
+        return "%s%s" % (MSG_BUSY, err)
     if status == "warning":
         err = (fields.get("warning") or "").strip() or "error"
+        if verify:
+            return "SSD dump tool verify failed: %s" % err
         return "SSD dump tool failed: %s" % err
     if status == "skipped":
+        err = (fields.get("warning") or "").strip()
+        if err:
+            return "SSD dump tool skipped: %s" % err
         return "SSD dump tool skipped"
-    return "SSD dump tool succeeded"
+    if verify:
+        return "SSD dump tool verify passed"
+    return MSG_SUCCEEDED
 
 
 def results_message(outdir, no_tar):
@@ -125,7 +314,7 @@ def append_log(log_path, msg):
 
 def drop_trailing_success_line(log_path):
     """Remove a premature 'succeeded' (and results) line if packing failed."""
-    marker = "SSD dump tool succeeded\n"
+    marker = MSG_SUCCEEDED + "\n"
     if not log_path or not os.path.isfile(log_path):
         return
     try:
@@ -781,6 +970,18 @@ def pack_outdir(outdir):
     return tar_path
 
 
+def archive_created(tar_path):
+    """True once <outdir>.tar.gz exists and is not empty.
+
+    Checked before the console says succeeded, so the message
+    always matches what the operator will find on disk.
+    """
+    try:
+        return os.path.isfile(tar_path) and os.path.getsize(tar_path) > 0
+    except OSError:
+        return False
+
+
 def resolve_device(explicit, cfg=None, dev_dir="/dev"):
     if explicit:
         explicit = os.path.abspath(explicit)
@@ -948,7 +1149,7 @@ def run_collect(args, logf, fields):
         fields["warning"] = ""
         fields["verify"] = "yes"
         log_print(logf, "verify ok: %s" % fields["cmd"])
-        return 0
+        return RC_OK
 
     if stage_from:
         log_print(logf, "stage_from: %s cfg=%s" % (stage_from, stage_cfg))
@@ -987,16 +1188,21 @@ def run_collect(args, logf, fields):
     )
     fields["status"] = "ok"
     fields["warning"] = ""
-    return 0
+    return RC_OK
 
 
 PROG = "hw-management-ssd-dump.py"
 
 
-def _positive_int(value):
-    ivalue = int(value)
-    if ivalue <= 0:
-        raise argparse.ArgumentTypeError("must be > 0")
+def _timeout_sec(value):
+    bad = argparse.ArgumentTypeError("must be 1..%s" % TIMEOUT_SEC_CLI_MAX)
+    try:
+        ivalue = int(value)
+    except ValueError:
+        # Default argparse wording would name this function.
+        raise bad
+    if ivalue <= 0 or ivalue > TIMEOUT_SEC_CLI_MAX:
+        raise bad
     return ivalue
 
 
@@ -1036,9 +1242,9 @@ def parse_args(argv):
     )
     p.add_argument(
         "--timeout",
-        type=_positive_int,
+        type=_timeout_sec,
         default=None,
-        help="override tool timeout seconds (must be > 0)",
+        help="override tool timeout seconds (1..%s)" % TIMEOUT_SEC_CLI_MAX,
     )
     p.add_argument(
         "--quiet",
@@ -1068,9 +1274,19 @@ def run_verify(args):
     if os.geteuid() != 0:
         fields["uid_warning"] = "not root (uid=%s); vendor tools may fail" % os.geteuid()
     logf = io.StringIO()
-    rc = 1
+    rc = RC_WARNING
     outdir_ok = False
+    lock = DumpLock()
     try:
+        # Report a collection in progress instead of checking
+        # against a work dir that another run already owns.
+        # Verify drives no vendor tool and creates nothing, so an
+        # unusable lock is noted and the preflight still runs:
+        # a non-root caller cannot write /run but can still use
+        # this to check the config and the tools.
+        no_lock = lock.acquire()
+        if no_lock:
+            fields["lock_warning"] = no_lock
         check_outdir(args.outdir)
         outdir_ok = True
         if not args.no_tar:
@@ -1080,21 +1296,28 @@ def run_verify(args):
         rc = run_collect(args, logf, fields)
     except DumpSkip as exc:
         fields["status"] = "skipped"
-        fields["warning"] = ""
+        fields["warning"] = str(exc)
         log_print(logf, "skipped: %s" % exc)
-        rc = 0
+        rc = RC_OK
+    except DumpLocked as exc:
+        fields["status"] = "warning"
+        fields["locked"] = "yes"
+        fields["warning"] = str(exc)
+        log_print(logf, "WARNING: %s" % exc, echo=False)
+        syslog_warn(str(exc))
+        rc = RC_LOCKED
     except DumpError as exc:
         fields["status"] = "warning"
         fields["warning"] = str(exc)
         log_print(logf, "WARNING: %s" % exc, echo=False)
         syslog_warn(str(exc))
-        rc = 1
+        rc = RC_WARNING
     except Exception as exc:
         fields["status"] = "warning"
         fields["warning"] = "internal: %s" % exc
         log_print(logf, "WARNING: internal: %s" % exc, echo=False)
         syslog_warn("internal: %s" % exc)
-        rc = 1
+        rc = RC_WARNING
     if outdir_ok:
         path = os.path.abspath(args.outdir)
         # Custom --outdir is only checked. Collect recreates it;
@@ -1109,7 +1332,8 @@ def run_verify(args):
                 fields["warning"] = msg
                 fields["status"] = "warning"
                 syslog_warn(msg)
-                rc = 1
+                rc = RC_WARNING
+    lock.release()
     emit_always(completion_message(fields))
     if not args.quiet:
         sys.stdout.write(
@@ -1140,24 +1364,40 @@ def run_dump(args):
         "warning": "",
     }
     log_path = None
-    rc = 1
+    rc = RC_WARNING
+    lock = DumpLock()
     try:
         try:
+            no_lock = lock.acquire()
+            if no_lock:
+                # Collecting unlocked is not best effort, it is a
+                # second vendor tool instance on the same SSD and
+                # two runs writing one work dir. Refuse instead.
+                raise DumpError("%s; refusing to collect" % no_lock)
             if not args.no_tar:
                 check_pack_parent(outdir)
             recreate_outdir(outdir)
+        except DumpLocked as exc:
+            # Nothing created or removed: outdir still belongs to
+            # the collection that holds the lock.
+            msg = str(exc)
+            fields["locked"] = "yes"
+            fields["warning"] = msg
+            syslog_warn(msg)
+            rc = RC_LOCKED
+            return RC_LOCKED
         except DumpError as exc:
             msg = str(exc)
             fields["warning"] = msg
             syslog_warn(msg)
-            rc = 1
-            return 1
+            rc = RC_WARNING
+            return RC_WARNING
         except OSError as exc:
             msg = "cannot create outdir %s: %s" % (outdir, exc)
             fields["warning"] = msg
             syslog_warn(msg)
-            rc = 1
-            return 1
+            rc = RC_WARNING
+            return RC_WARNING
 
         if os.geteuid() != 0:
             fields["uid_warning"] = (
@@ -1175,27 +1415,27 @@ def run_dump(args):
                     rc = run_collect(args, logf, fields)
                 except DumpSkip as exc:
                     fields["status"] = "skipped"
-                    fields["warning"] = ""
+                    fields["warning"] = str(exc)
                     log_print(logf, "skipped: %s" % exc)
-                    rc = 0
+                    rc = RC_OK
                 except DumpError as exc:
                     fields["status"] = "warning"
                     fields["warning"] = str(exc)
                     log_print(logf, "WARNING: %s" % exc, echo=False)
                     syslog_warn(str(exc))
-                    rc = 1
+                    rc = RC_WARNING
                 except Exception as exc:
                     fields["status"] = "warning"
                     fields["warning"] = "internal: %s" % exc
                     log_print(logf, "WARNING: internal: %s" % exc, echo=False)
                     syslog_warn("internal: %s" % exc)
-                    rc = 1
+                    rc = RC_WARNING
         except OSError as exc:
             msg = "cannot write log: %s" % exc
             fields["warning"] = msg
             fields["status"] = "warning"
             syslog_warn(msg)
-            rc = 1
+            rc = RC_WARNING
 
         try:
             promote_tool_log(outdir)
@@ -1204,7 +1444,7 @@ def run_dump(args):
             fields["warning"] = msg
             fields["status"] = "warning"
             syslog_warn(msg)
-            rc = 1
+            rc = RC_WARNING
 
         if discard_unused_tool_log(outdir, fields):
             log_path = None
@@ -1216,18 +1456,28 @@ def run_dump(args):
             fields["warning"] = msg
             fields["status"] = "warning"
             syslog_warn(msg)
-            rc = 1
-            return 1
+            rc = RC_WARNING
+            return RC_WARNING
 
         if fields.get("status") != "ok":
             return rc
         append_log(log_path, results_message(outdir, args.no_tar))
         append_log(log_path, completion_message(fields))
         if args.no_tar:
+            # No archive is asked for, so the work dir is the
+            # result; confirm it before the console says so.
+            if not os.path.isdir(outdir):
+                msg = "work dir not created: %s" % outdir
+                fields["status"] = "warning"
+                fields["warning"] = msg
+                syslog_warn(msg)
+                rc = RC_WARNING
+                log_path = None
+                return RC_WARNING
             log_path = None
             return rc
         try:
-            pack_outdir(outdir)
+            tar_path = pack_outdir(outdir)
         except (OSError, tarfile.TarError) as exc:
             msg = "cannot pack outdir %s: %s" % (outdir, exc)
             fields["status"] = "warning"
@@ -1238,8 +1488,19 @@ def run_dump(args):
             except OSError as status_exc:
                 syslog_warn("cannot write status: %s" % status_exc)
             syslog_warn(msg)
-            rc = 1
-            return 1
+            rc = RC_WARNING
+            return RC_WARNING
+        # Only claim success once the archive is really there.
+        # pack_outdir removed outdir, so the status file and the
+        # log are gone with it; report on the console and syslog.
+        if not archive_created(tar_path):
+            msg = "archive not created: %s" % tar_path
+            fields["status"] = "warning"
+            fields["warning"] = msg
+            syslog_warn(msg)
+            rc = RC_WARNING
+            log_path = None
+            return RC_WARNING
         log_path = None
         return rc
     finally:
@@ -1255,6 +1516,9 @@ def run_dump(args):
             if fields.get("status") == "ok":
                 emit_always(results_message(outdir, args.no_tar))
             emit_always(completion_message(fields))
+        # Last: the append above still writes into outdir, which
+        # the next collect is free to remove once this returns.
+        lock.release()
 
 
 if __name__ == "__main__":
