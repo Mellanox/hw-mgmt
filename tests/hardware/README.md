@@ -8,6 +8,7 @@ These tests verify the actual functionality of the hw-management services on rea
 
 - **test_thermal_updater_integration.py** - Tests thermal monitoring (ASIC and module temperatures)
 - **test_peripheral_updater_integration.py** - Tests peripheral monitoring (fans, chipup status, leakage sensors)
+- **ssd_dump_lock_test.sh** - Tests the SSD dump lock (shell, no pytest, see [SSD dump lock test](#ssd-dump-lock-test))
 
 ## Prerequisites
 
@@ -119,6 +120,169 @@ sudo python3 -m pytest tests/hardware/test_thermal_updater_integration.py::Therm
 5. **test_05_chipup_status_after_dvs_cycle**
    - Full DVS start/stop cycle
    - Monitors chipup status changes
+
+## SSD dump lock test
+
+`ssd_dump_lock_test.sh` checks that only one SSD dump collection
+runs at a time (`flock` on `/run/hw-management-ssd-dump.lock`,
+exit code 3) — required both because the work dir is a single
+fixed location and because a vendor dump tool supports only one
+instance at a time — and that the lock covers the SSD dump
+**only**, so a busy lock never costs you the rest of the hw-mgmt
+dump. It is a plain shell script: no pytest, no Python test deps
+on the target.
+
+| # | Running | Called in parallel |
+|---|---------|--------------------|
+| 0 | - | baseline, one collect, no contention |
+| 1 | `hw-management-ssd-dump.py` | `hw-management-ssd-dump.py` |
+| 2 | `hw-management-ssd-dump.py` | `hw-management-ssd-dump.py --verify` |
+| 3 | `hw-management-ssd-dump.py` | `hw-management-generate-dump.sh` |
+| 4 | `hw-management-ssd-dump-collect.sh` | `hw-management-ssd-dump.py` |
+| 5 | `hw-management-ssd-dump.py` | `hw-management-ssd-dump-collect.sh` |
+| 6 | `hw-management-generate-dump.sh` | `hw-management-ssd-dump.py` |
+| 7 | a collect that finishes mid-wait | `hw-management-ssd-dump-collect.sh` |
+| 8 | `hw-management-ssd-dump-collect.sh` that finishes mid-wait | `hw-management-ssd-dump-collect.sh` |
+| 9 | a `--no-tar` collect that finishes mid-wait | `hw-management-ssd-dump-collect.sh` |
+| 10 | a collect into a custom `--outdir` that finishes mid-wait | `hw-management-ssd-dump-collect.sh` |
+| 11 | - | `hw-management-ssd-dump-collect.sh` with no usable lock |
+| 12 | a collect into a custom `--outdir` that finishes mid-wait, with a `--verify` result in the default location | `hw-management-ssd-dump-collect.sh` |
+
+The two sides are asymmetric because the full system dump has
+priority. Scenarios 1, 2, 4 and 6 call the **collector**, which
+gives up at once: each asserts it exits 3, says
+`SSD dump tool busy:` and names the holder's pid, claims no
+success, and above all leaves the running collection's work
+directory byte for byte intact.
+
+Scenarios 5, 7, 8, 9 and 10 call the **helper**, which waits
+instead.
+Scenario 5 never frees the lock, so the helper must wait the
+whole budget (measured, not assumed) and only then exit 3.
+Scenarios 7, 8 and 9 free it mid-wait and check what the helper
+does with the result the other run left: reuse
+`/var/log/ssd-dump.tar.gz` (7), reuse a `--no-tar`
+`/var/log/ssd-dump/` (9), or collect for itself when the other
+run was another helper and so left nothing (8). The stub vendor
+tool counts its own invocations, so "reused" means the SSD
+really was not driven a second time rather than merely that a
+log line was printed; 7 and 9 also assert the source is left
+where its owner put it.
+
+Scenario 10 is the other half of that: the holder collects into
+its own `--outdir`, so an hour-old `/var/log/ssd-dump.tar.gz`
+staged beforehand is still sitting there, `status: ok`, when the
+lock frees. Reusing it would pack an hour-old dump into the
+system dump and call it a success, so the helper must collect
+instead, which again shows up as one more stub invocation.
+
+Scenario 11 has no contention at all: it blocks the lock file,
+which stands in for a target with no `flock`, and checks what
+the helper does when it cannot lock. Going ahead would be worse
+than refusing, because a collect begins by removing
+`$SSD_LOG_DIR` — possibly the work dir of a collection in
+progress — so the scenario seeds a file there and asserts it is
+still present afterwards, that the stub was never invoked, and
+that `$DUMP_FOLDER` carries `status: warning` with the missing
+lock named but **no** `locked: yes`, since nothing was
+contended.
+
+Scenario 12 is the same trap as 10 from the other direction: the
+result waiting in the default location is fresh and says
+`status: ok`, but a `--verify` wrote it without ever reading the
+SSD. The fixture is a real `--verify` run, planted while the
+helper is already waiting so that it is exactly as fresh as one
+that had finished during the wait, and the scenario asserts the
+helper collected anyway — one more stub invocation and real
+vendor data in the dump, not just a status file.
+
+Scenarios 3 and 6 are the two orderings of the same collision
+and both unpack `/tmp/hw-mgmt-dump.tar.gz` to check the outcome.
+In 3 generate-dump is the one refused, so the dump must still
+contain its non-SSD sections with `ssd-dump/ssd-dump-status.log`
+marked `locked: yes`. In 6 generate-dump got there first, so the
+dump must contain a complete `status: ok` SSD section and the
+standalone CLI is the one turned away. Scenario 6 waits for
+generate-dump to reach its SSD step, which is near the end of a
+full collection, and identifies the holder through `/proc`
+because the lock is taken by the helper generate-dump spawns
+rather than by generate-dump itself.
+
+The process that holds the lock is a real collector run whose
+vendor tool is replaced, through a generated `--config`, by a
+stub that writes one dump file and then blocks until the test
+releases it, so the hold is deterministic. Everything that
+collects here goes through that config — the helper under test
+too, via a `PATH` shim in front of `hw-management-ssd-dump.py` —
+so the vendor package (`ssd-dump-tools`) does **not** need to be
+installed and the test does not depend on which SSD the target
+has. The scripts themselves are the real ones.
+
+```bash
+# All scenarios
+sudo ./tests/hardware/ssd_dump_lock_test.sh
+
+# One scenario, keeping the work dir for inspection
+sudo ./tests/hardware/ssd_dump_lock_test.sh -k 5
+
+# List the scenarios
+./tests/hardware/ssd_dump_lock_test.sh -l
+```
+
+Scenario 0 runs first as an environment check; if a plain collect
+cannot complete on this system the run stops there instead of
+reporting that same failure in every scenario that follows.
+
+Exit codes: `0` all checks passed, `1` a check failed, `2`
+prerequisites not met (not root, no `flock` or `pgrep`, scripts
+not on `PATH`, no NVMe in `/sys/class/nvme`, or an SSD dump
+already running).
+
+The installed scripts have to be as new as the behaviour under
+test, which on a target is easy to get wrong: a collector
+without the lock, or a helper that still refuses a busy lock
+instead of waiting for it, is reported once as a prerequisite
+failure naming the file to update. Scenarios 3, 5, 7, 8, 9, 10
+and 12 are the ones that need the wait and 11 the no-lock
+refusal, so selecting only the others still runs against an
+older helper.
+
+**This test is destructive.** `/var/log/ssd-dump`,
+`/var/log/ssd-dump.tar.gz`, `/tmp/hw-mgmt-dump` and
+`/tmp/hw-mgmt-dump.tar.gz` are moved aside on start and restored
+on exit, including on Ctrl-C. Do not run it while a dump you care
+about is in progress; the script refuses to start in that case
+anyway. Each path is marked as the test's own only once it is
+safely saved, so a signal part way through setup cannot leave
+cleanup deleting a path that was never copied. Where the mark is
+missing the path itself decides: the backup lives on another
+filesystem, so the move empties the path only after the copy is
+whole, which makes a path still present the operator's — beside
+at most a fragment of a move that failed, which is discarded —
+and a path gone one with a complete copy to put back. Restoring
+waits for every SSD dump process the test started to be gone
+first, holder and children alike: putting the saved data back
+under a collect still writing to those paths would corrupt it. If something refuses to die within a
+minute the test keeps the saved copy and prints where it is
+instead of restoring it.
+
+To exercise a build tree instead of the installed package, point
+`SSD_DUMP_BIN_DIR` at it:
+
+```bash
+sudo SSD_DUMP_BIN_DIR=/path/to/hw-mgmt/usr/usr/bin \
+	./tests/hardware/ssd_dump_lock_test.sh
+```
+
+Other variables: `GENERATE_DUMP_MODE` (argument passed to
+generate-dump in scenarios 3 and 6, default `compact`),
+`GENERATE_DUMP_WAIT` (seconds scenario 6 waits for generate-dump
+to reach its SSD step, default 420), `HOLD_TIMEOUT` (cap on
+how long a holder may block, default 600, which is also the
+collector's `--timeout` maximum) and `LOCK_WAIT_SEC` (the
+`timeout_sec` written into the generated config, which is the
+budget the helper waits for a busy lock, default 20; in
+production it comes from the real config and is up to 120).
 
 ## Known Limitations
 
