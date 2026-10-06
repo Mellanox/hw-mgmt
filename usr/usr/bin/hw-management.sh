@@ -650,15 +650,10 @@ n61xxld_cartridge_eeprom_connect_table=( \
 	24c02 0x50 71 cable_cartridge4_eeprom)
 
 n7xxxld_cartridge_eeprom_connect_table=( \
-	24c02 0x50 67 swb1_cable_cartridge1_eeprom \
-	24c02 0x50 68 swb1_cable_cartridge2_eeprom \
-	24c02 0x50 69 swb1_cable_cartridge3_eeprom \
-	24c02 0x50 70 swb1_cable_cartridge4_eeprom \
-	24c02 0x50 83 swb2_cable_cartridge1_eeprom \
-	24c02 0x50 84 swb2_cable_cartridge2_eeprom \
-	24c02 0x50 85 swb2_cable_cartridge3_eeprom \
-	24c02 0x50 86 swb2_cable_cartridge4_eeprom \
-)
+	24c02 0x50 67 cable_cartridge1_eeprom \
+	24c02 0x50 68 cable_cartridge2_eeprom \
+	24c02 0x50 69 cable_cartridge3_eeprom \
+	24c02 0x50 70 cable_cartridge4_eeprom)
 
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
@@ -2765,7 +2760,7 @@ n7xxxld_specific()
 		cpld_num=3
 		add_i2c_dynamic_bus_dev_connection_table "${n7xxxld_cartridge_eeprom_connect_table[@]}"
 		echo -n "${n7xxxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
-		cartridge_count=8
+		cartridge_count=4
 		;;
 	esac
 
