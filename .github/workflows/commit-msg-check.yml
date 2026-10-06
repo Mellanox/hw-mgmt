@@ -1,0 +1,39 @@
+name: Commit message check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  commit-msg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR (commit history to validate)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: pr
+      # The validator is taken from the base branch, so a PR cannot weaken it
+      # by editing check_commit_msg.py.
+      - name: Checkout trusted validator from base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted
+          sparse-checkout: .github/scripts
+      - name: Verify ticket reference and Signed-off-by
+        working-directory: pr
+        run: |
+          script="$GITHUB_WORKSPACE/trusted/.github/scripts/check_commit_msg.py"
+          if [ ! -f "$script" ]; then
+            # Bootstrap: the base branch has no validator yet (the PR that
+            # introduces it). Never run PR-controlled code here; skip instead.
+            echo "::warning::No validator on the base branch yet, skipping the commit message check"
+            exit 0
+          fi
+          python3 "$script" \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}"
