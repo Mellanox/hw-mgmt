@@ -9,6 +9,9 @@ StartLimitBurst=10
 
 [Service]
 Type=oneshot
+# Type=oneshot does not treat SIGTERM as success. Stop/reboot kills the
+# still-running monitor loop (status=15/TERM) and logs Failed with result 'signal'.
+SuccessExitStatus=0 SIGINT SIGTERM
 ExecStart=/bin/sh -c "/usr/bin/hw-management-sysfs-monitor.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management-sysfs-monitor.sh stop"
 
