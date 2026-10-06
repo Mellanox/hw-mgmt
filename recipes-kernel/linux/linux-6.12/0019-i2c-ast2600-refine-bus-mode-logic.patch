@@ -9,8 +9,6 @@ refine transfer mode logic selection.
 Signed-off-by: Ryan Chen <ryan_chen@aspeedtech.com>
 Change-Id: I1fcc5ed7bfd828e5144147702d420d9632b17150
 (cherry picked from commit b5b7dfdae2f78c4f725e8e13fa8cc66937bc4d16)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (16a0210e), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 8 +++++---
  1 file changed, 5 insertions(+), 3 deletions(-)

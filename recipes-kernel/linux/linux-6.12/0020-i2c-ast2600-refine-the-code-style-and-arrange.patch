@@ -10,8 +10,6 @@ Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: Ib9dc3dce42d2ceba7b71cc165e8ebbda154c44d7
 (cherry picked from commit 44ef8508e1a886d791aa4292282f7104a46523b4)
 
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (341bfade), nvbug 6636807.
-
 Taken from the Aspeed original, not the dgx/bmc/linux version: that one
 carries [NvBMC] conflict resolutions against NVIDIA-only downstream code
 (slave SW watchdog, tout-baseclk-div, disable-master, i2c_retries sysfs)

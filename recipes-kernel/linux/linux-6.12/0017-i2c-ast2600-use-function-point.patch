@@ -9,8 +9,6 @@ use function point for ast2600/ast2700.
 Signed-off-by: Ryan Chen <ryan_chen@aspeedtech.com>
 Change-Id: Id67383fa6a1d7b56ea76df2649d1dbe71647c8f4
 (cherry picked from commit dfc0b2ae57fb13cbadd119a3a97a3a88c96911a7)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (bd097911), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 89 +++++++++++++++++---------------
  1 file changed, 48 insertions(+), 41 deletions(-)
