@@ -75,10 +75,13 @@ def str2bool(val):
         return val
     if isinstance(val, int):
         return bool(val)
-    if val.lower() in ("yes", "true", "t", "y", "1"):
-        return True
-    if val.lower() in ("no", "false", "f", "n", "0"):
-        return False
+    try:
+        if val.lower() in ("yes", "true", "t", "y", "1"):
+            return True
+        if val.lower() in ("no", "false", "f", "n", "0"):
+            return False
+    except AttributeError:
+        return None
     return None
 
 # ----------------------------------------------------------------------

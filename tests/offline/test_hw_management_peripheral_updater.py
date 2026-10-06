@@ -137,7 +137,8 @@ class TestRedfishDisabledFeature(unittest.TestCase):
     def test_stored_flag_is_read_by_updater(self):
         """A flag written through the feature API is used by updater main()."""
         temp_dir = tempfile.mkdtemp()
-        db_file = os.path.join(temp_dir, "config", "hw_management_features.json")
+        db_file = os.path.join(
+            temp_dir, "hw-management", "hw_management_features.json")
         os.makedirs(os.path.dirname(db_file), exist_ok=True)
         try:
             module, feature = _load_peripheral_updater_with_real_feature("stored_flag")
@@ -166,44 +167,48 @@ class TestRedfishDisabledFeature(unittest.TestCase):
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def _load_real_feature_module():
-    """Load hw_management_feature without importing hw_management_lib."""
+def _import_hw_management_lib():
+    """Import shipped hw_management_lib. Stub dataclasses on Python < 3.7."""
     import types
+    sys.modules.pop("hw_management_lib", None)
+    try:
+        import dataclasses  # noqa: F401
+    except ImportError:
+        dc = types.ModuleType("dataclasses")
 
-    lib = types.ModuleType("hw_management_lib")
+        def dataclass(*args, **_kwargs):
+            def deco(cls):
+                return cls
+            if args and callable(args[0]):
+                return args[0]
+            return deco
 
-    def str2bool(val):
-        if val is None:
-            return None
-        if isinstance(val, bool):
-            return val
-        if isinstance(val, int) and not isinstance(val, bool):
-            return bool(val)
-        try:
-            text = val.lower()
-        except AttributeError:
-            return None
-        if text in ("yes", "true", "t", "y", "1"):
-            return True
-        if text in ("no", "false", "f", "n", "0"):
-            return False
-        return None
+        dc.dataclass = dataclass
+        sys.modules["dataclasses"] = dc
+    import hw_management_lib as lib
+    return lib
+
+
+def _load_real_feature_module():
+    """Load hw_management_feature with the shipped str2bool.
+
+    Mock only run_shell_cmd so tests stay offline.
+    """
+    lib = _import_hw_management_lib()
+    sys.modules.pop("hw_management_feature", None)
 
     def run_shell_cmd(*_args, **_kwargs):
         return 1, ""
 
-    lib.str2bool = str2bool
-    lib.run_shell_cmd = run_shell_cmd
-    sys.modules["hw_management_lib"] = lib
-    sys.modules.pop("hw_management_feature", None)
-
     script_dir = os.path.dirname(os.path.abspath(__file__))
     feature_path = os.path.join(
         script_dir, "..", "..", "usr", "usr", "bin", "hw_management_feature.py")
-    spec = importlib.util.spec_from_file_location("hw_management_feature", feature_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["hw_management_feature"] = module
-    spec.loader.exec_module(module)
+    with patch.object(lib, "run_shell_cmd", side_effect=run_shell_cmd):
+        spec = importlib.util.spec_from_file_location(
+            "hw_management_feature", feature_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["hw_management_feature"] = module
+        spec.loader.exec_module(module)
     return module
 
 
