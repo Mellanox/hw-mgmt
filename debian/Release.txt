@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.1023
+- Tue, 06 Oct 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - 
+
+- Bug fixes
+    - #N/A, hw-mgmt: kernel 6.12 BMC: drop nvbug references from i2c-ast2600 patches 0015-0029 (#3018), 4a05a13
+    - #N/A, Update changelog and release notes for V.7.0070.1022, bfcf8aa
+    - #6636807, hw-mgmt: kernel 6.12 BMC: port AST2700 i2c buffer-mode fix (0014-0029) (#2997), 264c05a
+    - #N/A, Update changelog and release notes for V.7.0070.1021, 54c8d59
+    - #4966961, hw-mgmt: thermal: Close chipup trace lock FD and uniquify archives, 1570241
+    - #4966961, hw-mgmt: thermal: Skip chipup I2C trace if instance is unavailable, 427a7d2
+    - #4966961, hw-mgmt: thermal: Fix chipup trace cleanup and serialize captures, 148e6b8
+    - #5207348, hw-mgmt: scripts: Add mlxsw sysfs ready flag for SPC1, e0a8dee
+    - #N/A, fix: improve Linux patch descriptions (#2925), 2388239
+    - #N/A, Update changelog and release notes for V.7.0070.1020, 3215625
+    - #5245926, hw-mgmt: thermal: Make FAN relax time configurable per platform, 15b8962
+    - #N/A, Update changelog and release notes for V.7.0070.1019, e267f92
+    - #4966961, hw-mgmt: thermal: SPC1: Add fallback in case if I2C ASIC driver failure (#2912), 82e9f3f
+    - #1050174, hw-mgmt: kernel: patch 6.1/6.12: Fix duplicate /dev/i2c-N node creation, 12e7650
+    - #5125814, hw-mgmt: sensors: ignore PSU hotspot temperatures on SN5640 and SN5610., 41b8950
+    - #N/A, Update changelog and release notes for V.7.0070.1018, 6806f5c
+    - #N/A, hw-mgmt: thermal: Fix thermal data for SN2201_M, 2163705
+    - #N/A, Update changelog and release notes for V.7.0070.1017, 51b3376
+    - #5183998, hw-mgmt: scripts: Fix PSU EEPROM parsing on systems without PSU VPD, 45985f9
+    - #5232793, hw-mgmt: thermal: Fix PWM stuck high after tacho error recovery, ad769f1
+
+- Kernel Patches for New Features:
+    - 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1023/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    - Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    - Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    - Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+
+================================================================================
 - V.7.0070.1022
 - Mon, 05 Oct 2026
 --------------------------------------------------------------------------------
