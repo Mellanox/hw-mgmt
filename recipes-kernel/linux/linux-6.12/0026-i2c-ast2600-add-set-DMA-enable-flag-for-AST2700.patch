@@ -11,8 +11,6 @@ is applied correctly.
 Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: Id2f000f50907f5158bc82bf6213e3365e6fd82c6
 (cherry picked from commit f14ceee115632afb859d2ed7a7b04abe9cfba1f7)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (86d9f567), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 12 +++++++++---
  1 file changed, 9 insertions(+), 3 deletions(-)

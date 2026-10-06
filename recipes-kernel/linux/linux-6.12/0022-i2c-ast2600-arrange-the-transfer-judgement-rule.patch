@@ -9,8 +9,6 @@ Arrange the i2c transfer judgement rule.
 Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: I81fe58b6acbb5dd210b561d924b770f82182ed4f
 (cherry picked from commit d6c8e38d7d5f7561f96a87128fec55fb8b806d86)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (d19a410b), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 53 +++++++++++++++-----------------
  1 file changed, 25 insertions(+), 28 deletions(-)

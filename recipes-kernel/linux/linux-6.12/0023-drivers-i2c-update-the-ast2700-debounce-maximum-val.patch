@@ -9,8 +9,6 @@ Update the ast2700 debounce maximum value.
 Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: Ic65f971f3993687b8361b40544fe06030ce4f847
 (cherry picked from commit 717df7620c57f5e0060140e619ebb4432b034372)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (2c92e232), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

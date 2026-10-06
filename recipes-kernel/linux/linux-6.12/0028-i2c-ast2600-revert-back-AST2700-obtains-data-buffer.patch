@@ -10,8 +10,6 @@ The data should be obtained from data log on AST2700.
 Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: I84910765d4a6d4be529d1d854e172626829d5dd1
 (cherry picked from commit f9938ec5799e83f5b09d3a7acac7287c0cde2c26)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (847a9793), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 11 +++++++++--
  1 file changed, 9 insertions(+), 2 deletions(-)

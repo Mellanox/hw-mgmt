@@ -10,8 +10,6 @@ default i2c transfer mode to buffer mode.
 Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: I71e0e38245c212b0d126d3b6e190976f99bea949
 (cherry picked from commit b3df20c13b43d4d5f3ef92619c8298c10b39ff13)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (2dd8a3aa), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 9 +++------
  1 file changed, 3 insertions(+), 6 deletions(-)

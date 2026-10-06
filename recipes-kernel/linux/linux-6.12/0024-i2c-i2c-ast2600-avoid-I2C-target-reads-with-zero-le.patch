@@ -15,8 +15,6 @@ request with zero byte.
 Signed-off-by: Tommy Huang <tommy_huang@aspeedtech.com>
 Change-Id: I0964d2f7467a70c25ba1ab0353d086c8c938c026
 (cherry picked from commit 309e24ad433d33287a0a5e8200d584b9dc6c3fae)
-
-[hw-mgmt] SONiC BMC port of dgx/bmc/linux MR !1037 (8efc714e), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 14 ++++++++++++++
  1 file changed, 14 insertions(+)
