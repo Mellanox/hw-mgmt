@@ -1341,17 +1341,20 @@ if [ "$1" == "add" ]; then
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
 		cable_cartridge*_eeprom*)
-			if [ "$dmi_board_name" == "VMOD0021" ] || [ "$dmi_board_name" == "VMOD0023" ]; then
+			case "$dmi_board_name" in
+			VMOD0021|VMOD0023|VMOD0026)
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
 					validate_cartridge_fru "$eeprom_name"
 				else
 					log_info "$eeprom_name: ipmi-fru not found, FRU not validated"
 				fi
-			else
+				;;
+			*)
 				eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
 				hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
-			fi
+				;;
+			esac
 			;;
 		fio_info)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/fio_data
