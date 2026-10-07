@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-########################################################################
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Test Suite for ASIC chipup status files
 #
@@ -12,7 +11,6 @@
 # - /var/run/hw-management/config/asic_chipup_completed
 # - /var/run/hw-management/config/asics_init_done
 # - /var/run/hw-management/config/asic_num
-########################################################################
 
 import os
 import sys

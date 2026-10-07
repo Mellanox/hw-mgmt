@@ -1,6 +1,6 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Shared usb0 (BMC <-> host CPU) helpers. Sourced by plat-specific-preps and
 # hw-management-bmc-ready-common (do not execute directly).
