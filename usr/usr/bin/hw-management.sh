@@ -2870,6 +2870,7 @@ sn62xxld_specific()
 		leakage_count=2
 		i2c_asic_bus_default=4
 		hotplug_pdbs=0
+		echo 5.333 > $config_path/pdb_hotswap_scale
 		;;
 	esac
 
