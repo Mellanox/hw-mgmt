@@ -1,6 +1,6 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Leakage A2D config debugger — run on the BMC (as root) to find out WHY
 # hw-management-bmc-a2d-leakage-config.sh did not configure any device.

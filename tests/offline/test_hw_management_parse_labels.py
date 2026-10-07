@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-########################################################################
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Comprehensive Test Suite for hw_management_parse_labels.py
-########################################################################
 
 import hw_management_parse_labels as parse_labels
 import sys
