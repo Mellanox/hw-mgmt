@@ -44,7 +44,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
-ALLOWED_SHELL_CMDS = ["iorw", "/usr/bin/hw-management-chassis-events.sh"]
+ALLOWED_SHELL_CMDS = ["iorw", "/usr/bin/hw-management-chassis-events.sh", "show"]
 
 
 def to_int(value: Any, default: int = 0) -> int:
@@ -59,6 +59,30 @@ def to_int(value: Any, default: int = 0) -> int:
         return int(str(value).strip())
     except (ValueError, TypeError):
         return default
+
+
+# ----------------------------------------------------------------------
+def str2bool(val):
+    """
+    @summary:
+        Convert input val value (y/n, true/false, 1/0, y/n) to bool
+    @param val: input value.
+    @return: True / False / None
+    """
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, int):
+        return bool(val)
+    try:
+        if val.lower() in ("yes", "true", "t", "y", "1"):
+            return True
+        if val.lower() in ("no", "false", "f", "n", "0"):
+            return False
+    except AttributeError:
+        return None
+    return None
 
 # ----------------------------------------------------------------------
 
