@@ -1166,6 +1166,25 @@ check_and_recreate_dpu_devices()
 	done
 }
 
+# Due to some delay in hardware, in some switches it has been observed that
+# cable cartridge eeprom initialization fails during the startup. This
+# function will try to re-instantiate if there was a failure. Needs to be
+# invoked from hw-management-start-post.sh
+check_and_recreate_cable_cartridge_eeprom()
+{
+	for bus in {35..38}; do
+		if ! ls /sys/bus/i2c/devices/${bus}-0050/eeprom >/dev/null 2>&1; then
+			log_info "Cable cartridge eeprom not found on i2c-$bus. Recreating device..."
+			# Delete the device on this bus with address 0x68
+			echo 0x50 > /sys/bus/i2c/devices/i2c-${bus}/delete_device >/dev/null 2>&1
+			# Create the device again
+			echo "24c02 0x50" > /sys/bus/i2c/devices/i2c-${bus}/new_device >/dev/null 2>&1
+		else
+			log_info "Found cable cartridge eeprom on i2c-$bus"
+		fi
+	done
+}
+
 run_fixup_script()
 {
 	local status

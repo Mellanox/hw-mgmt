@@ -86,6 +86,13 @@ case $board in
 			check_and_recreate_dpu_devices
 		fi
 		;;
+	VMOD0025)
+		# Trying to re-instatiate cable cartridge eeproms
+		# if there was a problem during initialization
+		if [ "$sku" == "HI195" ]; then
+			check_and_recreate_cable_cartridge_eeprom
+		fi
+		;;
 	*)
 		;;
 esac
