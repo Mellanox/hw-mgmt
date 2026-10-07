@@ -429,7 +429,7 @@ The application could be stopped by the `systemctl stop hw-management` command.
 
 ## License
 
-This project is Licensed under the GNU General Public License Version 2.
+This project is dual-licensed under GPL-2.0-only OR BSD-3-Clause, at your choice. See the [LICENSE](LICENSE) file. The Linux kernel patches under `recipes-kernel/linux/` are not covered by this grant and keep the license stated in each patch (mostly GPL-2.0 variants). Third-party code is listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES).
 
 ## Acknowledgments
 

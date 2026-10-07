@@ -1,5 +1,6 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Validate hw-management-bmc-gpio-set.sh functions offline.
 # All GPIO sysfs paths are redirected to a tmpdir; no real kernel GPIO

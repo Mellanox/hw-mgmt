@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-########################################################################
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Comprehensive Test Suite for hw_management_psu_fw_update_common.py
-########################################################################
 
 import hw_management_psu_fw_update_common as psu_common
 import sys

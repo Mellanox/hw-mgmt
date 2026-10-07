@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 [Unit]
 Description=BMC ABR Watchdog Heartbeat (MCTP to Bali/Caliptra)
 # Start only after the BMC has successfully booted, per the SONiC requirement
