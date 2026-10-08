@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Unit tests for thermal_asic_sensor.handle_input fread_err reset (commit
 # 1c294f7a3770e4aed227a4e6b77be81265792c29, Bug 4931215). TC 2.5 only:
 # after ASIC read succeeds and value is in range, fread_err must reset so
 # SENSOR_READ_ERR clears and PWM can drop from emergency level.
-################################################################################
 
 import sys
 from pathlib import Path

@@ -1,7 +1,7 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # BusyBox-Compatible JSON Parser Library
 #
@@ -13,7 +13,6 @@
 #
 # Usage:
 #   source /usr/bin/hw-management-bmc-json-parser.sh
-################################################################################
 
 # Function to extract a top-level object block from JSON array by index
 # Usage: json_get_array_element <json_file> <index>

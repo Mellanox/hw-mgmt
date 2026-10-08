@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Test Suite for platform_config module and refactored architecture
 #
@@ -10,8 +10,6 @@
 # - _build_thermal_config() filtering logic
 # - Helper functions (get_platform_config, get_module_count, etc.)
 # - Architecture independence (thermal_updater can be disabled)
-#
-########################################################################
 
 import os
 import sys

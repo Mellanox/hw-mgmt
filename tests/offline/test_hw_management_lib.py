@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Comprehensive Test Suite for hw_management_lib.py
 # Tests all functions with simple, medium, and complex scenarios
-########################################################################
 
 from hw_management_lib import HW_Mgmt_Logger, current_milli_time
 import sys

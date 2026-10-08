@@ -1,4 +1,6 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 [Unit]
 Description=Setup BMC I2C Slave Device for Recovery Interface
 After=multi-user.target

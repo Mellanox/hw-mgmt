@@ -1,4 +1,6 @@
 <!-- SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES -->
+<!-- Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
+<!-- SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause -->
 
 # hw-management BMC (SONiC BMC / Microsoft Sonic BMC OS)
 
