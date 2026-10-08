@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 # hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh

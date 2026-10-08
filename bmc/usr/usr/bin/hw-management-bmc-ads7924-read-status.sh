@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # ADS7924: read mode, interrupt/alarm, and channel data via i2ctransfer (debug).
 # Register map: TI SBAS482 (same layout as hw-management-bmc-a2d-leakage-config.sh).

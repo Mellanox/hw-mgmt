@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Unified SSD dump collector. Vendor tools stay on PATH (NOS image).
 # Called from hw-management-generate-dump.sh (best-effort) or standalone.

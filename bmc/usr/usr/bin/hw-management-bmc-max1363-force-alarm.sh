@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # MAX1363: force threshold window so selected channels assert alarm (debug).
 # Origin: OpenBMC meta-nvidia bmc-post-boot-cfg max1363_force_alarm.sh

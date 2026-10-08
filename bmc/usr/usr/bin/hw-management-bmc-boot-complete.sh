@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Wait until /var/run/hw-management/{system,thermal,eeprom} each have at least
 # the minimum entry counts from /etc/hw-management-bmc-boot-complete.conf (see

@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Export BMC reset cause into hw-management style files.
 # BusyBox ash (/bin/sh): POSIX sh + C-style 0x arithmetic and bitwise ops; no bashisms.

@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # ADS1015: read config / conversion registers via i2ctransfer (debug).
 # Register map: TI SBAS173 (pointer 0x00 conversion, 0x01 config).

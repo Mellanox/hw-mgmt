@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Template only: not read by systemd-networkd from this path. Installed as
 # /usr/etc/systemd/network/... ; hw-management-bmc-plat-specific-preps.sh replaces
