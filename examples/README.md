@@ -143,3 +143,5 @@ topology_id: 0x00
 tray_id: 0x00
 slot_id: 0x01
 ```
+
+<!-- CI test only - DO NOT MERGE -->
