@@ -867,6 +867,7 @@ Kernel-6.12
 |9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
 |9010-amd-xgbe-support-accessing-MII-management-bus-from.patch    |                    | Downstream;skip[ALL];take[opt]           |            | AMD XGBE MII PHY access from user space        |
+|9012-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3401          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
