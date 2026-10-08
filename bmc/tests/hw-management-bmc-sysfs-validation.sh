@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Validate /var/run/hw-management/{config,leakage,system,eeprom,thermal} against
 # expected thresholds and packaged reference configs (HI189 or override paths).

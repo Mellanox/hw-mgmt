@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Unit tests for the chunked exit wait (Bug 4879247): waits in short chunks so
 # the SIGTERM handler can run during long waits. Originally
 # ThermalManagement._exit_wait(); refactored in 8aaba0f1 into the shared
 # hw_management_lib.exit_wait(exit_event, timeout, chunk_sec) helper, which both
 # thermal_control modules import and call.
-################################################################################
 
 import sys
 from pathlib import Path

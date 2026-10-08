@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Exercise mlxreg LEDs under /sys/class/leds/: for each mlxreg entry, read
 # brightness, force "no color" (brightness 0), verify, enumerate available

@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Simulate leakage hotplug udev events for one A2D leak detector index:
 #   hw-management-bmc-events.sh hotplug-event LEAKAGE<n> 1

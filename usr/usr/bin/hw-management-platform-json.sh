@@ -1,13 +1,12 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Apply per-platform hw-management settings from
 # /etc/hw-management-cfg/<HID>/platform.json
 # (packaged under usr/etc/hw-management-cfg/<HID>/).
 # Parsed with hw-management-json-parser.sh (jq).
-################################################################################
 
 PLATFORM_JSON_CFG_DIR="hw-management-cfg"
 PLATFORM_JSON_FILENAME="platform.json"

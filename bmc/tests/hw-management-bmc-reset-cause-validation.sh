@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Validate hw-management-bmc-get-reset-cause.sh logic offline.
 # Uses a tmpdir as OUT_DIR and a mock fw_printenv shim to inject SCU register

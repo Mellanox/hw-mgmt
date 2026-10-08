@@ -1,7 +1,7 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # hw-management-bmc-early-config: copy platform-specific files from /etc/<HID>/
 # to their runtime locations in /etc/ and /usr/bin/.
@@ -14,7 +14,6 @@
 # (same style as /etc/hw-management-bmc-early-i2c-devices.json).
 #
 # Default HID is HI189. Later: detect HID from BMC system EEPROM.
-################################################################################
 
 set -e
 

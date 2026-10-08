@@ -1,0 +1,59 @@
+THIRD-PARTY NOTICES
+
+This product includes the following third-party code. The remainder of this
+repository, except for the Linux kernel patches described below, is licensed
+as described in the LICENSE file.
+
+
+Linux kernel patches - GPL-2.0 and other licenses, as marked in each patch
+
+Applies to: recipes-kernel/linux/linux-*/ (all *.patch and *.patch.txt files)
+
+These patches modify or add Linux kernel source files. They are NOT covered by
+the dual GPL-2.0-only OR BSD-3-Clause grant in the LICENSE file. Each patch is
+licensed under the terms stated in the patch itself (the SPDX-License-Identifier
+and MODULE_LICENSE lines of the files it adds or modifies), and under the license
+of the Linux kernel source file it applies to. These terms include, for example,
+GPL-2.0, GPL-2.0-only, GPL-2.0-or-later, GPL-2.0+, GPL-2.0 WITH Linux-syscall-note,
+Apache-2.0 and dual-licensed variants. Some patches are GPL-only (for example the
+PCF85053A RTC driver and the MP29502 hwmon driver) and do not offer a BSD option.
+The MCTP patch linux-6.12/0001-mctp-driver-net-Extend-MCTP-support.patch adds two
+files (glacier-spb-ap.h, mctp-stats.h) under Apache-2.0 in addition to GPL-2.0 files.
+See the LICENSES and COPYING files of the Linux kernel for the license texts.
+
+
+Copyright Renesas Electronics Corporation - BSD 3-clause License
+
+Applies to: usr/usr/bin/hw-management-vr-dpc-renesas-update.sh
+
+License Text(http://spdx.org/licenses/BSD-3-Clause)
+
+################################################################################
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Copyright 2026, Renesas Electronics Corporation and/or its affiliates
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software
+# without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+################################################################################

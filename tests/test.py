@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # Test Runner for hw-mgmt
 #
@@ -13,7 +13,6 @@
 #
 # Known issues and bugs are tracked in offline/known_issues_*.py files
 # which are explicitly ignored by CI.
-########################################################################
 
 import sys
 import os

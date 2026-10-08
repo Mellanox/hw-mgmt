@@ -1,14 +1,7 @@
 /*
  * SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
- * Copyright (c) 2001-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- *
- * This software product is a proprietary product of Mellanox Technologies, Ltd.
- * (the "Company") and all right, title, and interest in and to the software product,
- * including all associated intellectual property rights, are and shall
- * remain exclusively with the Company.
- *
- * This software product is governed by the End User License Agreement
- * provided with the software product.
+ * Copyright (c) 2001-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
  *
  *  Sysfs event handle example.
  */

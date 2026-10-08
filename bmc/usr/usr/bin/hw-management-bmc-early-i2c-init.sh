@@ -1,7 +1,7 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # BMC Early I2C Device Initialization Script
 #
@@ -19,7 +19,6 @@
 #         }
 #     ]
 # }
-################################################################################
 
 CONFIG_FILE="/etc/hw-management-bmc-early-i2c-devices.json"
 
