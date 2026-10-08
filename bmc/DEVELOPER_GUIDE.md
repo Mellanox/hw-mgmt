@@ -1,5 +1,6 @@
-<!-- SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
-<!-- SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause -->
+<!-- SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES -->
+<!-- Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
+<!-- SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause -->
 
 # BMC platform bring-up: supporting a new `HINNN` (e.g. HI189 → HI162)
 

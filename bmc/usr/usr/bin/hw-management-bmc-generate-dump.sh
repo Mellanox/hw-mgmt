@@ -1,6 +1,7 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # BMC debug bundle (SONiC BMC): dmesg, journalctl -b0, /proc/interrupts,
 # ifconfig (or ip), i2cdetect per non-mux bus, CPLD grid dump, systemctl for

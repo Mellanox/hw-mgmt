@@ -1,6 +1,7 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 
 # configuration
 # read-only EEPROM on i2c bus 3 with slave id 0x4f. 0x1000 is the address

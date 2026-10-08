@@ -1,6 +1,7 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 
 # Journal/syslog tag for log_err / log_info (basename of this script without .sh).
 _HW_MANAGEMENT_BMC_SH_LOG_TAG=$(basename "${BASH_SOURCE[0]:-hw-management-bmc.sh}" .sh)

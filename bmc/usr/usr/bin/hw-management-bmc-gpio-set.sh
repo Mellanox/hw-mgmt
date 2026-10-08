@@ -1,6 +1,7 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 
 # Journal/syslog tag: basename of this file without .sh (correct when sourced).
 _GPIO_SET_LOG_TAG=$(basename "${BASH_SOURCE[0]:-hw-management-bmc-gpio-set.sh}" .sh)

@@ -1,6 +1,7 @@
 #!/bin/sh
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 #
 # MAX1363: read status / ADC bytes via i2ctransfer (debug).
 # Origin: OpenBMC meta-nvidia bmc-post-boot-cfg max1363_read_status.sh

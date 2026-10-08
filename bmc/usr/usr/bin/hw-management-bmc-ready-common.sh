@@ -1,6 +1,7 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 
 # Journal identifier for logger(1) from this file (basename without .sh).
 _HW_MANAGEMENT_BMC_READY_COMMON_LOG_TAG=$(basename "${BASH_SOURCE[0]:-hw-management-bmc-ready-common.sh}" .sh)
