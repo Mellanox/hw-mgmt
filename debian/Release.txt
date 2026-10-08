@@ -1,4 +1,147 @@
 ================================================================================
+- V.7.0070.2000
+- Thu, 08 Oct 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - Added configurable leakage A2D framework for ADS7924, ADS1015 and MAX1363.
+    - Added additional BMC feature set support; USB0_MANAGED_BY_NOS, 6.12.94 kernel support, ABR watchdog heartbeat.
+    - Added N7170_LD, N7300_LD, N7400_LD and N8100_LD virtual mock platforms.
+    - Added support for SN6800_LD/SN6810_LD (SN68XX_LD) switch platforms ES Level.
+    - Added improved debug utilities and NVMe SSD dump collector
+
+- Bug fixes
+    - Fixes an issue where the ADS1015 leakage detector treated every channel program as failed
+    - Fixes an issue where peripheral-updater failed to start when hw_management_sonic_check was missing
+    - #5027944: Fixes an issue where hw-mgmt trace logs could grow beyond the intended size limit
+    - #5040812: Fixes an issue where the udev event debug log could grow without bound on busy systems and fill disk space.
+    - #5046588: Fixes an issue where SN6600_LD power and current sensor readings in lm-sensors were scaled incorrectly.
+    - #5085644: Fixes an issue where the i2c-mux-regmap module was loaded at startup although it is no longer required.
+    - #4151613: Fixes an issue where mlxsw hotplug bus-nr resolution on multi-segment I2C muxes could dereference a NULL adapter and time out mux completion
+    - #4984971: Fixes an issue where a requested graceful shutdown was not detected
+    - #4889170: Fixes an issue where I2C controllers on AMD V3000 host CPU were unreachable after kexec boot
+    - #5100761: Fixes an issue where cpu_type was wrong or empty when read too early during hw-mgmt startup, before the config directory existed.
+    - #6181524: ASIC temperature hotplug events were missed because the event register was not marked non_sticky.
+    - #5104076: Fixes an issue where the periodic thermal report crashed when a missing sensor value ("N/A") was passed to round().
+    - #4542714: Fixes an issue where TPM power state was left non-always-on on the underlying sysfs physical device (only the tpm0 class device was set).
+    - #5080289: Fixes an issue where AST2700 EHCI (USB Port B) probe failed with -ENOMEM due to a missing 64-bit DMA mask.
+    - #5107746: Fixes a set of issues where hw-management services could exceed the systemd stop timeout or come back on the wrong version after restart, because SIGTERM handling was delayed by long waits/thermal loops, TC run state was not preserved across restart, and the updater service swallowed shutdown signals.
+    - #5114977: Fixes an issue where the support-dump tool used the wrong log file names for the thermal/peripheral updater logs.
+    - #5112578: Fixes an issue where kernel module presence checks used inconsistent ad-hoc lsmod/grep logic and produced noisy log output.
+    - #5102733: Fixes an issue where PSU I2C addresses for QM3200/QM3400 (HI157/HI158) were stored as bare hex and misparsed as decimal, breaking PSU fan speed control.
+    - #5151050: Fixes an issue where fanX_dir could remain uninitialized
+    - #5146441: Fixes an issue where new SN5600/SN5400 Delta PSUs with smaller 256-byte EEPROMs failed EEPROM driver instantiation.
+    - #5156400: Fixes an issue where N6XXX_LD platforms had an incorrect I2C mux channel table under kernel 6.12, breaking device enumeration.
+    - Fixes multiple minor Thermal Control issues.
+    - #5113179: Fixes an issue where fan PWM writes during ASIC restart produced spurious mlxsw_minimal error messages.
+    - #5170326: Fixes an issue where add_come_named_busses silently ignored unsupported cpu_type values instead of logging a warning, as originally designed.
+    - Fixes an issue where SN6600_LD and other DDR5 platforms loaded the JC42 DRAM temperature driver instead of SPD5118, breaking DIMM temperature reporting.
+    - #5173086: Fixes an issue where the GB300 SWB hot-swap controller (MP5926) probed with the wrong driver (lm5066i) because its BOM HotSwap code was unmapped.
+    - #5191603: Fixes an issue where hw-management-read-vr-model-version.sh reported the wrong Model/Revision for mp2975/mp2974.
+    - #5082250: Fixes an issue where fan direction could be wrong or stale during rapid hotplug
+    - Fixes an issue where the boot-complete service got stuck at counter 156/157 on HID189.
+    - #5196190: Fixes an issue where non-existent clock-board EEPROM devices in the SN5640/SN5610/SN5600D I2C tables produced spurious failure messages in syslog.
+    - #5189244: Fixes an issue where BMC standby-ready waits and dump timing could hang or time out early.
+    - #5176781: Fixes an issue where the SN5600/SN5600D sensor config had incorrect MP2975 out2 current mapping plus redundant/incorrect I2C bus and ASIC temperature definitions.
+    - Fixes an issue where a CPLD register rename in the SN68XX_LD BMC platform driver (NVSW_REG_CPLD9B_PN_OFFSET) was left inconsistent at one call site.
+    - Fixes several MP5926 hot-swap driver issues: VOUT reporting not aligned with upstream mainline, sign-extension of the linear11 mantissa producing wrong voltages, and telemetry unreadable when the device was left on a non-zero PMBus page at probe.
+    - #6557317: Fixes an issue where logger startup rotated the active log and created empty rotated files whenever the configured size limit changed.
+    - Fixes an issue where mlxreg-io .bit handling for multi-bit CPLD fields in the nvsw-bmc kernel driver (bios_status, cpu_spi_ctrl, psu_qty, etc.) used the wrong bit position, shifting reported sysfs values.
+    - Fixes an issue where MP2845 CPU VR voltage/current sysfs links were created incorrectly, since only rails 1 and 3 are wired on platforms using MP2845.
+    - #5224885: Fixes an issue where comex_voltmon links were not created on SN6600_LD due to an incorrect CPU/DDR VR I2C bus.
+    - #5204171: Fixes an issue where kernel module dependencies were regenerated on every hw-mgmt start, adding unnecessary startup delay.
+    - Fixes an issue where MP2855 OV/UV fault thresholds were cached at probe time instead of read dynamically, so inX_crit/inX_lcrit went stale when the VR changed its VID/load-dependent operating point.
+    - #5230695: Fixes an issue where MP2975 WRITE_PROTECT command handling on pages 1/2 incorrectly skipped MFR_PROTECT_DELAY_TIME/MFR_PIN_* writes.
+    - #5225682: Fixes an issue where N51XX_LD and N55XX_LD current sensor labels were inconsistent with N61XX_LD.
+    - #5232793: Fixes an issue where PWM stayed stuck at the tacho-error dmin and never recovered after a simulated tacho fault was restored, on both TC 2.5 and TC 2.0, including a follow-up fix for multi-tacho fan drawers where an unsettled tacho could incorrectly clear a fault already latched by another tacho in the same drawer.
+    - #5303520: Fixes an issue where SN27002 fan speed validation shared the same min/max RPM limits for inlet and outlet fans, instead of using separate front/rear tach ranges.
+    - #4966961: Fixes an issue on SPC1 systems where a failed ASIC I2C driver chipup left thermal PWM control unavailable; PWM is now forced to 100% via mlxreg MFSC as a fallback.
+    - #5183998: Fixes an issue where PSU EEPROM parsing failed to record manufacturer information on systems (e.g. MSN2700-A1) that keep PSU VPD in the PSU EEPROM.
+    - #5183838: Fixes an issue where DPU voltmon2 attributes could be missing because voltmon udev events arrived before the DPU_READY directories were created.
+    - #5238405: Fixes an issue where SN6800_LD (HI187) lacked an ASIC PCIe bus mapping.
+    - Fixes an issue where the SN2201(M) busbar module Tmax was clamped to 65C instead of following the platform's 80C val_max.
+    - #5125814: Fixes an issue where PSU hotspot temperature sensors on SN5640/SN5610 raised false alarms, because PSU firmware reports the ambient OTW/OTP thresholds for all three PSU temperature channels.
+    - #5037522: Fixes an issue where asynchronous mlxplat mux segment creation could race i2c-dev module load and fail with a duplicate /dev/i2c-N sysfs entry (-EEXIST).
+    - #5100061: Fixes an issue where SN2700 (SPC1) port CPLD reads could race ASIC reset on boot; the read now runs after chip-up completes, on both the start and restart paths.
+    - #5245926: Fixes an issue where the default 10s fan-speed stabilization timeout was too short for SN2201(M) fans; relax_time is now configurable per platform (20s for SN2201/SN2201M).
+    - Fixes an issue where internal CPU-BMC Redfish communication used HTTPS without certificate verification; hw-mgmt now prefers HTTP and falls back to whichever scheme is reachable for the life of the client.
+    - #5269629: Fixes an issue where MP2975 DDR VR curr2/curr5 output-current labels for SN6600_LD/SN68XX_LD were mismapped and one rail's current was ignored.
+    - #5269665: Fixes an issue where a misspelled reset-attribute counter variable was never initialized, and a missing reset_attr_num config caused repeated error logging instead of being treated as optional.
+    - #5225696: Fixes an issue where usb0 ifup, triggered from a udev RUN rule could lose a lock-conflict race against the networking service and fail silently; ifup now runs from its own systemd service with longer, lock-aware retries and captured diagnostics.
+
+- Kernel patches (for new features / fixes)
+    - SPC6 AST2700 A2 DTS extension: phram-env reservation, TPM probe ordering,
+      i2c5 expander reset-gpios, i3c1 pull-ups; plus CONFIG_MTD_PHRAM.
+      hw-mgmt: bmc: Add SPC6 AST2700 A2 DTS extension patch
+      hw-mgmt: bmc: Enable CONFIG_MTD_PHRAM for SPC6 AST2700 A2 phram-env
+        recipes-kernel/linux/linux-6.12/0008-arm64-dts-aspeed-spc6-bmc-ext-phram-env-tpm-i3c-pull.patch
+        recipes-kernel/linux/kconfig_6_12.txt
+    - SPC6 AST2700 DTS split for SONiC (no ramrofs) vs OpenBMC (phram/ramrofs)
+      boot, plus eMMC HS200 8-bit/200MHz bump and ftgmac100 SGMII fixes.
+      hw-mgmt: bmc: Split SPC6 AST2700 A2 DTS for SONiC and OpenBMC boot
+      leakage config fix & boot-complete service modification for HID189 (#2665)
+      hw-mgmt: kernel 6.12 BMC: add ftgmac100 SGMII fixes (0010, 0011)
+        recipes-kernel/linux/linux-6.12/0008-...patch, 0009-...patch
+        recipes-kernel/linux/linux-6.12/0010-net-ftgmac100-hard-reset-mac-for-sgmii.patch
+        recipes-kernel/linux/linux-6.12/0011-arm64-dts-aspeed-spc6-bmc-fix-sgmii-phy-names.patch
+    - AST2700 EHCI (USB Port B) 64-bit DMA support backport (Bug #5080289).
+      hw-mgmt: kernel 6.12 BMC: add AST2700 EHCI 64-bit DMA fix (0012)
+        recipes-kernel/linux/linux-6.12/0012-usb-ehci-Add-Aspeed-AST2700-support.patch
+    - Renesas RAA228942/RAA228943 (isl68137) VR support: probe/page fixes,
+      channel label remap, READ_TEMPERATURE_2, VID-relative OV/UV fault
+      limits, DMA-payload/errno separation.
+        recipes-kernel/linux/linux-6.1/0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch
+        recipes-kernel/linux/linux-6.12/0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch
+    - Mux completion-notify reverted after causing I2C bus creation timing
+      issues on some NOSs; hotplug bus-nr fixup added for multi-segment muxes
+      instead (Bug #4151613, #5079211).
+      hw-mgmt: pathes: [6.1, 6.12]: Fix hotplug bus-nr fixup on multi-segment mux
+      (revert of mux completion notify, part of V.7.0070.1100 br merge)
+        recipes-kernel/linux/linux-6.1/, linux-6.12/ i2c-mux-reg/regmap and platform-mellanox patches
+    - AMD I2C (Designware) controllers powered back up after kexec on V3000 CPU
+      (Bug 4889170).
+      hw-mgmt: patches: 6.1: Fix AMD I2C controller init after kexec
+        recipes-kernel/linux/linux-6.1/0118-i2c-designware-Fix-ACPI-power-on-of-AMD-I2C-after-ke.patch
+    - SPD5118 DDR5 SODIMM temperature sensor driver added and wired in for
+      DDR5 platforms (SN6600_LD).
+      hw-mgmt: patches: Add support for SPD5118 DDR5 SODIMM temperature sensor
+      hw-mgmt: patches: Fix SN6600_LD SODIMM temperature sensor driver
+    - Kernel 6.1.174 and 6.12.94 support.
+      hw-mgmt: documentation: Update README.md with new kernel 6.1.174
+      hw-mgmt: kernel: Add 6.12.94 support (FR 5082964)
+    - mlxreg-io .bit fix for multi-bit CPLD fields in the nvsw-bmc patch
+      (bios_status, cpu_spi_ctrl, psu_qty, asic_clk_brd_hw_id, config1).
+      hw-mgmt: bmc: fix mlxreg-io .bit for multi-bit CPLD fields in nvsw-bmc patch (#2813)
+    - MP5926 hot-swap driver: BOM mapping for GB300 SWB, aligned with upstream
+      mainline, mantissa sign-extension fix, forced PAGE 0 at probe.
+      hw-mgmt: devtree: Add MP5926 BOM map for GB300 SWB hotswap (Bug #5173086)
+      hw-mgmt: patches: Align MP5926 driver with upstream mainline
+      hw-mgmt: patches: Fix MP5926 linear VOUT mantissa handling
+      hw-mgmt: patches: Force MP5926 PAGE 0 during probe
+    - MP2855 VR: dynamic OV/UV fault threshold reads instead of probe-time cache.
+      hw-mgmt: patches: 6.1-6.12: Update kernel patches for mp2855 (FR 5221265 / 5203078)
+    - N6XXX_LD platform driver: fixed 6.12 mux channel table, synced with 6.1
+      driver (Bug 5156400).
+      hw-mgmt: patches: Update platform driver for N6XXX_LD platforms
+    - WDT_RESET_MASK1 bit 1 set on AST2700 WDT restart.
+      kernel 6.12 BMC: Set WDT_RESET_MASK1 bit 1 on AST2700 WDT restart (#2853)
+    - Duplicate /dev/i2c-N node creation fixed by making the i2c-dev attach
+      path idempotent (Bug 5037522, pending upstream review on linux-i2c).
+      hw-mgmt: kernel: patch 6.1/6.12: Fix duplicate /dev/i2c-N node creation
+    - NVMe SSD function-level-reset recovery patches extended to kernel 6.12.
+      hw-mgmt: patches: add NVME SSD FLR recovery patches to kernel 6.12
+
+    - For detailed patch list: Please view:
+      https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.2000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    - Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    - Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    - Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0070.1938
 - Thu, 08 Oct 2026
 --------------------------------------------------------------------------------
