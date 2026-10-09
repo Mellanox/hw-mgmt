@@ -1,5 +1,6 @@
  {
 	"name": "n5110_ld/n5112_ld",
+	"tc_version": "2.0",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
@@ -17,8 +18,8 @@
 	"psu_fan_pwm_decode" : {"0:100": -1},
 	"fan_trend" : {
 		"C2P": {
-			"0" : {"rpm_min":6700, "rpm_max":33000, "slope": 328.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":6000, "rpm_max":30000, "slope": 300, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
+			"0" : {"rpm_min":6700, "rpm_max":33000, "slope": 328.8, "pwm_min" : 20, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":6000, "rpm_max":30000, "slope": 300, "pwm_min" : 20, "pwm_max_reduction" : 10}
 			}
 	},
 	"dev_parameters" : {
@@ -30,10 +31,10 @@
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60},
 		"ibc\\d+":        {"pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!100000", "poll_time": 30},
 		"hotswap\\d+_temp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!150000", "poll_time": 30},
-		"bmc\\d+_temp":   {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!125000", "poll_time": 30}
+		"bmc_temp":   {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!125000", "poll_time": 30}
 	},
-	"error_mask" : {"psu" : ["direction", "present"], "fan" : ["direction"]},
-	"sensor_list" : ["cpu",
+	"error_mask" : {"psu_err" : ["direction", "present"], "fan_err" : ["direction"]},
+	"sensor_list" : ["cpu", "bmc",
 					"swb_voltmon1", "swb_voltmon2", "swb_voltmon3", "swb_voltmon4", "swb_voltmon5", "swb_voltmon6",
 					"sodimm1",
 					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4",

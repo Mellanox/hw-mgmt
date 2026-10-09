@@ -55,6 +55,10 @@ udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
+asic_chipup_status=/run/.asic_chipup_completed
+# TC run state across hw-management stop/start. Outside $hw_management_path
+# (removed on stop). Keep in sync with hw-management-tc.service.
+tc_state_file="/var/run/.hw-management-tc-state"
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -283,6 +287,38 @@ check_simx()
 	fi
 }
 
+# This function checks if ThermalControl supports current platform
+# Returns 1 if TC is supported, 0 otherwise.
+check_tc_is_supported()
+{
+	if grep -q '"platform_support" : 0' $config_path/tc_config.json; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+# Read once and remove. Prints "started" or nothing if missing/invalid.
+consume_tc_saved_state()
+{
+	local state=""
+
+	if [ -L "$tc_state_file" ]; then
+		rm -f "$tc_state_file"
+		return
+	fi
+	if [ ! -f "$tc_state_file" ]; then
+		return
+	fi
+	state=$(tr -d '[:space:]' < "$tc_state_file" 2>/dev/null)
+	rm -f "$tc_state_file"
+	case $state in
+		started)
+			printf '%s\n' "$state"
+			;;
+	esac
+}
+
 # Check if file exists and create soft link
 # $1 - file path
 # $2 - link path
@@ -364,6 +400,16 @@ unlock_service_state_change_update_and_match()
 		fi
 	fi
 	/usr/bin/flock -u ${LOCKFD}
+}
+
+# Check if module is loaded
+# $1 - module name
+# return 0 if module is loaded, 1 otherwise
+is_module()
+{
+	/sbin/lsmod 2>/dev/null | grep -w "$1" > /dev/null
+	RC=$?
+	return $RC
 }
 
 connect_device()

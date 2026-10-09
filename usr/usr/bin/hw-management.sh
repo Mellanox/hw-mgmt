@@ -97,7 +97,9 @@ chipup_log_archive_max=3
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 chipup_retry_count=3
-fan_speed_tolerance=15
+
+# Set FAN speed tolerance based on spec +-30%
+fan_speed_tolerance=30
 minimal_unsupported=0
 
 mctp_bus=""
@@ -3147,7 +3149,6 @@ do_start()
 	sleep 1
 	enable_vpd_wp
 	echo 0 > $config_path/events_ready
-	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
@@ -3169,6 +3170,8 @@ do_start()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
+	/usr/bin/hw-management-start-post.sh
+
 	log_info "Init completed."
 }
 
