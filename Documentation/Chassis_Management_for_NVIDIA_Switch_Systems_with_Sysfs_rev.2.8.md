@@ -5311,11 +5311,11 @@ cat $bsp_path/system/sgmii_phy_reset
 
 ### Management PHY Recovery Helper
 
-**Command:** `hw-management-phy-recover.sh [-d|--dump-phy] <eth0|eth1>`
+**Command:** `hw-management-phy-recover.sh [-d|--dump-phy] [-t|--timeout <seconds>] <eth0|eth1>`
 
 **Description:** Pulse the CPLD PHY reset of one management port with the sequence that fits the port. Use it when the port does not come up at boot and the kernel log shows `amd-xgbe ... ethN: get_phy_device failed`. After exit code `0`, bring the port up again (`ifup ethN` or `ip link set ethN up`).
 
-Note: The helper waits up to 30 seconds for the `hw-management` service to be active. The option must come before the port name.
+Note: The helper waits for the `hw-management` service to be active, up to 30 seconds by default. Options must come before the port name.
 
 **Release version:** TBD (first release with this change)
 
@@ -5323,6 +5323,7 @@ Note: The helper waits up to 30 seconds for the `hw-management` service to be ac
 | Option | Meaning |
 |--------|---------|
 | `-d`, `--dump-phy` | Store a PHY snapshot (`phy_id`, driver, `ethtool` output) before and after the pulse under `/var/log/hw-mgmt-phy-recover/`. The last 10 snapshots per port are kept. `hw-management-generate-dump.sh` collects this directory |
+| `-t <seconds>`, `--timeout <seconds>` | Wait time for the `hw-management` service, in seconds. Default 30. With 0 the helper checks once and does not wait |
 
 **Exit codes:**
 | Code | Meaning |
@@ -5331,7 +5332,7 @@ Note: The helper waits up to 30 seconds for the `hw-management` service to be ac
 | 1 | Usage error |
 | 2 | No reset attribute for this port on this system |
 | 3 | Sysfs write or read failed or timed out, the bit stayed asserted, or a signal interrupted the pulse |
-| 4 | `hw-management` service not active within 30 seconds |
+| 4 | `hw-management` service not active within the wait time |
 
 **Example:** Recover eth0 and bring it up:
 ```bash
