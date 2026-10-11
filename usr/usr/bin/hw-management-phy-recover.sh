@@ -31,10 +31,11 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# hw-management-phy-recover.sh [-d|--dump-phy] <port>
+# hw-management-phy-recover.sh [-d|--dump-phy] [-t|--timeout <seconds>] <port>
 # Pulse the CPLD PHY reset for one CPU management port.
 # Requires hw-management init: the hw-management service must be active. Its
 # start creates the links under /var/run/hw-management/system before it returns.
+# The helper waits for the service up to -t seconds (default 30).
 # ComE / eth0 (HW-pulsed 50 ms): write 0. MGMT / eth1 (not pulsed): write 0, wait 50 ms, write 1.
 # Exit codes: 0 reset done, 1 usage, 2 no reset attribute for this port,
 # 3 sysfs timeout, bit stuck asserted or interrupted (bit released), 4 hw-management not ready.
@@ -49,7 +50,7 @@ READBACK_RETRIES=5	# extra readbacks while the bit is still 0
 READBACK_POLL=0.02
 PULSE_TIMEOUT=5		# bound hung sysfs I/O
 DUMP_TIMEOUT=5		# bound hung ethtool
-READY_TIMEOUT=30	# wait for the hw-management service
+READY_TIMEOUT=30	# wait for the hw-management service, -t overrides
 READY_POLL=0.2
 DUMP_KEEP=10		# snapshots kept per port
 PULSE_PATH=""
@@ -64,7 +65,7 @@ COME_ATTRS="sgmii_phy2_reset"
 
 usage()
 {
-	echo "Usage: $(basename "$0") [-d|--dump-phy] <eth0|eth1>" >&2
+	echo "Usage: $(basename "$0") [-d|--dump-phy] [-t|--timeout <seconds>] <eth0|eth1>" >&2
 }
 
 sysfs_write()
@@ -86,11 +87,12 @@ wait_hw_mgmt_ready()
 {
 	local deadline=$((SECONDS + READY_TIMEOUT))
 
-	while [ "$SECONDS" -lt "$deadline" ]; do
+	while :; do
 		hw_mgmt_active && return 0
+		[ "$SECONDS" -lt "$deadline" ] || break
 		sleep "$READY_POLL"
 	done
-	log_err "PHY recovery: hw-management not ready (service not active)"
+	log_err "PHY recovery: hw-management not ready (service not active after ${READY_TIMEOUT}s)"
 	exit 4
 }
 
@@ -202,16 +204,29 @@ main()
 {
 	local dump_opt=0 opt port name path ptype rc
 
-	set -- "${@/--dump-phy/-d}"
-	while getopts "d" opt; do
+	set -- "${@/#--dump-phy/-d}"
+	set -- "${@/#--timeout/-t}"
+	while getopts "dt:" opt; do
 		case $opt in
 			d) dump_opt=1 ;;
+			t) READY_TIMEOUT=$OPTARG ;;
 			*) usage; exit 1 ;;
 		esac
 	done
 	shift $((OPTIND - 1))
+	if [[ ! $READY_TIMEOUT =~ ^[0-9]+$ ]]; then
+		log_err "PHY recovery: bad timeout '$READY_TIMEOUT'"
+		usage
+		exit 1
+	fi
+	READY_TIMEOUT=$((10#$READY_TIMEOUT))
+	if [ $# -gt 1 ]; then
+		log_err "PHY recovery: bad arguments: $*"
+		usage
+		exit 1
+	fi
 	port=$1
-	if [ $# -ne 1 ] || [ -z "$port" ] || [ -z "${PORT_ATTRS[$port]+x}" ]; then
+	if [ -z "$port" ] || [ -z "${PORT_ATTRS[$port]+x}" ]; then
 		log_err "PHY recovery: unknown port ${port:-(none)}"
 		usage
 		exit 1
