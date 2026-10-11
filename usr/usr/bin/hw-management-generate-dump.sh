@@ -113,6 +113,7 @@ fi
 [ -f /var/log/hw-management-thermal-updater.log ] && cp /var/log/hw-management-thermal-updater.log* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw-management-peripheral-updater.log ] && cp /var/log/hw-management-peripheral-updater.log* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw-mgmt-i2c-trace.log ] && cp /var/log/hw-mgmt-i2c-trace.log* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -d /var/log/hw-mgmt-phy-recover ] && cp -a /var/log/hw-mgmt-phy-recover "$DUMP_FOLDER/" 2>/dev/null || true
 uname -a > "$DUMP_FOLDER/sys_version"
 mkdir "$DUMP_FOLDER/bin/"
 cp /usr/bin/hw?management* "$DUMP_FOLDER/bin/" 2>/dev/null || true
