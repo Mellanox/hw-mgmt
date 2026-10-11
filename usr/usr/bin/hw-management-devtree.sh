@@ -711,16 +711,16 @@ declare -A sn66xxld_swb_alternatives=( \
 	["xdpe1a2g7_5"]="xdpe1a2g7b 0x66 15 voltmon6" \
 	["xdpe1a2g7_6"]="xdpe1a2g7b 0x67 15 voltmon7" \
 	["xdpe1a2g7_7"]="xdpe1a2g7b 0x6a 15 voltmon8" \
-	["xdpe1a2g7_8"]="xdpe1a2g7b 0x61 16 voltmon9" \
-	["xdpe1a2g7_9"]="xdpe1a2g7b 0x62 16 voltmon10" \
-	["xdpe1a2g7_10"]="xdpe1a2g7b 0x63 16 voltmon11" \
-	["xdpe1a2g7_11"]="xdpe1a2g7b 0x64 16 voltmon12" \
-	["xdpe1a2g7_12"]="xdpe1a2g7b 0x65 16 voltmon13" \
-	["xdpe1a2g7_13"]="xdpe1a2g7b 0x66 16 voltmon14" \
-	["xdpe1a2g7_14"]="xdpe1a2g7b 0x67 16 voltmon15" \
-	["xdpe1a2g7_15"]="xdpe1a2g7b 0x68 16 voltmon16" \
-	["xdpe1a2g7_16"]="xdpe1a2g7b 0x69 16 voltmon17" \
-	["xdpe1a2g7_17"]="xdpe1a2g7b 0x6a 16 voltmon18" \
+	["xdpe1a2g7_8"]="xdpe1a2g7b 0x60 16 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7b 0x61 16 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7b 0x62 16 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7b 0x63 16 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7b 0x64 16 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7b 0x65 16 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7b 0x66 16 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7b 0x67 16 voltmon16" \
+	["xdpe1a2g7_16"]="xdpe1a2g7b 0x68 16 voltmon17" \
+	["xdpe1a2g7_17"]="xdpe1a2g7b 0x69 16 voltmon18" \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
@@ -799,17 +799,12 @@ declare -A sn66xxld_port_alternatives=( \
 	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
-	["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-	["adt75_0"]="adt75 0x4a 7 port_amb" \
-	["stts751_0"]="stts751 0x4a 7 port_amb" \
 )
 
-# Devices located on SN66XX (AC) port board
+# Devices reported under the SN66XX (AC) port board BOM section. The AC system
+# has no port board, its OSFP cages sit on the switch board, so the section
+# carries the OOB board ambient sensor only.
 declare -A sn66xx_port_alternatives=( \
-	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
-	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
-	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
-	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
 	["tmp102_0"]="tmp102 0x48 17 port_amb" \
 	["adt75_0"]="adt75 0x48 17 port_amb" \
 	["stts751_0"]="stts751 0x48 17 port_amb" \
