@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 2.8.2
+Rev. 2.8.3
 
 ## Table of Contents
 
@@ -400,6 +400,7 @@ Rev. 2.8.2
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 2.8.3 | October 2026 | Added "Management PHY Reset" (`sgmii_phy2_reset` for eth0, `sgmii_phy_reset` for eth1) and "Management PHY Recovery Helper" (`hw-management-phy-recover.sh`) for the Juliet platform family (N51XX_LD) |
 | 2.8.2 | September 2026 | Juliet platform family (N51XX_LD) unsupported reset causes: added `reset_comex_wd` and `reset_from_comex` |
 | 2.8.1 | May 2026 | Replaced PDF with markdown (#5014001)<br>• Corrected Juliet platform family (N51XX_LD) reset-cause list per CPLD support<br>• Documented 22 supported reset causes; removed unsupported: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 2.8 | April 2024 | Added temperature, BMC and power related attributes (PDF release) |
@@ -481,6 +482,8 @@ Package contains the following files, used within the workload:
  /usr/bin/hw-management.sh: performs initialization and de-initialization, detects the system type, connects thermal drivers according to the system topology, activates and deactivates thermal algorithm.
 
  /usr/bin/hw-management-led-state-conversion.sh and /usr/bin/hw-management-power- helper.sh: helper scripts.
+
+ /usr/bin/hw-management-phy-recover.sh: pulses the CPLD PHY reset of management port eth0 or eth1 when the PHY does not answer after boot (see "Management PHY Recovery Helper").
 
  /etc/modprobe.d/hw-management.conf and /etc/modules-load.d/hw-management- modules.conf: configuration for kernel modules loading.
 
@@ -5273,6 +5276,59 @@ echo 1 > $bsp_path/system/dpu1_reset
 **Example:** Enable DPU1 reset:
 ```bash
 echo 1 > $bsp_path/system/dpu1_reset_enable
+```
+
+### Management PHY Reset
+
+**Node name:** `$bsp_path/system/sgmii_phy2_reset` (eth0), `$bsp_path/system/sgmii_phy_reset` (eth1)
+
+**Description:** Reset the PHY of one CPU management port: `sgmii_phy2_reset` is eth0, `sgmii_phy_reset` is eth1. Write `0`, wait 120 ms, then read the node. If it still reads `0`, write `1`. `hw-management-phy-recover.sh` does this sequence (see "Management PHY Recovery Helper").
+
+Note: These attributes are for the N51XX_LD family.
+
+**Access:** Read/Write
+
+**Release version:** `sgmii_phy_reset` V.7.0030.4000, `sgmii_phy2_reset` TBD (first release with this change)
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| reset | Integer | 0 (assert), 1 (release) |
+
+**Example:** Reset the eth0 PHY with a sequence that fits both bit types:
+```bash
+echo 0 > $bsp_path/system/sgmii_phy2_reset
+sleep 0.12
+echo 1 > $bsp_path/system/sgmii_phy2_reset
+```
+
+### Management PHY Recovery Helper
+
+**Command:** `hw-management-phy-recover.sh [-d|--dump-phy] <eth0|eth1>`
+
+**Description:** Pulse the CPLD PHY reset of one management port with the sequence that fits the port. Use it when the port does not come up at boot and the kernel log shows `amd-xgbe ... ethN: get_phy_device failed`. After exit code `0`, bring the port up again (`ifup ethN` or `ip link set ethN up`).
+
+Note: The helper waits up to 30 seconds for the `hw-management` service to be active. The option must come before the port name.
+
+**Release version:** TBD (first release with this change)
+
+**Options:**
+| Option | Meaning |
+|--------|---------|
+| `-d`, `--dump-phy` | Log a PHY snapshot line (`phy_id`, driver, link state) to syslog before and after the pulse |
+
+**Exit codes:**
+| Code | Meaning |
+|------|---------|
+| 0 | Reset done |
+| 1 | Usage error |
+| 2 | No reset attribute for this port on this system |
+| 3 | Sysfs write or read failed or timed out, the bit stayed asserted, or a signal interrupted the pulse |
+| 4 | `hw-management` service not active within 30 seconds |
+
+**Example:** Recover eth0 and bring it up:
+```bash
+hw-management-phy-recover.sh -d eth0 && ifup eth0
 ```
 
 ### Get Reset Cause
