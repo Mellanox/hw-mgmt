@@ -1488,8 +1488,8 @@ else
 	fi
 	if [ "$2" == "sxcore" ]; then
 		print_function_call "$0" "remove" "sxcore $4/$5"
-		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 		set_asic_ready "$4/$5" 0
+		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 	fi
 	if [ "$2" == "dpu" ]; then
 		print_function_call "$0" "remove" "dpu $3$4"
