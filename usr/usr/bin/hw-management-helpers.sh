@@ -2094,31 +2094,44 @@ is_spc1_warm_reboot()
 	return 1
 }
 
-# After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
-# not created (SPC1 PWM comes from ASIC hwmon). Thermal control never
-# latches emergency and never calls write_pwm_mlxreg(), so ASIC PWM stays
-# at the HW default (~60%). Program MFSC via mlxreg for the failed ASIC.
-# Scope: SPC1 after a warm (COMEX/CPU) reboot only. Cold reboot recovery
-# is another reboot; other platforms must not get these register writes.
-# $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
-# $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
-set_asic_pwm_full_speed_on_chipup_fail()
+# Write PWM via mlxreg MFSC (direct ASIC register access).
+# Same command as thermal write_pwm_mlxreg(): yes | mlxreg -d DEV --reg_name MFSC
+# --indexes pwm=0x0 --set pwm_duty_cycle=<hex>.
+# $1: ASIC index (0- or 1-based; 0 means first ASIC)
+# $2: PWM duty cycle 0-255 (decimal or 0xNN). 255/0xff is 100%.
+#     Scale matches sysfs pwm1 and MFSC, not thermal-control percent 0-100.
+# $3: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+write_pwm_mlxreg()
 {
 	local asic_index
-	local explicit_dev="$2"
+	local pwm_in="$2"
+	local explicit_dev="$3"
 	local mt_dev=""
 	local mlxreg_rc=0
+	local pwm_dec pwm_hex
 	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
 
-	if ! is_spc1_warm_reboot; then
-		log_info "Skip PWM fallback after chipup failure: not SPC1 warm reboot."
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"asic:$asic_index pwm:$pwm_in dev:$explicit_dev"
+
+	if [[ "$pwm_in" =~ ^0[xX][0-9A-Fa-f]+$ ]]; then
+		pwm_dec=$((pwm_in))
+	elif [[ "$pwm_in" =~ ^[0-9]+$ ]]; then
+		pwm_dec=$((10#$pwm_in))
+	else
+		log_err "Invalid PWM duty cycle for mlxreg write: '$pwm_in'."
 		return 1
 	fi
 
-	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+	if [ "$pwm_dec" -lt 0 ] || [ "$pwm_dec" -gt 255 ]; then
+		log_err "PWM duty cycle out of range (0-255) for mlxreg write: $pwm_in."
+		return 1
+	fi
+	pwm_hex=$(printf "0x%x" "$pwm_dec")
 
 	if ! command -v mlxreg >/dev/null 2>&1; then
-		log_err "mlxreg is not available; cannot set PWM after chipup failure."
+		log_err "mlxreg is not available; cannot set PWM."
 		return 1
 	fi
 
@@ -2130,26 +2143,82 @@ set_asic_pwm_full_speed_on_chipup_fail()
 
 	mt_dev=$(get_asic_mlxreg_dev "$1" "$explicit_dev")
 	if [ -z "$mt_dev" ]; then
-		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM after chipup failure."
+		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM."
+		return 1
+	fi
+
+	# check if mlxreg is available
+	if ! command -v mlxreg >/dev/null 2>&1; then
+		log_err "mlxreg is not available; cannot set PWM."
 		return 1
 	fi
 
 	# mlxreg prompts for confirmation; same pattern as thermal write_pwm_mlxreg().
 	if command -v timeout >/dev/null 2>&1; then
 		yes | timeout 3 mlxreg -d "$mt_dev" --reg_name MFSC \
-			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+			--indexes pwm=0x0 --set pwm_duty_cycle="$pwm_hex" >/dev/null 2>&1
 		mlxreg_rc=$?
 	else
 		yes | mlxreg -d "$mt_dev" --reg_name MFSC \
-			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+			--indexes pwm=0x0 --set pwm_duty_cycle="$pwm_hex" >/dev/null 2>&1
 		mlxreg_rc=$?
 	fi
 
 	if [ "$mlxreg_rc" -ne 0 ]; then
-		log_err "Failed to set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev rc=$mlxreg_rc)."
+		log_err "Failed to set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
 		return 1
 	fi
 
-	log_info "Set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev)."
+	log_info "Set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex)."
 	return 0
+}
+
+# Set ASIC PWM speed for ASIC controlled systems
+# If PWM controlled by ASIC - set it with mlxreg tool
+# If PWM controlled by CPLD - do nothing
+# $1 - ASIC index
+# $2 - PWM speed (0-255)
+set_asic_pwm_speed_safe()
+{
+	local asic_index="$1"
+	local pwm_speed="$2"
+	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index"
+	
+	# check if PWM controlled by ASIC.
+	is_spc1_system || return 0
+
+	# PWM controlled by ASIC
+	print_function_call "$0" "${FUNCNAME[0]}" "PWM controlled by ASIC, set pwm to $pwm_speed via mlxreg"
+	write_pwm_mlxreg "$asic_index" "$pwm_speed"
+	return_code=$?
+	if [ $return_code -ne 0 ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "Failed to set PWM via mlxreg (asic=$asic_index pwm=$pwm_speed). Trying to set via sysfs as last chance"
+		if [ -e "$thermal_path/pwm1" ]; then
+			echo "$pwm_speed" > "$thermal_path/pwm1"
+		fi
+	fi
+	return
+}
+
+# After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
+# not created (SPC1 PWM comes from ASIC hwmon). Thermal control never
+# latches emergency and never calls write_pwm_mlxreg(), so ASIC PWM stays
+# at the HW default (~60%). Program MFSC via mlxreg for the failed ASIC.
+# Scope: SPC1 after a warm (COMEX/CPU) reboot only. Cold reboot recovery
+# is another reboot; other platforms must not get these register writes.
+# Do not skip on pwm_control and do not use the sysfs PWM path.
+# $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
+# $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+set_asic_pwm_full_speed_on_chipup_fail()
+{
+	local explicit_dev="$2"
+
+	if ! is_spc1_warm_reboot; then
+		log_info "Skip PWM fallback after chipup failure: not SPC1 warm reboot."
+		return 1
+	fi
+
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"asic:$(_hw_mgmt_normalize_asic_index "$1") dev:$explicit_dev"
+	write_pwm_mlxreg "$1" 0xff "$explicit_dev"
 }
