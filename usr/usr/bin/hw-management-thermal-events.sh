@@ -1435,8 +1435,8 @@ else
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
-		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 		set_asic_ready "$4/$5" 0
+		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 	fi
 	if [ "$2" == "dpu" ]; then
 		case ${dmi_sku} in
