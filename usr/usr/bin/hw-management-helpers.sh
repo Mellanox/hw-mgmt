@@ -1872,6 +1872,121 @@ get_asic_mlxreg_dev()
 	return 1
 }
 
+# Write PWM via mlxreg MFSC (direct ASIC register access).
+# Same command as thermal write_pwm_mlxreg(): mlxreg -d DEV --reg_name MFSC
+# --indexes pwm=0x0 --set pwm_duty_cycle=<hex>.
+# Confirm with a finite "y" stream. Unbounded "yes |" hits SIGPIPE when mlxreg
+# closes stdin and logs "yes: standard output: Broken pipe".
+# $1: ASIC index (0- or 1-based; 0 means first ASIC)
+# $2: PWM duty cycle 0-255 (decimal or 0xNN). 255/0xff is 100%.
+#     Scale matches sysfs pwm1 and MFSC, not thermal-control percent 0-100.
+# $3: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+write_pwm_mlxreg()
+{
+	local asic_index
+	local pwm_in="$2"
+	local explicit_dev="$3"
+	local mt_dev=""
+	local mlxreg_rc=0
+	local pwm_dec pwm_hex
+	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"asic:$asic_index pwm:$pwm_in dev:$explicit_dev"
+
+	if [[ "$pwm_in" =~ ^0[xX][0-9A-Fa-f]+$ ]]; then
+		pwm_dec=$((pwm_in))
+	elif [[ "$pwm_in" =~ ^[0-9]+$ ]]; then
+		pwm_dec=$((10#$pwm_in))
+	else
+		log_err "Invalid PWM duty cycle for mlxreg write: '$pwm_in'."
+		return 1
+	fi
+
+	if [ "$pwm_dec" -lt 0 ] || [ "$pwm_dec" -gt 255 ]; then
+		log_err "PWM duty cycle out of range (0-255) for mlxreg write: $pwm_in."
+		return 1
+	fi
+	pwm_hex=$(printf "0x%x" "$pwm_dec")
+
+	if ! command -v mlxreg >/dev/null 2>&1; then
+		log_err "mlxreg is not available; cannot set PWM."
+		return 1
+	fi
+
+	if [ -z "$explicit_dev" ] && [ ! -d "$mst_devdir" ] && \
+	   [ -z "${HW_MGMT_MST_DEVDIR:-}" ] && command -v mst >/dev/null 2>&1; then
+		mst start >/dev/null 2>&1
+		sleep 2
+	fi
+
+	mt_dev=$(get_asic_mlxreg_dev "$1" "$explicit_dev")
+	if [ -z "$mt_dev" ]; then
+		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM."
+		return 1
+	fi
+
+	# check if mlxreg is available
+	if ! command -v mlxreg >/dev/null 2>&1; then
+		log_err "mlxreg is not available; cannot set PWM."
+		return 1
+	fi
+
+	# mlxreg prompts for confirmation. Do not use unbounded "yes":
+	# mlxreg closes stdin after the first answer and "yes" logs Broken pipe.
+	if command -v timeout >/dev/null 2>&1; then
+		printf 'y\ny\ny\n' | timeout 5 mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle="$pwm_hex" >/dev/null 2>&1
+		mlxreg_rc=$?
+	else
+		printf 'y\ny\ny\n' | mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle="$pwm_hex" >/dev/null 2>&1
+		mlxreg_rc=$?
+	fi
+
+	if [ "$mlxreg_rc" -ne 0 ]; then
+		log_err "Failed to set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
+		return 1
+	fi
+
+	log_info "Set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex)."
+	return 0
+}
+
+# Set ASIC PWM speed for ASIC controlled systems
+# If PWM controlled by ASIC - set it with mlxreg tool. 
+# If PWM controlled by CPLD - do nothing
+# $1 - ASIC index
+# $2 - PWM speed (0-255)
+set_asic_pwm_speed_safe()
+{
+	local asic_index="$1"
+	local pwm_speed="$2"
+	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index"
+	
+	# check if PWM controlled by ASIC.
+	# if config/cooling_name == "mlxsw" then PWM controlled by ASIC
+	[ -f "$config_path/cooling_name" ] || return 0
+	local cooling_name=$(< "$config_path/cooling_name")
+	if [ "$cooling_name" == "mlxsw" ]; then
+		# PWM controlled by ASIC
+		print_function_call "$0" "${FUNCNAME[0]}" "PWM controlled by ASIC, set pwm to $pwm_speed via mlxreg"
+		write_pwm_mlxreg "$asic_index" "$pwm_speed"
+		return_code=$?
+		if [ $return_code -ne 0 ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "Failed to set PWM via mlxreg (asic=$asic_index pwm=$pwm_speed). Trying to set via sysfs as last chance"
+			if [ -e "$thermal_path/pwm1" ]; then
+				echo "$pwm_speed" > "$thermal_path/pwm1"
+			else
+				print_function_call "$0" "${FUNCNAME[0]}" "PWM sysfs is missing; ASIC PWM control is not configured."
+				return 1
+			fi
+		fi
+	fi
+	return 0
+}
+
 # After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
 # typically missing, so thermal control never latches emergency and never
 # calls write_pwm_mlxreg(). Force PWM 100% here:
@@ -1886,9 +2001,6 @@ set_asic_pwm_full_speed_on_chipup_fail()
 	local explicit_dev="$2"
 	local pwm_link="$thermal_path/pwm1"
 	local tc_cfg="$config_path/tc_config.json"
-	local mt_dev=""
-	local mlxreg_rc=0
-	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
 
 	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
 	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index dev:$explicit_dev"
@@ -1904,39 +2016,5 @@ set_asic_pwm_full_speed_on_chipup_fail()
 		return 1
 	fi
 
-	if ! command -v mlxreg >/dev/null 2>&1; then
-		log_err "mlxreg is not available; cannot set PWM after chipup failure."
-		return 1
-	fi
-
-	if [ -z "$explicit_dev" ] && [ ! -d "$mst_devdir" ] && \
-	   [ -z "${HW_MGMT_MST_DEVDIR:-}" ] && command -v mst >/dev/null 2>&1; then
-		mst start >/dev/null 2>&1
-		sleep 2
-	fi
-
-	mt_dev=$(get_asic_mlxreg_dev "$1" "$explicit_dev")
-	if [ -z "$mt_dev" ]; then
-		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM after chipup failure."
-		return 1
-	fi
-
-	# mlxreg prompts for confirmation; same pattern as thermal write_pwm_mlxreg().
-	if command -v timeout >/dev/null 2>&1; then
-		yes | timeout 3 mlxreg -d "$mt_dev" --reg_name MFSC \
-			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
-		mlxreg_rc=$?
-	else
-		yes | mlxreg -d "$mt_dev" --reg_name MFSC \
-			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
-		mlxreg_rc=$?
-	fi
-
-	if [ "$mlxreg_rc" -ne 0 ]; then
-		log_err "Failed to set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev rc=$mlxreg_rc)."
-		return 1
-	fi
-
-	log_info "Set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev)."
-	return 0
+	write_pwm_mlxreg "$1" 0xff "$explicit_dev"
 }
