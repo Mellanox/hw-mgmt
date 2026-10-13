@@ -546,6 +546,34 @@ i2c_write_ads7924_burst()
 	return 0
 }
 
+# Clear a latched alarm and the INT assertion. SBAS482 splits this across two
+# registers: reading INTCNTRL (0x01) clears the alarm status and resets the alarm
+# counter (7.3.9); reading INTCONFIG (0x12) clears the interrupt itself (7.3.7).
+# Reading 0x12 alone leaves the counter armed and INT re-asserts on the next conversion.
+# Best effort: a failed read is logged, not fatal, so the caller still finishes programming.
+ads7924_clear_alarm()
+{
+	local bus="$1" address="$2" reg
+
+	for reg in 0x01 0x12; do
+		if ! i2ctransfer -f -y "$bus" w1@"$address" "$reg" r1 >/dev/null 2>&1; then
+			log_message "warning" "ADS7924 bus $bus addr $address: alarm clear read of $reg failed — alarm may stay latched"
+		fi
+	done
+}
+
+# Leave a part we do not program unable to assert INT: disable all channel alarms,
+# then clear whatever is latched. ULR/LLR are undefined out of reset, so a skipped
+# part (or one armed by a previous boot) otherwise holds INT low with no window set.
+ads7924_disarm()
+{
+	local bus="$1" address="$2"
+	if ! i2c_write_ads7924_burst "$bus" "$address" 0x01 0x00 >/dev/null 2>&1; then
+		log_message "warning" "ADS7924 bus $bus addr $address: alarm disable write failed — alarms may stay enabled"
+	fi
+	ads7924_clear_alarm "$bus" "$address"
+}
+
 # Convert voltage (engineering units) to ADS7924 8-bit window comparator code.
 # Matches 12-bit IIO raw >> 4 when Scale = volts per 12-bit LSB (Vref/4096).
 ads7924_volts_to_code8()
@@ -1050,10 +1078,12 @@ configure_ads7924_raw_i2c()
 	local scale_s v_min v_max ll ul i b c t gtype
 	local int_b slp_b acq_b pwr_b mode_b awake_b aen_b
 	local ul0 ll0 ul1 ll1 ul2 ll2 ul3 ll3
-	local k cid ctype cvmin cvmax cll cul hw
+	local k cid ctype cvmin cvmax cll cul hw aen_mask
+	local ch craw ccur aen_run
 
 	if ! scale_s=$(json_optional_scalar "$device_json" "Scale"); then
 		log_message "warning" "ADS7924 $device_name: Scale required for alarm threshold codes — skipping raw init"
+		ads7924_disarm "$bus" "$address"
 		return 1
 	fi
 
@@ -1072,6 +1102,7 @@ configure_ads7924_raw_i2c()
 		:
 	else
 		log_message "warning" "ADS7924 $device_name: need NormalMin or WarningMin for LLR — skipping raw init"
+		ads7924_disarm "$bus" "$address"
 		return 1
 	fi
 	if v_max=$(resolve_threshold "$device_json" "$gtype" "NormalMax"); then
@@ -1080,6 +1111,7 @@ configure_ads7924_raw_i2c()
 		:
 	else
 		log_message "warning" "ADS7924 $device_name: need NormalMax or WarningMax for ULR — skipping raw init"
+		ads7924_disarm "$bus" "$address"
 		return 1
 	fi
 
@@ -1092,14 +1124,17 @@ configure_ads7924_raw_i2c()
 		[ "$ll" -lt 0 ] && ll=0
 	fi
 
-	ul0=$ul
-	ll0=$ll
-	ul1=$ul
-	ll1=$ll
-	ul2=$ul
-	ll2=$ll
-	ul3=$ul
-	ll3=$ll
+	# Inputs without a Channels[] entry have no type and so no window. Leave them
+	# wide open (ULR 0xff, LLR 0x00) rather than copying channel 1's window: an
+	# unwired input floats to a level unrelated to channel 1 and would hold INT low
+	# while every mapped channel reads in range. Legacy flat configs (no Channels[])
+	# keep the global window on all four inputs.
+	if json_has_channels_array "$device_json"; then
+		ul0=255; ll0=0; ul1=255; ll1=0; ul2=255; ll2=0; ul3=255; ll3=0
+	else
+		ul0=$ul; ll0=$ll; ul1=$ul; ll1=$ll; ul2=$ul; ll2=$ll; ul3=$ul; ll3=$ll
+	fi
+	aen_mask=0
 
 	# Per-channel-type windows (new schema): each Channels[k] maps a hardware input
 	# (Id) to a Type whose NormalMin/Max (or WarningMin/Max) defines that input's
@@ -1133,6 +1168,7 @@ configure_ads7924_raw_i2c()
 				2) ul2=$cul; ll2=$cll ;;
 				3) ul3=$cul; ll3=$cll ;;
 				esac
+				aen_mask=$((aen_mask | (1 << hw)))
 				log_message "info" "ADS7924 $device_name: channel $k (input $cid, type ${ctype:-?}) window LLR=$cll ULR=$cul"
 			fi
 			k=$((k + 1))
@@ -1178,7 +1214,13 @@ configure_ads7924_raw_i2c()
 	pwr_b="0x00"
 	mode_b="0xcc"
 	awake_b="0x80"
-	aen_b="0x0f"
+	# INTCNTRL AEN: arm only inputs that received a window from Channels[]; legacy
+	# flat configs keep all four.
+	if [ "$aen_mask" -ne 0 ]; then
+		aen_b=$(printf '0x%02x' "$aen_mask")
+	else
+		aen_b="0x0f"
+	fi
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924IntConfig") && int_b="$t"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924SlpConfig") && slp_b="$t"
 	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AcqConfig") && acq_b="$t"
@@ -1219,17 +1261,16 @@ configure_ads7924_raw_i2c()
 	fi
 	sleep 0.02
 
-	log_message "info" "ADS7924 $device_name: enabling alarms (INTCNTRL, no readback verify)"
+	log_message "info" "ADS7924 $device_name: enabling alarms (INTCNTRL=$aen_b, no readback verify)"
 	if ! i2c_write_ads7924_burst "$bus" "$address" 0x01 $aen_b; then
 		log_message "warning" "ADS7924 $device_name: INTCNTRL write failed"
 		return 1
 	fi
 	sleep 0.02
 
-	# Clear any stale alarm interrupt before starting the scan. TI SBAS482: reading
-	# INTCONFIG (0x12) clears a latched alarm-condition interrupt.
-	log_message "info" "ADS7924 $device_name: clearing stale alarm (read INTCONFIG 0x12)"
-	i2ctransfer -f -y "$bus" w1@"$address" 0x12 r1 >/dev/null 2>&1 || true
+	# Clear anything latched before the new window took effect.
+	log_message "info" "ADS7924 $device_name: clearing stale alarm (read INTCNTRL 0x01, INTCONFIG 0x12)"
+	ads7924_clear_alarm "$bus" "$address"
 	sleep 0.002
 
 	log_message "info" "ADS7924 $device_name: AWAKE then MODE ($awake_b then $mode_b)"
@@ -1242,6 +1283,42 @@ configure_ads7924_raw_i2c()
 		log_message "warning" "ADS7924 $device_name: MODE write failed"
 		return 1
 	fi
+
+	# The comparator only runs once the scan starts and the first conversions see the
+	# input still settling, so clear once more with the mode live; otherwise a start-up
+	# transient stays latched and INT reads asserted with every channel in window.
+	sleep 0.02
+	ads7924_clear_alarm "$bus" "$address"
+
+	# Margin check. ULR/LLR are compared against DATAx[11:4], so one code is
+	# (AVDD/4096)*16, ~13 mV. The alarm counter is cumulative and only an INTCNTRL
+	# read resets it (SBAS482 7.3.9), so in Auto-Scan a channel a few codes from a
+	# limit accumulates crossings on noise alone and latches an alarm while hand
+	# reads still look in range. Name the channel now.
+	aen_run=$((aen_b))
+	ch=0
+	while [ "$ch" -le 3 ]; do
+		if [ $((aen_run & (1 << ch))) -ne 0 ]; then
+			case "$ch" in
+			0) cul=$ul0; cll=$ll0 ;;
+			1) cul=$ul1; cll=$ll1 ;;
+			2) cul=$ul2; cll=$ll2 ;;
+			3) cul=$ul3; cll=$ll3 ;;
+			esac
+			craw=$(i2ctransfer -f -y "$bus" w1@"$address" "$(printf '0x%02x' $((2 + 2 * ch)))" r1 2>/dev/null) || craw=""
+			if [ -n "$craw" ]; then
+				ccur=$((craw))
+				if [ "$ccur" -ge "$cul" ] || [ "$ccur" -le "$cll" ]; then
+					log_message "warning" "ADS7924 $device_name: CH$ch reads $ccur, outside window [$cll,$cul] — alarm will assert"
+				elif [ $((ccur - cll)) -lt 4 ] || [ $((cul - ccur)) -lt 4 ]; then
+					log_message "warning" "ADS7924 $device_name: CH$ch reads $ccur, $((ccur - cll)) codes above LLR, $((cul - ccur)) below ULR [$cll,$cul] (~13 mV/code) — noise will latch spurious alarms, widen the limits"
+				else
+					log_message "info" "ADS7924 $device_name: CH$ch reads $ccur, window [$cll,$cul]"
+				fi
+			fi
+		fi
+		ch=$((ch + 1))
+	done
 
 	if [ "$post_driver" = "post_driver" ]; then
 		log_message "info" "ADS7924 $device_name: post-driver I2C configuration complete"
