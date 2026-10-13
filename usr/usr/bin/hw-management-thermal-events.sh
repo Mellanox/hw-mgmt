@@ -277,9 +277,7 @@ function get_psu_eeprom_type()
 }
 
 # Set ASIC ready state
-# Set ./configasicX_ready to corresponding ASIC state (0 or 1)
-# For ASIC1 it updates also ./config/asic_ready (for backward compatibility)
-# $1 - sysfs path of ASIC PCI device
+# $1 - sysfs path of PCI device
 # $2 - ASIC ready state (0 or 1)
 # return none
 function set_asic_ready()
@@ -287,21 +285,15 @@ function set_asic_ready()
 	local asic_num=0
 	sysfs_picdev_path=$1
 	state=$2
-	# Get ASIC number from config/asic_num
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
 	print_function_call "$0" "${FUNCNAME[0]}" "path:$sysfs_picdev_path state:$state asic_num:$asic_num"
 	if [ $asic_num -gt 1 ]; then
-		# Get ASIC PCI bus ID from sysfs path
 		pci_bus="${sysfs_picdev_path: -7}"
-		# Loop through all defined ASICs and set the ready state for corresponding ASIC
 		for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
-			# Get ASIC bus from config/asicX_pci_bus_id
 			bus=$(< $config_path/asic"$asic_id"_pci_bus_id)
 			if [ "$bus" == "$pci_bus" ]; then
-				# Update asicX_ready file
 				echo $state > $config_path/asic"$asic_id"_ready
-				if [ $asic_id -eq 1 ]; then 
-					# Update also asic_ready file for ASIC1
+				if [ $asic_id -eq 1 ]; then
 					echo $state > $config_path/asic_ready
 				fi
 				break
@@ -1526,8 +1518,8 @@ else
 	fi
 	if [ "$2" == "sxcore" ]; then
 		print_function_call "$0" "remove" "sxcore $4/$5"
-		set_asic_ready "$4/$5" 0
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
+		set_asic_ready "$4/$5" 0
 	fi
 	if [ "$2" == "dpu" ]; then
 		print_function_call "$0" "remove" "dpu $3$4"
