@@ -1,11 +1,31 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** October 5, 2026
+**Last Updated:** October 13, 2026
 
 ---
 
 ## Change History
+
+Section links in Rev. 3.2.6 and later point to the manual heading. Entries from Rev. 3.2.5 and earlier keep the section numbers that the manual used when they were written. The manual no longer numbers its headings.
+
+### Rev. 3.2.13 - October 13, 2026
+
+#### Fixed: section references, missing driver sections, example
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| Section references | Every `§3.x` reference in the manual is a link to the named heading. The `#tc-v2.5` anchor is now `#tc-v25` |
+| [Drivers](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#drivers) | Added `lm25066`, `tps53679`, `xdpe12284` (with `xdpe15284`, `xdpe1a2g7`), `xdpe1a2g7b`, `mp2845`, `mp2869`, `mp29502`, the temperature sensors (`lm75`, `tmp102`, `tmp421`, `tmp401`, `lm90`, `emc1403`, `stts751`, `spd5118`, `coretemp`), `max1363`, `ti-ads1015`, `at24`, `gpio-pca953x`, `i2c-mux-pca954x`, `i2c-mux-reg`, `i2c-i801`, `i2c_designware_platform`, `i2c-asf`, `mlxbf-ptm`, `icp201xx`, and the BMC helper modules |
+| `config/hotplug_pwrs` | Added the missing example |
+| Rendering | Raw markdown tables and `####` headings inside table cells now render as text. This covers Get Reset Cause (platform-family notes moved out of the table, which was too tall for one page and ran off it), Read Fan Direction, and Get LED Control Owner |
+| Layout | Section headings keep with their first entry (no heading alone at the bottom of a page). Example and Values cells are ragged-right, which removes the wide word gaps. Figures have one caption. The Host and BMC table has a wider label column. The two `Power Button Event` headings are told apart (`events`, `system`). Alarm headings have no trailing period |
+| Figures | Figure 1 is a single redrawn "System architecture and sysfs layout" diagram. It names the NOS generically (no OPT-OS or DVS-OS) and lists the kernel drivers hw-management uses. The old Mellanox-era Figure 1 and Figure 2 images are removed, and the thermal flow chart is now Figure 2 |
+| Typos | `attribue` in the module counter description, and a duplicated `MODULE_DESCRIPTION` sentence in the `isl68137` section |
+
+---
 
 ### Rev. 3.2.12 - October 5, 2026
 
@@ -40,7 +60,7 @@
 
 | Area | Change |
 |------|--------|
-| §3.18.39 | **SN5610 / SN5640**: `reset_reload_bios` is a read-only status attribute and cannot be triggered; the CPLD does not implement the trigger that would set it |
+| [Get Reset Cause](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#get-reset-cause) | **SN5610 / SN5640**: `reset_reload_bios` is a read-only status attribute and cannot be triggered; the CPLD does not implement the trigger that would set it |
 
 **Validation source:** `mlxplat_mlxcpld_default_ng_regs_io_data` in the mlx-platform driver (`.mode = 0444`).
 
@@ -52,7 +72,7 @@
 
 | Area | Change |
 |------|--------|
-| §3.18.39 | **SN6810_LD / SN6800_LD**: `reset_system` is not supported as a triggerable reset cause |
+| [Get Reset Cause](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#get-reset-cause) | **SN6810_LD / SN6800_LD**: `reset_system` is not supported as a triggerable reset cause |
 
 ---
 
@@ -66,7 +86,7 @@
 
 | Area | Change |
 |------|--------|
-| §3.18.39 | **N51XX_LD platform family**: added `reset_comex_wd` and `reset_from_comex` to the unsupported reset causes |
+| [Get Reset Cause](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#get-reset-cause) | **N51XX_LD platform family**: added `reset_comex_wd` and `reset_from_comex` to the unsupported reset causes |
 
 ---
 
@@ -80,7 +100,7 @@
 
 | Area | Change |
 |------|--------|
-| §3.1.61 | **`config/cable_cartridge<n>_valid`**: `1` FRU valid, `0` FRU invalid, absent when the check did not run or the cartridge was removed |
+| [Cable Cartridge FRU Validity](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#cable-cartridge-fru-validity) | **`config/cable_cartridge<n>_valid`**: `1` FRU valid, `0` FRU invalid, absent when the check did not run or the cartridge was removed |
 
 **Validation source:** `usr/usr/bin/hw-management-chassis-events.sh`
 (`validate_cartridge_fru()`).
@@ -97,8 +117,8 @@
 
 | Area | Change |
 |------|--------|
-| §3.1.60 | **`config/led_control_type`**: optional space-separated `name type` pairs from platform `*_specific()`; exact name or `led_<name>`; glob masks `*` / `?` |
-| §3.16.28 | **`led/led_<name>_control`**: `led_sw`, `led_hw`, or `led_hw_sw` (default if map missing or name unmatched). `fan` and `fan1` are distinct names |
+| [Read LED Control Type Map](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#read-led-control-type-map) | **`config/led_control_type`**: optional space-separated `name type` pairs from platform `*_specific()`; exact name or `led_<name>`; glob masks `*` / `?` |
+| [Get LED Control Owner](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#get-led-control-owner) | **`led/led_<name>_control`**: `led_sw`, `led_hw`, or `led_hw_sw` (default if map missing or name unmatched). `fan` and `fan1` are distinct names |
 
 **Validation source:** `usr/usr/bin/hw-management.sh` (`set_config_data()`),
 `usr/usr/bin/hw-management-chassis-events.sh` (`get_led_control_type()`),
@@ -116,7 +136,7 @@
 
 | Area | Change |
 |------|--------|
-| §3.18.54 | **`system/asic_pg_fail`**: noted that this API does not exist on SN6600_LD, SN6800_LD, and SN6810_LD; removed SN66XX_LD from the applicability note |
+| [ASIC PG Failure](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#asic-pg-failure) | **`system/asic_pg_fail`**: noted that this API does not exist on SN6600_LD, SN6800_LD, and SN6810_LD; removed SN66XX_LD from the applicability note |
 
 ---
 
@@ -130,11 +150,11 @@
 
 | Area | Change |
 |------|--------|
-| §2.2 | BMC peripheral table: `leakage/<N>/<j>/…` tree, `$bsp_path/bmc/` reset-cause subtree; example `hw-management-bmc-leakage-sysfs.txt` |
-| §3.1.59 | **`config/pdb_hotswap_scale`** (SN6600_LD, value 5.333) |
-| §3.4 | **`environment/pdb_hotswap<N>_power1_scale`** and **`_curr1_scale`** (lm5066i only) |
-| §3.18 | **`cpu_shutdown_req`**: hw-mgmt polls this node via `hw_management_platform_config.py` (HI176–HI185, …) |
-| §3.24 | **BMC reset cause** (AST2700): primary `reset_pwr_cycle` / `reset_soft_reboot` / `reset_unknown`; `bmc/domains/reset_*`; raw SCU logs |
+| [Host and BMC software stacks](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#host-and-bmc-software-stacks) | BMC peripheral table: `leakage/<N>/<j>/…` tree, `$bsp_path/bmc/` reset-cause subtree; example `hw-management-bmc-leakage-sysfs.txt` |
+| [Read PDB Hotswap Scale Factor](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#read-pdb-hotswap-scale-factor) | **`config/pdb_hotswap_scale`** (SN6600_LD, value 5.333) |
+| [Environment Control](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#environment-control) | **`environment/pdb_hotswap<N>_power1_scale`** and **`_curr1_scale`** (lm5066i only) |
+| [CPU Shut Down Request](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#cpu-shut-down-request) | **`cpu_shutdown_req`**: hw-mgmt polls this node via `hw_management_platform_config.py` (HI176–HI185, …) |
+| [BMC reset cause](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#bmc-reset-cause) | **BMC reset cause** (AST2700): primary `reset_pwr_cycle` / `reset_soft_reboot` / `reset_unknown`; `bmc/domains/reset_*`; raw SCU logs |
 | §3.25 | **BMC leakage A2D tree** under `$bsp_path/leakage/` (ADS1015, ADS7924, MAX1363 per JSON) |
 | N61XX_LD notes | Extended cartridge / PDB / leakage applicability to **N6300_LD** (HI185): `cartridge_counter`=4, `hotplug_pdbs`=2, `cpld_num`=3 |
 
