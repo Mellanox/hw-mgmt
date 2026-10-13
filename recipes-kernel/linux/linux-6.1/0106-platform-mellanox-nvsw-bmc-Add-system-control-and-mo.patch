@@ -3660,7 +3660,7 @@ new file mode 100644
 index 000000000..3706787b5
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,736 @@
+@@ -0,0 +1,743 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia L1 host platform driver
@@ -4325,6 +4325,13 @@ index 000000000..3706787b5
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0023"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI185"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_l1_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0023"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI204"),
 +		},
 +	},
 +	{ }

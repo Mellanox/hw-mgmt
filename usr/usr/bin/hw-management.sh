@@ -649,6 +649,13 @@ n61xxld_cartridge_eeprom_connect_table=( \
 	24c02 0x50 70 cable_cartridge3_eeprom \
 	24c02 0x50 71 cable_cartridge4_eeprom)
 
+# N6350_LD is fed by a single PSU which is not hot-pluggable, so the CPLD
+# provides no presence events and the PMBUS device is connected statically.
+# The FRU EEPROM is left out: the psu hwmon handler derives its address from
+# psu1_i2c_addr and connects it once the PMBUS device shows up.
+n6350ld_psu_connect_table=( \
+	dps460 0x59 7 psu1)
+
 n7xxxld_cartridge_eeprom_connect_table=( \
 	24c02 0x50 67 cable_cartridge1_eeprom \
 	24c02 0x50 68 cable_cartridge2_eeprom \
@@ -674,6 +681,7 @@ q3401_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 vr1 5 vr2 21 vr3 
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
 n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cart1 68 cart2 69 cart3 70 cart4 71 cpu-vr 6)
+n6350ld_named_busses=( asic1 5 pwr 7 vr1 8 vpd 1 cpu-vr 6)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
 sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
@@ -814,7 +822,7 @@ set_jtag_gpio()
 			;;
 		$AMD_SNW_CPU)
 			case $sku in
-			HI180|HI185)
+			HI180|HI185|HI204)
 				echo 0x20e5 > $config_path/jtag_rw_reg
 				echo 0x20e6 > $config_path/jtag_ro_reg
 				;;
@@ -2690,6 +2698,11 @@ n51xxld_specific_cleanup()
 
 n61xxld_specific()
 {
+	local platform_named_busses=("${n61xxld_named_busses[@]}")
+
+	psu_count=0
+	hotplug_psus=0
+
 	case $sku in
 	# N6100_LD
 	HI180)
@@ -2728,14 +2741,36 @@ n61xxld_specific()
 		erot_count=1
 		hotplug_pdbs=2
 		;;
+	# N6350_LD
+	HI204)
+		echo 0 > $config_path/cartridge_counter
+
+		asic_i2c_buses=(5)
+		echo 1 > $config_path/global_wp_wait_step
+		echo 20 > $config_path/global_wp_timeout
+		echo 0 > $config_path/i2c_bus_offset
+		lm_sensors_config="$lm_sensors_configs_path/n6350ld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+		# The single PSU is not hot-pluggable, connect it statically.
+		add_i2c_dynamic_bus_dev_connection_table "${n6350ld_psu_connect_table[@]}"
+		echo -n "${n6350ld_psu_connect_table[@]}" >> "$devtree_file"
+		psu_count=1
+		psu1_i2c_bus=7
+		psu1_i2c_addr=0x59
+		echo 24c02 > $config_path/psu_eeprom_type
+
+		platform_named_busses=("${n6350ld_named_busses[@]}")
+		cpld_num=2
+		erot_count=1
+		hotplug_pdbs=0
+		;;
 	esac
 
 	echo $cpld_num > $config_path/cpld_num
 	echo 0 > $config_path/fan_drwr_num
-	psu_count=0
 	hotplug_fans=0
 	hotplug_pwrs=0
-	hotplug_psus=0
 	asic_control=0
 	max_tachos=0
 	health_events_count=0
@@ -2744,7 +2779,7 @@ n61xxld_specific()
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=6
 	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
-	named_busses+=(${n61xxld_named_busses[@]})
+	named_busses+=("${platform_named_busses[@]}")
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
@@ -3616,6 +3651,9 @@ set_asic_pci_id()
 		;;
 	HI180|HI185)
 		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
+		;;
+	HI204)
+		asic_pci_id="${quantum4_pci_id}"
 		;;
 	HI193)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"

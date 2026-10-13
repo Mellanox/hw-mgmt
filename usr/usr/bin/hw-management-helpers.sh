@@ -338,7 +338,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI179" ] ||
         [ "$ui_tree_sku" = "HI180" ] ||
         [ "$ui_tree_sku" = "HI185" ] ||
-        [ "$ui_tree_sku" = "HI194" ]; then
+        [ "$ui_tree_sku" = "HI194" ] ||
+        [ "$ui_tree_sku" = "HI204" ]; then
         ui_tree_archive_file="$(get_ui_tree_archive_file)"
         if [ ! -e "$ui_tree_archive_file" ]; then
             return 0
@@ -408,7 +409,7 @@ consume_tc_saved_state()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193|HI194)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193|HI194|HI204)
 			return 0
 			;;
 

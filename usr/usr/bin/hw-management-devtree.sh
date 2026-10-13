@@ -683,6 +683,23 @@ declare -A n63xxld_swb_alternatives=( \
 	["mp29502_1"]="mp29502 0x2e 23 pwr_conv2" \
 )
 
+# Devices located on N6350_LD switch board. It carries a single QTM4 ASIC with
+# 5 voltage regulators and has no hot-swap controllers or power converters:
+# the board is fed directly by one PSU.
+declare -A n6350ld_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x66 8 voltmon1" \
+	["mp29816_1"]="mp29816 0x68 8 voltmon2" \
+	["mp29816_2"]="mp29816 0x6c 8 voltmon3" \
+	["mp29816_3"]="mp29816 0x69 8 voltmon4" \
+	["mp29816_4"]="mp29816 0x6d 8 voltmon5" \
+	["mp29816-6x_0"]="mp29816 0x66 8 voltmon1" \
+	["mp29816-6x_1"]="mp29816 0x68 8 voltmon2" \
+	["mp29816-6x_2"]="mp29816 0x6c 8 voltmon3" \
+	["mp29816-6x_3"]="mp29816 0x69 8 voltmon4" \
+	["mp29816-6x_4"]="mp29816 0x6d 8 voltmon5" \
+	["24c512_0"]="24c512 0x51 14 swb_info" \
+)
+
 # Devices located on SN66XX_LD switch board
 declare -A sn66xxld_swb_alternatives=( \
 	["mp29816_0"]="mp29816 0x61 15 voltmon1" \
@@ -1438,6 +1455,15 @@ devtr_check_supported_system_init_alternatives()
 			HI185)
 				for key in "${!n63xxld_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${n63xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!n61xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n61xxld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI204)
+				for key in "${!n6350ld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${n6350ld_swb_alternatives["$key"]}"
 				done
 
 				for key in "${!n61xxld_platform_alternatives[@]}"; do
