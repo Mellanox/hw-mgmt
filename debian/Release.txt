@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.2002
+- Wed, 14 Oct 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - 
+
+- Bug fixes
+    - #5320566, hw-mgmt: kernel 6.12: Add support for Q3401-RD platform driver, 3e3a289
+    - #N/A, Update changelog and Release notes to V.7.0070.2001, d3bd57e
+    - #5332817, hw-mgmt: kernel: Enable LAN743X config, 390e317
+    - #N/A, hw-mgmt: license: Drop the Linux kernel patches clause from THIRD_PARTY_NOTICES (#3041), 79c1993
+    - #N/A, hw-mgmt: scripts: report SSD dump skip reason, 1912fb4
+    - #N/A, Update changelog and release notes for V.7.0070.2000, d3de4f8
+    - #N/A, Update changelog and release notes for V.7.0070.1938, 416bb94
+    - #N/A, hw-mgmt: license: Use 3-line SPDX header (#3024), 96df142
+    - #N/A, Update changelog and release notes for V.7.0070.1937, a618bf9
+    - #N/A, hw-mgmt: license: Align license headers to NVIDIA GPL-2.0-only OR BSD-3-Clause (#3021), 869d1fa
+    - #N/A, hw-mgmt: docs: Drop the sysfs user manual PDF from V.7.0070.2000 (#3016), 2e66a3a
+    - #N/A, Update changelog and release notes for V.7.0070.1936, e1257a0
+    - #N/A, hw-mgmt: docs: Update the sysfs user manual to Rev. 3.2.12 (#3002), 6f67d9e
+    - #N/A, Update changelog and release notes for V.7.0070.1935, 16b8359
+    - #5303701, hw-mgmt: scripts: Add I2C trace around PSU VPD read on hotplug, dccd273
+    - #N/A, Update changelog and release notes for V.7.0070.1934, 516c35a
+    - #5303520, hw-mgmt: Fix SN27002 fan min/max speed, fa8277f
+    - #N/A, hw-mgmt: thermal: Fix PWM stuck high after tacho error recovery, c927392
+    - #N/A, hw-mgmt: thermal: Fix PWM stuck high after tacho error recovery, f9f2a2c
+    - #N/A, Update changelog and release notes for V.7.0070.1933, 9db3fa3
+
+- Kernel Patches for New Features:
+    - 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.2002/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    - Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    - Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    - Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+
+================================================================================
 - V.7.0070.2001
 - Fri, 09 Oct 2026
 --------------------------------------------------------------------------------
