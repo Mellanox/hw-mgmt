@@ -1,11 +1,10 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # hw-management-bmc-powerctrl: host and board power control via sysfs.
 # No dependency on phosphor/OpenBMC services or bmc-boot-complete.
-################################################################################
 
 set -euo pipefail
 

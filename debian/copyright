@@ -3,29 +3,47 @@ Upstream-Name: hw-management
 Source: <https://github.com/Mellanox/hw-mgmt>
 
 Files: *
-Copyright: SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-Copyright: Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-License: GPL-2
+Copyright: Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+License: GPL-2.0-only or BSD-3-Clause
+
+Files: recipes-kernel/linux/linux-*/*
+Copyright: Copyright (c) the respective Linux kernel authors and contributors
+License: GPL-2.0-only
+Comment: Linux kernel patches. They are not covered by the dual GPL-2.0-only OR
+ BSD-3-Clause grant above. Each patch is licensed under the terms stated in the
+ patch itself (SPDX-License-Identifier and MODULE_LICENSE lines) and under the
+ license of the Linux kernel source file it applies to, e.g. GPL-2.0-only,
+ GPL-2.0-or-later or GPL-2.0 WITH Linux-syscall-note. Some patches are GPL-only
+ and offer no BSD option.
+
+Files: recipes-kernel/linux/linux-6.12/0001-mctp-driver-net-Extend-MCTP-support.patch
+Copyright: Copyright (c) the respective Linux kernel authors and contributors
+License: GPL-2.0-only and Apache-2.0
+Comment: Mixed-license Linux kernel patch. It adds glacier-spb-ap.h and
+ mctp-stats.h under Apache-2.0 (SPDX-License-Identifier: Apache-2.0). The other
+ files it adds or modifies are under the GPL-2.0 variants stated in the patch.
+
+Files: usr/usr/bin/hw-management-vr-dpc-renesas-update.sh
+Copyright: Copyright 2026, Renesas Electronics Corporation and/or its affiliates
+License: BSD-3-Clause
+
+License: BSD-3-Clause
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
  .
- 1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
- 2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
- 3. Neither the names of the copyright holders nor the names of its
-    contributors may be used to endorse or promote products derived from
-    this software without specific prior written permission.
- .
- Alternatively, this software may be distributed under the terms of the
- GNU General Public License ("GPL") version 2 as published by the Free
- Software Foundation.
+ 1. Redistributions of source code must retain the above copyright notice,
+ this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ 3. Neither the name of the copyright holder nor the names of its contributors
+ may be used to endorse or promote products derived from this software
+ without specific prior written permission.
  .
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -33,7 +51,12 @@ License: GPL-2
  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
- .
+
+License: Apache-2.0
+ On Debian systems, the full text of the Apache License, Version 2.0 can be
+ found in the file '/usr/share/common-licenses/Apache-2.0'.
+
+License: GPL-2.0-only
  On Debian systems, the full text of the GNU General Public
  License version 2 can be found in the file
  '/usr/share/common-licenses/GPL-2'.
