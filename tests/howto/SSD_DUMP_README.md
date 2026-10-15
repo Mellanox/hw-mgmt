@@ -224,8 +224,8 @@ write `ssd-dump-status.log` only for the default `--outdir`
 (`/var/log/ssd-dump`; mkdir if needed; no rmtree), carrying
 `verify: yes` so that nothing takes it for a collected dump. A custom
 `--outdir` is checked only; status stays on stdout so a later
-collect is not blocked. stdout omits `warning:` and the last
-`Status:` line (reason is on stderr). It also reports a
+collect is not blocked. stdout omits `warning:` and `reason:`
+(those are on stderr) and ends with `status:`. It also reports a
 collection already in progress: rc 3 and
 `SSD dump tool busy: …`, without writing a status file into the
 work dir that collection owns. rc 0 = ok or skipped,
@@ -340,8 +340,8 @@ Work dir:
 - `ssd-dump-status.log` — status, model, `part`, tool, `tool_rc`,
   files (first 3 names, comma-space; then `(N in total, 12M)`
   for all dump files: count and ceil K or M), `config`
-  path; `warning:` only on errors; last line
-  `Status: Ok / succeeded`, `Status: skipped`, or `Status: error`
+  path; `warning:` only on errors; a skip uses `reason:`;
+  last line `status: ok`, `status: skipped`, or `status: warning`
 - `ssd-dump-tool.log` — vendor stdout/stderr plus collector cmd
   lines when the vendor binary ran (written as `.txt` during
   the run, renamed to `.log` before pack). Omitted if the
