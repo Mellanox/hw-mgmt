@@ -313,20 +313,107 @@ class TestCreatedFiles:
 
 
 class TestStatusFormat:
+    def test_field_order_is_config_vendor_then_command(self, ssd):
+        text = ssd.format_status_fields(
+            {
+                "cmd": "/usr/local/sbin/virtium_nvme_dump_v2 /dev/nvme0",
+                "config": "/usr/share/ssd-dump-tools/ssd-dump-config.json",
+                "device": "/dev/nvme0",
+                "device_form": "controller",
+                "device_in": "/dev/nvme0",
+                "files": "nandlog.bin (1 in total, 6M)",
+                "free_mb": "2342",
+                "fw": "CE00A474",
+                "json_model": "VTPM24CEXI080-BM110006",
+                "locked": "yes",
+                "lock_warning": "busy",
+                "min_free_mb": "64",
+                "model": "Virtium VTPM24CEXI080-BM110006",
+                "outdir": "/var/log/ssd-dump",
+                "part": "VTPM24CEXI080-BM110006",
+                "reason": "kept when set",
+                "stage_from": "/usr/share/hw-management-tools/smi",
+                "status": "ok",
+                "timeout_sec": "90",
+                "tool": "virtium_nvme_dump_v2",
+                "tool_path": "/usr/local/sbin/virtium_nvme_dump_v2",
+                "tool_rc": "0",
+                "uid_warning": "not root",
+                "vendor": "Virtium",
+                "verify": "yes",
+                "warning": "tool missing",
+                "zz_extra": "kept",
+            }
+        )
+        assert "tool_path:" not in text
+        names = [
+            line.split(":", 1)[0]
+            for line in text.splitlines()
+            if line
+        ]
+        assert names == [
+            "config",
+            "min_free_mb",
+            "free_mb",
+            "device_form",
+            "device",
+            "device_in",
+            "stage_from",
+            "vendor",
+            "json_model",
+            "model",
+            "part",
+            "fw",
+            "tool",
+            "cmd",
+            "timeout_sec",
+            "outdir",
+            "files",
+            "tool_rc",
+            "verify",
+            "reason",
+            "warning",
+            "uid_warning",
+            "lock_warning",
+            "locked",
+            "zz_extra",
+            "status",
+        ]
+
     def test_ok_omits_warning_ends_with_status(self, ssd):
         text = ssd.format_status_fields({"status": "ok", "warning": "", "part": "X"})
         assert "warning:" not in text
-        assert text.strip().endswith("Status: Ok / succeeded")
+        assert text.strip().endswith("status: ok")
+        assert text.count("\nstatus:") == 1
 
     def test_skipped_ends_with_status_skipped(self, ssd):
-        text = ssd.format_status_fields({"status": "skipped", "warning": ""})
+        text = ssd.format_status_fields(
+            {
+                "status": "skipped",
+                "warning": "",
+                "reason": "no NVMe controller found",
+            }
+        )
         assert "warning:" not in text
-        assert text.strip().endswith("Status: skipped")
+        assert "reason: no NVMe controller found" in text
+        assert text.strip().endswith("status: skipped")
+        assert text.count("\nstatus:") == 1
+        hidden = ssd.format_status_fields(
+            {
+                "status": "skipped",
+                "warning": "",
+                "reason": "no NVMe controller found",
+            },
+            skip_warning=True,
+            skip_status_line=True,
+        )
+        assert "reason:" not in hidden
+        assert "status:" not in hidden
         assert ssd.completion_message({"status": "skipped"}) == (
             "SSD dump tool skipped"
         )
         assert ssd.completion_message(
-            {"status": "skipped", "warning": "no NVMe controller found"}
+            {"status": "skipped", "reason": "no NVMe controller found"}
         ) == (
             "SSD dump tool skipped: no NVMe controller found"
         )
@@ -345,7 +432,8 @@ class TestStatusFormat:
             {"status": "warning", "warning": "tool missing"}
         )
         assert "warning: tool missing" in text
-        assert text.strip().endswith("Status: error")
+        assert text.strip().endswith("status: warning")
+        assert text.count("\nstatus:") == 1
 
     def test_skip_warning_omits_reason(self, ssd):
         text = ssd.format_status_fields(
@@ -353,8 +441,7 @@ class TestStatusFormat:
             skip_warning=True,
         )
         assert "warning:" not in text
-        assert "status: warning" in text
-        assert text.strip().endswith("Status: error")
+        assert text.strip().endswith("status: warning")
 
     def test_skip_status_line(self, ssd):
         text = ssd.format_status_fields(
@@ -363,8 +450,7 @@ class TestStatusFormat:
             skip_status_line=True,
         )
         assert "warning:" not in text
-        assert "Status:" not in text
-        assert "status: warning" in text
+        assert "status:" not in text
         assert "verify: yes" in text
 
 
@@ -1738,6 +1824,9 @@ class TestEndToEnd:
     ):
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
         rc = ssd.main(
             [
                 "--verify",
@@ -1756,11 +1845,16 @@ class TestEndToEnd:
         assert "Status:" not in captured.out
         status = (outdir / "ssd-dump-status.log").read_text()
         assert "warning: config not found" in status
-        assert "Status: error" in status
+        assert status.strip().endswith("status: warning")
         assert not (outdir / "ssd-dump-tool.log").exists()
 
-    def test_collect_config_missing_no_tool_log(self, ssd, tmp_path, capsys):
+    def test_collect_config_missing_no_tool_log(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
         outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
         rc = ssd.main(
             [
                 "--config",
@@ -1776,6 +1870,247 @@ class TestEndToEnd:
         assert not (outdir / "ssd-dump-tool.txt").exists()
         err = capsys.readouterr().err
         assert "SSD dump tool failed:" in err
+
+    def test_config_missing_no_nvme_skips_before_config(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        rc = ssd.main(
+            [
+                "--config",
+                str(tmp_path / "missing.json"),
+                "--outdir",
+                str(outdir),
+            ]
+        )
+        captured = capsys.readouterr()
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc == 0
+        assert "status: skipped" in status
+        assert status.strip().endswith("status: skipped")
+        assert "reason: no NVMe controller found" in status
+        assert "config not found" not in status
+        assert "SSD dump tool skipped: no NVMe controller found" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+        assert not (tmp_path / "ssd-dump.tar.gz").exists()
+
+    def test_verify_config_missing_no_nvme_skips_before_config(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        rc = ssd.main(
+            [
+                "--verify",
+                "--config",
+                str(tmp_path / "missing.json"),
+                "--outdir",
+                str(outdir),
+            ]
+        )
+        captured = capsys.readouterr()
+        assert rc == 0
+        assert "status: skipped" in captured.out
+        assert "SSD dump tool skipped: no NVMe controller found" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+
+    def test_config_missing_explicit_device_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        rc = ssd.main(
+            [
+                "--config",
+                str(tmp_path / "missing.json"),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        assert rc != 0
+        assert "SSD dump tool failed:" in capsys.readouterr().err
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % (tmp_path / "missing.json"))
+        ]
+
+    def _missing_default_config(self, ssd, tmp_path, monkeypatch, installed):
+        missing = tmp_path / "ssd-dump-config.json"
+        monkeypatch.setattr(ssd, "DEFAULT_CONFIG", str(missing))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
+        monkeypatch.setattr(
+            ssd, "ssd_dump_tools_installed", lambda *_a, **_k: installed
+        )
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        return seen
+
+    def test_nvme_without_package_skips(self, ssd, tmp_path, monkeypatch, capsys):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(["--outdir", str(outdir)])
+        captured = capsys.readouterr()
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc == 0
+        assert "status: skipped" in status
+        assert "reason: ssd-dump-tools is not installed" in status
+        assert "config not found" not in status
+        assert "SSD dump tool skipped: ssd-dump-tools is not installed" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+
+    def test_verify_nvme_without_package_skips(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(["--verify", "--outdir", str(outdir)])
+        captured = capsys.readouterr()
+        assert rc == 0
+        assert "status: skipped" in captured.out
+        assert "SSD dump tool skipped: ssd-dump-tools is not installed" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+
+    def test_package_installed_missing_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, True)
+        rc = ssd.main(["--outdir", str(outdir)])
+        err = capsys.readouterr().err
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_explicit_device_missing_default_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(["--outdir", str(outdir), "--device", "/dev/nvme0"])
+        err = capsys.readouterr().err
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert "ssd-dump-tools is not installed" not in err
+        assert "status: warning" in status
+        assert "reason:" not in status
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_verify_explicit_device_missing_default_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(
+            ["--verify", "--outdir", str(outdir), "--device", "/dev/nvme0"]
+        )
+        captured = capsys.readouterr()
+        assert rc != 0
+        assert "SSD dump tool verify failed:" in captured.err
+        assert "config not found" in captured.err
+        assert "ssd-dump-tools is not installed" not in captured.err
+        assert "status: warning" in captured.out
+        assert "reason:" not in captured.out
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def _dpkg_status(self, ssd, monkeypatch, status, rc=0):
+        class Proc(object):
+            returncode = rc
+
+            def communicate(self):
+                return (status, "")
+
+        def fake_popen(argv, **_k):
+            assert argv[:3] == ["dpkg-query", "-W", "-f"]
+            return Proc()
+
+        monkeypatch.setattr(ssd.subprocess, "Popen", fake_popen)
+
+    def test_held_package_counts_as_installed(self, ssd, monkeypatch):
+        self._dpkg_status(ssd, monkeypatch, "hold ok installed")
+        assert ssd.ssd_dump_tools_installed() is True
+        self._dpkg_status(ssd, monkeypatch, "install ok installed")
+        assert ssd.ssd_dump_tools_installed() is True
+        self._dpkg_status(ssd, monkeypatch, "deinstall ok config-files")
+        assert ssd.ssd_dump_tools_installed() is False
+        self._dpkg_status(ssd, monkeypatch, "", rc=1)
+        assert ssd.ssd_dump_tools_installed() is False
+
+    def test_held_package_missing_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        missing = tmp_path / "ssd-dump-config.json"
+        monkeypatch.setattr(ssd, "DEFAULT_CONFIG", str(missing))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        self._dpkg_status(ssd, monkeypatch, "hold ok installed")
+        rc = ssd.main(["--outdir", str(outdir)])
+        err = capsys.readouterr().err
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert "ssd-dump-tools is not installed" not in err
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_verify_held_package_missing_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        missing = tmp_path / "ssd-dump-config.json"
+        monkeypatch.setattr(ssd, "DEFAULT_CONFIG", str(missing))
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        self._dpkg_status(ssd, monkeypatch, "hold ok installed")
+        rc = ssd.main(["--verify", "--outdir", str(outdir)])
+        captured = capsys.readouterr()
+        assert rc != 0
+        assert "SSD dump tool verify failed:" in captured.err
+        assert "config not found" in captured.err
+        assert "status: warning" in captured.out
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
 
     def test_missing_tool_writes_status(self, ssd, tmp_path, monkeypatch):
         cfg = tmp_path / "cfg.json"
@@ -1807,7 +2142,7 @@ class TestEndToEnd:
         status = (outdir / "ssd-dump-status.log").read_text()
         assert "not found on PATH" in status
         assert "status: warning" in status
-        assert "Status: error" in status
+        assert status.strip().endswith("status: warning")
         assert any(ln.startswith("warning:") for ln in status.splitlines())
         assert not (outdir / "ssd-dump-tool.log").exists()
         assert not (outdir / "ssd-dump-tool.txt").exists()
@@ -2038,7 +2373,9 @@ class TestEndToEnd:
             "device_form"
         ] = "disk"
         write_json(cfg, obj)
-        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
         rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
         text = "".join(capsys.readouterr())
         assert rc != 0
@@ -2196,8 +2533,8 @@ class TestEndToEnd:
         status = (outdir / "ssd-dump-status.log").read_text()
         assert rc == 0
         assert "status: skipped" in status
-        assert "Status: skipped" in status
-        assert "warning: no NVMe controller found" in status
+        assert status.strip().endswith("status: skipped")
+        assert "reason: no NVMe controller found" in status
         assert "not enough free space" not in status
         assert seen == []
         assert not (tmp_path / "ssd-dump.tar.gz").exists()
@@ -2224,7 +2561,7 @@ class TestEndToEnd:
         status = tar_text(tar_path, "ssd-dump/ssd-dump-status.log")
         assert rc == 0, status
         assert "status: ok" in status
-        assert "Status: Ok / succeeded" in status
+        assert status.strip().endswith("status: ok")
         assert not any(ln.startswith("warning:") for ln in status.splitlines())
         assert "nandlog_64384-1454.bin" in status
         assert not outdir.exists()
@@ -2665,7 +3002,7 @@ class TestEndToEnd:
         assert outdir.is_dir()
         status = (outdir / "ssd-dump-status.log").read_text()
         assert "status: warning" in status
-        assert "Status: error" in status
+        assert status.strip().endswith("status: warning")
         assert "cannot pack outdir" in status
         assert not tar_path.exists()
         log = (outdir / "ssd-dump-tool.log").read_text()
