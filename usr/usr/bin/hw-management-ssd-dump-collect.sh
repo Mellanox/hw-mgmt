@@ -176,9 +176,10 @@ chmod 0755 "$DUMP_FOLDER" || {
 
 write_status_warning() {
 	mkdir -p "$SSD_LOG_DIR"
-	echo "status: warning" > "$SSD_LOG_DIR/ssd-dump-status.log"
-	echo "warning: $1" >> "$SSD_LOG_DIR/ssd-dump-status.log"
-	echo "Status: error" >> "$SSD_LOG_DIR/ssd-dump-status.log"
+	{
+		echo "warning: $1"
+		echo "status: warning"
+	} > "$SSD_LOG_DIR/ssd-dump-status.log"
 	logger -t hw-management-ssd-dump -p user.warning "$1" 2>/dev/null || true
 }
 
@@ -190,10 +191,9 @@ write_dump_folder_warning() { # message [locked]
 	rm -rf "$DUMP_FOLDER/ssd-dump"
 	mkdir -p "$DUMP_FOLDER/ssd-dump" || return 1
 	{
-		echo "status: warning"
 		[ -n "$2" ] && echo "locked: yes"
 		echo "warning: $1"
-		echo "Status: error"
+		echo "status: warning"
 	} > "$DUMP_FOLDER/ssd-dump/ssd-dump-status.log"
 	logger -t hw-management-ssd-dump -p user.warning "$1" 2>/dev/null || true
 }
