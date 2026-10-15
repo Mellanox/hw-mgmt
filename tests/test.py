@@ -29,6 +29,7 @@ if sys.version_info < (3, 7):
     sys.exit("ERROR: Python 3.7+ is required. Please install it.")
 
 import argparse
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -722,6 +723,11 @@ class TestRunner:
 
         for script in validation_scripts:
             name = f"BMC: {script.stem}"
+            # Systemd unit validation can't run on hosts without systemctl
+            # (e.g. minimal CI containers); skip rather than fail.
+            if script.stem == "hw-management-bmc-services-validation" and not shutil.which("systemctl"):
+                print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} {name} (systemctl not available)")
+                continue
             self.run_command(['bash', str(script)], self.bmc_tests_dir, name)
 
         return len(self.failed_tests) == 0
