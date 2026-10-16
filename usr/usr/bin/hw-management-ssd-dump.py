@@ -67,7 +67,10 @@ class DumpError(Exception):
 
 
 class DumpSkip(Exception):
-    """Skip (no NVMe / no model); exit 0. Reason is in status warning and the skipped line."""
+    """Skip (no NVMe / no model / no package); exit 0.
+
+    The text is the status reason field and the skipped line.
+    """
 
 
 class DumpLocked(DumpError):
@@ -85,6 +88,68 @@ def syslog_warn(msg):
         syslog.syslog(syslog.LOG_WARNING, msg)
     except Exception:
         pass
+
+
+def skip_without_nvme(args):
+    """No controller and no --device: nothing to dump.
+
+    Checked before the JSON. A SATA box has no /dev/nvmeN, so the
+    skip reason is the missing controller whether or not NOS
+    installed ssd-dump-config.json. An explicit --device still
+    falls through to the config check.
+    """
+    if args.device:
+        return
+    if not list_nvme_controllers():
+        raise DumpSkip("no NVMe controller found")
+
+
+def ssd_dump_tools_installed(name="ssd-dump-tools"):
+    """True when dpkg reports the package installed.
+
+    A hold is still installed. dpkg then prints
+    "hold ok installed" instead of "install ok installed".
+    """
+    try:
+        proc = subprocess.Popen(
+            ["dpkg-query", "-W", "-f", "${Status}", name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            universal_newlines=True,
+        )
+        out, _err = proc.communicate()
+    except OSError:
+        return False
+    if proc.returncode != 0:
+        return False
+    return out.strip() in ("install ok installed", "hold ok installed")
+
+
+def skip_without_package(args):
+    """NVMe is present, and NOS never installed ssd-dump-tools.
+
+    After the controller check, so a SATA box still skips for
+    no NVMe. The default JSON is the package file. Missing that
+    file with no dpkg package is a skip, not a warning. An
+    explicit --device or --config still goes to require_config,
+    so a missing file there stays a warning. The package
+    installed and that file missing stays a warning. A default
+    JSON that is already on disk is used, dpkg record or not.
+    """
+    if args.device or args.config != DEFAULT_CONFIG:
+        return
+    if os.path.isfile(args.config):
+        return
+    if ssd_dump_tools_installed():
+        return
+    raise DumpSkip("ssd-dump-tools is not installed")
+
+
+def require_config(args):
+    """The JSON must exist once an NVMe dump was asked for."""
+    if os.path.isfile(args.config):
+        return
+    raise DumpError("config not found: %s" % args.config)
 
 
 def busy_warning(pid, path):
@@ -255,7 +320,7 @@ def completion_message(fields):
             return "SSD dump tool verify failed: %s" % err
         return "SSD dump tool failed: %s" % err
     if status == "skipped":
-        err = (fields.get("warning") or "").strip()
+        err = (fields.get("reason") or "").strip()
         if err:
             return "SSD dump tool skipped: %s" % err
         return "SSD dump tool skipped"
@@ -325,23 +390,71 @@ def write_status(outdir, fields):
     return path
 
 
+# Status lines, in the order a person reads them. status is not
+# here; format_status_fields writes that line last. tool_path is
+# not here: cmd already has the full path.
+# fw follows part. tool stays the line before cmd. stage_from
+# follows the device lines. The reason and warning lines follow
+# tool_rc.
+STATUS_FIELD_ORDER = (
+    "config",
+    "min_free_mb",
+    "free_mb",
+    "device_form",
+    "device",
+    "device_in",
+    "stage_from",
+    "vendor",
+    "json_model",
+    "model",
+    "part",
+    "fw",
+    "tool",
+    "cmd",
+    "timeout_sec",
+    "outdir",
+    "files",
+    "tool_rc",
+    "verify",
+    "reason",
+    "warning",
+    "uid_warning",
+    "lock_warning",
+    "locked",
+)
+
+
+def status_field_keys(fields):
+    """Known lines in STATUS_FIELD_ORDER, then any other key.
+
+    status and tool_path are omitted.
+    """
+    present = set(fields.keys()) - set(("status", "tool_path"))
+    keys = []
+    for name in STATUS_FIELD_ORDER:
+        if name in present:
+            keys.append(name)
+            present.remove(name)
+    keys.extend(sorted(present))
+    return keys
+
+
 def format_status_fields(fields, skip_warning=False, skip_status_line=False):
+    """Field lines, then one status line last.
+
+    Values stay ok, warning, and skipped. skip_status_line omits
+    that line (verify stdout used to hide the old Status trailer).
+    """
     lines = []
-    for key in sorted(fields.keys()):
+    for key in status_field_keys(fields):
         val = fields[key]
-        if key == "warning" and (not val or skip_warning):
+        if key in ("warning", "reason") and (not val or skip_warning):
             continue
         if val is None:
             val = ""
         lines.append("%s: %s\n" % (key, val))
-    if skip_status_line:
-        return "".join(lines)
-    if fields.get("status") == "warning":
-        lines.append("Status: error\n")
-    elif fields.get("status") == "skipped":
-        lines.append("Status: skipped\n")
-    else:
-        lines.append("Status: Ok / succeeded\n")
+    if not skip_status_line:
+        lines.append("status: %s\n" % (fields.get("status") or ""))
     return "".join(lines)
 
 
@@ -1088,7 +1201,6 @@ def run_collect(args, logf, fields):
 
     tool_path, tool = resolve_tool(mcfg)
     fields["tool"] = tool
-    fields["tool_path"] = tool_path
 
     stage_from = mcfg.get("stage_from") or ""
     stage_cfg = mcfg.get("stage_cfg") or "one_button_NV.cfg"
@@ -1261,12 +1373,14 @@ def run_verify(args):
         outdir_ok = True
         if not args.no_tar:
             check_pack_parent(args.outdir)
-        if not os.path.isfile(args.config):
-            raise DumpError("config not found: %s" % args.config)
+        skip_without_nvme(args)
+        skip_without_package(args)
+        require_config(args)
         rc = run_collect(args, logf, fields)
     except DumpSkip as exc:
         fields["status"] = "skipped"
-        fields["warning"] = str(exc)
+        fields["reason"] = str(exc)
+        fields["warning"] = ""
         log_print(logf, "skipped: %s" % exc)
         rc = RC_OK
     except DumpLocked as exc:
@@ -1307,9 +1421,7 @@ def run_verify(args):
     emit_always(completion_message(fields))
     if not args.quiet:
         sys.stdout.write(
-            format_status_fields(
-                fields, skip_warning=True, skip_status_line=True
-            )
+            format_status_fields(fields, skip_warning=True)
         )
     return rc
 
@@ -1380,12 +1492,14 @@ def run_dump(args):
             with open(log_tmp, "w") as logf:
                 log_print(logf, MSG_STARTED, echo=False)
                 try:
-                    if not os.path.isfile(args.config):
-                        raise DumpError("config not found: %s" % args.config)
+                    skip_without_nvme(args)
+                    skip_without_package(args)
+                    require_config(args)
                     rc = run_collect(args, logf, fields)
                 except DumpSkip as exc:
                     fields["status"] = "skipped"
-                    fields["warning"] = str(exc)
+                    fields["reason"] = str(exc)
+                    fields["warning"] = ""
                     log_print(logf, "skipped: %s" % exc)
                     rc = RC_OK
                 except DumpError as exc:
