@@ -389,7 +389,10 @@ lock_busy=0
 lock_waited=0
 lock_wait_elapsed=0
 lock_wait_started=
-if [ -n "$FLOCK" ] && [ -x "$FLOCK" ] && ( : >> "$LOCK_FILE" ) 2>/dev/null; then
+if [ -n "$FLOCK" ] && [ -x "$FLOCK" ] &&
+	( umask 077; : >> "$LOCK_FILE" ) 2>/dev/null &&
+	chmod 600 "$LOCK_FILE"
+then
 	exec 9>> "$LOCK_FILE"
 	if acquire_lock "$(read_lock_wait_sec)"; then
 		lock_held=1

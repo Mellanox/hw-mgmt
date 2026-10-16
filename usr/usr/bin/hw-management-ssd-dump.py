@@ -190,7 +190,7 @@ class DumpLock(object):
             fd = os.open(
                 self.path,
                 os.O_RDWR | os.O_CREAT | os.O_CLOEXEC,
-                0o644,
+                0o600,
             )
         except OSError as exc:
             # Staying quiet on a permission denial keeps a
@@ -199,6 +199,16 @@ class DumpLock(object):
             reason = "cannot create lock %s: %s" % (self.path, exc)
             if exc.errno not in (errno.EACCES, errno.EPERM):
                 syslog_warn(reason)
+            return reason
+        try:
+            # An existing file may be world-readable. Linux allows
+            # LOCK_EX on a file opened read-only, so another user
+            # could hold this lock and block every collection.
+            os.fchmod(fd, 0o600)
+        except OSError as exc:
+            os.close(fd)
+            reason = "cannot restrict lock %s: %s" % (self.path, exc)
+            syslog_warn(reason)
             return reason
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -802,8 +812,67 @@ def strip_workdir(outdir, keep_dirs, strict=True):
                 raise DumpError("cannot drop staged file %s" % p)
 
 
+_vendor_proc = None
+
+
+def _handle_sigterm(signum, _frame):
+    """A normal kill must not leave the vendor session running.
+
+    SIGTERM is not turned into an exception, so the cleanup in
+    run_vendor_process would not run. Stop the group first. The
+    SystemExit then lets run_dump release the lock.
+    """
+    proc = _vendor_proc
+    if proc is not None:
+        _stop_vendor_group(proc)
+    raise SystemExit(128 + signum)
+
+
+def _stop_vendor_group(proc):
+    """Stop a vendor session started with start_new_session.
+
+    Ctrl-C and SIGTERM reach the collector only. The vendor
+    process is in its own session, so it keeps running after the
+    lock is released unless this kills it first. A further signal
+    during the stop is ignored until SIGKILL has been tried. A
+    vendor still alive after that is not waited on: holding the
+    lock until it exits would block every later dump.
+    """
+    def _kill(sig):
+        try:
+            os.killpg(proc.pid, sig)
+        except OSError:
+            pass
+
+    def _wait():
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            return False
+        except KeyboardInterrupt:
+            return False
+        return True
+
+    saved = []
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            saved.append((sig, signal.signal(sig, signal.SIG_IGN)))
+        except (OSError, ValueError):
+            pass
+    try:
+        _kill(signal.SIGTERM)
+        if _wait():
+            return
+        _kill(signal.SIGKILL)
+        _wait()
+    finally:
+        for sig, previous in saved:
+            signal.signal(sig, previous)
+
+
 def run_vendor_process(cmd, outdir, logf, timeout_sec):
     """New session so timeout can kill vendor children too."""
+    global _vendor_proc
     proc = subprocess.Popen(
         cmd,
         cwd=outdir,
@@ -812,25 +881,14 @@ def run_vendor_process(cmd, outdir, logf, timeout_sec):
         universal_newlines=True,
         start_new_session=True,
     )
+    _vendor_proc = proc
     try:
         proc.communicate(timeout=timeout_sec)
-    except subprocess.TimeoutExpired:
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except OSError:
-            pass
-        try:
-            proc.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except OSError:
-                pass
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                pass
+    except BaseException:
+        _stop_vendor_group(proc)
         raise
+    finally:
+        _vendor_proc = None
     return proc
 
 
@@ -1429,6 +1487,7 @@ def run_verify(args):
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
     args.config = resolve_config_path(args.config)
+    signal.signal(signal.SIGTERM, _handle_sigterm)
     try:
         syslog.openlog(SYSLOG_IDENT, syslog.LOG_PID | syslog.LOG_CONS, syslog.LOG_USER)
     except Exception:
