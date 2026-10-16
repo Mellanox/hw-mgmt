@@ -83,6 +83,9 @@ SECOND_PID=""
 WORK=""
 BACKUP=""
 CLEANED=0
+# scenario_11 replaces the lock file with a directory. cleanup
+# removes it, including when that scenario is interrupted.
+LOCK_DIR_BLOCK=
 
 usage() {
 	cat <<'EOF'
@@ -361,6 +364,17 @@ release_holder() {
 	HOLDER_RC=$?
 	HOLDER_PID=""
 	return 0
+}
+
+# newer_than_wait rejects an mtime in the same second the wait
+# began. Scenarios 7 and 9 finish the holder on purpose, so that
+# second has to pass before the holder is allowed to pack.
+wait_past_this_second() {
+	_now=$(date +%s)
+	sleep 1
+	while [ "$(date +%s)" -le "$_now" ]; do
+		sleep 1
+	done
 }
 
 # Killing a holder is not enough: generate-dump spawns the SSD
@@ -650,6 +664,7 @@ scenario_7() {
 	runs_before=$(stub_runs)
 
 	start_waiting_helper || return 0
+	wait_past_this_second
 	release_holder
 	ok_eq "the collect it waited for completes" 0 "$HOLDER_RC"
 	reap_waiting_helper
@@ -704,6 +719,7 @@ scenario_9() {
 	runs_before=$(stub_runs)
 
 	start_waiting_helper || return 0
+	wait_past_this_second
 	release_holder
 	ok_eq "the collect it waited for completes" 0 "$HOLDER_RC"
 	reap_waiting_helper
@@ -776,6 +792,10 @@ scenario_11() {
 		fail "the lock file can be blocked" "mkdir $LOCK_FILE failed"
 		return 0
 	fi
+	# Recorded before the helper runs, so an interrupt here still
+	# reaches cleanup with the path. A directory left at the lock
+	# file blocks every later collection.
+	LOCK_DIR_BLOCK="$LOCK_FILE"
 	rm -rf "$SSD_LOG_DIR"
 	mkdir -p "$SSD_LOG_DIR"
 	printf 'in-progress collection\n' > "$SSD_LOG_DIR/nandlog_0.bin"
@@ -784,7 +804,9 @@ scenario_11() {
 
 	run_second "$COLLECT_SH" "$DUMP_FOLDER" "$SSD_LOG_DIR"
 
-	rmdir "$LOCK_FILE" 2>/dev/null
+	if rmdir "$LOCK_FILE" 2>/dev/null; then
+		LOCK_DIR_BLOCK=
+	fi
 	ok_eq "the helper returns 0" 0 "$SECOND_RC"
 	ok_grep "it reports the missing lock" "$WORK/second.err" \
 		"SSD dump tool failed: $MSG_NO_LOCK"
@@ -888,36 +910,45 @@ scenario_6() {
 # either it was moved aside or there was nothing there. A signal
 # between two save_path calls, or a move that fails and dies,
 # otherwise leaves cleanup removing a path whose only copy is
-# still the operator's. A failed move takes its fragment with
-# it, so nothing is left for cleanup to mistake for the copy.
+# still the operator's. Across filesystems mv copies and then
+# removes the source. A failure after that copy can leave the
+# source incomplete and the saved tree complete, so the saved
+# tree is kept and named instead of deleted.
 save_path() { # path
 	_base="$BACKUP/$(basename "$1")"
 	if [ -e "$1" ] || [ -L "$1" ]; then
-		mv -- "$1" "$_base.saved" 2>/dev/null || {
-			rm -rf -- "$_base.saved"
+		if ! mv -- "$1" "$_base.saved" 2>/dev/null; then
+			if [ -e "$_base.saved" ] || [ -L "$_base.saved" ]; then
+				die "cannot move $1 aside; saved copy left at $_base.saved"
+			fi
 			die "cannot move $1 aside"
-		}
+		fi
 	fi
 	: > "$_base.taken"
 }
 
-# Without the marker the setup never finished with this path,
-# and then the path itself says what happened. $BACKUP is on
-# another filesystem than /var/log, so the move is a copy and an
-# unlink: it empties the path only once the copy is whole. A
-# path still there is therefore the operator's, beside at most a
-# fragment of a move that failed, and a path gone has a complete
-# copy waiting even if the signal arrived before the marker.
+# Without the marker the setup never finished with this path.
+# A path that is gone has a complete copy waiting, even if the
+# signal arrived before the marker. A path that is still there
+# beside a saved tree is uncertain: the source may be the
+# fragment, so the saved tree is kept and the restore fails.
 # With the marker, whatever is there now is the test's own.
 restore_path() { # path
 	_base="$BACKUP/$(basename "$1")"
-	if ! [ -f "$_base.taken" ] && { [ -e "$1" ] || [ -L "$1" ]; }; then
-		rm -rf -- "$_base.saved"
-		return 0
+	if ! [ -f "$_base.taken" ]; then
+		if [ -e "$_base.saved" ] || [ -L "$_base.saved" ]; then
+			if [ -e "$1" ] || [ -L "$1" ]; then
+				echo "saved copy left at $_base.saved;" \
+					"$1 was not restored" >&2
+				return 1
+			fi
+		else
+			return 0
+		fi
 	fi
 	rm -rf -- "$1"
 	if [ -e "$_base.saved" ] || [ -L "$_base.saved" ]; then
-		mv -- "$_base.saved" "$1" 2>/dev/null
+		mv -- "$_base.saved" "$1" 2>/dev/null || return 1
 	fi
 	return 0
 }
@@ -925,13 +956,28 @@ restore_path() { # path
 cleanup() {
 	[ "$CLEANED" = "1" ] && return 0
 	CLEANED=1
+	# Only the directory this run created. A regular lock file,
+	# or a directory this run did not record, is left alone.
+	if [ -n "$LOCK_DIR_BLOCK" ] && [ -d "$LOCK_DIR_BLOCK" ] &&
+		[ ! -L "$LOCK_DIR_BLOCK" ]; then
+		rm -rf -- "$LOCK_DIR_BLOCK"
+	fi
 	kill_holder
 	if [ -n "$BACKUP" ] && [ -d "$BACKUP" ]; then
 		if no_ssd_dump_procs 60; then
-			restore_path "$SSD_LOG_DIR"
-			restore_path "$SSD_TARBALL"
-			restore_path "$DUMP_FOLDER"
-			restore_path "$DUMP_TARBALL"
+			_ok=0
+			restore_path "$SSD_LOG_DIR" &&
+			restore_path "$SSD_TARBALL" &&
+			restore_path "$DUMP_FOLDER" &&
+			restore_path "$DUMP_TARBALL" &&
+			_ok=1
+			if [ "$_ok" != "1" ]; then
+				# A failed move leaves the only complete copy
+				# under $BACKUP. Deleting $WORK would delete it.
+				KEEP_WORK=1
+				say "a restore failed; the saved data is left in" \
+					"$BACKUP, restore it by hand"
+			fi
 		else
 			# Restoring now would hand the live collection the
 			# operator's data to delete. Leave it saved instead.
