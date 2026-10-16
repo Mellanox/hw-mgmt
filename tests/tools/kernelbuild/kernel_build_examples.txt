@@ -1,0 +1,121 @@
+Linux 6.x kernel build scripts
+
+Scripts:
+  kernel_build_6_x.sh
+      Download a Linux 6.x tarball, apply hw-mgmt patches from
+      recipes-kernel/linux/Patch_Status_Table.txt, and build Debian
+      packages with "make deb-pkg".
+  kernel_build_6_x_arm.sh
+      Same script with --arch arm64 (arm64 kconfig, aarch64-linux-gnu-).
+  kernel_build_6_x_sonic_bmc.sh
+      SONiC BMC. arm64 tools, aspeed kconfig. --third-party-patches is
+      required. Forces --os-type sonic, --arch arm64, --deploy-arch aspeed,
+      and --bmc-patch-table Patch_BMC_Status_Table.txt. A --cross-compile
+      prefix on the command line is kept.
+
+Usage:
+  kernel_build_6_x.sh [options] <build_path> <hw_mgmt_path> <kernel_version>
+  kernel_build_6_x_arm.sh [options] <build_path> <hw_mgmt_path> <kernel_version>
+  kernel_build_6_x_sonic_bmc.sh [options] <build_path> <hw_mgmt_path> <kernel_version> \
+      --third-party-patches <sonic_patch_dir>
+
+Options may be placed before or after the three arguments.
+Underscore names are accepted as well as hyphen names (--os_type, --os-type).
+
+Arguments:
+  build_path       Work directory (created if missing). Receives the tarball,
+                   linux-<version>/, patches/, the build log, and the .deb files.
+  hw_mgmt_path     hw-mgmt checkout that contains recipes-kernel/linux/.
+  kernel_version   Upstream release, three numeric components, for example
+                   6.12.94.
+
+Options:
+  -h, --help
+  --os-type TYPE, --os_type=TYPE
+                   NOS filter. One of: nvos, opt, cumulus, sonic, dvs, none.
+                   Default: opt.
+                   "none" does not select a NOS (deploy tool default).
+  --arch ARCH      x86_64 (default) or arm64.
+                   Also accepted: amd64, x86, aarch64, arm.
+                   x86_64 uses kconfig section amd64 and KBUILD_DEBARCH=amd64.
+                   The compiler is the native gcc unless --cross-compile is set.
+                   arm64 uses kconfig section arm64, CROSS_COMPILE
+                   aarch64-linux-gnu- unless --cross-compile is set, and
+                   KBUILD_DEBARCH=arm64.
+  --deploy-arch ARCH, --deploy_arch=ARCH
+                   Kconfig section written into .config: amd64, arm64, or aspeed.
+                   Default follows --arch. Sections come from
+                   recipes-kernel/linux/kconfig_<major>_<minor>.txt:
+                   [amd64:upstream] [amd64:downstream],
+                   [arm64:upstream] [arm64:downstream],
+                   [aspeed:upstream] [aspeed:downstream].
+  --cross-compile PREFIX
+                   Toolchain prefix, for example aarch64-linux-gnu-
+                   or x86_64-linux-gnu-.
+  --config FILE    Starting .config, copied in before hw-mgmt kconfig flags
+                   are merged. If omitted and this file exists, it is used:
+                   <parent of build_path>/.config_<major.minor>
+  --patch-table FILE, --patch_table=FILE
+                   Status table. Default: Patch_Status_Table.txt under
+                   recipes-kernel/linux/. A basename is looked up in that
+                   directory.
+  --third-party-patches DIR, --third_party_patches=DIR
+                   After the status-table patches, import every *.patch in
+                   this directory, one by one, in version-sort order. No
+                   status-table filtering. A series file in the directory
+                   is not used.
+  --bmc-patch-table FILE, --bmc_patch_table=FILE
+                   After the third-party patches, apply this table. Requires
+                   --third-party-patches. The SONiC BMC script passes
+                   Patch_BMC_Status_Table.txt.
+  --tarball FILE   Use this source archive instead of downloading it.
+  --jobs N         Parallel jobs for the first build. Default: 3/4 of nproc,
+                   at least 1.
+  --force          Delete an existing linux-<version> tree and patches/
+                   under build_path before starting. The tarball is kept.
+  --skip-build     Import patches, then stop before olddefconfig and deb-pkg.
+  --no-retry       Do not start a second build after a failure.
+                   Otherwise a failed build is repeated with -j2 and V=1.
+  --dry-run        Check arguments, the patch table, and host tools, then exit.
+  --debug          Trace shell commands (set -x).
+
+NOS types: nvos, opt, cumulus, sonic, dvs, none (default opt).
+
+Patch order when third-party and BMC tables are used:
+  1. Patch_Status_Table.txt (linux-<major.minor>/, filtered by NOS markers)
+  2. Each *.patch in the third-party directory, filename order
+  3. Patch_BMC_Status_Table.txt (linux-<major.minor>/, filtered for sonic)
+
+Examples:
+
+native x86_64:
+tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos
+
+x86_64 with a cross compiler:
+tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos \
+    --arch x86_64 --cross-compile x86_64-linux-gnu-
+
+arm64, arm64 kconfig, default toolchain aarch64-linux-gnu-:
+tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos --arch arm64
+
+arm64, same build through the arm64 entry point:
+tests/tools/kernelbuild/kernel_build_6_x_arm.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos
+
+arm64, arm64 kconfig, toolchain prefix aarch64-none-linux-gnu-:
+tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos \
+    --arch arm64 --cross-compile aarch64-none-linux-gnu-
+
+SONiC BMC, arm64 tools and aspeed kconfig:
+tests/tools/kernelbuild/kernel_build_6_x_sonic_bmc.sh <build> <hw-mgmt> 6.12.94 \
+    --third-party-patches <sonic-patches>
+
+SONiC BMC with another arm64 toolchain:
+tests/tools/kernelbuild/kernel_build_6_x_sonic_bmc.sh <build> <hw-mgmt> 6.12.94 \
+    --cross-compile aarch64-none-linux-gnu- \
+    --third-party-patches <sonic-patches>
+
+Check the plan without downloading or building:
+tests/tools/kernelbuild/kernel_build_6_x.sh --dry-run <build> <hw-mgmt> 6.12.94 --os_type=nvos
+
+Apply patches and stop before the package build:
+tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos --skip-build
