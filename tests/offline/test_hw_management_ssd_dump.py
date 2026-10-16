@@ -884,6 +884,18 @@ class TestLock:
             os.close(mine)
             holder.release()
 
+    def test_lock_file_is_owner_only(self, ssd, tmp_path, monkeypatch):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        fd = os.open(ssd.LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o644)
+        os.close(fd)
+        lock = ssd.DumpLock()
+        assert lock.acquire() is None
+        try:
+            mode = os.stat(ssd.LOCK_PATH).st_mode & 0o777
+            assert mode == 0o600
+        finally:
+            lock.release()
+
     def test_a_descriptor_on_another_file_is_not_the_lock(
         self, ssd, tmp_path, monkeypatch
     ):
@@ -947,21 +959,25 @@ class TestLock:
     def test_lock_permission_denied_is_silent(
         self, ssd, tmp_path, monkeypatch
     ):
-        """Non-root cannot write /run; do not make every run noisy."""
+        """A permission denial is not a syslog warning.
+
+        Root can create a file in a mode 0500 directory, so the
+        open itself is what fails here.
+        """
         monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
         seen = []
         monkeypatch.setattr(
             ssd.syslog, "syslog", lambda pri, msg: seen.append((pri, msg))
         )
-        denied = tmp_path / "denied"
-        denied.mkdir()
-        denied.chmod(0o500)
-        try:
-            lock = ssd.DumpLock(path=str(denied / "ssd.lock"))
-            lock.acquire()
-        finally:
-            denied.chmod(0o700)
+
+        def denied(*_a, **_k):
+            raise OSError(ssd.errno.EACCES, "Permission denied")
+
+        monkeypatch.setattr(ssd.os, "open", denied)
+        lock = ssd.DumpLock(path=str(tmp_path / "ssd.lock"))
+        reason = lock.acquire()
         assert lock.fd is None
+        assert "cannot create lock" in reason
         assert seen == []
 
 
@@ -1033,6 +1049,8 @@ class TestHelperConstants:
         # one it is and on the lock living there.
         assert self._assign(helper, ssd.LOCK_FD_ENV) == "9"
         assert 'exec 9>> "$LOCK_FILE"' in helper
+        assert 'chmod 600 "$LOCK_FILE"' in helper
+        assert "umask 077" in helper
         assert '"$FLOCK" -n -x 9' in helper
         assert "export %s %s" % (ssd.LOCK_ENV, ssd.LOCK_FD_ENV) in helper
 
@@ -1132,12 +1150,18 @@ class TestHelperConstants:
         assert helper.count('timeout "$_left"') == 1
         assert helper.count("within_reuse_budget ") == 4
 
-    def _reuse_left(self, helper, started):
+    def _reuse_left(self, helper, started, now=1000000):
         """Run the helper's reuse_budget_left on one start time."""
         body = helper.split("reuse_budget_left() {", 1)[1]
         body = "reuse_budget_left() {" + body.split("\n}\n", 1)[0] + "\n}\n"
-        script = 'SSD_COPY_TIMEOUT=%s\n%sreuse_budget_left "$1"\n' % (
+        script = (
+            "SSD_COPY_TIMEOUT=%s\n"
+            "date() { echo %s; }\n"
+            "%s"
+            'reuse_budget_left "$1"\n'
+        ) % (
             self._assign(helper, "SSD_COPY_TIMEOUT"),
+            int(now),
             body,
         )
         out = subprocess.run(
@@ -1150,21 +1174,21 @@ class TestHelperConstants:
 
     def test_a_fresh_reuse_phase_has_the_whole_budget(self, helper):
         copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
-        assert self._reuse_left(helper, int(time.time())) == copy
+        assert self._reuse_left(helper, 1000000) == copy
 
     def test_a_second_reuse_source_gets_only_the_remainder(self, helper):
         # A slice per source, plus the collect a failed reuse
         # falls back to, would run past what dump_cmd allows.
         copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
-        left = self._reuse_left(helper, int(time.time()) - copy // 2)
+        left = self._reuse_left(helper, 1000000 - copy // 2)
         assert 0 < left <= copy - copy // 2
 
     def test_a_spent_budget_reads_as_zero(self, helper):
         # Zero stops reuse; passing it to timeout would mean no
         # limit at all.
         copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
-        assert self._reuse_left(helper, int(time.time()) - copy) == 0
-        assert self._reuse_left(helper, int(time.time()) - 10 * copy) == 0
+        assert self._reuse_left(helper, 1000000 - copy) == 0
+        assert self._reuse_left(helper, 1000000 - 10 * copy) == 0
 
     def test_an_unusable_start_time_stops_reuse(self, helper):
         assert self._reuse_left(helper, "") == 0
@@ -1365,14 +1389,32 @@ class TestLockTestScript:
         assert (live / "nandlog_0.bin").read_text() == "operator data"
         assert not list(backup.iterdir())
 
+    def test_a_failed_restore_keeps_the_backup(self, funcs, tmp_path):
+        # A full filesystem makes the move back fail. The saved
+        # copy is then the only complete one, so the caller must
+        # see the failure and keep $BACKUP. Root ignores a mode
+        # 0555 directory, so the move itself is what fails here.
+        live = tmp_path / "ssd-dump"
+        live.mkdir()
+        (live / "nandlog_0.bin").write_text("operator data")
+        backup, live = self._run(
+            funcs, tmp_path, "ssd-dump",
+            'save_path "$2"\n'
+            'mv() { return 1; }\n'
+            'restore_path "$2"\n'
+            'echo $? > "$1/rc"\n',
+        )
+        assert (backup / "rc").read_text().strip() == "1"
+        saved = backup / "ssd-dump.saved" / "nandlog_0.bin"
+        assert saved.read_text() == "operator data"
+        assert not live.exists()
+
     def test_a_partial_backup_does_not_replace_the_original(
         self, funcs, tmp_path
     ):
-        # $BACKUP is on another filesystem than /var/log, so the
-        # move is a copy and an unlink and a failure part way
-        # through leaves a fragment with the original still
-        # there. Treating that fragment as the copy would delete
-        # the operator's data and hand back less than it had.
+        # Both trees exist and neither has a marker, so which one
+        # is complete is unknown. The original stays, and so does
+        # the saved copy.
         live = tmp_path / "ssd-dump"
         live.mkdir()
         (live / "nandlog_0.bin").write_text("operator data")
@@ -1381,17 +1423,21 @@ class TestLockTestScript:
             'mkdir -p "$1/ssd-dump.saved"\nrestore_path "$2"\n',
         )
         assert (live / "nandlog_0.bin").read_text() == "operator data"
-        assert not list(backup.iterdir())
+        assert (backup / "ssd-dump.saved").is_dir()
 
-    def test_a_failed_save_leaves_no_fragment(self, funcs, tmp_path):
+    def test_a_failed_save_keeps_the_saved_copy(self, funcs, tmp_path):
         # die is stubbed out, so this covers save_path alone.
+        # A failed mv may already have copied the tree. That
+        # copy is kept; the source is still the operator's.
         live = tmp_path / "ssd-dump"
         live.mkdir()
-        backup, _live = self._run(
+        (live / "nandlog_0.bin").write_text("operator data")
+        backup, live = self._run(
             funcs, tmp_path, "ssd-dump",
             'mv() { mkdir -p "$3"; return 1; }\nsave_path "$2"\n',
         )
-        assert not list(backup.iterdir())
+        assert (live / "nandlog_0.bin").read_text() == "operator data"
+        assert (backup / "ssd-dump.saved").is_dir()
 
     def test_a_path_that_was_absent_is_not_recreated(self, funcs, tmp_path):
         _backup, live = self._run(
@@ -1399,6 +1445,96 @@ class TestLockTestScript:
             'save_path "$2"\nmkdir -p "$2"\nrestore_path "$2"\n',
         )
         assert not live.exists()
+
+    def _cleanup_fn(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("cleanup() {", 1)[1]
+        return "cleanup() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+
+    def test_cleanup_removes_the_blocked_lock_directory(self, tmp_path):
+        # scenario_11's rmdir runs only after the helper returns.
+        # Ctrl-C before that used to leave a directory where the
+        # lock file belongs, and every later collection refused.
+        blocked = tmp_path / "hw-management-ssd-dump.lock"
+        blocked.mkdir()
+        script = (
+            "CLEANED=0\nKEEP_WORK=0\nWORK=\nBACKUP=\n"
+            "kill_holder() { :; }\n"
+            'LOCK_DIR_BLOCK="$1"\n'
+            "%s"
+            "cleanup\n"
+            'if [ -e "$1" ]; then echo still-there; else echo gone; fi\n'
+        ) % self._cleanup_fn()
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(blocked)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert out.stdout.strip() == "gone"
+        assert not blocked.exists()
+
+    def test_cleanup_leaves_a_real_lock_file(self, tmp_path):
+        lock = tmp_path / "hw-management-ssd-dump.lock"
+        lock.write_text("holder\n")
+        script = (
+            "CLEANED=0\nKEEP_WORK=0\nWORK=\nBACKUP=\n"
+            "kill_holder() { :; }\n"
+            "LOCK_DIR_BLOCK=\n"
+            "%s"
+            "cleanup\n"
+        ) % self._cleanup_fn()
+        subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(lock)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert lock.read_text() == "holder\n"
+
+    def test_scenario_11_records_the_lock_directory_before_the_helper(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("scenario_11() {", 1)[1]
+        body = body.split("\n}\n", 1)[0]
+        assert body.index('LOCK_DIR_BLOCK="$LOCK_FILE"') < body.index(
+            "run_second"
+        )
+
+    def test_reuse_scenarios_cross_the_wait_second(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        for name in ("scenario_7", "scenario_9"):
+            body = text.split(name + "() {", 1)[1]
+            body = body.split("\n}\n", 1)[0]
+            assert body.index("wait_past_this_second") < body.index(
+                "release_holder"
+            )
+
+    def test_wait_past_this_second_moves_the_clock(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("wait_past_this_second() {", 1)[1]
+        body = "wait_past_this_second() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+        script = (
+            "NOW=100\n"
+            'date() { echo "$NOW"; }\n'
+            "sleep() { NOW=$((NOW + 1)); }\n"
+            "%s"
+            "wait_past_this_second\n"
+            'echo "$NOW"\n'
+        ) % body
+        out = subprocess.run(
+            ["/bin/sh", "-c", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert out.stdout.strip() == "101"
 
 
 class TestEndToEnd:
@@ -3069,4 +3205,100 @@ class TestEndToEnd:
             logf.close()
         assert killed
         assert killed[0][0] == 4242
+
+    def test_vendor_interrupt_kills_process_group(
+        self, ssd, monkeypatch, tmp_path
+    ):
+        killed = []
+
+        class FakeProc(object):
+            pid = 4242
+            returncode = None
+
+            def communicate(self, timeout=None):
+                raise KeyboardInterrupt()
+
+            def wait(self, timeout=None):
+                return None
+
+        monkeypatch.setattr(
+            ssd.subprocess, "Popen", lambda *_a, **_k: FakeProc()
+        )
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append((pid, sig))
+        )
+        logf = open(os.devnull, "w")
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
+        finally:
+            logf.close()
+        assert killed
+        assert killed[0][0] == 4242
+
+    def test_a_second_interrupt_still_stops_the_vendor(
+        self, ssd, monkeypatch, tmp_path
+    ):
+        killed = []
+        waits = {"n": 0}
+
+        class FakeProc(object):
+            pid = 4242
+            returncode = None
+
+            def communicate(self, timeout=None):
+                raise KeyboardInterrupt()
+
+            def wait(self, timeout=None):
+                waits["n"] += 1
+                if waits["n"] == 1:
+                    raise KeyboardInterrupt()
+                return None
+
+        monkeypatch.setattr(
+            ssd.subprocess, "Popen", lambda *_a, **_k: FakeProc()
+        )
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append(sig)
+        )
+        logf = open(os.devnull, "w")
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
+        finally:
+            logf.close()
+        assert killed == [ssd.signal.SIGTERM, ssd.signal.SIGKILL]
+
+    def test_sigterm_stops_the_vendor_group(self, ssd, monkeypatch):
+        killed = []
+
+        class FakeProc(object):
+            pid = 4242
+
+            def wait(self, timeout=None):
+                return None
+
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append(sig)
+        )
+        ssd._vendor_proc = FakeProc()
+        try:
+            with pytest.raises(SystemExit) as raised:
+                ssd._handle_sigterm(ssd.signal.SIGTERM, None)
+        finally:
+            ssd._vendor_proc = None
+        assert raised.value.code == 128 + ssd.signal.SIGTERM
+        assert killed[0] == ssd.signal.SIGTERM
+
+    def test_main_installs_the_sigterm_handler(self, ssd, monkeypatch):
+        monkeypatch.setattr(ssd, "run_dump", lambda _args: 0)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *_a, **_k: None)
+        previous = ssd.signal.signal(ssd.signal.SIGTERM, ssd.signal.SIG_DFL)
+        try:
+            assert ssd.main([]) == 0
+            assert ssd.signal.getsignal(ssd.signal.SIGTERM) == (
+                ssd._handle_sigterm
+            )
+        finally:
+            ssd.signal.signal(ssd.signal.SIGTERM, previous)
     # SpellCheck-ignoreBlockEnd
