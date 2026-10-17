@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "recipes-kernel/linux/deploy_kernel_patches.py",
+      "description": "Reads a status table and copies the listed patches into a consumer kernel tree. Authoritative for status semantics: PATCH_RULES holds the valid status words, parse_status parses the os/take/skip modifiers, filter_patch_list resolves conflicts and chooses destinations."
+    },
+    {
+      "path": "recipes-kernel/linux/Patch_Status_Table.txt",
+      "description": "Registry of host kernel patches, grouped by kernel version. An unlisted patch is never deployed."
+    },
+    {
+      "path": "recipes-kernel/linux/Patch_BMC_Status_Table.txt",
+      "description": "Registry of BMC kernel patches, applied in a separate run via --patch_table. Its Legend section is the written reference for status words and modifiers."
+    }
+  ]
+}
