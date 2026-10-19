@@ -155,7 +155,7 @@ Section links in Rev. 3.2.6 and later point to the manual heading. Entries from 
 | [Environment Control](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#environment-control) | **`environment/pdb_hotswap<N>_power1_scale`** and **`_curr1_scale`** (lm5066i only) |
 | [CPU Shut Down Request](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#cpu-shut-down-request) | **`cpu_shutdown_req`**: hw-mgmt polls this node via `hw_management_platform_config.py` (HI176–HI185, …) |
 | [BMC reset cause](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#bmc-reset-cause) | **BMC reset cause** (AST2700): primary `reset_pwr_cycle` / `reset_soft_reboot` / `reset_unknown`; `bmc/domains/reset_*`; raw SCU logs |
-| §3.25 | **BMC leakage A2D tree** under `$bsp_path/leakage/` (ADS1015, ADS7924, MAX1363 per JSON) |
+| [BMC leakage A2D tree](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#bmc-leakage-a2d-tree) | **BMC leakage A2D tree** under `$bsp_path/leakage/` (ADS1015, ADS7924, MAX1363 per JSON) |
 | N61XX_LD notes | Extended cartridge / PDB / leakage applicability to **N6300_LD** (HI185): `cartridge_counter`=4, `hotplug_pdbs`=2, `cpld_num`=3 |
 
 **Validation source:** `bmc/usr/usr/bin/hw-management-bmc-get-reset-cause.sh`,
@@ -436,7 +436,7 @@ calls 3.2.8.
 | 3.2.10 | September 2026 | §3.18.39 N51XX_LD unsupported reset causes: added `reset_comex_wd` and `reset_from_comex` |
 | 3.2.8 | August 2026 | §3.1.61 `config/cable_cartridge<n>_valid`: IPMI FRU check result per cable cartridge (N51XX_LD / N61XX_LD) |
 | 3.2.7 | August 2026 | §3.1.60 `config/led_control_type` platform LED owner map; §3.16.28 `led/led_<name>_control` (`led_sw` / `led_hw` / `led_hw_sw`); glob masks `*` and `?` |
-| 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; §3.25 BMC A2D leakage runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
+| 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; [BMC leakage A2D tree](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#bmc-leakage-a2d-tree) runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
 | 3.2.5 | June 2026 | §2.2 HI189 BMC peripheral table; §3.3.7–§3.3.8 BMC EEPROM bodies; §3.20 BMC stack tags and CPU-on-BMC thermal cross-refs; §3.23 BMC status bodies (present, bmc_to_cpu_ctrl, MCTP) |
 | 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
 | 3.2.3 | June 2026 | §3.20 thermal: filled missing section bodies; TOC aligned; per-HID BMC examples under `bmc/examples/<HID>/examples/` |

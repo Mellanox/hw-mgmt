@@ -7,7 +7,7 @@ Rev. 3.2.13, October 2026. Revisions through 3.2.12 are in the
   "see Get Reset Cause" now points at that heading, and it stays valid when sections move.
 - [Drivers](#drivers) covers every kernel module and I2C device that the scripts load or
   instantiate: the PMBus regulators, the temperature sensors, the ADC, GPIO, EEPROM and I2C mux
-  drivers, and the host I2C controllers.
+  drivers, the host I2C controllers, and the generic `i2c-dev` and `ledtrig-timer` modules.
 - Layout and rendering fixes: tables that showed raw markdown now render as text, the Get Reset Cause
   notes no longer run off the page, and section headings no longer sit alone at the bottom of a page.
 
@@ -4542,7 +4542,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & poweroff & Integer & 0/1 \\
 Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Initiate graceful power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/graceful\_power\_off}} \\
-Note & \multicolumn{3}{p{0.735\linewidth}}{See also section 3.5.9 for the related event \texttt{\small graceful\_pwr\_off} that monitors graceful shutdown status.} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{See also \hyperref[graceful-power-off-event]{Graceful Power Off Event} for the related event \texttt{\small graceful\_pwr\_off} that monitors graceful shutdown status.} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -7355,6 +7355,10 @@ hw-mgmt adds `drivers/hwmon/pmbus/mp2869.c` in the Linux 6.12 kernel patch `0041
 
 hw-mgmt adds `drivers/hwmon/pmbus/mp29502.c` in the Linux 6.12 kernel patch `0042-hwmon-add-MP29502-driver.patch`. `MODULE_DESCRIPTION` is "PMBus driver for MPS MP29502". The I2C id is `mp29502`.
 
+### mp5926
+
+Kernel module `mp5926` (`drivers/hwmon/pmbus/mp5926.c`), added by the hw-mgmt patches `0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch` (Linux 6.1) and `0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch` (Linux 6.12). The I2C id is `mp5926`. The BMC BOM files instantiate it as the PDB hot-swap controller (spec `mp5926 0x12 <bus> pdb_hotswap<N>`). It does not create `config/pdb_hotswap_scale`; that node exists only for `lm5066i`.
+
 ## Temperature sensors
 
 hw-management links the attributes of these drivers into `$bsp_path/thermal/` and `$bsp_path/environment/` as the platform sensor configuration names them. Kernel version `6.12` is the reference.
@@ -7395,6 +7399,18 @@ Kernel module `spd5118` (`drivers/hwmon/spd5118.c`). `MODULE_DESCRIPTION` is "SP
 
 Kernel module `coretemp` (`drivers/hwmon/coretemp.c`). `MODULE_DESCRIPTION` is "Intel Core temperature monitor". `hw-management.sh` runs `modprobe coretemp` on every CPU type except AMD SNW, AMD V3000, AMD FRNG, and BF3, because the driver supports only Intel CPUs. It is also skipped on SimX.
 
+### jc42
+
+Kernel module `jc42` (`drivers/hwmon/jc42.c`). The I2C id is `jc42`. It reads the temperature sensor of DDR4 SODIMMs. `hw-management-helpers.sh` runs `modprobe jc42` when `/sys/bus/i2c/drivers/jc42` is missing, writes the SODIMM critical limit to each bound sensor, and `hw-management.sh` instantiates `jc42` by hand on AMD platforms where the driver does not probe the sensor itself. DDR5 SPD hubs use `spd5118` instead.
+
+### sbtsi
+
+I2C id `sbtsi` (the AMD SB-TSI CPU temperature interface). It exposes `temp1_input`, `temp1_max`, and `temp1_min`. Only the BMC stack uses it: the HI189 early-I2C map binds bus 15 / `0x4c` to it, and it is the source of `thermal/cpu_temp_input`, `cpu_temp`, and `cpu_min` (see [Host and BMC software stacks](#host-and-bmc-software-stacks)).
+
+### drivetemp
+
+Kernel module `drivetemp` (`drivers/hwmon/drivetemp.c`). It reports the temperature of SATA and NVMe-attached drives. `hw-management.sh` runs `modprobe drivetemp` only when the module file exists for the running kernel. `hw-management-thermal-events.sh` links it to `$bsp_path/thermal/drivetemp` and the `_crit`, `_max`, and `_min` nodes.
+
 ## ADC, GPIO, EEPROM and I2C mux
 
 ### max1363
@@ -7404,6 +7420,18 @@ Kernel module `max1363` (`drivers/iio/adc/max1363.c`). `MODULE_DESCRIPTION` is "
 ### ti-ads1015
 
 Kernel module `ti-ads1015` (`drivers/iio/adc/ti-ads1015.c`). `MODULE_DESCRIPTION` is "Texas Instruments ADS1015 ADC driver". The I2C ids are `ads1015`, `ads1115`, and `tla2024`. It reads the leak detector inputs in the [BMC leakage A2D tree](#bmc-leakage-a2d-tree). The module is listed in `modules-load.d`.
+
+### ads7924
+
+I2C id `ads7924` (Texas Instruments ADS7924, 4-channel 12-bit ADC). The BMC leakage configuration script maps `DeviceType` `ADS7924` to this driver name and binds it through `new_device` when `Probe` is true. Its alarm thresholds are programmed with raw I2C transfers (`hw-management-bmc-ads7924-force-alarm.sh` and `hw-management-bmc-a2d-leakage-config.sh`). It is one of the devices behind the [BMC leakage A2D tree](#bmc-leakage-a2d-tree).
+
+### i2c-dev
+
+Kernel module `i2c-dev`. It creates the `/dev/i2c-<N>` character devices and the `i2c-dev` class entries. It is listed in `modules-load.d`. The udev rules handle the `i2c-dev` subsystem events for the CPLD I2C adapters and call `hw-management-chassis-events.sh` with `i2c_link`, which creates the per-bus links.
+
+### ledtrig-timer
+
+Kernel module `ledtrig-timer`. It provides the `timer` LED trigger, which blinks an LED at a configured rate, and it is listed in `modules-load.d`.
 
 ### at24
 
