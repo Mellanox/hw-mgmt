@@ -57,6 +57,9 @@ do_start_sysfs_monitor()
             log_info "sysfs monitor done!"
             # Write the current time into the sysfs ready file.
             echo "$current_time" > "$SYSFS_MONITOR_RDY_FILE"
+            # Publish the label tree indicator for a SKU that builds the tree
+            # at run time. Done before the dump so that it covers the full tree.
+            publish_labels_ready
             # Generate debug dump of hw-mgmt tree
             find -L $hw_management_path -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' \
                ! -name '*.sh' ! -name '*.py' ! -name 'led_*_state' -exec ls -la {} \; -exec cat {} \; > /var/log/hw-mgmt-val.log 2>/dev/null
