@@ -735,6 +735,7 @@ Kernel-6.1
 |0120-hwmon-Add-support-for-SPD5118-compliant-temperature-.patch  | 09262e9814ca       | Feature upstream                         |            |                                                |
 |0121-i2c-dev-Fix-duplicate-chardev-registration-during-mo.patch|                    | Bugfix pending                           |            | Fix duplicate /dev/i2c-N node race at init     |
 |0122-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
+|0123-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600_LD SN6800_LD SN6810_LD PHY reset        |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
@@ -845,6 +846,7 @@ Kernel-6.12
 |0072-iio-adc-max1363-Add-ability-to-set-scale-of-the-ADC.patch   |                    | Downstream accepted                      |            | MAX1363 Vdd reference for leakage A2D          |
 |0073-i2c-dev-Fix-duplicate-chardev-registration-during-mo.patch|                    | Bugfix pending                           |            | Fix duplicate /dev/i2c-N node race at init     |
 |0074-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
+|0075-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600_LD SN6800_LD SN6810_LD PHY reset        |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
