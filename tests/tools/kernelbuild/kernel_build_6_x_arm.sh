@@ -12,4 +12,5 @@
 set -euo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-exec "$script_dir/kernel_build_6_x.sh" "$@" --arch arm64
+# shellcheck disable=SC1091
+source "$script_dir/kernel_build_6_x.sh" "$@" --arch arm64

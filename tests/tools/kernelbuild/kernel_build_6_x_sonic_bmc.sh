@@ -6,7 +6,7 @@
 #
 # SONiC BMC (AST2700) entry point for kernel_build_6_x.sh.
 # Toolchain and make ARCH match the arm64 build. Kernel options come from
-# the [aspeed:upstream] and [aspeed:downstream] sections of kconfig_6_*.txt.
+# the [aspeed:upstream] and [aspeed:downstream] sections of kconfig_<major>_<minor>.txt.
 #
 # Patches are applied in three layers:
 #   1. recipes-kernel/linux/Patch_Status_Table.txt
@@ -21,13 +21,24 @@ set -euo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
+case "${0##*/}" in
+    kernel_build_7*)
+        KERNEL_SERIES=7
+        EXAMPLE_VER=7.0.1
+        ;;
+    *)
+        KERNEL_SERIES=6
+        EXAMPLE_VER=6.12.94
+        ;;
+esac
+
 usage() {
     cat <<EOF
 Usage:
   ${0##*/} [options] <build_path> <hw_mgmt_path> <kernel_version> \\
       --third-party-patches <sonic_patch_dir>
 
-Build a 6.x SONiC BMC kernel.
+Build a ${KERNEL_SERIES}.x SONiC BMC kernel.
 
 The toolchain is the arm64 one (ARCH=arm64, aarch64-linux-gnu- unless
 --cross-compile is set). .config is filled from the aspeed sections of
@@ -43,7 +54,7 @@ Options are the same as kernel_build_6_x.sh. --third-party-patches is required.
 this script. A --cross-compile prefix on the command line is kept.
 
 Example:
-  ${0##*/} /tmp/bmc-build /path/to/hw-mgmt 6.12.94 \\
+  ${0##*/} /tmp/bmc-build /path/to/hw-mgmt ${EXAMPLE_VER} \\
       --third-party-patches /path/to/sonic-patches
 EOF
 }
@@ -67,7 +78,8 @@ if [[ "$has_third_party" -eq 0 ]]; then
     exit 2
 fi
 
-exec "$script_dir/kernel_build_6_x.sh" "$@" \
+# shellcheck disable=SC1091
+source "$script_dir/kernel_build_6_x.sh" "$@" \
     --arch arm64 \
     --deploy-arch aspeed \
     --os-type sonic \

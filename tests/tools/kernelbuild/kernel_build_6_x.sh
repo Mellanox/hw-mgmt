@@ -6,6 +6,8 @@
 #
 # Download a Linux 6.x release, apply hw-mgmt patches selected by
 # recipes-kernel/linux/Patch_Status_Table.txt, and build Debian packages.
+# kernel_build_7_x.sh sources this file. $0 stays the 7.x name, which
+# selects kernel.org v7.x and a Kernel-7.* status-table section.
 #
 # Patch selection follows the Kernel-<major.minor> section of the status
 # table. --os-type picks the NOS (nvos, opt, cumulus, sonic, dvs). The
@@ -14,6 +16,19 @@
 #
 
 set -euo pipefail
+
+# The 7.x entry points source this file, so $0 remains kernel_build_7*.
+case "${0##*/}" in
+    kernel_build_7*)
+        KERNEL_SERIES=7
+        EXAMPLE_VER=7.0.1
+        ;;
+    *)
+        KERNEL_SERIES=6
+        EXAMPLE_VER=6.12.94
+        ;;
+esac
+SERIES_NOTE="Patches and kconfig are read from recipes-kernel/linux/linux-<major.minor>/ and kconfig_<major>_<minor>.txt. A ${KERNEL_SERIES}.x build needs a Kernel-${KERNEL_SERIES}.* section in the status table."
 
 MAKE_ARCH="x86_64"
 DEPLOY_ARCH="amd64"
@@ -56,9 +71,11 @@ usage() {
 Usage:
   ${0##*/} [options] <build_path> <hw_mgmt_path> <kernel_version>
 
-Download a Linux 6.x tarball, apply the hw-mgmt patches listed for that
-version in recipes-kernel/linux/Patch_Status_Table.txt, and build Debian
-packages with "make deb-pkg".
+Download a Linux ${KERNEL_SERIES}.x tarball, apply the hw-mgmt patches listed
+for that version in recipes-kernel/linux/Patch_Status_Table.txt, and build
+Debian packages with "make deb-pkg".
+
+${SERIES_NOTE}
 
 The status table decides which patches apply. --os-type selects the NOS.
 Patches marked for another NOS are skipped. A patch that the table ties to
@@ -72,7 +89,7 @@ Arguments:
                    linux-<version>/, patches/, the build log, and the .deb files.
   hw_mgmt_path     hw-mgmt checkout that contains recipes-kernel/linux/.
   kernel_version   Upstream release, three numeric components, for example
-                   6.12.94.
+                   ${EXAMPLE_VER}. Must be Linux ${KERNEL_SERIES}.x.
 
 Options:
   -h, --help
@@ -86,11 +103,11 @@ Options:
                    arm64 uses kconfig section arm64, CROSS_COMPILE
                    aarch64-linux-gnu- unless --cross-compile is set, and
                    KBUILD_DEBARCH=arm64.
-                   kernel_build_6_x_arm.sh is the same script with --arch arm64.
+                   kernel_build_${KERNEL_SERIES}_x_arm.sh is the same script with --arch arm64.
   --deploy-arch ARCH
                    Kconfig section written into .config: amd64, arm64, or aspeed.
-                   Default follows --arch. kernel_build_6_x_sonic_bmc.sh uses
-                   arm64 tools with the aspeed section.
+                   Default follows --arch. kernel_build_${KERNEL_SERIES}_x_sonic_bmc.sh
+                   uses arm64 tools with the aspeed section.
   --cross-compile PREFIX
                    Toolchain prefix, for example aarch64-linux-gnu-.
   --config FILE    Starting .config, copied in before hw-mgmt kconfig flags
@@ -106,8 +123,8 @@ Options:
                    status-table filtering.
   --bmc-patch-table FILE
                    After the third-party patches, apply this table. Requires
-                   --third-party-patches. kernel_build_6_x_sonic_bmc.sh passes
-                   Patch_BMC_Status_Table.txt.
+                   --third-party-patches. kernel_build_${KERNEL_SERIES}_x_sonic_bmc.sh
+                   passes Patch_BMC_Status_Table.txt.
   --tarball FILE   Use this source archive instead of downloading it.
   --jobs N         Parallel jobs for the first build. Default: 3/4 of nproc,
                    at least 1.
@@ -123,19 +140,20 @@ the build is repeated with -j2 and V=1 so the compiler error is readable.
 
 Examples:
   mkdir -p /tmp/kernel-build
-  ${0##*/} /tmp/kernel-build /path/to/hw-mgmt 6.12.94 --os_type=nvos
+  ${0##*/} /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} --os_type=nvos
 
-  kernel_build_6_x_arm.sh /tmp/kernel-build /path/to/hw-mgmt 6.12.94 --os_type=nvos
+  kernel_build_${KERNEL_SERIES}_x_arm.sh /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} --os_type=nvos
 
-  kernel_build_6_x_sonic_bmc.sh /tmp/kernel-build /path/to/hw-mgmt 6.12.94 \
+  kernel_build_${KERNEL_SERIES}_x_sonic_bmc.sh /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} \
       --third-party-patches /path/to/sonic-patches
 
 Tools:
   Checked before the kernel is downloaded.
   Always: tar, xz, git, stg (stgit), python3, make, and wget or curl.
-  To build .deb packages: the Build-Depends used by Linux 6.12 "make deb-pkg"
+  To build .deb packages: the Build-Depends used by "make deb-pkg"
   (debhelper, bc, bison, cpio, flex, kmod, rsync, libelf-dev, libssl-dev,
-  and the gcc package for the package architecture).
+  and the gcc package for the package architecture). The check matches
+  Linux 6.12 scripts/package/mkdebian and is used for ${KERNEL_SERIES}.x too.
   An arm64 build needs the host libssl-dev and libssl-dev:arm64.
 EOF
 }
@@ -684,8 +702,8 @@ if [[ "$DEBUG" -eq 1 ]]; then
     set -x
 fi
 
-if [[ ! "$KERNEL_VER" =~ ^6\.[0-9]+\.[0-9]+$ ]]; then
-    die "kernel version must look like 6.12.94 (this script downloads from kernel.org v6.x)"
+if [[ ! "$KERNEL_VER" =~ ^${KERNEL_SERIES}\.[0-9]+\.[0-9]+$ ]]; then
+    die "kernel version must look like ${EXAMPLE_VER} (this script downloads from kernel.org v${KERNEL_SERIES}.x)"
 fi
 KERNEL_BASE=${KERNEL_VER%.*}
 
@@ -818,7 +836,7 @@ fi
 
 info "build path:  $BUILD_PATH"
 info "hw-mgmt:     $HW_MGMT_PATH"
-info "kernel:      $KERNEL_VER (patch table Kernel-${KERNEL_BASE})"
+info "kernel:      $KERNEL_VER (patch table Kernel-${KERNEL_BASE}, kernel.org v${KERNEL_SERIES}.x)"
 if [[ "$OS_TYPE_SET" -eq 1 ]]; then
     info "os type:     $OS_TYPE"
 else
@@ -874,7 +892,7 @@ if [[ -f "$TARBALL" ]] && ! xz -t "$TARBALL"; then
     rm -f "$TARBALL"
 fi
 if [[ ! -f "$TARBALL" ]]; then
-    url="https://cdn.kernel.org/pub/linux/kernel/v6.x/${ARCHIVE_NAME}"
+    url="https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_SERIES}.x/${ARCHIVE_NAME}"
     info "downloading $url"
     if ! download "$url" "$TARBALL"; then
         rm -f "$TARBALL"

@@ -1,13 +1,24 @@
-Linux 6.x kernel build scripts
+Linux 6.x and 7.x kernel build scripts
+
+The 7.x scripts are the 6.x scripts with a 7.x version check and a
+kernel.org v7.x download. They expect, for a 7.0 kernel:
+
+  recipes-kernel/linux/linux-7.0/
+  recipes-kernel/linux/kconfig_7_0.txt
+  a Kernel-7.0 section in Patch_Status_Table.txt
+  a Kernel-7.0 section in Patch_BMC_Status_Table.txt for the SONiC BMC build
 
 Scripts:
   kernel_build_6_x.sh
-      Download a Linux 6.x tarball, apply hw-mgmt patches from
+  kernel_build_7_x.sh
+      Download a Linux 6.x or 7.x tarball, apply hw-mgmt patches from
       recipes-kernel/linux/Patch_Status_Table.txt, and build Debian
       packages with "make deb-pkg".
   kernel_build_6_x_arm.sh
+  kernel_build_7_x_arm.sh
       Same script with --arch arm64 (arm64 kconfig, aarch64-linux-gnu-).
   kernel_build_6_x_sonic_bmc.sh
+  kernel_build_7_x_sonic_bmc.sh
       SONiC BMC. arm64 tools, aspeed kconfig. --third-party-patches is
       required. Forces --os-type sonic, --arch arm64, --deploy-arch aspeed,
       and --bmc-patch-table Patch_BMC_Status_Table.txt. A --cross-compile
@@ -15,8 +26,12 @@ Scripts:
 
 Usage:
   kernel_build_6_x.sh [options] <build_path> <hw_mgmt_path> <kernel_version>
+  kernel_build_7_x.sh [options] <build_path> <hw_mgmt_path> <kernel_version>
   kernel_build_6_x_arm.sh [options] <build_path> <hw_mgmt_path> <kernel_version>
+  kernel_build_7_x_arm.sh [options] <build_path> <hw_mgmt_path> <kernel_version>
   kernel_build_6_x_sonic_bmc.sh [options] <build_path> <hw_mgmt_path> <kernel_version> \
+      --third-party-patches <sonic_patch_dir>
+  kernel_build_7_x_sonic_bmc.sh [options] <build_path> <hw_mgmt_path> <kernel_version> \
       --third-party-patches <sonic_patch_dir>
 
 Options may be placed before or after the three arguments.
@@ -26,8 +41,11 @@ Arguments:
   build_path       Work directory (created if missing). Receives the tarball,
                    linux-<version>/, patches/, the build log, and the .deb files.
   hw_mgmt_path     hw-mgmt checkout that contains recipes-kernel/linux/.
-  kernel_version   Upstream release, three numeric components, for example
-                   6.12.94.
+  kernel_version   Upstream release, three numeric components.
+                   6.x scripts require a 6.* version, for example 6.12.94.
+                   7.x scripts require a 7.* version, for example 7.0.1.
+                   kernel.org ships the Linus 7.0 tree as linux-7.0.tar.xz,
+                   not linux-7.0.0.tar.xz; use a point release.
 
 Options:
   -h, --help
@@ -119,3 +137,32 @@ tests/tools/kernelbuild/kernel_build_6_x.sh --dry-run <build> <hw-mgmt> 6.12.94 
 
 Apply patches and stop before the package build:
 tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos --skip-build
+
+Linux 7.x uses the same options. The version selects linux-7.<minor>/,
+kconfig_7_<minor>.txt, and the Kernel-7.<minor> status-table section.
+
+native x86_64:
+tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos
+
+x86_64 with a cross compiler:
+tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos \
+    --arch x86_64 --cross-compile x86_64-linux-gnu-
+
+arm64, arm64 kconfig, default toolchain aarch64-linux-gnu-:
+tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos --arch arm64
+
+arm64, same build through the arm64 entry point:
+tests/tools/kernelbuild/kernel_build_7_x_arm.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos
+
+arm64, arm64 kconfig, toolchain prefix aarch64-none-linux-gnu-:
+tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos \
+    --arch arm64 --cross-compile aarch64-none-linux-gnu-
+
+SONiC BMC, arm64 tools and aspeed kconfig:
+tests/tools/kernelbuild/kernel_build_7_x_sonic_bmc.sh <build> <hw-mgmt> 7.0.1 \
+    --third-party-patches <sonic-patches>
+
+SONiC BMC with another arm64 toolchain:
+tests/tools/kernelbuild/kernel_build_7_x_sonic_bmc.sh <build> <hw-mgmt> 7.0.1 \
+    --cross-compile aarch64-none-linux-gnu- \
+    --third-party-patches <sonic-patches>
