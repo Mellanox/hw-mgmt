@@ -647,6 +647,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: labels_ready indicator',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_labels_ready.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: TC _exit_wait (stop timeout)',
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
                 'cwd': self.tests_dir

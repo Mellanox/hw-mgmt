@@ -57,6 +57,14 @@ asic_chipup_status=/run/.asic_chipup_completed
 # TC run state across hw-management stop/start. Outside $hw_management_path
 # (removed on stop). Keep in sync with hw-management-tc.service.
 tc_state_file="/var/run/.hw-management-tc-state"
+# Set by hw-management-start-post.sh for a SKU whose label tree is built at run
+# time instead of extracted from a ui_tree archive. Tells
+# hw-management-sysfs-monitor.sh to publish config/labels_ready once the tree
+# has settled. Outside $hw_management_path (removed on stop).
+labels_pending_file="/var/run/.hw-management-labels-pending"
+labels_maker_script="hw-management-labels-maker.sh"
+# Cap on the drain of the makers still in flight when the tree settles.
+labels_maker_timeout=30
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -326,6 +334,40 @@ check_labels_enabled()
     return 1
 }
 
+# Wait for the hw-management-labels-maker.sh instances spawned by check_n_link
+# to finish. Returns 1 if any of them is still running after the timeout.
+wait_labels_maker_done()
+{
+    local waited=0
+
+    while pgrep -f "$labels_maker_script" > /dev/null 2>&1; do
+        if [ "$waited" -ge "$labels_maker_timeout" ]; then
+            return 1
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+    return 0
+}
+
+# Publish config/labels_ready for a SKU whose label tree is built at run time.
+# Called from hw-management-sysfs-monitor.sh once the tree has settled: a maker
+# is spawned from check_n_link, which is also what refreshes the monitor
+# timestamps, so by then every maker has been spawned and only the ones still
+# in flight have to be drained. No-op when hw-management-start-post.sh
+# extracted a ui_tree archive and published the indicator itself.
+publish_labels_ready()
+{
+    [ -f "$labels_pending_file" ] || return 0
+
+    if ! wait_labels_maker_done; then
+        log_err "Label tree is still being built after ${labels_maker_timeout}s"
+    fi
+    rm -f "$labels_pending_file"
+    echo 1 > "$config_path"/labels_ready
+    log_info "Labels data base is ready"
+}
+
 # This function checks if the platform is having BSP emulation support.
 # return 0 if supported, 1 otherwise.
 check_if_simx_supported_platform()
@@ -433,6 +475,26 @@ check_host_usb0_managed_by_nos()
 		return 1
 	fi
 	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
+}
+
+# hw-management-sysfs-monitor.service owns the sysfs ready file, the hw-mgmt
+# tree dump, the post fixup hook, the i2c trace teardown and config/labels_ready.
+# systemd pulls it in after hw-management.service, but "hw-management.sh restart"
+# and a manual start run do_start on their own, outside any systemd job, so
+# nothing re-runs the monitor and the labels handoff never completes. Start it
+# from here in that case. Only while hw-management.service is already active:
+# during its ExecStart the unit reads "activating" and systemd starts the
+# monitor itself, and when the unit is inactive the monitor Requires= would drag
+# it in. --no-block because the monitor ExecStart returns only once the tree has
+# settled.
+start_sysfs_monitor_if_needed()
+{
+    print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+    [ "$(systemctl is-active hw-management.service 2>/dev/null)" = "active" ] || return 0
+    systemctl is-active --quiet hw-management-sysfs-monitor.service 2>/dev/null && return 0
+
+    log_info "Starting sysfs monitor to complete hw-management initialization"
+    systemctl start --no-block hw-management-sysfs-monitor.service 2>/dev/null
 }
 
 # This function create or cleans sysfs monitor helper files.
