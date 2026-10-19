@@ -1,19 +1,15 @@
 # What changed in this revision
 
-Rev. 3.2.12, October 2026. Revisions through 3.2.11 are in
-[CHANGELOG_User_Manual.md](CHANGELOG_User_Manual.md).
+Rev. 3.2.13, October 2026. Revisions through 3.2.12 are in the
+[user manual changelog](CHANGELOG_User_Manual.md).
 
-- [mlxsw sysfs ready](#mlxsw-sysfs-ready). `$bsp_path/sysfs_mlxsw_rdy` is written when
-  hw-management has created the virtual links for an hwmon device whose name is `mlxsw`.
-  The file contains uptime in milliseconds. The helper comment limits that indication to SPC1.
-- Read-only nodes no longer have an Arguments table. The value meaning is on a Values line.
-  Empty examples on those nodes now show the `cat` command.
-- [Drivers](#drivers) covers the kernel modules behind this hierarchy, including
-  [Watchdog (mlx-wdt)](#watchdog-mlx-wdt). Type 3 watchdog maximum timeout is 65535 seconds.
-- [TC v2.5](#tc-v2.5) is selected when `tc_version` in `tc_config.json` is `2.5` or `2.5.*`.
-  On this branch that is SN5600 (HI144), SN2201 SKU HI168, MSN4700 DGX (HI184), Q3401 (HI179),
-  SN5610 (HI172), and SN5640 (HI171), plus any other SKU on the SN5640 board.
-- The host and BMC role line names the stack only.
+- Section references are links. The manual does not number its headings, so a reference such as
+  "see Get Reset Cause" now points at that heading, and it stays valid when sections move.
+- [Drivers](#drivers) covers every kernel module and I2C device that the scripts load or
+  instantiate: the PMBus regulators, the temperature sensors, the ADC, GPIO, EEPROM and I2C mux
+  drivers, the host I2C controllers, and the generic `i2c-dev` and `ledtrig-timer` modules.
+- Layout and rendering fixes: tables that showed raw markdown now render as text, the Get Reset Cause
+  notes no longer run off the page, and section headings no longer sit alone at the bottom of a page.
 
 # Introduction
 
@@ -25,15 +21,11 @@ The major advantage of working with sysfs is that it makes HW hierarchy easy to 
 
 ## Software Components
 
-Figure 1 presents the software architecture layout and Figure 2 presents layer separation for sysfs support.
+Figure 1 presents the system architecture and the layer separation for sysfs support.
 
-##### Figure 1 - System Architecture Layout
+##### Figure 1 - System Architecture and Sysfs Layout
 
-![System Architecture Layout](images/system-arc-layout.png)
-
-##### Figure 2 - Sysfs Layout
-
-![Sysfs Layout](images/sysfs-layout.png)
+![](images/sysfs-layout.png)
 
 ## Host and BMC software stacks
 
@@ -42,7 +34,7 @@ hierarchy under **`/var/run/hw-management/`** (`$bsp_path` in this manual), but 
 from **different source trees** and run on **different processors**:
 
 | | **Host stack** | **BMC stack** |
-|---|----------------|---------------|
+|--------------|--------------------------------|--------------------------------|
 | **Role** | Switch CPU / NOS | Dedicated BMC SoC |
 | **Debian package** | `hw-management` | `hw-management-bmc` |
 | **Repository source** | `usr/` (scripts under `usr/usr/bin/`, platform data under `usr/etc/`) | `bmc/usr/` (mirrors host layout; platform data under `bmc/usr/etc/<HID>/`) |
@@ -64,7 +56,7 @@ from **different source trees** and run on **different processors**:
 Both stacks may be present on the same product (CPU + BMC each running their own package);
 they do **not** share the same `/usr/bin` install tree on a single root filesystem.
 
-**Stack column (used in §3.x):**
+**Stack column (used in [Virtual SysFS Hierarchy](#virtual-sysfs-hierarchy)):**
 
 | Label | Meaning |
 |-------|---------|
@@ -135,7 +127,7 @@ drivers need to be initialized before using sysfs. In addition, NVIDIA virtual h
 needs to be created in order to use it.
 
 The following applies to the **host** package (`hw-management`). For the **BMC** package,
-see **§2.2** and `bmc/README.md` (systemd units, udev rules, and scripts under
+see [Host and BMC software stacks](#host-and-bmc-software-stacks) and `bmc/README.md` (systemd units, udev rules, and scripts under
 `hw-management-bmc-*`).
 
 The package provides a simple way to initialize the drivers using the set of shell scripts. These scripts support initialization and de-initialization of driver, virtual hierarchy structure, udev events handling, based on a set of NVIDIA system specific udev rules.
@@ -159,9 +151,9 @@ Package contains the following files, used within the workload:
 
 For more details follow package README file (`README.md` for host, `bmc/README.md` for BMC).
 
-##### Figure 3 - Thermal Management Flow
+##### Figure 2 - Thermal Management Flow
 
-![Thermal Control Core](images/thermal-control-core.png)
+![](images/thermal-control-core.png)
 
 # Virtual SysFS Hierarchy
 
@@ -192,10 +184,10 @@ NVIDIA virtual hierarchy supports the following HW control ($bsp_path below is a
 
 Detailed information on each of these nodes can be found in the following sections.
 
-**Stack applicability:** Most §3.x nodes are created by the **host** stack
+**Stack applicability:** Most nodes in [Virtual SysFS Hierarchy](#virtual-sysfs-hierarchy) are created by the **host** stack
 (`hw-management-thermal-events.sh` / `hw-management-chassis-events.sh`). Sections tagged
 **Stack: BMC** or naming **`hw-management-bmc-events.sh`** apply to the **BMC package** only
-(see **§2.2**). §3.23 documents host-visible BMC status; BMC `system/` register layout is in
+(see [Host and BMC software stacks](#host-and-bmc-software-stacks)). [BMC status](#bmc-status) documents host-visible BMC status; BMC `system/` register layout is in
 `bmc/examples/hw-management-bmc-system-sysfs.txt`.
 
 Note: some of the attributes described below are not relevant to all platforms and will exist only on the platforms which support this attribute.
@@ -212,11 +204,15 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/sysfs
 Description & \multicolumn{3}{p{0.735\linewidth}}{Written by \texttt{\small hw-management-thermal-events.sh} on the switch add path when the hwmon \texttt{\small name} file is \texttt{\small mlxsw}, after that hwmon's module temperature links are created. The value is \texttt{\small /proc/uptime} converted to milliseconds (\texttt{\small awk '\{print int(\$1 * 1000)\}'}). The helper comment describes the file as the module, ASIC, fan, and PWM ready indication for SPC1. The script does not test a SKU; it tests the hwmon name. The tree writes this file and does not delete it. Introduced by commit \texttt{\small 8775d0d3} (bug 5207348), listed in the V.7.0070.1932 release notes.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1932} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the ready timestamp: \texttt{\small cat \$bsp\_path/sysfs\_mlxsw\_rdy}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the ready timestamp: \texttt{\small cat \$bsp\_path/sysfs\_mlxsw\_rdy}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## Config Control
@@ -231,10 +227,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the ready timestamp: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_bus}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get system ASIC bus number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-99} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-99} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic bus number: \texttt{\small cat \$bsp\_path/config/asic\_bus}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get asic bus number: \texttt{\small cat \$bsp\_path/config/asic\_bus}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -253,7 +249,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC \textless{}index\textgreater{} I2C bus} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.2930} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC I2C bus address: \texttt{\small cat \$bsp\_path/config/asic1\_i2c\_bus\_id}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get ASIC I2C bus address: \texttt{\small cat \$bsp\_path/config/asic1\_i2c\_bus\_id}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -272,7 +268,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC PCI bus ID} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.1338} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic PCI bus number: \texttt{\small cat \$bsp\_path/config/asic1\_pci\_bus\_id}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get asic PCI bus number: \texttt{\small cat \$bsp\_path/config/asic1\_pci\_bus\_id}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -289,10 +285,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic PCI bus number: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_chipup\_completed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC count which has already initialized. When asic\_chipup\_completed == asic\_num, asics\_init\_done should be set to "1'} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0..asic\_count} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0..asic\_count} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get already initialized asic count: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_completed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get already initialized asic count: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_completed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -309,10 +305,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get already initialized asic count
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asics\_init\_done}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC init done status. 1 – All asic initialized and ready. 0 – One or more ASICs not ready When asic\_chipup\_completed == asic\_num, asics\_init\_done should be set to "1'} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1 – ALL ASICs ready; 0 – One or more ASICs not ready} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1 – ALL ASICs ready; 0 – One or more ASICs not ready} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get asics init ready: \texttt{\small cat \$bsp\_path/config/asics\_init\_done}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get asics init ready: \texttt{\small cat \$bsp\_path/config/asics\_init\_done}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -333,7 +329,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write/Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & Status & Integer (seconds) & 0 – no delay other – delay \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get chipdown value: \texttt{\small cat \$bsp\_path/config/chipdown\_delay} Set 5 seconds delay in chipup value: \texttt{\small echo 5 \textgreater{} \$bsp\_path/config/chipup\_delay}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get chipdown value: \texttt{\small cat \$bsp\_path/config/chipdown\_delay} Set 5 seconds delay in chipup value: \texttt{\small echo 5 \textgreater{} \$bsp\_path/config/chipup\_delay}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -350,10 +346,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get chipdown value: \texttt{\small
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cpld\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of CPLD modules in the system} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD number: \texttt{\small cat \$bsp\_path/config/cpld\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get CPLD number: \texttt{\small cat \$bsp\_path/config/cpld\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -370,10 +366,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD number: \texttt{\small ca
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/psu\{n\}\_vpd}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU VPD info in human readable format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, ASCII: EEPROM info} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, ASCII: EEPROM info} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU VPD info: \texttt{\small cat \$bsp\_path/eeprom/psu\{n\}\_vpd}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU VPD info: \texttt{\small cat \$bsp\_path/eeprom/psu\{n\}\_vpd}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -390,10 +386,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU VPD info: \texttt{\small c
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_fans}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug FAN number in the system} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only It can be zero on fixed system.} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug fan number: \texttt{\small cat \$bsp\_path/config/hotplug\_fans}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get hot-plug fan number: \texttt{\small cat \$bsp\_path/config/hotplug\_fans}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -410,10 +406,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug fan number: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_psus}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug PSU number in the system. It can be zero on fixed system.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug psu number: \texttt{\small cat \$bsp\_path/config/hotplug\_psus}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get hot-plug psu number: \texttt{\small cat \$bsp\_path/config/hotplug\_psus}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -430,10 +426,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug psu number: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_pdbs}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.\newline Note: This attribute is primarily for liquid-cooled systems (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD, N6300\_LD; SN66XX\_LD family: SN6600\_LD). PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present. It can be zero on air-cooled systems or systems without hot-pluggable PDBs. Note: N6100\_LD has hotplug\_pdbs=0 (PDB is not hot-pluggable). Note: N6300\_LD (SKU HI185) has hotplug\_pdbs=2. Note: SN6600\_LD (SKU HI193) has hotplug\_pdbs=2 with \texttt{\small events/pdb1} and \texttt{\small events/pdb2}.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0-X (number of hot-pluggable PDBs)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0-X (number of hot-pluggable PDBs)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.3930} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug PDB number: \texttt{\small cat \$bsp\_path/config/hotplug\_pdbs}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get hot-plug PDB number: \texttt{\small cat \$bsp\_path/config/hotplug\_pdbs}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -450,7 +446,8 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug PDB number: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_pwrs}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug Power cable number in the system. It can be zero on fixed system.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0-X} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get hot-plug Power cable number: \texttt{\small cat \$bsp\_path/config/hotplug\_pwrs}} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
 \bottomrule
@@ -471,7 +468,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of Linecards} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-plug linecards: \texttt{\small cat \$bsp\_path/config/hotplug\_linecards}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get the number of hot-plug linecards: \texttt{\small cat \$bsp\_path/config/hotplug\_linecards}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -488,10 +485,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-plug linecar
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/gearbox\_counter}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of gearboxes in the system.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: 0-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/gearbox\_counter}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/gearbox\_counter}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -507,11 +504,11 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/module\_counter}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of sfp modules in the system Note: this is attribue is valid only for I2C ASIC driver} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-X} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of sfp modules in the system Note: this attribute is valid only for I2C ASIC driver} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get sfp module: \texttt{\small cat \$bsp\_path/config/module\_counter}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get sfp module: \texttt{\small cat \$bsp\_path/config/module\_counter}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -530,7 +527,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Number of remaining ASIC chip-up retry attempts. This counter is decremented with each chip-up attempt and reset to the initial retry count when all attempts are exhausted.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic chipup completed: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_counter}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get asic chipup completed: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_counter}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -547,10 +544,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic chipup completed: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asic\_chipup\_completed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{counter of successful ASIC driver initialization completions: 0 - no successful initialization completion. 1 - one ASIC device has been successful initialized. n – 'n' ASIC devices has been successful initialized.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic chipup completed: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_completed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get asic chipup completed: \texttt{\small cat \$bsp\_path/config/asic\_chipup\_completed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -567,10 +564,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get asic chipup completed: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/asics\_init\_done}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{is to be set to one, when 'asic\_chipup\_completed' attribute matches 'asic\_num' attribute (old static attribute /var/run/hw-management/config/asic\_num)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get asics init done: \texttt{\small cat \$bsp\_path/config/asics\_init\_done}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get asics init done: \texttt{\small cat \$bsp\_path/config/asics\_init\_done}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -587,10 +584,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get asics init done: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/max\_tachos}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get max number of system fans.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fans max value: \texttt{\small cat \$bsp\_path/config/max\_tachos}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fans max value: \texttt{\small cat \$bsp\_path/config/max\_tachos}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -607,10 +604,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get fans max value: \texttt{\small
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_drwr\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get number of system FAN drawers} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get number of system FAN drawers: \texttt{\small cat \$bsp\_path/config/fan\_drwr\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get number of system FAN drawers: \texttt{\small cat \$bsp\_path/config/fan\_drwr\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -627,10 +624,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get number of system FAN drawers: 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_command}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PMBUS command for PSU config} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Hex: 0xhh} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Hex: 0xhh} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan command: \texttt{\small cat \$bsp\_path/config/fan\_command}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fan command: \texttt{\small cat \$bsp\_path/config/fan\_command}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -647,10 +644,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan command: \texttt{\small ca
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_max\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_min\_speed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the absolute system fan max/min speed} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan max speed: \texttt{\small cat \$bsp\_path/config/fan\_max\_speed} Get fan min speed: \texttt{\small cat \$bsp\_path/config/fan\_min\_speed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fan max speed: \texttt{\small cat \$bsp\_path/config/fan\_max\_speed} Get fan min speed: \texttt{\small cat \$bsp\_path/config/fan\_min\_speed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -667,10 +664,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan max speed: \texttt{\small 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_front\_max\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_front\_min\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_rear\_max\_speed}\newline \texttt{\small \$bsp\_path/config/fan\_rear\_min\_speed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the absolute system fan max/min speed for front/rear FAN. These attributes can be present on some switch types. If not present  - fan\_max\_speed/fan\_min\_speed should be used instead.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get front fan max speed: \texttt{\small cat \$bsp\_path/config/fan\_front\_max\_speed} Get front fan min speed: \texttt{\small cat \$bsp\_path/config/fan\_front\_min\_speed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get front fan max speed: \texttt{\small cat \$bsp\_path/config/fan\_front\_max\_speed} Get front fan min speed: \texttt{\small cat \$bsp\_path/config/fan\_front\_min\_speed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -687,10 +684,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get front fan max speed: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_speed\_tolerance}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Max tolerance for measured FAN min/max speed compared to reference defined in fan\_max\_speed/fan\_min\_speed} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{int (percent): 0..90 (default 15)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{int (percent): 0..90 (default 15)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.1032} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_speed\_tolerance}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_speed\_tolerance}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -707,10 +704,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/fan\_speed\_units}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Value to write PSU PMBUS register FAN\_CONFIG\_1\_2 Set FAN Commanded in Duty Cycle. Used for PSU fan SET configuration} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: X (default 0x90)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: X (default 0x90)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.10.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_speed\_units i2cset -f -y "\$bus" "\$addr" "\$fan\_config\_command" "\$fan\_speed\_units" bp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_speed\_units i2cset -f -y "\$bus" "\$addr" "\$fan\_config\_command" "\$fan\_speed\_units" bp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -727,10 +724,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/leakage\_counter}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of leakage sensors installed in the switch.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 1-8} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 1-8} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{RO} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/leakage\_counter}\newline Note: On SN6600\_LD (SKU HI193), \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} sets \texttt{\small leakage\_count} to \textbf{2}, which becomes \texttt{\small config/leakage\_counter}. The same script initializes \texttt{\small events/leakage1} and \texttt{\small events/leakage2} only. Additional \texttt{\small system/leakage\textless{}N\textgreater{}} symlinks (for example \texttt{\small leakage3} through \texttt{\small leakage5} in the validated tree) can appear when mlxreg-io exposes those hwmon attributes; \texttt{\small hw-management-thermal-events.sh} links each present \texttt{\small leakageN} up to its \texttt{\small max\_leakage} limit (\textbf{8}). Consumers should treat \texttt{\small leakage\_counter} as the supported event and policy count unless platform documentation states otherwise.} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/leakage\_counter}\newline Note: On SN6600\_LD (SKU HI193), \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} sets \texttt{\small leakage\_count} to \textbf{2}, which becomes \texttt{\small config/leakage\_counter}. The same script initializes \texttt{\small events/leakage1} and \texttt{\small events/leakage2} only. Additional \texttt{\small system/leakage\textless{}N\textgreater{}} symlinks (for example \texttt{\small leakage3} through \texttt{\small leakage5} in the validated tree) can appear when mlxreg-io exposes those hwmon attributes; \texttt{\small hw-management-thermal-events.sh} links each present \texttt{\small leakageN} up to its \texttt{\small max\_leakage} limit (\textbf{8}). Consumers should treat \texttt{\small leakage\_counter} as the supported event and policy count unless platform documentation states otherwise.} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -747,10 +744,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cartridge\_counter}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of cable cartridges in the system. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD and N6300\_LD (SKU HI185) have 4 cable cartridges (\texttt{\small config/cartridge\_counter} = 4).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Count, Integer: 0-X (number of cartridges)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Count, Integer: 0-X (number of cartridges)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get cartridge count: \texttt{\small cat \$bsp\_path/config/cartridge\_counter}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get cartridge count: \texttt{\small cat \$bsp\_path/config/cartridge\_counter}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -771,7 +768,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & Status & Integer & X \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set periodic log report time: \texttt{\small echo 3000 \textgreater{} \$bsp\_path/config/periodic\_report}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set periodic log report time: \texttt{\small echo 3000 \textgreater{} \$bsp\_path/config/periodic\_report}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -788,10 +785,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set periodic log report time: \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu\textless{}power supply module number\textgreater{}\_i2c\_addr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the I2C address of PSU for direct connection} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Hex: 0xhh} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Hex: 0xhh} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 I2C address: \texttt{\small cat \$bsp\_path/config/psu1\_i2c\_addr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 I2C address: \texttt{\small cat \$bsp\_path/config/psu1\_i2c\_addr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -808,10 +805,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 I2C address: \texttt{\sma
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu\textless{}X\textgreater{}\_i2c\_bus}\newline Where \texttt{\small \textless{}X\textgreater{}} is the power supply module index (for example \texttt{\small psu1\_i2c\_bus}, \texttt{\small psu2\_i2c\_bus}).} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Contains the I2C bus number of PSU\textless{}X\textgreater{} used for direct connection to that power supply module.\newline This configuration parameter is \textbf{optional} and is \textbf{not mandatory} on all platforms. It is created and used by the hw-management package for internal purposes (for example dummy PSU detection and mapping on supported switch systems). The OS and user-space applications \textbf{must not} assume that \texttt{\small psu\textless{}X\textgreater{}\_i2c\_bus} is always present; check for the file before reading it.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Bus index, Integer: Platform-specific I2C bus number (for example \texttt{\small 3}, \texttt{\small 4})} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Bus index, Integer: Platform-specific I2C bus number (for example \texttt{\small 3}, \texttt{\small 4})} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only\newline \textbf{Mandatory:} No} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 I2C bus when the file exists: \texttt{\small if [ -f \$bsp\_path/config/psu1\_i2c\_bus ]; then 	cat \$bsp\_path/config/psu1\_i2c\_bus fi}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 I2C bus when the file exists: \texttt{\small if [ -f \$bsp\_path/config/psu1\_i2c\_bus ]; then 	cat \$bsp\_path/config/psu1\_i2c\_bus fi}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -828,10 +825,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 I2C bus when the file exi
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/thermal\_delay}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the delay duration (seconds) since the HW mgmt service starts until thermal control init} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer (seconds): X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer (seconds): X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get thermal delay: \texttt{\small cat \$bsp\_path/config/thermal\_delay}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get thermal delay: \texttt{\small cat \$bsp\_path/config/thermal\_delay}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -848,10 +845,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get thermal delay: \texttt{\small 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dummy\_psus\_supported}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Indicates whether the system supports dummy PSUs for power management. Set to "1" for systems that support dummy PSU functionality, "0" otherwise.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: 0 or 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 or 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/dummy\_psus\_supported 1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/dummy\_psus\_supported 1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -868,10 +865,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu[x]\_power\_capacity}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the maximum power capacity for the psu.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Constant, Milli watt: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Constant, Milli watt: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only\newline This attribute is present only in SN5600 and SN5400 platforms.} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power capacity of the psu \texttt{\small cat \$bsp\_path/config/psu[x]\_power\_capacity}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power capacity of the psu \texttt{\small cat \$bsp\_path/config/psu[x]\_power\_capacity}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -888,10 +885,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power capacity of the psu \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/psu[x]\_power\_slope}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get the power slope value for the psu. This is a hardware defined constant and will be used in power calculation} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Constant, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Constant, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only\newline This attribute is present only in SN5600 and SN5400 platforms.} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power slope for the psu \texttt{\small cat \$bsp\_path/config/psu[x]\_power\_slope}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power slope for the psu \texttt{\small cat \$bsp\_path/config/psu[x]\_power\_slope}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -908,10 +905,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power slope for the psu \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Number of DPUs (1-4)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer (number): X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer (number): X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu number: \texttt{\small cat \$bsp\_path/config/dpu\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu number: \texttt{\small cat \$bsp\_path/config/dpu\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -928,10 +925,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu number: \texttt{\small cat
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_board\_type}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Whether DPU sensors are loaded static or dynamic} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, String: Static / dynamic} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, String: Static / dynamic} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu board type: \texttt{\small cat \$bsp\_path/config/dpu\_board\_type}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu board type: \texttt{\small cat \$bsp\_path/config/dpu\_board\_type}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -948,10 +945,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu board type: \texttt{\small
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_brd\_bus\_offset}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{DPU i2c bus offset} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer (number): X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer (number): X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu i2c bus offset \texttt{\small cat \$bsp\_path/config/dpu\_brd\_bus\_offset}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu i2c bus offset \texttt{\small cat \$bsp\_path/config/dpu\_brd\_bus\_offset}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -968,10 +965,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu i2c bus offset \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_bus\_off}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{I2c bus offset for the dpu} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer (number): X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer (number): X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu bus offset number: \texttt{\small cat \$bsp\_path/config/dpu\_bus\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu bus offset number: \texttt{\small cat \$bsp\_path/config/dpu\_bus\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -988,10 +985,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu bus offset number: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_events}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Events supported by DPUs} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, String: Ev1, ev2, etc.} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, String: Ev1, ev2, etc.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get the events supported by DPU \texttt{\small cat \$bsp\_path/config/dpu\_events}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get the events supported by DPU \texttt{\small cat \$bsp\_path/config/dpu\_events}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1008,10 +1005,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get the events supported by DPU \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/dpu\_to\_host\_events}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{DPU events to host} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, String: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, String: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu events to host \texttt{\small cat \$bsp\_path/config/dpu\_to\_host\_events}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu events to host \texttt{\small cat \$bsp\_path/config/dpu\_to\_host\_events}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1028,10 +1025,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu events to host \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/labels\_ready}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Label folder \$bsp\_path/ui\_tree ready to use} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{0 – labels init in progress; 1 – labels init ready} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{0 – labels init in progress; 1 – labels init ready} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.0958} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/labels\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/labels\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1048,10 +1045,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cpu\_type}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{CPU type ID. Extracted from /proc/cpuinfo. Format: 0xXXYY XX – model num YY - cpu family} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Hex} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Hex} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read Only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/cpu\_type 0x656 cpu family	: 6 model		: 86 model name	: Intel(R) Xeon(R) CPU D-1527 @ 2.20GHz}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/cpu\_type 0x656 cpu family	: 6 model		: 86 model name	: Intel(R) Xeon(R) CPU D-1527 @ 2.20GHz}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1070,7 +1067,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{List of I2C bus idx/bus names separated by 'space'. Contains meaningful names for I2C busses on main board Present on some systems.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read Only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.3100} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{asic1 2 pwr 4 vr1 5 amb1 7 vpd 8} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{asic1 2 pwr 4 vr1 5 amb1 7 vpd 8} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1089,7 +1086,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Base i2c bus idx. used for internal purposes} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/i2c\_bus\_offset 2}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/i2c\_bus\_offset 2}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1108,7 +1105,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{List of i2c devices/names/bus/add\newline used for internal purposes} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{xdpe12284 0x62 5 voltmon1 xdpe12284 0x64 5 voltmon2 …} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{xdpe12284 0x62 5 voltmon1 xdpe12284 0x64 5 voltmon2 …} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1127,7 +1124,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Offset of i2c bus for CPU VPD eeprom} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/i2c\_bus\_def\_off\_eeprom\_cpu}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/i2c\_bus\_def\_off\_eeprom\_cpu}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1144,10 +1141,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_comex\_mon\_bus\_default}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Default I2C bus number for COMEX monitoring devices. Used for voltage monitoring and other COMEX-related sensor readings.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: Bus number} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: Bus number} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/i2c\_comex\_mon\_bus\_default}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/i2c\_comex\_mon\_bus\_default}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1164,10 +1161,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/i2c\_swb\_bus}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Absolute I2C adapter number for the switch-board (SWB) CPLD used for cartridge identity registers (rack id, topology id, tray id, slot id) at slave address \texttt{\small 0x31}. Platform-specific (for example HI176 CPU bus 18, HI180 CPU bus 53). Created from platform.json \texttt{\small variables.i2c\_swb\_bus} or from legacy \texttt{\small *\_specific()} init. Used by \texttt{\small hw-management-generate-dump.sh} to produce archive member \texttt{\small cpld\_swb\_cartridge\_dump} when the node exists (rack\_id 13 bytes + ASCII, topology/tray/slot).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: Bus number} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: Bus number} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/i2c\_swb\_bus 53}\newline Example \texttt{\small cpld\_swb\_cartridge\_dump} (from \texttt{\small /tmp/hw-mgmt-dump.tar.gz}): ``\texttt{\small text i2c\_swb\_bus=53 addr=0x31 rack\_id: 0x31 0x38 0x32 0x34 0x32 0x32 0x35 0x34 0x31 0x30 0x30 0x31 0x33 rack\_id\_ascii: 1824225410013 topology\_id: 0x00 tray\_id: 0x00 slot\_id: 0x01 }``} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/i2c\_swb\_bus 53}\newline Example \texttt{\small cpld\_swb\_cartridge\_dump} (from \texttt{\small /tmp/hw-mgmt-dump.tar.gz}): ``\texttt{\small text i2c\_swb\_bus=53 addr=0x31 rack\_id: 0x31 0x38 0x32 0x34 0x32 0x32 0x35 0x34 0x31 0x30 0x30 0x31 0x33 rack\_id\_ascii: 1824225410013 topology\_id: 0x00 tray\_id: 0x00 slot\_id: 0x01 }``} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1184,10 +1181,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lm\_sensors\_config}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Configuration file for sensor tool from lm\_sensors package. Contains sensors definition for the system} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Text file} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Text file} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small sensors -c \$bsp\_path/config/lm\_sensors\_config}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small sensors -c \$bsp\_path/config/lm\_sensors\_config}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1204,10 +1201,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small sensors -c \$bsp\_p
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lm\_sensors\_labels}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Path to JSON file containing sensor labels for lm-sensors configuration. Provides human-readable names for various temperature, voltage, and fan sensors.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Text file} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Text file} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/lm\_sensors\_labels /etc/hw-management-sensors/msn2700\_sensors\_labels.json}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/lm\_sensors\_labels /etc/hw-management-sensors/msn2700\_sensors\_labels.json}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1224,10 +1221,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/events\_ready}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Provides indication that VPD parsing was completed.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0/1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Check whether VPD parsing has been completed \texttt{\small cat \$bsp\_path/config/events\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Check whether VPD parsing has been completed \texttt{\small cat \$bsp\_path/config/events\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1244,10 +1241,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Check whether VPD parsing has been
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/minimal\_unsupported}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Provides indication for whether ASIC I2C ('minimal') driver is supported.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0/1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read Only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get indication on whether minimal driver is supported: \texttt{\small \$bsp\_path/config/minimal\_unsupported}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get indication on whether minimal driver is supported: \texttt{\small \$bsp\_path/config/minimal\_unsupported}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1266,7 +1263,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/syste
 Description & \multicolumn{3}{p{0.735\linewidth}}{SGMII (Serial Gigabit Media Independent Interface) PHY status and configuration. Provides information about the physical layer interface for gigabit Ethernet connections.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/sgmii\_phy}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/sgmii\_phy}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1285,7 +1282,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Indicates system flow capability for thermal management. Set to "C2P" (Cold to Power) for systems that support this flow direction.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/system\_flow\_capability C2P}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/system\_flow\_capability C2P}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1304,7 +1301,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Enables fan direction detection from EEPROM. Set to "1" for systems that support fan direction detection via EEPROM. On these systems, each fan drawer direction (\texttt{\small thermal/fan\textless{}index\textgreater{}\_dir}) is taken from the fan module EEPROM VPD. When the fan is removed, the corresponding \texttt{\small fan\textless{}index\textgreater{}\_dir} attribute may also be removed. See Read Fan Direction.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_dir\_eeprom 1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/fan\_dir\_eeprom 1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1323,7 +1320,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Write protection wait step configuration in seconds. Used by global write protection mechanism.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/global\_wp\_wait\_step 1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/global\_wp\_wait\_step 1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1342,7 +1339,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Write protection timeout configuration in seconds. Used by global write protection mechanism.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/global\_wp\_timeout 20}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/global\_wp\_timeout 20}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1361,7 +1358,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Default I2C bus number for ConnectX devices. Used for ConnectX device communication.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/cx\_default\_i2c\_bus 15}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/cx\_default\_i2c\_bus 15}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1380,7 +1377,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{JTAG bridge memory offset for debugging purposes. Extracted from /proc/iomem mlxplat\_jtag\_bridge entry.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/jtag\_bridge\_offset 0x40000000}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/jtag\_bridge\_offset 0x40000000}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1399,7 +1396,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Temperature sensor ID for CPU core 0. Used for thermal monitoring of the first CPU core.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/core0\_temp\_id 2}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/core0\_temp\_id 2}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1418,7 +1415,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{Temperature sensor ID for CPU core 1. Used for thermal monitoring of the second CPU core.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/core1\_temp\_id 3}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/core1\_temp\_id 3}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1435,11 +1432,11 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{LM5066I PDB hot-swap input power and current scaling factor. Written by \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} for SN6600\_LD (SKU HI193). The same value is symlinked under each lm5066i PDB hotswap environment node as \texttt{\small *\_power1\_scale} and \texttt{\small *\_curr1\_scale} (see §3.4). lm-sensors applies the same factor via \texttt{\small compute} rules in \texttt{\small usr/etc/hw-management-sensors/sn66xxld\_sensors.conf}.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Scale, Float: \textbf{5.333} on SN6600\_LD (validated in \texttt{\small hw-management.sh})} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{LM5066I PDB hot-swap input power and current scaling factor. Written by \texttt{\small sn66xxld\_specific()} in \texttt{\small hw-management.sh} for SN6600\_LD (SKU HI193). The same value is symlinked under each lm5066i PDB hotswap environment node as \texttt{\small *\_power1\_scale} and \texttt{\small *\_curr1\_scale} (see \hyperref[environment-control]{Environment Control}). lm-sensors applies the same factor via \texttt{\small compute} rules in \texttt{\small usr/etc/hw-management-sensors/sn66xxld\_sensors.conf}.} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Scale, Float: \textbf{5.333} on SN6600\_LD (validated in \texttt{\small hw-management.sh})} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/pdb\_hotswap\_scale}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/pdb\_hotswap\_scale}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1456,11 +1453,11 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/con
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/led\_control\_type}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Optional platform map of LED name (or glob mask) to control owner. Written by \texttt{\small set\_config\_data()} in \texttt{\small hw-management.sh} when a \texttt{\small *\_specific()} function sets the \texttt{\small led\_control\_type} array. Space-separated pairs: \texttt{\small name type [name type ...]}.\newline If the node is absent, or a given LED name is not listed, LED add uses the default owner \texttt{\small led\_hw\_sw} (see §3.16.28).\newline Name matching (in \texttt{\small hw-management-chassis-events.sh} \texttt{\small get\_led\_control\_type()}):\newline 1. Exact match of the udev LED name (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}) or \texttt{\small led\_\textless{}name\textgreater{}}.    \texttt{\small fan} and \texttt{\small fan1} are different names. 2. Glob mask: \texttt{\small *} matches any string, \texttt{\small ?} matches one character. First matching    mask wins. Masks must be quoted in the platform array (\texttt{\small "fan*"}, \texttt{\small "led?"})    so the shell does not expand them. 3. Otherwise \texttt{\small led\_hw\_sw}.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{name, String: LED name (\texttt{\small fan}, \texttt{\small status}) or mask (\texttt{\small fan*}, \texttt{\small led\_psu?}, \texttt{\small led*}); type, String: \texttt{\small led\_sw}, \texttt{\small led\_hw}, \texttt{\small led\_hw\_sw}} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Optional platform map of LED name (or glob mask) to control owner. Written by \texttt{\small set\_config\_data()} in \texttt{\small hw-management.sh} when a \texttt{\small *\_specific()} function sets the \texttt{\small led\_control\_type} array. Space-separated pairs: \texttt{\small name type [name type ...]}.\newline If the node is absent, or a given LED name is not listed, LED add uses the default owner \texttt{\small led\_hw\_sw} (see \hyperref[get-led-control-owner]{Get LED Control Owner}).\newline Name matching (in \texttt{\small hw-management-chassis-events.sh} \texttt{\small get\_led\_control\_type()}):\newline 1. Exact match of the udev LED name (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}) or \texttt{\small led\_\textless{}name\textgreater{}}.    \texttt{\small fan} and \texttt{\small fan1} are different names. 2. Glob mask: \texttt{\small *} matches any string, \texttt{\small ?} matches one character. First matching    mask wins. Masks must be quoted in the platform array (\texttt{\small "fan*"}, \texttt{\small "led?"})    so the shell does not expand them. 3. Otherwise \texttt{\small led\_hw\_sw}.} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{name, String: LED name (\texttt{\small fan}, \texttt{\small status}) or mask (\texttt{\small fan*}, \texttt{\small led\_psu?}, \texttt{\small led*}); type, String: \texttt{\small led\_sw}, \texttt{\small led\_hw}, \texttt{\small led\_hw\_sw}} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.7} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/led\_control\_type \# fan led\_sw psu led\_sw status led\_sw}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/led\_control\_type \# fan led\_sw psu led\_sw status led\_sw}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1478,14 +1475,18 @@ Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cable\_cartridge\textless{}cartridge number\textgreater{}\_valid}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Result of the IPMI FRU check run on the cable cartridge EEPROM at init. The BMC reads the same EEPROM and programs the rack id, topology id, switch tray id and slot id into the switch board CPLD without validating it, so this node reports whether that source data can be trusted.\newline Written by \texttt{\small validate\_cartridge\_fru()} in \texttt{\small hw-management-chassis-events.sh} after \texttt{\small ipmi-fru} parses \texttt{\small eeprom/cable\_cartridge\textless{}n\textgreater{}\_eeprom}. \texttt{\small ipmi-fru} exits 0 even for a broken FRU, so the verdict comes from its output: a \texttt{\small FRU Error} line, or a missing board serial number or chassis custom info field, gives 0. Failures are also reported to syslog.\newline Created on the N51XX\_LD and N61XX\_LD families only. Other platforms that have cable cartridge EEPROMs parse them through a different path and do not get this node. It is also absent when \texttt{\small ipmi-fru} is not installed.\newline The node is created when the cartridge EEPROM appears and removed when the cartridge is removed, so it never reports a verdict for an empty slot.\newline One node per cartridge, so the count follows \texttt{\small config/cartridge\_counter}, which is platform dependent: 4 on N6100\_LD (HI180), N6300\_LD (HI185), N5110\_LD (HI166) and N5100\_LD (HI167/HI170), and 2 on N5112\_LD (HI169).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Validity, Integer: 1 - FRU valid, 0 - FRU invalid} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Validity, Integer: 1 - FRU valid, 0 - FRU invalid} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.8} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Check cable cartridge 1 FRU validity: \texttt{\small cat \$bsp\_path/config/cable\_cartridge1\_valid}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Check cable cartridge 1 FRU validity: \texttt{\small cat \$bsp\_path/config/cable\_cartridge1\_valid}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## BIOS Control
@@ -1500,14 +1501,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Check cable cartridge 1 FRU validi
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/bios\_active\_image}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Currently active BIOS image identifier. Indicates which BIOS image is currently running on the system.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Text: Image identifier} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Text: Image identifier} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bios\_active\_image primary}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bios\_active\_image primary}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## EEPROM Control
@@ -1522,10 +1527,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/sys
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/cpu\_info}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU raw data in hexadecimal format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPU EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/cpu\_info}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get CPU EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/cpu\_info}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1542,10 +1547,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPU EEPROM information: \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/fan\textless{}fan module number\textgreater{}\_info}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan module raw data in hexadecimal format Note: This attribute is not supported on Comex CPU systems.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan module 1 EEPROM information: \texttt{\small hexdump -C \$bsp\_path/eeprom/fan1\_info}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fan module 1 EEPROM information: \texttt{\small hexdump -C \$bsp\_path/eeprom/fan1\_info}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1562,10 +1567,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan module 1 EEPROM informatio
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/psu\textless{}power supply module number\textgreater{}\_info}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read power supply module raw data in hexadecimal format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power supply module 1 EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/psu1\_info}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power supply module 1 EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/psu1\_info}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1582,10 +1587,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power supply module 1 EEPROM i
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/vpd\_info}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read system chassis raw data in hexadecimal format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get system chassis EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/vpd\_info}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get system chassis EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/vpd\_info}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1602,10 +1607,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get system chassis EEPROM informat
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/vpd\_data}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read system chassis parsed data in text format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, string: string format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, string: string format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get system chassis EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/vpd\_data}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get system chassis EEPROM information: \texttt{\small cat \$bsp\_path/eeprom/vpd\_data}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1622,10 +1627,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get system chassis EEPROM informat
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/cable\_cartridge\textless{}index\textgreater{}\_eeprom}\newline \texttt{\small \$bsp\_path/eeprom/cable\_cartridge\textless{}index\textgreater{}\_eeprom\_data}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read cable cartridge EEPROM raw data or parsed data. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is for systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD has 4 cable cartridges (index 1-4) on I2C buses 68, 69, 70, 71. N6300\_LD (SKU HI185) uses the same cartridge EEPROM connect table as N6100\_LD (\texttt{\small n61xxld\_cartridge\_eeprom\_connect\_table} in \texttt{\small hw-management.sh}).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD); EEPROM data, Binary/String: Raw or parsed EEPROM content} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD); EEPROM data, Binary/String: Raw or parsed EEPROM content} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get cable cartridge EEPROM data: \texttt{\small cat \$bsp\_path/eeprom/cable\_cartridge1\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge2\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge3\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge4\_eeprom\_data}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get cable cartridge EEPROM data: \texttt{\small cat \$bsp\_path/eeprom/cable\_cartridge1\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge2\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge3\_eeprom\_data cat \$bsp\_path/eeprom/cable\_cartridge4\_eeprom\_data}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1645,7 +1650,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eepro
 Description & \multicolumn{3}{p{0.735\linewidth}}{Raw system VPD EEPROM on the \textbf{BMC} image. HI189 udev matches I2C \texttt{\small 5-0051} (\texttt{\small hw-management-bmc-early-i2c-devices.json}: bus 5 / \texttt{\small 0x51}, \textbf{24c512}). Symlink points at the kernel \texttt{\small eeprom} attribute for that device.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eeprom/eeprom\_system}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eeprom/eeprom\_system}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1665,11 +1670,15 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eepro
 Description & \multicolumn{3}{p{0.735\linewidth}}{BMC FRU EEPROM on the \textbf{BMC} image. HI189 udev matches I2C \texttt{\small 4-0050} (bus 4 / \texttt{\small 0x50}, \textbf{24c02} per early-I2C JSON).} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eeprom/eeprom\_bmc}\newline \textbf{Reference:} \texttt{\small bmc/examples/hw-management-bmc-eeprom-sysfs.txt}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eeprom/eeprom\_bmc}\newline \textbf{Reference:} \texttt{\small bmc/examples/hw-management-bmc-eeprom-sysfs.txt}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## Environment Control
@@ -1684,10 +1693,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/eep
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/a2d\_iio:device\textless{}number\textgreater{}\_raw\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from A2D sensor} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage input from A2D1: \texttt{\small cat \$bsp\_path/environment/a2d\_iio:device0\_raw\_1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get voltage input from A2D1: \texttt{\small cat \$bsp\_path/environment/a2d\_iio:device0\_raw\_1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1704,10 +1713,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage input from A2D1: \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/comex\_voltmon\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from Comex\newline Note: This attribute is for Comex based system only} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get comex voltage monitor 1 current2 reading: \texttt{\small cat \$bsp\_path/environment/comex\_voltmon1\_curr2\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get comex voltage monitor 1 current2 reading: \texttt{\small cat \$bsp\_path/environment/comex\_voltmon1\_curr2\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1724,10 +1733,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get comex voltage monitor 1 curren
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/comex\_voltmon\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from Comex Note: This attribute is for Comex based system only} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get Comex voltage monitor 1 input reading: \texttt{\small cat \$bsp\_path/environment/comex\_voltmon1\_in1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get Comex voltage monitor 1 input reading: \texttt{\small cat \$bsp\_path/environment/comex\_voltmon1\_in1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1744,10 +1753,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get Comex voltage monitor 1 input 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/comex\_voltmon\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from Comex Note: This attribute is for Comex based system only} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get Comex voltage monitor 1 power reading: \texttt{\small cat \$bsp\_path/environment/comex\_power2\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get Comex voltage monitor 1 power reading: \texttt{\small cat \$bsp\_path/environment/comex\_power2\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1764,10 +1773,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get Comex voltage monitor 1 power 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/voltmon\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from system} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 current2 reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_curr2\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get voltage monitor 1 current2 reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_curr2\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1784,10 +1793,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 current2 rea
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/voltmon\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from system} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 input reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_in1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get voltage monitor 1 input reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_in1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1804,10 +1813,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 input readin
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/voltmon\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get raw voltage input from system} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: X} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: X} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 power reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_power2\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get voltage monitor 1 power reading: \texttt{\small cat \$bsp\_path/environment/voltmon1\_power2\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1824,10 +1833,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage monitor 1 power readin
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB (Power Distribution Board) hot-swap controller current measurement\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Current, Integer: Value in milliamps (mA)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Current, Integer: Value in milliamps (mA)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 current input: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB hotswap 1 current input: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1844,10 +1853,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 current input: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hot-swap controller voltage measurement\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: Value in millivolts (mV)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: Value in millivolts (mV)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 input voltage: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB hotswap 1 input voltage: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1864,10 +1873,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 input voltage: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hot-swap controller power measurement\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Power, Integer: Value in microwatts} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Power, Integer: Value in microwatts} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 power input: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_power1\_input}\newline Note: On SN6600\_LD, when the underlying hwmon device is \textbf{lm5066i}, \texttt{\small hw-management-chassis-events.sh} creates scale-factor symlinks for input power and current (see following sections). lm-sensors also applies factor \textbf{5.333} to the lm5066i PDB hotswap \texttt{\small power1} and \texttt{\small curr1} labels in \texttt{\small sn66xxld\_sensors.conf}.} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB hotswap 1 power input: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_power1\_input}\newline Note: On SN6600\_LD, when the underlying hwmon device is \textbf{lm5066i}, \texttt{\small hw-management-chassis-events.sh} creates scale-factor symlinks for input power and current (see following sections). lm-sensors also applies factor \textbf{5.333} to the lm5066i PDB hotswap \texttt{\small power1} and \texttt{\small curr1} labels in \texttt{\small sn66xxld\_sensors.conf}.} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1887,7 +1896,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/envir
 Description & \multicolumn{3}{p{0.735\linewidth}}{Scaling factor symlink for PDB hot-swap controller input power. Created when the hotswap hwmon driver name is \textbf{lm5066i}; the symlink targets \texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}.\newline Note: SN6600\_LD (SKU HI193) only. Not created for other hotswap driver types (for example mp5926).} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_power1\_scale}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_power1\_scale}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1907,7 +1916,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/envir
 Description & \multicolumn{3}{p{0.735\linewidth}}{Scaling factor symlink for PDB hot-swap controller input current. Created when the hotswap hwmon driver name is \textbf{lm5066i}; the symlink targets \texttt{\small \$bsp\_path/config/pdb\_hotswap\_scale}.\newline Note: SN6600\_LD (SKU HI193) only.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0070.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_scale}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_scale}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1924,10 +1933,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/env
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_hotswap\textless{}index\textgreater{}\_\textless{}sensor\textgreater{}\_\textless{}threshold\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hot-swap controller threshold values (crit, lcrit, max, min)\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Threshold, Integer: Varies by sensor type} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Threshold, Integer: Varies by sensor type} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 current max threshold: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_max cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_crit cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_lcrit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB hotswap 1 current max threshold: \texttt{\small cat \$bsp\_path/environment/pdb\_hotswap1\_curr1\_max cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_crit cat \$bsp\_path/environment/pdb\_hotswap1\_in1\_lcrit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1944,10 +1953,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 current max thre
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input} (SN58XX\_LD, SN66XX\_LD)\newline \texttt{\small \$bsp\_path/environment/pwr\_conv\textless{}index\textgreater{}\_curr\textless{}index\textgreater{}\_input} (N61XX\_LD)} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter current measurement (input or output)\newline Note: This attribute is for liquid-cooled systems only. - SN58XX\_LD family uses: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} naming (1 power converter on SN5810\_LD; more on SN5800\_LD) - SN66XX\_LD family (SN6600\_LD) uses: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} with N = 1..2 - N61XX\_LD family uses: \texttt{\small pwr\_conv\textless{}N\textgreater{}\_...} naming (2 power converters)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Current, Integer: Value in milliamps (mA)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Current, Integer: Value in milliamps (mA)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000 (SN58XX\_LD), V.7.0060.1000 (N61XX\_LD)} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter current readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr2\_input \# SN6600\_LD systems (2 PDB converters) cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr2\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_curr2\_input \# N6100\_LD systems (2 power converters) cat \$bsp\_path/environment/pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pwr\_conv1\_curr2\_input cat \$bsp\_path/environment/pwr\_conv2\_curr1\_input cat \$bsp\_path/environment/pwr\_conv2\_curr2\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power converter current readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr2\_input \# SN6600\_LD systems (2 PDB converters) cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr2\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_curr1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_curr2\_input \# N6100\_LD systems (2 power converters) cat \$bsp\_path/environment/pwr\_conv1\_curr1\_input cat \$bsp\_path/environment/pwr\_conv1\_curr2\_input cat \$bsp\_path/environment/pwr\_conv2\_curr1\_input cat \$bsp\_path/environment/pwr\_conv2\_curr2\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1964,10 +1973,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter current readin
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input} (SN58XX\_LD, SN66XX\_LD)\newline \texttt{\small \$bsp\_path/environment/pwr\_conv\textless{}index\textgreater{}\_in\textless{}index\textgreater{}\_input} (N61XX\_LD)} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter voltage measurement (input or output)\newline Note: This attribute is for liquid-cooled systems only. - SN58XX\_LD and SN66XX\_LD families use: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} naming - N61XX\_LD family uses: \texttt{\small pwr\_conv\textless{}N\textgreater{}\_...} naming} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Voltage, Integer: Value in millivolts (mV)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Voltage, Integer: Value in millivolts (mV)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000 (SN58XX\_LD), V.7.0060.1000 (N61XX\_LD)} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter voltage readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in2\_input \# SN6600\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in2\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_in2\_input \# N6100\_LD systems cat \$bsp\_path/environment/pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pwr\_conv1\_in2\_input cat \$bsp\_path/environment/pwr\_conv2\_in1\_input cat \$bsp\_path/environment/pwr\_conv2\_in2\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power converter voltage readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in2\_input \# SN6600\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in2\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_in1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_in2\_input \# N6100\_LD systems cat \$bsp\_path/environment/pwr\_conv1\_in1\_input cat \$bsp\_path/environment/pwr\_conv1\_in2\_input cat \$bsp\_path/environment/pwr\_conv2\_in1\_input cat \$bsp\_path/environment/pwr\_conv2\_in2\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1984,10 +1993,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter voltage readin
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input} (SN58XX\_LD, SN66XX\_LD)\newline \texttt{\small \$bsp\_path/environment/pwr\_conv\textless{}index\textgreater{}\_power\textless{}index\textgreater{}\_input} (N61XX\_LD)} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter power measurement (input or output)\newline Note: This attribute is for liquid-cooled systems only. - SN58XX\_LD and SN66XX\_LD families use: \texttt{\small pdb\_pwr\_conv\textless{}N\textgreater{}\_...} naming - N61XX\_LD family uses: \texttt{\small pwr\_conv\textless{}N\textgreater{}\_...} naming} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Power, Integer: Value in microwatts} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Power, Integer: Value in microwatts} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000 (SN58XX\_LD), V.7.0060.1000 (N61XX\_LD)} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter power readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_power1\_input \# SN6600\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_power1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_power1\_input \# N6100\_LD systems cat \$bsp\_path/environment/pwr\_conv1\_power1\_input cat \$bsp\_path/environment/pwr\_conv2\_power1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power converter power readings: \texttt{\small \# SN58XX\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_power1\_input \# SN6600\_LD systems cat \$bsp\_path/environment/pdb\_pwr\_conv1\_power1\_input cat \$bsp\_path/environment/pdb\_pwr\_conv2\_power1\_input \# N6100\_LD systems cat \$bsp\_path/environment/pwr\_conv1\_power1\_input cat \$bsp\_path/environment/pwr\_conv2\_power1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2004,14 +2013,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power converter power readings
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/pdb\_pwr\_conv\textless{}index\textgreater{}\_\textless{}sensor\textgreater{}\_\textless{}threshold\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter threshold values (crit, lcrit, max, min)\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Threshold, Integer: Varies by sensor type} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Threshold, Integer: Varies by sensor type} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter 1 thresholds: \texttt{\small cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_crit cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_max cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_min}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB power converter 1 thresholds: \texttt{\small cat \$bsp\_path/environment/pdb\_pwr\_conv1\_curr1\_crit cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_max cat \$bsp\_path/environment/pdb\_pwr\_conv1\_in1\_min}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## Events
@@ -2026,10 +2039,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter 1 threshol
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/fan\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug event status of FAN\textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_fans 0 – FAN\textless{}index\textgreater{} was removed, 1 – FAN\textless{}index\textgreater{} was inserted.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get FAN3 hot-plug status: \texttt{\small cat \$bsp\_path/events/fan3}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get FAN3 hot-plug status: \texttt{\small cat \$bsp\_path/events/fan3}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2046,10 +2059,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get FAN3 hot-plug status: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/psu\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug event status of PSU\textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_psus 0 – PSU\textless{}index\textgreater{} was removed, 1 – PSU\textless{}index\textgreater{} was inserted.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU2 hot-plug status: \texttt{\small cat \$bsp\_path/events/psu2}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU2 hot-plug status: \texttt{\small cat \$bsp\_path/events/psu2}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2066,10 +2079,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU2 hot-plug status: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/pwr\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get latest hot-plug event status of PWR\textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_pwrs 0 – PWR\textless{}index\textgreater{} cable was plugged-out, 1 – PWR\textless{}index\textgreater{} cable was plugged-in.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1300} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get Power1 cable hot-plug status: \texttt{\small cat \$bsp\_path/events/pwr1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get Power1 cable hot-plug status: \texttt{\small cat \$bsp\_path/events/pwr1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2086,10 +2099,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get Power1 cable hot-plug status: 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/pdb\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get hot-plug event status of PDB (Power Distribution Board) \textless{}index\textgreater{} Index max value corresponds to \$bsp\_path/config/hotplug\_pdbs 0 – PDB\textless{}index\textgreater{} was removed, 1 – PDB\textless{}index\textgreater{} was inserted.\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Event, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Event, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB1 hot-plug status: \texttt{\small cat \$bsp\_path/events/pdb1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB1 hot-plug status: \texttt{\small cat \$bsp\_path/events/pdb1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2106,10 +2119,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB1 hot-plug status: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu[1-8]\_ready}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get dpu ready event} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu[1-8] ready status \texttt{\small cat \$bsp\_path/events/dpu1\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu[1-8] ready status \texttt{\small cat \$bsp\_path/events/dpu1\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2126,10 +2139,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu[1-8] ready status \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu[1-8]\_shtdn\_ready}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get dpu shutdown ready event} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu[1-8] shut down ready status \texttt{\small cat \$bsp\_path/events/dpu1\_shtdn\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu[1-8] shut down ready status \texttt{\small cat \$bsp\_path/events/dpu1\_shtdn\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2146,10 +2159,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu[1-8] shut down ready statu
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/erot\textless{}index\textgreater{}\_ap}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{EROT Application Processor event status. Indicates the state of the External Root of Trust application processor at the specified index.\newline Note: This attribute is for systems with eRoT support (N61XX\_LD family: N6100\_LD). N6100\_LD has 1 eRoT (index=1).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1 (N6100\_LD); Status, Integer: 0 (inactive), 1 (active)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1 (N6100\_LD); Status, Integer: 0 (inactive), 1 (active)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get eRoT AP status: \texttt{\small cat \$bsp\_path/events/erot1\_ap}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get eRoT AP status: \texttt{\small cat \$bsp\_path/events/erot1\_ap}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2166,10 +2179,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get eRoT AP status: \texttt{\small
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/erot\textless{}index\textgreater{}\_error}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{EROT error event status. Indicates error conditions detected by the External Root of Trust at the specified index.\newline Note: This attribute is for systems with eRoT support (N61XX\_LD family: N6100\_LD). N6100\_LD has 1 eRoT (index=1).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1 (N6100\_LD); Status, Integer: 0 (no error), 1 (error detected)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1 (N6100\_LD); Status, Integer: 0 (no error), 1 (error detected)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get eRoT error status: \texttt{\small cat \$bsp\_path/events/erot1\_error}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get eRoT error status: \texttt{\small cat \$bsp\_path/events/erot1\_error}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2186,17 +2199,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get eRoT error status: \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/graceful\_pwr\_off}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Graceful power off event status. Indicates when the system is performing a graceful shutdown sequence.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: 0 (normal), 1 (graceful shutdown)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (normal), 1 (graceful shutdown)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/graceful\_pwr\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/graceful\_pwr\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Power Button Event
+### Power Button Event (events)
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -2206,10 +2219,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/power\_button}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Power button event status. Indicates when the system power button has been pressed.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: 0 (not pressed), 1 (pressed)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (not pressed), 1 (pressed)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/power\_button}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/power\_button}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2226,17 +2239,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/power\_events}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Power events configuration file. Contains settings and thresholds for power-related event handling.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Text file: Configuration data} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Text file: Configuration data} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/power\_events}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/config/power\_events}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Power Button Event
+### Power Button Event (system)
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -2246,19 +2259,23 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read the node: \texttt{\small cat 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/power\_button\_evt}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Power button event status. Indicates the current state of power button events in the system.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Integer: Event status} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: Event status} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/power\_button\_evt}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/power\_button\_evt}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
+```{=latex}
+\Needspace{0.35\textheight}
+```
+
 ## Alarms
 
-### Get PMBUS voltmon alarm status.
+### Get PMBUS voltmon alarm status
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -2268,17 +2285,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/sys
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/voltmon\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get voltmonitor alarm status of voltmon\textless{}index\textgreater{} sensor\_name one of: in, curr, power, temp. sensor count can be different for different voltmonitor types/configuration. Alarm set by voltmon sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltmon1\_in1\_alarm: \texttt{\small cat \$bsp\_path/alarm/voltmon1\_in1\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get voltmon1\_in1\_alarm: \texttt{\small cat \$bsp\_path/alarm/voltmon1\_in1\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Get COMEX PMBUS voltmon alarm status.
+### Get COMEX PMBUS voltmon alarm status
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -2288,17 +2305,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltmon1\_in1\_alarm: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/comex\_voltmon\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get voltmonitor alarm status of comex\_voltmon\textless{}index\textgreater{} sensor\_name one of: in, curr, power, temp. sensor count can be different for different voltmonitor types/configuration. Alarm set by voltmon sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get comex\_voltmon1\_in1\_alarm: \texttt{\small cat \$bsp\_path/alarm/comex\_voltmon1\_in1\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get comex\_voltmon1\_in1\_alarm: \texttt{\small cat \$bsp\_path/alarm/comex\_voltmon1\_in1\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Get PSU PMBUS alarm status.
+### Get PSU PMBUS alarm status
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -2308,10 +2325,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get comex\_voltmon1\_in1\_alarm: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/psu\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU PMBUS alarm status of PSU\textless{}index\textgreater{} sensor\_name: in, curr, power, temp. sensor count can be different for different PSU types/configuration. Alarm set by PSU sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get psu1\_power1\_alarm: \texttt{\small cat \$bsp\_path/alarm/psu1\_power1\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get psu1\_power1\_alarm: \texttt{\small cat \$bsp\_path/alarm/psu1\_power1\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2328,10 +2345,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get psu1\_power1\_alarm: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/pdb\_hotswap\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB (Power Distribution Board) hot-swap controller alarm status sensor\_name: in, curr, power, temp. Alarm set by PDB hotswap controller sensor itself (hardware-controlled attribute) 1 – alarm set 0 – alarm clear\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Alarm, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Alarm, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 alarms: \texttt{\small cat \$bsp\_path/alarm/pdb\_hotswap1\_curr1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_in1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_power1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_temp1\_crit\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_temp1\_max\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB hotswap 1 alarms: \texttt{\small cat \$bsp\_path/alarm/pdb\_hotswap1\_curr1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_in1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_power1\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_temp1\_crit\_alarm cat \$bsp\_path/alarm/pdb\_hotswap1\_temp1\_max\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2348,17 +2365,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB hotswap 1 alarms: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/pdb\_pwr\_conv\textless{}index\textgreater{}\_\textless{}sensor\_name\textgreater{}\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter alarm status sensor\_name: in, curr, power, temp. Alarm set by PDB power converter sensor itself (hardware-controlled attribute) 1 – alarm set 0 – alarm clear\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Alarm, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Alarm, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter 1 alarms: \texttt{\small cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_curr1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_curr2\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_in1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_in2\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_power1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_temp1\_crit\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_temp1\_max\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PDB power converter 1 alarms: \texttt{\small cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_curr1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_curr2\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_in1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_in2\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_power1\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_temp1\_crit\_alarm cat \$bsp\_path/alarm/pdb\_pwr\_conv1\_temp1\_max\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Get CPU temp alarm status.
+### Get CPU temp alarm status
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -2368,14 +2385,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PDB power converter 1 alarms: 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/cpu\_core\textless{}idx\textgreater{}\_crit\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPU core overtemperature alarm status. idx – 0…cpu\_core\_num cpu\_core\_num can be different for different CPU type Alarm set by CPU sensor itself (hw controlled attribute) 1 – alarm set 0 – alarm clear} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Thermal, Integer: 0 / 1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0010.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get cpu\_core0\_crit\_alarm: \texttt{\small cat \$bsp\_path/alarm/cpu\_core0\_crit\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get cpu\_core0\_crit\_alarm: \texttt{\small cat \$bsp\_path/alarm/cpu\_core0\_crit\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## PSU FW
@@ -2390,10 +2411,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get cpu\_core0\_crit\_alarm: \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/firmware/psu\textless{}index\textgreater{}\_fw\_ver}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get secondary FW version of PSU\textless{}index\textgreater{} For Murata 1500/2000 and Delta 550 the contents of the file is the relevant FW version For all other PSUs - the contents is string "N/A"} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{version, string} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{version, string} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.2000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get secondary FW version of PSU1 \texttt{\small \$bsp\_path/firmware/psu1\_fw\_ver}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get secondary FW version of PSU1 \texttt{\small \$bsp\_path/firmware/psu1\_fw\_ver}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2410,14 +2431,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get secondary FW version of PSU1 \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/firmware/psu\textless{}index\textgreater{}\_fw\_primary\_ver}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get primary FW version of PSU\textless{}index\textgreater{} Primary files exist only for Murata. For all other PSUs - the contents is string "N/A"} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{version, string} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{version, string} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0020.2000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get primary FW version of PSU1 \texttt{\small \$bsp\_path/firmware/psu1\_fw\_primary\_ver}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get primary FW version of PSU1 \texttt{\small \$bsp\_path/firmware/psu1\_fw\_primary\_ver}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## DPU system attributes
@@ -2432,10 +2457,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get primary FW version of PSU1 \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_id}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} id} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 id \texttt{\small \$bsp\_path/system/dpu1\_id}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 id \texttt{\small \$bsp\_path/system/dpu1\_id}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2452,10 +2477,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 id \texttt{\small \$bsp\_
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_boot\_progress}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} boot progress} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 boot progress \texttt{\small \$bsp\_path/system/dpu1\_boot\_progress}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 boot progress \texttt{\small \$bsp\_path/system/dpu1\_boot\_progress}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2472,10 +2497,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 boot progress \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_cpld\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} CPLD version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpld version \texttt{\small \$bsp\_path/system/dpu1\_cpld\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 cpld version \texttt{\small \$bsp\_path/system/dpu1\_cpld\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2492,10 +2517,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpld version \texttt{\sma
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_cpld\_base\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} CPLD base version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpld base version \texttt{\small \$bsp\_path/system/dpu1\_cpld\_base\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 cpld base version \texttt{\small \$bsp\_path/system/dpu1\_cpld\_base\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2512,10 +2537,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpld base version \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_aux\_pwr\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} auxiliary power reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 auxiliary power reset reason \texttt{\small \$bsp\_path/system/dpu1\_aux\_pwr\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 auxiliary power reset reason \texttt{\small \$bsp\_path/system/dpu1\_aux\_pwr\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2532,10 +2557,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 auxiliary power reset rea
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_main\_brd\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} main board reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 main board reset reason \texttt{\small \$bsp\_path/system/dpu1\_main\_brd\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 main board reset reason \texttt{\small \$bsp\_path/system/dpu1\_main\_brd\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2552,10 +2577,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 main board reset reason \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_comex\_pwr\_fail}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} comex power failure} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 comex power failure \texttt{\small \$bsp\_path/system/dpu1\_comex\_pwr\_fail}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 comex power failure \texttt{\small \$bsp\_path/system/dpu1\_comex\_pwr\_fail}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2572,10 +2597,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 comex power failure \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_pwr\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} power reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 power reset reason \texttt{\small \$bsp\_path/system/dpu1\_pwr\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 power reset reason \texttt{\small \$bsp\_path/system/dpu1\_pwr\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2592,10 +2617,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 power reset reason \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_thermal\_shtdn\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} thermal shutdown reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 thermal shutdown reason \texttt{\small \$bsp\_path/system/dpu1\_thermal\_shtdn\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 thermal shutdown reason \texttt{\small \$bsp\_path/system/dpu1\_thermal\_shtdn\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2612,10 +2637,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 thermal shutdown reason \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_tpm\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} tpm reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 tpm reset reason \texttt{\small \$bsp\_path/system/dpu1\_tpm\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 tpm reset reason \texttt{\small \$bsp\_path/system/dpu1\_tpm\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2632,10 +2657,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 tpm reset reason \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_perst\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} perst reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 perst reset reason \texttt{\small \$bsp\_path/system/dpu1\_perst\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 perst reset reason \texttt{\small \$bsp\_path/system/dpu1\_perst\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2652,10 +2677,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 perst reset reason \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_phy\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} phy reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 phy reset reason \texttt{\small \$bsp\_path/system/dpu1\_phy\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 phy reset reason \texttt{\small \$bsp\_path/system/dpu1\_phy\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2672,10 +2697,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 phy reset reason \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_usb\_phy\_rst\_reason}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} usb phy reset reason} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 usb phy reset reason \texttt{\small \$bsp\_path/system/dpu1\_usb\_phy\_rst\_reason}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 usb phy reset reason \texttt{\small \$bsp\_path/system/dpu1\_usb\_phy\_rst\_reason}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2692,10 +2717,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 usb phy reset reason \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_fpga\_part\_number}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} fpga part number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 fpga part number \texttt{\small \$bsp\_path/system/dpu1\_fpga\_part\_number}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 fpga part number \texttt{\small \$bsp\_path/system/dpu1\_fpga\_part\_number}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2712,10 +2737,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 fpga part number \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_fpga\_minor\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} fpga minor version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 fpga minor version \texttt{\small \$bsp\_path/system/dpu1\_fpga\_minor\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 fpga minor version \texttt{\small \$bsp\_path/system/dpu1\_fpga\_minor\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2732,10 +2757,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 fpga minor version \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_ufm\_upgrade\_status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ufm upgrade status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ufm upgrade status \texttt{\small \$bsp\_path/system/dpu1\_ufm\_upgrade\_status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 ufm upgrade status \texttt{\small \$bsp\_path/system/dpu1\_ufm\_upgrade\_status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2752,14 +2777,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ufm upgrade status \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/dpu\textless{}index\textgreater{}\_vr\_update\_status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} VR update status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 VR update status \texttt{\small \$bsp\_path/system/dpu1\_vr\_update\_status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 VR update status \texttt{\small \$bsp\_path/system/dpu1\_vr\_update\_status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## DPU events
@@ -2774,10 +2803,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 VR update status \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_pll\_pwr\_good}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} PLL power good indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 PLL power good indication \texttt{\small \$bsp\_path/events/dpu1\_pll\_pwr\_good}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 PLL power good indication \texttt{\small \$bsp\_path/events/dpu1\_pll\_pwr\_good}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2794,10 +2823,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 PLL power good indication
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_input\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} input power indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 input power indication \texttt{\small \$bsp\_path/events/dpu1\_input\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 input power indication \texttt{\small \$bsp\_path/events/dpu1\_input\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2814,10 +2843,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 input power indication \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_serdes\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} serdes power indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 serdes power indication \texttt{\small \$bsp\_path/events/dpu1\_serdes\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 serdes power indication \texttt{\small \$bsp\_path/events/dpu1\_serdes\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2834,10 +2863,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 serdes power indication \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_serdes\_analog\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} serdes analog power indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 serdes analog power indication \texttt{\small \$bsp\_path/events/dpu1\_serdes\_analog\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 serdes analog power indication \texttt{\small \$bsp\_path/events/dpu1\_serdes\_analog\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2854,10 +2883,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 serdes analog power indic
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_core\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} core power indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 core power indication \texttt{\small \$bsp\_path/events/dpu1\_core\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 core power indication \texttt{\small \$bsp\_path/events/dpu1\_core\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2874,10 +2903,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 core power indication \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_cpu\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} cpu power indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu power indication \texttt{\small \$bsp\_path/events/dpu1\_cpu\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 cpu power indication \texttt{\small \$bsp\_path/events/dpu1\_cpu\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2894,10 +2923,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu power indication \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_digital\_if\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} digital interfaces power} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 digital interfaces power \texttt{\small \$bsp\_path/events/dpu1\_digital\_if\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 digital interfaces power \texttt{\small \$bsp\_path/events/dpu1\_digital\_if\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2914,10 +2943,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 digital interfaces power 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_ddr5\_pwr}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ddr5 power indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 power indication \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_pwr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 ddr5 power indication \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_pwr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2934,10 +2963,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 power indication \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_thermal\_trip}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} thermal trip indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 thermal trip indication \texttt{\small \$bsp\_path/events/dpu1\_thermal\_trip}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 thermal trip indication \texttt{\small \$bsp\_path/events/dpu1\_thermal\_trip}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2954,10 +2983,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 thermal trip indication \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_tps\_upgrade}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} tps upgrade status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 tps upgrade status \texttt{\small \$bsp\_path/events/dpu1\_tps\_upgrade}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 tps upgrade status \texttt{\small \$bsp\_path/events/dpu1\_tps\_upgrade}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2974,10 +3003,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 tps upgrade status \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_cpu\_pwr\_fault}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} cpu power fault indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu power fault indication \texttt{\small \$bsp\_path/events/dpu1\_cpu\_pwr\_fault}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 cpu power fault indication \texttt{\small \$bsp\_path/events/dpu1\_cpu\_pwr\_fault}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -2994,10 +3023,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu power fault indicatio
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_cpu\_vr\_hot}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} cpu VR hot alert} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu VR hot alert \texttt{\small \$bsp\_path/events/dpu1\_cpu\_vr\_hot}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 cpu VR hot alert \texttt{\small \$bsp\_path/events/dpu1\_cpu\_vr\_hot}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3014,10 +3043,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 cpu VR hot alert \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_ddr5\_fault}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ddr5 fault indication} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 fault indication \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_fault}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 ddr5 fault indication \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_fault}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3034,14 +3063,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 fault indication \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/dpu\textless{}index\textgreater{}\_ddr5\_hot}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get DPU\textless{}index\textgreater{} ddr5 hot alert} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{dpu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{dpu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 hot alert \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_hot}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get dpu1 ddr5 hot alert \texttt{\small \$bsp\_path/events/dpu1\_ddr5\_hot}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## LC Alarms
@@ -3056,10 +3089,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get dpu1 ddr5 hot alert \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_hotswap\_pwr\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap power alarm} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 hot swap power alarm \texttt{\small \$bsp\_path/alarm/lc1\_hotswap\_pwr\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get lc1 hot swap power alarm \texttt{\small \$bsp\_path/alarm/lc1\_hotswap\_pwr\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3076,10 +3109,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 hot swap power alarm \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_volt\_in\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage input alarm} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage input alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_in\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get lc1 voltage input alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_in\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3096,10 +3129,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage input alarm \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_volt\_curr\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage current alarm} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage current alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_curr\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get lc1 voltage current alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_curr\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3116,14 +3149,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage current alarm \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/alarm/lc\textless{}index\textgreater{}\_volt\_pwr\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage power alarm} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage power alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_pwr\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get lc1 voltage power alarm \texttt{\small \$bsp\_path/alarm/lc1\_volt\_pwr\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.6\textheight}
 ```
 
 ## LC EEPROM
@@ -3138,10 +3175,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get lc1 voltage power alarm \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_fru}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM FRU data in hexadecimal format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM FRU information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_fru}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 EEPROM FRU information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_fru}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3158,10 +3195,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM FRU information: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_ini}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM INI data in hexadecimal format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, Hex: Hex dump format of memory} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM INI information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_ini}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 EEPROM INI information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_ini}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3178,10 +3215,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM INI information: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_vpd\_parsed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM VPD parsed data in text format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, string: Parsed VPD data} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, string: Parsed VPD data} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM VPD parsed information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_vpd\_parsed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 EEPROM VPD parsed information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_vpd\_parsed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3198,14 +3235,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM VPD parsed informat
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/lc\textless{}index\textgreater{}\_ini\_parsed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read LC\textless{}index\textgreater{} EEPROM INI parsed data in text format} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{EEPROM information, string: Parsed INI data} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{EEPROM information, string: Parsed INI data} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM INI parsed information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_ini\_parsed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 EEPROM INI parsed information: \texttt{\small cat \$bsp\_path/eeprom/lc1\_ini\_parsed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## LC Environment
@@ -3220,10 +3261,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 EEPROM INI parsed informat
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_volt\_curr\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage current reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage current reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_curr1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 voltage current reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_curr1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3240,10 +3281,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage current reading: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_volt\_in\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage input reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage input reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_in1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 voltage input reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_in1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3260,10 +3301,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage input reading: \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_volt\_pwr\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} voltage power reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage power reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_pwr1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 voltage power reading: \texttt{\small cat \$bsp\_path/environment/lc1\_volt\_pwr1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3280,10 +3321,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 voltage power reading: \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_hotswap\_curr\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap current reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap current reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_curr1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 hot swap current reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_curr1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3300,10 +3341,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap current reading: 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_hotswap\_in\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap input reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap input reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_in1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 hot swap input reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_in1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3320,10 +3361,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap input reading: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_hotswap\_pwr\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} hot swap power reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap power reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_pwr1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 hot swap power reading: \texttt{\small cat \$bsp\_path/environment/lc1\_hotswap\_pwr1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3340,10 +3381,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 hot swap power reading: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_a2d\_volt\textless{}idx\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} A2D voltage reading} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 A2D voltage reading: \texttt{\small cat \$bsp\_path/environment/lc1\_a2d\_volt1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 A2D voltage reading: \texttt{\small cat \$bsp\_path/environment/lc1\_a2d\_volt1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3360,14 +3401,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 A2D voltage reading: \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/environment/lc\textless{}index\textgreater{}\_a2d\_volt\textless{}idx\textgreater{}\_scale}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} A2D voltage scale} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 A2D voltage scale: \texttt{\small cat \$bsp\_path/environment/lc1\_a2d\_volt1\_scale}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 A2D voltage scale: \texttt{\small cat \$bsp\_path/environment/lc1\_a2d\_volt1\_scale}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## LC LED
@@ -3385,10 +3430,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 A2D voltage scale: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} status LED state} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 status LED: \texttt{\small cat \$bsp\_path/led/lc1\_status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 status LED: \texttt{\small cat \$bsp\_path/led/lc1\_status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3405,10 +3450,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 status LED: \texttt{\small
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/lc\textless{}index\textgreater{}\_status\_led\_capability}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} status LED capabilities} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 status LED capabilities: \texttt{\small cat \$bsp\_path/led/lc1\_status\_led\_capability}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 status LED capabilities: \texttt{\small cat \$bsp\_path/led/lc1\_status\_led\_capability}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3430,7 +3475,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
  & color & String & green, orange \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/lc1\_status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set LC1 status LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/lc1\_status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3452,7 +3497,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/lc1\_status\_led\_delay\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set LC1 status LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/lc1\_status\_led\_delay\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3474,11 +3519,15 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/lc1\_status\_led\_delay\_on}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set LC1 status LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/lc1\_status\_led\_delay\_on}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## LC Config
@@ -3493,10 +3542,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 status LED delay on to 500
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_cpld\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} CPLD number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 CPLD number: \texttt{\small cat \$bsp\_path/config/lc1\_cpld\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 CPLD number: \texttt{\small cat \$bsp\_path/config/lc1\_cpld\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3513,10 +3562,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 CPLD number: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_fpga\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} FPGA number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 FPGA number: \texttt{\small cat \$bsp\_path/config/lc1\_fpga\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 FPGA number: \texttt{\small cat \$bsp\_path/config/lc1\_fpga\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3533,10 +3582,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 FPGA number: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_gearbox\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} gearbox number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox number: \texttt{\small cat \$bsp\_path/config/lc1\_gearbox\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 gearbox number: \texttt{\small cat \$bsp\_path/config/lc1\_gearbox\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3553,10 +3602,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox number: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_gearbox\_mgr\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} gearbox manager number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox manager number: \texttt{\small cat \$bsp\_path/config/lc1\_gearbox\_mgr\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 gearbox manager number: \texttt{\small cat \$bsp\_path/config/lc1\_gearbox\_mgr\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3573,10 +3622,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox manager number: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_port\_num}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} port number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 port number: \texttt{\small cat \$bsp\_path/config/lc1\_port\_num}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 port number: \texttt{\small cat \$bsp\_path/config/lc1\_port\_num}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3593,10 +3642,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 port number: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/lc\textless{}index\textgreater{}\_module\_counter}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module counter} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module counter: \texttt{\small cat \$bsp\_path/config/lc1\_module\_counter}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 module counter: \texttt{\small cat \$bsp\_path/config/lc1\_module\_counter}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3617,7 +3666,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 UART configuration: \texttt{\small cat \$bsp\_path/system/lc1\_uart}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 UART configuration: \texttt{\small cat \$bsp\_path/system/lc1\_uart}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3638,11 +3687,15 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 ASIC control: \texttt{\small cat \$bsp\_path/system/lc1\_asic\_control}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 ASIC control: \texttt{\small cat \$bsp\_path/system/lc1\_asic\_control}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## LC thermal
@@ -3657,10 +3710,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 ASIC control: \texttt{\sma
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_gearbox\textless{}idx\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} gearbox\textless{}idx\textgreater{} temperature input} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox1 temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_gearbox1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 gearbox1 temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_gearbox1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3677,17 +3730,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 gearbox1 temperature: \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} QSFP/SFP module\textless{}idx\textgreater{} temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 module1 temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Read Temperature Critical Module
+### Read LC Temperature Critical Module
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -3697,17 +3750,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature: \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} critical temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 module1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Read Temperature Emergency Module
+### Read LC Temperature Emergency Module
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -3717,17 +3770,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 critical temperatu
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_emergency}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} emergency temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_emergency}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 module1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_emergency}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Read Temperature Fault Module
+### Read LC Temperature Fault Module
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -3737,17 +3790,17 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 emergency temperat
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_fault}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} temperature fault status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature fault: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_fault}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 module1 temperature fault: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_fault}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Read Temperature Input Module
+### Read LC Temperature Input Module
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -3757,14 +3810,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature fault:
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/lc\textless{}index\textgreater{}\_module\textless{}idx\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get LC\textless{}index\textgreater{} module\textless{}idx\textgreater{} temperature input} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0030.4000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature input: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get LC1 module1 temperature input: \texttt{\small cat \$bsp\_path/thermal/lc1\_module1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## LED Control
@@ -3783,10 +3840,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get LC1 module1 temperature input:
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get fan\textless{}index\textgreater{} status LED state} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{fan, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{fan, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan1 status LED: \texttt{\small cat \$bsp\_path/led/fan1\_status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fan1 status LED: \texttt{\small cat \$bsp\_path/led/fan1\_status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3803,10 +3860,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan1 status LED: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/fan\textless{}index\textgreater{}\_status\_led\_capability}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get fan\textless{}index\textgreater{} LED capabilities} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{fan, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{fan, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan1 LED capabilities: \texttt{\small cat \$bsp\_path/led/fan1\_status\_led\_capability}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fan1 LED capabilities: \texttt{\small cat \$bsp\_path/led/fan1\_status\_led\_capability}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3828,7 +3885,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & fan & Integer &  \\
  & color & String & green, amber, red \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/fan1\_status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set fan1 LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/fan1\_status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3850,7 +3907,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & fan & Integer &  \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/fan1\_status\_led\_delay\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set fan1 LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/fan1\_status\_led\_delay\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3872,7 +3929,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & fan & Integer &  \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/fan1\_status\_led\_delay\_on}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set fan1 LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/fan1\_status\_led\_delay\_on}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3889,10 +3946,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 LED delay on to 500ms: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} LED state} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 LED: \texttt{\small cat \$bsp\_path/led/psu1\_status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 LED: \texttt{\small cat \$bsp\_path/led/psu1\_status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3909,10 +3966,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 LED: \texttt{\small cat \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/psu\textless{}index\textgreater{}\_status\_led\_capability}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} LED capabilities} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 LED capabilities: \texttt{\small cat \$bsp\_path/led/psu1\_status\_led\_capability}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 LED capabilities: \texttt{\small cat \$bsp\_path/led/psu1\_status\_led\_capability}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3934,7 +3991,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & psu & Integer &  \\
  & color & String & green, amber, red \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/psu1\_status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set PSU1 LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/psu1\_status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3956,7 +4013,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & psu & Integer &  \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/psu1\_status\_led\_delay\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set PSU1 LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/psu1\_status\_led\_delay\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3978,7 +4035,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & psu & Integer &  \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/psu1\_status\_led\_delay\_on}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set PSU1 LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/psu1\_status\_led\_delay\_on}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -3995,10 +4052,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 LED delay on to 500ms: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED state} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{status, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{status, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED: \texttt{\small cat \$bsp\_path/led/status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get system status LED: \texttt{\small cat \$bsp\_path/led/status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4015,10 +4072,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED: \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/status\_led\_capability}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED capabilities} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{capability, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{capability, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get system status LED capabilities: \texttt{\small cat \$bsp\_path/led/status\_led\_capability}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get system status LED capabilities: \texttt{\small cat \$bsp\_path/led/status\_led\_capability}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4039,7 +4096,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & color & String & green, amber, red \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/status\_led}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set system status LED to green: \texttt{\small echo green \textgreater{} \$bsp\_path/led/status\_led}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4060,7 +4117,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/status\_led\_delay\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set system status LED delay off to 1000ms: \texttt{\small echo 1000 \textgreater{} \$bsp\_path/led/status\_led\_delay\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4081,7 +4138,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & delay & Integer & milliseconds \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/status\_led\_delay\_on}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set system status LED delay on to 500ms: \texttt{\small echo 500 \textgreater{} \$bsp\_path/led/status\_led\_delay\_on}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4098,15 +4155,19 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set system status LED delay on to 
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/led/led\_\textless{}name\textgreater{}\_control}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Control owner of LED \texttt{\small \textless{}name\textgreater{}} (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}, \texttt{\small psu}, \texttt{\small uid}, …). Created on LED udev add next to \texttt{\small led\_\textless{}name\textgreater{}\_capability} and \texttt{\small led\_\textless{}name\textgreater{}\_state}. Value is resolved from \texttt{\small \$bsp\_path/config/led\_control\_type} (§3.1.60). Missing map or unmatched name uses \texttt{\small led\_hw\_sw}.\newline | Value | Meaning | |-------|---------| | \texttt{\small led\_sw} | Software controlled | | \texttt{\small led\_hw} | Hardware controlled | | \texttt{\small led\_hw\_sw} | Hardware and software controlled (default) |} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{name, String: LED type from the udev LED class name; control, String: \texttt{\small led\_sw}, \texttt{\small led\_hw}, \texttt{\small led\_hw\_sw}} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Control owner of LED \texttt{\small \textless{}name\textgreater{}} (\texttt{\small status}, \texttt{\small fan}, \texttt{\small fan1}, \texttt{\small psu}, \texttt{\small uid}, …). Created on LED udev add next to \texttt{\small led\_\textless{}name\textgreater{}\_capability} and \texttt{\small led\_\textless{}name\textgreater{}\_state}. Value is resolved from \texttt{\small \$bsp\_path/config/led\_control\_type} (\hyperref[read-led-control-type-map]{Read LED Control Type Map}). Missing map or unmatched name uses \texttt{\small led\_hw\_sw}.\newline \texttt{\small led\_sw} --- Software controlled\newline \texttt{\small led\_hw} --- Hardware controlled\newline \texttt{\small led\_hw\_sw} --- Hardware and software controlled (default)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{name, String: LED type from the udev LED class name; control, String: \texttt{\small led\_sw}, \texttt{\small led\_hw}, \texttt{\small led\_hw\_sw}} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.7} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get status LED control owner (default when no platform map): \texttt{\small cat \$bsp\_path/led/led\_status\_control led\_hw\_sw}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get status LED control owner (default when no platform map): \texttt{\small cat \$bsp\_path/led/led\_status\_control led\_hw\_sw}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.6\textheight}
 ```
 
 ## Power Control
@@ -4121,10 +4182,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get status LED control owner (defa
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/pwr\_consum}\newline \texttt{\small \$bsp\_path/power/pwr\_sys}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get system power consumption values - \texttt{\small pwr\_consum}: Power consumption calculation based on PSU selection - \texttt{\small pwr\_sys}: System power consumption} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu1, String: Get power consumption for PSU1; psu2, String: Get power consumption for PSU2} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu1, String: Get power consumption for PSU1; psu2, String: Get power consumption for PSU2} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get power consumption for PSU1: \texttt{\small cat \$bsp\_path/power/pwr\_consum psu1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get power consumption for PSU1: \texttt{\small cat \$bsp\_path/power/pwr\_consum psu1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4141,10 +4202,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get power consumption for PSU1: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_curr\textless{}idx\textgreater{}\_input}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_curr\textless{}idx\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_curr\textless{}idx\textgreater{}\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} current sensor readings and thresholds} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 current sensor: \texttt{\small cat \$bsp\_path/power/psu1\_curr1\_input cat \$bsp\_path/power/psu1\_curr1\_crit cat \$bsp\_path/power/psu1\_curr1\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 current sensor: \texttt{\small cat \$bsp\_path/power/psu1\_curr1\_input cat \$bsp\_path/power/psu1\_curr1\_crit cat \$bsp\_path/power/psu1\_curr1\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4161,10 +4222,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 current sensor: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_in\textless{}idx\textgreater{}\_input}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_in\textless{}idx\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_in\textless{}idx\textgreater{}\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} voltage sensor readings and thresholds} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 voltage sensor: \texttt{\small cat \$bsp\_path/power/psu1\_in1\_input cat \$bsp\_path/power/psu1\_in1\_crit cat \$bsp\_path/power/psu1\_in1\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 voltage sensor: \texttt{\small cat \$bsp\_path/power/psu1\_in1\_input cat \$bsp\_path/power/psu1\_in1\_crit cat \$bsp\_path/power/psu1\_in1\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4181,10 +4242,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 voltage sensor: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_power\textless{}idx\textgreater{}\_input}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_power\textless{}idx\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_power\textless{}idx\textgreater{}\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} power sensor readings and thresholds} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 power sensor: \texttt{\small cat \$bsp\_path/power/psu1\_power1\_input cat \$bsp\_path/power/psu1\_power1\_crit cat \$bsp\_path/power/psu1\_power1\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 power sensor: \texttt{\small cat \$bsp\_path/power/psu1\_power1\_input cat \$bsp\_path/power/psu1\_power1\_crit cat \$bsp\_path/power/psu1\_power1\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4201,14 +4262,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 power sensor: \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/power/psu\textless{}index\textgreater{}\_sensor\_capability}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get PSU\textless{}index\textgreater{} sensor capabilities} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 sensor capabilities: \texttt{\small cat \$bsp\_path/power/psu1\_sensor\_capability}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get PSU1 sensor capabilities: \texttt{\small cat \$bsp\_path/power/psu1\_sensor\_capability}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## System / Power Control
@@ -4223,10 +4288,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get PSU1 sensor capabilities: \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/asic\_health}\newline \texttt{\small \$bsp\_path/system/asic\textless{}N\textgreater{}\_health} (for multi-ASIC systems)} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC health status. For multi-ASIC systems (N61XX\_LD family: N6100\_LD), additional nodes exist for each ASIC.\newline Note: SN6600\_LD (SN66XX\_LD) is a single-ASIC system; only \texttt{\small asic\_health} applies (no \texttt{\small asic2\_health}..\texttt{\small asic4\_health} in that configuration).\newline Note: N6100\_LD has 4 ASICs with individual health monitoring: - \texttt{\small asic\_health} (ASIC1), \texttt{\small asic2\_health}, \texttt{\small asic3\_health}, \texttt{\small asic4\_health}} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{health, Integer: 0 (unhealthy), 1 (healthy)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{health, Integer: 0 (unhealthy), 1 (healthy)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0 (V.7.0060.1000 for multi-ASIC)} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC health: \texttt{\small \# Single-ASIC systems cat \$bsp\_path/system/asic\_health \# Multi-ASIC systems (N6100\_LD) cat \$bsp\_path/system/asic\_health    \# ASIC1 cat \$bsp\_path/system/asic2\_health   \# ASIC2 cat \$bsp\_path/system/asic3\_health   \# ASIC3 cat \$bsp\_path/system/asic4\_health   \# ASIC4}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get ASIC health: \texttt{\small \# Single-ASIC systems cat \$bsp\_path/system/asic\_health \# Multi-ASIC systems (N6100\_LD) cat \$bsp\_path/system/asic\_health    \# ASIC1 cat \$bsp\_path/system/asic2\_health   \# ASIC2 cat \$bsp\_path/system/asic3\_health   \# ASIC3 cat \$bsp\_path/system/asic4\_health   \# ASIC4}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4248,7 +4313,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & N & Integer & 1-2 (N6100\_LD) \\
  & reset & Integer & 0 (normal), 1 (reset) \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Reset MCU1: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/mcu1\_reset cat \$bsp\_path/system/mcu1\_reset cat \$bsp\_path/system/mcu2\_reset}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Reset MCU1: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/mcu1\_reset cat \$bsp\_path/system/mcu1\_reset cat \$bsp\_path/system/mcu2\_reset}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4265,10 +4330,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Reset MCU1: \texttt{\small echo 1 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_major\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD major version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{version, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{version, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD major version: \texttt{\small cat \$bsp\_path/system/cpld\_major\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get CPLD major version: \texttt{\small cat \$bsp\_path/system/cpld\_major\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4285,10 +4350,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD major version: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_part\_number}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD part number} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{part\_number, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{part\_number, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD part number: \texttt{\small cat \$bsp\_path/system/cpld\_part\_number}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get CPLD part number: \texttt{\small cat \$bsp\_path/system/cpld\_part\_number}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4305,10 +4370,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD part number: \texttt{\sma
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_minor\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD minor version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{version, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{version, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD minor version: \texttt{\small cat \$bsp\_path/system/cpld\_minor\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get CPLD minor version: \texttt{\small cat \$bsp\_path/system/cpld\_minor\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4325,10 +4390,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD minor version: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpld\_full\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD full version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{version, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{version, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get CPLD full version: \texttt{\small cat \$bsp\_path/system/cpld\_full\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get CPLD full version: \texttt{\small cat \$bsp\_path/system/cpld\_full\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4349,7 +4414,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & direction & String & intake, exhaust \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get fan direction: \texttt{\small cat \$bsp\_path/system/fan\_direction}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get fan direction: \texttt{\small cat \$bsp\_path/system/fan\_direction}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4370,7 +4435,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & mode & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG mode: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/jtag\_mode}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set JTAG mode: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/jtag\_mode}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4392,7 +4457,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & psu & Integer &  \\
  & state & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set PSU1 on: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/psu1\_on\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set PSU1 on: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/psu1\_on\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4413,7 +4478,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & cycle & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set system power cycle: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/power\_cycle}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set system power cycle: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/power\_cycle}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4434,7 +4499,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & power & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set system power down: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/power\_down}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set system power down: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/power\_down}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4455,7 +4520,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & request & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set CPU shutdown request: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_shutdown\_req}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set CPU shutdown request: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_shutdown\_req}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4476,8 +4541,8 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & poweroff & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Initiate graceful power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/graceful\_power\_off}} \\
-Note & \multicolumn{3}{p{0.735\linewidth}}{See also section 3.5.9 for the related event \texttt{\small graceful\_pwr\_off} that monitors graceful shutdown status.} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Initiate graceful power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/graceful\_power\_off}} \\
+Note & \multicolumn{3}{p{0.735\linewidth}}{See also \hyperref[graceful-power-off-event]{Graceful Power Off Event} for the related event \texttt{\small graceful\_pwr\_off} that monitors graceful shutdown status.} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4498,7 +4563,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & ready & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set CPU power off ready status: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_power\_off\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set CPU power off ready status: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_power\_off\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4519,8 +4584,8 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & unlock & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Unlock shutdown operations: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/shutdown\_unlock}} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Lock shutdown operations: \texttt{\small echo 0 \textgreater{} \$bsp\_path/system/shutdown\_unlock}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Unlock shutdown operations: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/shutdown\_unlock}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Lock shutdown operations: \texttt{\small echo 0 \textgreater{} \$bsp\_path/system/shutdown\_unlock}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4541,8 +4606,8 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & status & Integer & 0 (not completed), 1 (completed) \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read boot completion status: \texttt{\small cat \$bsp\_path/system/boot\_completed}} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set boot completed flag: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/boot\_completed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read boot completion status: \texttt{\small cat \$bsp\_path/system/boot\_completed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set boot completed flag: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/boot\_completed}} \\
 Note & \multicolumn{3}{p{0.735\linewidth}}{On AMD SNW CPU platforms, this may be implemented as a GPIO-based attribute.} \\
 \bottomrule
 \end{tabular}
@@ -4565,7 +4630,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
  & power & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 power: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_power}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set LC1 power: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_power}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4587,7 +4652,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
  & enable & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 enable: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_enable}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set LC1 enable: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_enable}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4604,10 +4669,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 enable: \texttt{\small ech
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_active}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} active status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 active status: \texttt{\small cat \$bsp\_path/system/lc1\_active}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 active status: \texttt{\small cat \$bsp\_path/system/lc1\_active}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4624,10 +4689,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 active status: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_powered}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} powered status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 powered status: \texttt{\small cat \$bsp\_path/system/lc1\_powered}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 powered status: \texttt{\small cat \$bsp\_path/system/lc1\_powered}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4644,10 +4709,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 powered status: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_present}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} present status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 present status: \texttt{\small cat \$bsp\_path/system/lc1\_present}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 present status: \texttt{\small cat \$bsp\_path/system/lc1\_present}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4664,10 +4729,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 present status: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_ready}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} ready status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 ready status: \texttt{\small cat \$bsp\_path/system/lc1\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 ready status: \texttt{\small cat \$bsp\_path/system/lc1\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4684,10 +4749,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 ready status: \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_synced}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} synced status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 synced status: \texttt{\small cat \$bsp\_path/system/lc1\_synced}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 synced status: \texttt{\small cat \$bsp\_path/system/lc1\_synced}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4704,10 +4769,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 synced status: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_verified}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} verified status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 verified status: \texttt{\small cat \$bsp\_path/system/lc1\_verified}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 verified status: \texttt{\small cat \$bsp\_path/system/lc1\_verified}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4724,10 +4789,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 verified status: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/lc\textless{}index\textgreater{}\_reset\_mask}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read line card\textless{}index\textgreater{} reset mask} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{lc, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{lc, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read LC1 reset mask: \texttt{\small cat \$bsp\_path/system/lc1\_reset\_mask}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read LC1 reset mask: \texttt{\small cat \$bsp\_path/system/lc1\_reset\_mask}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4749,7 +4814,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & lc & Integer &  \\
  & shutdown & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set LC1 shutdown: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_shutdown}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set LC1 shutdown: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/lc1\_shutdown}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4770,7 +4835,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & protect & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set VPD write protect: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/vpd\_write\_protect}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set VPD write protect: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/vpd\_write\_protect}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4791,7 +4856,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & asic & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set ASIC up during PCIe reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/asic\_up\_during\_pcie\_reset}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set ASIC up during PCIe reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/asic\_up\_during\_pcie\_reset}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4808,10 +4873,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set ASIC up during PCIe reset: \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/voltreg\_update\_status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get voltage regulator update status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{status, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{status, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage regulator update status: \texttt{\small cat \$bsp\_path/system/voltreg\_update\_status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get voltage regulator update status: \texttt{\small cat \$bsp\_path/system/voltreg\_update\_status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4828,10 +4893,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get voltage regulator update statu
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/config1}\newline \texttt{\small \$bsp\_path/system/config2}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get system configuration 1 and 2} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{config, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{config, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get system configurations: \texttt{\small cat \$bsp\_path/system/config1 cat \$bsp\_path/system/config2}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get system configurations: \texttt{\small cat \$bsp\_path/system/config1 cat \$bsp\_path/system/config2}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4848,10 +4913,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get system configurations: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/ufm\_version}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get UFM version} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{version, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{version, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get UFM version: \texttt{\small cat \$bsp\_path/system/ufm\_version}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get UFM version: \texttt{\small cat \$bsp\_path/system/ufm\_version}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4873,7 +4938,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & dpu & Integer &  \\
  & power & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set DPU1 power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_power\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set DPU1 power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_power\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4895,7 +4960,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & dpu & Integer &  \\
  & force & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Force DPU1 power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_force\_power\_off}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Force DPU1 power off: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_force\_power\_off}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4917,7 +4982,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & dpu & Integer &  \\
  & reset & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set DPU1 reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_reset}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set DPU1 reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_reset}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4939,7 +5004,7 @@ Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{3}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & dpu & Integer &  \\
  & enable & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Enable DPU1 reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_reset\_enable}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Enable DPU1 reset: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/dpu1\_reset\_enable}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4956,16 +5021,59 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Enable DPU1 reset: \texttt{\small 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/reset\_\textless{}cause\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get last system reset cause. Reset causes vary between platform families. Each supported cause is exposed as a separate read-only attribute under \texttt{\small \$bsp\_path/system/}. Reading \texttt{\small \$bsp\_path/system/reset\_cause} returns the primary cause string. For most causes only one attribute reads \texttt{\small 1}; the rest read \texttt{\small 0}.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{cause, String: Primary reset cause (via \texttt{\small reset\_cause}); \texttt{\small reset\_\textless{}cause\textgreater{}}, Integer: \texttt{\small 1} = this cause triggered the reset, \texttt{\small 0} = not related} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{cause, String: Primary reset cause (via \texttt{\small reset\_cause}); \texttt{\small reset\_\textless{}cause\textgreater{}}, Integer: \texttt{\small 1} = this cause triggered the reset, \texttt{\small 0} = not related} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Check if long button press caused reset: \texttt{\small cat \$bsp\_path/system/reset\_long\_pb}} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get reset cause string: \texttt{\small cat \$bsp\_path/system/reset\_cause}\newline \#\#\#\# N51XX\_LD platform family\newline N51XX\_LD platforms do \textbf{not} support \texttt{\small reset\_ac\_pwr\_fail}, \texttt{\small reset\_aux\_pwr\_or\_ref}, \texttt{\small reset\_comex\_wd}, \texttt{\small reset\_from\_asic}, \texttt{\small reset\_from\_comex}, or \texttt{\small reset\_reload\_bios}.\newline Applies to N5110\_LD, N5112\_LD, N5100\_LD, N5101\_LD, N5200\_LD, N5201\_LD, N5300\_LD, N5400\_LD, N5120\_LD, N5121\_LD, N5320\_LD, N5500\_LD (GB200/GB300), and N5240\_LD (Kyber). \texttt{\small config/reset\_attr\_num} = 22.\newline | Reset cause attribute | Description | |-----------------------|-------------| | \texttt{\small reset\_long\_pb} | Reset button was pushed for more than 15 seconds | | \texttt{\small reset\_short\_pb} | Reset button was pushed for less than 15 seconds | | \texttt{\small reset\_aux\_pwr\_or\_fu} | Reset due to CPLD power down or CPLD code refresh | | \texttt{\small reset\_swb\_dc\_dc\_pwr\_fail} | Switch board DC/DC power failure | | \texttt{\small reset\_sw\_reset} | Power cycle command initiated by software | | \texttt{\small reset\_pwr\_button\_or\_leak\_con} | Reset triggered by power button or leak connector event | | \texttt{\small reset\_swb\_wd} | Reset or power off initiated by switch-board watchdog | | \texttt{\small reset\_asic\_thermal} | ASIC power drop due to failure or thermal shutdown | | \texttt{\small reset\_cpu\_thermal} | CPU thermal shutdown | | \texttt{\small reset\_aux\_pwr\_or\_reload} | Auxiliary power failure or CPLD field upgrade | | \texttt{\small reset\_comex\_pwr\_fail} | COMe module power failure | | \texttt{\small reset\_platform} | Reboot command initiated by software | | \texttt{\small reset\_soc} | Power off initiated by SoC (for example Linux \texttt{\small poweroff}) | | \texttt{\small reset\_from\_erot} | Reset initiated by eRoT | | \texttt{\small reset\_erot} | eRoT reset | | \texttt{\small reset\_system} | System reset cycle, power on, power cycle, or ASIC reset | | \texttt{\small reset\_sw\_pwr\_off} | Power off initiated by software through CPLD | | \texttt{\small reset\_comex\_thermal} | COMe thermal shutdown | | \texttt{\small reset\_comex\_power} | COMe power event | | \texttt{\small reset\_pwr\_converter\_fail} | Power converter failure | | \texttt{\small reset\_main\_5v} | Management board 5 V rail failure | | \texttt{\small reset\_mgmt\_pwr} | Management board power failure |\newline Validation source: \texttt{\small recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch}, \texttt{\small usr/usr/bin/hw-management.sh} (\texttt{\small n51xx\_reset\_attr\_num}).\newline \#\#\#\# SN5610 / SN5640\newline SN5610 (HI172) and SN5640 (HI171) expose \texttt{\small reset\_reload\_bios} as a read-only status attribute, but the CPLD does not implement the trigger that would set it, so this reset cause cannot be produced on these systems.\newline Validation source: \texttt{\small mlxplat\_mlxcpld\_default\_ng\_regs\_io\_data} in the mlx-platform driver (\texttt{\small .mode = 0444}).\newline \#\#\#\# SN6810\_LD / SN6800\_LD\newline SN6810\_LD (HI183) and SN6800\_LD (HI187) do not support triggering \texttt{\small reset\_system}.} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Check if long button press caused reset: \texttt{\small cat \$bsp\_path/system/reset\_long\_pb}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get reset cause string: \texttt{\small cat \$bsp\_path/system/reset\_cause}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
+
+#### N51XX_LD platform family
+
+N51XX_LD platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_comex_wd`, `reset_from_asic`, `reset_from_comex`, or `reset_reload_bios`.
+
+Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
+
+| Reset cause attribute | Description |
+|-----------------------|-------------|
+| `reset_long_pb` | Reset button was pushed for more than 15 seconds |
+| `reset_short_pb` | Reset button was pushed for less than 15 seconds |
+| `reset_aux_pwr_or_fu` | Reset due to CPLD power down or CPLD code refresh |
+| `reset_swb_dc_dc_pwr_fail` | Switch board DC/DC power failure |
+| `reset_sw_reset` | Power cycle command initiated by software |
+| `reset_pwr_button_or_leak_con` | Reset triggered by power button or leak connector event |
+| `reset_swb_wd` | Reset or power off initiated by switch-board watchdog |
+| `reset_asic_thermal` | ASIC power drop due to failure or thermal shutdown |
+| `reset_cpu_thermal` | CPU thermal shutdown |
+| `reset_aux_pwr_or_reload` | Auxiliary power failure or CPLD field upgrade |
+| `reset_comex_pwr_fail` | COMe module power failure |
+| `reset_platform` | Reboot command initiated by software |
+| `reset_soc` | Power off initiated by SoC (for example Linux `poweroff`) |
+| `reset_from_erot` | Reset initiated by eRoT |
+| `reset_erot` | eRoT reset |
+| `reset_system` | System reset cycle, power on, power cycle, or ASIC reset |
+| `reset_sw_pwr_off` | Power off initiated by software through CPLD |
+| `reset_comex_thermal` | COMe thermal shutdown |
+| `reset_comex_power` | COMe power event |
+| `reset_pwr_converter_fail` | Power converter failure |
+| `reset_main_5v` | Management board 5 V rail failure |
+| `reset_mgmt_pwr` | Management board power failure |
+
+Validation source: `recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch`, `usr/usr/bin/hw-management.sh` (`n51xx_reset_attr_num`).
+
+#### SN5610 / SN5640
+
+SN5610 (HI172) and SN5640 (HI171) expose `reset_reload_bios` as a read-only status attribute, but the CPLD does not implement the trigger that would set it, so this reset cause cannot be produced on these systems.
+
+Validation source: `mlxplat_mlxcpld_default_ng_regs_io_data` in the mlx-platform driver (`.mode = 0444`).
+
+#### SN6810_LD / SN6800_LD
+
+SN6810_LD (HI183) and SN6800_LD (HI187) do not support triggering `reset_system`.
 
 ### Cartridge
 
@@ -4977,10 +5085,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get reset cause string: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cartridge\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX\_LD family: N6100\_LD, N6300\_LD) for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD and N6300\_LD (SKU HI185) have 4 cable cartridges.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD, N6300\_LD); Status, Integer: 0/1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD, N6300\_LD); Status, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get cartridge 1 status: \texttt{\small cat \$bsp\_path/system/cartridge1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get cartridge 1 status: \texttt{\small cat \$bsp\_path/system/cartridge1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -4997,14 +5105,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get cartridge 1 status: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/asic\_pg\_fail}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC power good failure status. Indicates power sequencing failure on the ASIC.\newline Note: This attribute is for multi-ASIC systems (SN58XX\_LD family, N61XX\_LD family). N6100\_LD has 4 ASICs with individual failure tracking. Exception: This API does not exist on SN6600\_LD, SN6800\_LD, and SN6810\_LD systems.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0/1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC power good failure status: \texttt{\small cat \$bsp\_path/system/asic\_pg\_fail}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get ASIC power good failure status: \texttt{\small cat \$bsp\_path/system/asic\_pg\_fail}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## Leakage Sensors
@@ -5019,14 +5131,18 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC power good failure status
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/leakage\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get leakage sensor status at the specified index. Detects liquid leaks in liquid-cooled systems.\newline Note: This attribute is for liquid-cooled systems (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family). N6100\_LD has 2 leakage sensors, SN5810\_LD has 2, SN5800\_LD has 5. N6300\_LD (SKU HI185): \texttt{\small config/leakage\_counter} is \textbf{2} (\texttt{\small n61xxld\_specific()} / HI185 branch in \texttt{\small hw-management.sh}). SN6600\_LD: \texttt{\small config/leakage\_counter} is \textbf{2}; the validated sysfs tree may still list \texttt{\small system/leakage1} through \texttt{\small system/leakage5} when the hardware exposes those mlxreg-io channels (see the \texttt{\small leakage\_counter} section note above).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-X (system dependent); Status, Integer: 0=no leak, 1=leak detected} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-X (system dependent); Status, Integer: 0=no leak, 1=leak detected} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.3930} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get leakage sensor 1 status: \texttt{\small cat \$bsp\_path/system/leakage1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get leakage sensor 1 status: \texttt{\small cat \$bsp\_path/system/leakage1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## Thermal
@@ -5048,10 +5164,10 @@ Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (\texttt{\small hw-management-t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/\textless{}ambient\_name\textgreater{}} (platform-specific; examples include\newline \texttt{\small mng\_amb}, \texttt{\small comex\_amb}, \texttt{\small port\_amb}, \texttt{\small fan\_amb}, \texttt{\small swb\_amb}, \texttt{\small cpu\_amb})} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Ambient temperature sensors are created by \texttt{\small hw-management-thermal-events.sh} when the corresponding hwmon device appears. The stable symlink name under \texttt{\small \$bsp\_path/thermal/} depends on the platform label and sensor type.\newline Some platforms also expose management ambient via \texttt{\small \$bsp\_path/thermal/mng\_amb} (see \textbf{MNG Temperature}). Legacy documentation referenced \texttt{\small \$bsp\_path/system/amb\_sens} for mlxreg ambient enablement on certain systems.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read management ambient temperature (when present): \texttt{\small cat \$bsp\_path/thermal/mng\_amb}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read management ambient temperature (when present): \texttt{\small cat \$bsp\_path/thermal/mng\_amb}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5068,10 +5184,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read management ambient temperatur
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{asic, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{asic, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read ASIC1 temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5088,10 +5204,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 temperature: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_normal}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} normal temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{asic, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{asic, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 normal temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_normal}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read ASIC1 normal temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_normal}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5108,10 +5224,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 normal temperature: \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} critical temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{asic, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{asic, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read ASIC1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5128,10 +5244,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 critical temperature: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_emergency}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} emergency temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{asic, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{asic, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_emergency}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read ASIC1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_emergency}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5148,10 +5264,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 emergency temperature: 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/asic\textless{}index\textgreater{}\_temp\_trip\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch ASIC\textless{}index\textgreater{} trip critical temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{asic, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{asic, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_trip\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read ASIC1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/asic1\_temp\_trip\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5168,10 +5284,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read ASIC1 trip critical temperatu
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch Comex temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read Comex temperature: \texttt{\small cat \$bsp\_path/thermal/comex\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read Comex temperature: \texttt{\small cat \$bsp\_path/thermal/comex\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5189,10 +5305,10 @@ Stack & \multicolumn{3}{p{0.735\linewidth}}{Host (\texttt{\small hw-management-t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/mng\_amb}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read management (MNG) ambient temperature when the platform exposes this sensor through the hw-mgmt thermal events handler.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read MNG ambient temperature: \texttt{\small cat \$bsp\_path/thermal/mng\_amb}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read MNG ambient temperature: \texttt{\small cat \$bsp\_path/thermal/mng\_amb}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5212,7 +5328,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{Instantaneous \textbf{host CPU} temperature as seen on the \textbf{BMC} image. The BMC early-I2C map binds bus 15 / \texttt{\small 0x4c} to the \textbf{sbtsi} driver (\texttt{\small hw-management-bmc-early-i2c-devices.json}). This is not created by the host thermal events script on the CPU image.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/cpu\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/cpu\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5232,7 +5348,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{High/low limit attributes from the same \textbf{sbtsi} sensor as \texttt{\small cpu\_temp\_input}. \textbf{sbtsi} exposes \texttt{\small temp1\_min}; both symlinks are created on HI189.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/cpu\_temp cat \$bsp\_path/thermal/cpu\_min}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/cpu\_temp cat \$bsp\_path/thermal/cpu\_min}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5250,11 +5366,11 @@ Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/bmc\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read BMC ambient temperature (instantaneous reading from the BMC hwmon sensor). Symlink is created under \texttt{\small /var/run/hw-management/thermal/} by \texttt{\small hw-management-bmc-events.sh} when the BMC temperature hwmon device appears (for example HI189 / SN6600: I2C \texttt{\small 4-0048}, \texttt{\small lm75} driver, \texttt{\small temp1\_input}).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 Note & \multicolumn{3}{p{0.735\linewidth}}{Supported on systems with the hw-mgmt BMC thermal stack only. Values are typically millidegrees Celsius (Linux hwmon convention).} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read BMC ambient temperature: \texttt{\small cat \$bsp\_path/thermal/bmc\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read BMC ambient temperature: \texttt{\small cat \$bsp\_path/thermal/bmc\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5272,11 +5388,11 @@ Stack & \multicolumn{3}{p{0.735\linewidth}}{BMC (\texttt{\small hw-management-bm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/bmc\_temp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read BMC ambient high-temperature limit (maps to hwmon \texttt{\small temp1\_max} on the BMC sensor). Created by the same BMC thermal udev handler as \texttt{\small bmc\_temp\_input}. On HI189 the BMC sensor uses the \texttt{\small lm75} driver, which exposes \texttt{\small temp1\_input} and \texttt{\small temp1\_max} only (no \texttt{\small temp1\_min}).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: driver-specific limit semantics} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: driver-specific limit semantics} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 Note & \multicolumn{3}{p{0.735\linewidth}}{Supported on systems with the hw-mgmt BMC thermal stack only. Do not expect \texttt{\small thermal/bmc\_min} on \texttt{\small lm75}-backed BMC sensors; the driver does not register a minimum temperature attribute, so \texttt{\small hw-management-bmc-events.sh} does not create that symlink.} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read BMC max temperature threshold: \texttt{\small cat \$bsp\_path/thermal/bmc\_temp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read BMC max temperature threshold: \texttt{\small cat \$bsp\_path/thermal/bmc\_temp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5297,7 +5413,7 @@ Description & \multicolumn{3}{p{0.735\linewidth}}{On systems with the hw-mgmt BM
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (when node exists on other platforms)} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 Note & \multicolumn{3}{p{0.735\linewidth}}{Virtual test trees (for example HI193) may still ship fixture files named \texttt{\small bmc\_crit} under \texttt{\small usr/etc/hw-management-virtual/}; that naming does not apply to live HI189 runtime symlinks.} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Not applicable on HI189 — verify with \texttt{\small ls \$bsp\_path/thermal/} on the device.} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Not applicable on HI189 — verify with \texttt{\small ls \$bsp\_path/thermal/} on the device.} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5317,7 +5433,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{The BMC events handler attempts \texttt{\small temp1\_min}, then \texttt{\small bmc\_min}, but \texttt{\small check\_n\_link} silently skips missing sources. The HI189 BMC sensor (\texttt{\small lm75} at I2C \texttt{\small 4-0048}) has no \texttt{\small temp1\_min} attribute, so \textbf{`bmc\_min` never appears} on the BMC stack using this stack. See \texttt{\small bmc/examples/hw-management-bmc-thermal-sysfs.txt}.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (when node exists on other platforms)} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Not applicable on HI189: \texttt{\small \# Expected absent on lm75-backed BMC: ls \$bsp\_path/thermal/bmc\_min}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Not applicable on HI189: \texttt{\small \# Expected absent on lm75-backed BMC: ls \$bsp\_path/thermal/bmc\_min}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5334,10 +5450,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Not applicable on HI189: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cooling\_state}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read system cooling state} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{state, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{state, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read cooling state: \texttt{\small cat \$bsp\_path/thermal/cooling\_state}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read cooling state: \texttt{\small cat \$bsp\_path/thermal/cooling\_state}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5354,10 +5470,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read cooling state: \texttt{\small
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cooling\_name}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Thermal control cooling device name written by \texttt{\small hw-management-thermal-events.sh} during cooling device registration. Used by the thermal control daemon configuration.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{name, String: platform-specific} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{name, String: platform-specific} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read cooling name: \texttt{\small cat \$bsp\_path/config/cooling\_name}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read cooling name: \texttt{\small cat \$bsp\_path/config/cooling\_name}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5374,10 +5490,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read cooling name: \texttt{\small 
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{core, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{core, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU core1 temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5394,10 +5510,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 temperature: \textt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} critical temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{core, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{core, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU core1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5414,10 +5530,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 critical temperatur
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_crit\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} critical temperature alarm} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{core, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{core, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 critical temperature alarm: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_crit\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU core1 critical temperature alarm: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_crit\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5434,10 +5550,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 critical temperatur
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_core\textless{}index\textgreater{}\_temp\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core\textless{}index\textgreater{} maximum temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{core, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{core, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 maximum temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU core1 maximum temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_core1\_temp\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5454,10 +5570,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU core1 maximum temperature
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU pack temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5474,10 +5590,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack temperature: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU pack critical temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5494,10 +5610,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_crit\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature alarm} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{alarm, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{alarm, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature alarm: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_crit\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU pack critical temperature alarm: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_crit\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5514,10 +5630,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack critical temperature
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/cpu\_pack\_temp\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack maximum temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack maximum temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read CPU pack maximum temperature: \texttt{\small cat \$bsp\_path/thermal/cpu\_pack\_temp\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5534,10 +5650,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read CPU pack maximum temperature:
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_max\_speed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} maximum speed} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{fan, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{fan, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 maximum speed: \texttt{\small cat \$bsp\_path/thermal/fan1\_max\_speed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read fan1 maximum speed: \texttt{\small cat \$bsp\_path/thermal/fan1\_max\_speed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5554,10 +5670,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 maximum speed: \texttt{\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_min\_speed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} minimum speed} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{fan, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{fan, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 minimum speed: \texttt{\small cat \$bsp\_path/thermal/fan1\_min\_speed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read fan1 minimum speed: \texttt{\small cat \$bsp\_path/thermal/fan1\_min\_speed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5578,14 +5694,14 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & speed & Integer & platform-specific PWM scale \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 speed: \texttt{\small echo 50 \textgreater{} \$bsp\_path/thermal/fan1\_speed\_set}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set fan1 speed: \texttt{\small echo 50 \textgreater{} \$bsp\_path/thermal/fan1\_speed\_set}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
-### Fan Speed Tolerance
+### Fan Speed Tolerance (per fan)
 
 ```{=latex}
 \begin{minipage}{\linewidth}
@@ -5594,11 +5710,11 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set fan1 speed: \texttt{\small ech
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_speed\_tolerance}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Fan speed tolerance for fan \texttt{\small \textless{}index\textgreater{}} when exposed under the thermal hierarchy. For system-wide tolerance configuration see also \texttt{\small \$bsp\_path/config/fan\_speed\_tolerance} (§3.1.24).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{tolerance, Integer} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Fan speed tolerance for fan \texttt{\small \textless{}index\textgreater{}} when exposed under the thermal hierarchy. For system-wide tolerance configuration see also \texttt{\small \$bsp\_path/config/fan\_speed\_tolerance} (\hyperref[fan-speed-tolerance]{Fan Speed Tolerance}).} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{tolerance, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 speed tolerance (when present): \texttt{\small cat \$bsp\_path/thermal/fan1\_speed\_tolerance}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read fan1 speed tolerance (when present): \texttt{\small cat \$bsp\_path/thermal/fan1\_speed\_tolerance}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5617,8 +5733,8 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan drawer \texttt{\small \textless{}index\textgreater{}} airflow direction.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{| Value | Meaning | |------|---------| | 0 | Reverse (C2P) | | 1 | Forward (P2C) | | 2 | Direction cannot be determined (fan missing, or fan present but direction debounce failed) |\newline \textbf{Notes:} - If the fan is not present (\texttt{\small thermal/fan\textless{}index\textgreater{}\_status} is 0), \texttt{\small fan\textless{}index\textgreater{}\_dir} is irrelevant and must be ignored by consumers. - On systems that report direction via CPLD (\texttt{\small system/fan\_dir}), a remove event keeps \texttt{\small fan\textless{}index\textgreater{}\_dir} present and sets it to \texttt{\small 2}. - On systems with fan-module EEPROM direction detection (\texttt{\small config/fan\_dir\_eeprom}), direction is taken from EEPROM VPD data. When the fan (and its EEPROM) is removed, \texttt{\small fan\textless{}index\textgreater{}\_dir} may also be removed.} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 direction: \texttt{\small cat \$bsp\_path/thermal/fan1\_dir}} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{0 --- Reverse (C2P)\newline 1 --- Forward (P2C)\newline 2 --- Direction cannot be determined (fan missing, or fan present but direction debounce failed)\newline \textbf{Notes:}\newline $\bullet$ If the fan is not present (\texttt{\small thermal/fan\textless{}index\textgreater{}\_status} is 0), \texttt{\small fan\textless{}index\textgreater{}\_dir} is irrelevant and must be ignored by consumers.\newline $\bullet$ On systems that report direction via CPLD (\texttt{\small system/fan\_dir}), a remove event keeps \texttt{\small fan\textless{}index\textgreater{}\_dir} present and sets it to \texttt{\small 2}.\newline $\bullet$ On systems with fan-module EEPROM direction detection (\texttt{\small config/fan\_dir\_eeprom}), direction is taken from EEPROM VPD data. When the fan (and its EEPROM) is removed, \texttt{\small fan\textless{}index\textgreater{}\_dir} may also be removed.} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read fan1 direction: \texttt{\small cat \$bsp\_path/thermal/fan1\_dir}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5635,10 +5751,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 direction: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{fan, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{fan, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 status: \texttt{\small cat \$bsp\_path/thermal/fan1\_status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read fan1 status: \texttt{\small cat \$bsp\_path/thermal/fan1\_status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5655,10 +5771,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 status: \texttt{\small c
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/fan\textless{}index\textgreater{}\_fault}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read fan\textless{}index\textgreater{} fault status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{fan, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{fan, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 fault status: \texttt{\small cat \$bsp\_path/thermal/fan1\_fault}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read fan1 fault status: \texttt{\small cat \$bsp\_path/thermal/fan1\_fault}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5675,10 +5791,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read fan1 fault status: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_voltmon\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read Comex PMBus voltmon temperature input.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read comex voltmon1 temperature: \texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read comex voltmon1 temperature: \texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5695,10 +5811,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read comex voltmon1 temperature: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_voltmon\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read Comex voltmon critical temperature threshold.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5715,10 +5831,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/the
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/comex\_voltmon\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read Comex voltmon maximum temperature threshold.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/comex\_voltmon1\_temp1\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5735,10 +5851,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/the
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/port\textless{}index\textgreater{}\_ambient\_temp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read port\textless{}index\textgreater{} ambient temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{port, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{port, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read port1 ambient temperature: \texttt{\small cat \$bsp\_path/thermal/port1\_ambient\_temp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read port1 ambient temperature: \texttt{\small cat \$bsp\_path/thermal/port1\_ambient\_temp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5755,10 +5871,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read port1 ambient temperature: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 temperature: \texttt{\small cat \$bsp\_path/thermal/psu1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 temperature: \texttt{\small cat \$bsp\_path/thermal/psu1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5775,10 +5891,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 temperature: \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} alarm status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 alarm: \texttt{\small cat \$bsp\_path/thermal/psu1\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 alarm: \texttt{\small cat \$bsp\_path/thermal/psu1\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5795,10 +5911,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 alarm: \texttt{\small ca
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_temp\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} maximum temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 maximum temperature: \texttt{\small cat \$bsp\_path/thermal/psu1\_temp\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 maximum temperature: \texttt{\small cat \$bsp\_path/thermal/psu1\_temp\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5815,10 +5931,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 maximum temperature: \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_fan\_speed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} fan speed} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 fan speed: \texttt{\small cat \$bsp\_path/thermal/psu1\_fan\_speed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 fan speed: \texttt{\small cat \$bsp\_path/thermal/psu1\_fan\_speed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5835,10 +5951,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 fan speed: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_fan\_min\_speed}\newline \texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_fan\_max\_speed}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} minimum and maximum fan speed} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 fan speeds: \texttt{\small cat \$bsp\_path/thermal/psu1\_fan\_min\_speed cat \$bsp\_path/thermal/psu1\_fan\_max\_speed}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 fan speeds: \texttt{\small cat \$bsp\_path/thermal/psu1\_fan\_min\_speed cat \$bsp\_path/thermal/psu1\_fan\_max\_speed}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5855,10 +5971,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 fan speeds: \texttt{\sma
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_power\_status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} power status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 power status: \texttt{\small cat \$bsp\_path/thermal/psu1\_power\_status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 power status: \texttt{\small cat \$bsp\_path/thermal/psu1\_power\_status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5875,10 +5991,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 power status: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/psu\textless{}index\textgreater{}\_status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PSU\textless{}index\textgreater{} status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 status: \texttt{\small cat \$bsp\_path/thermal/psu1\_status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PSU1 status: \texttt{\small cat \$bsp\_path/thermal/psu1\_status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5895,10 +6011,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PSU1 status: \texttt{\small c
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_hotswap\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB (Power Distribution Board) hot-swap controller temperature\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hotswap 1 temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PDB hotswap 1 temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5915,10 +6031,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hotswap 1 temperature: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_hotswap\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/thermal/pdb\_hotswap\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hot-swap controller temperature critical and maximum thresholds\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hotswap 1 temperature thresholds: \texttt{\small cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_crit cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PDB hotswap 1 temperature thresholds: \texttt{\small cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_crit cat \$bsp\_path/thermal/pdb\_hotswap1\_temp1\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5935,10 +6051,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB hotswap 1 temperature thr
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter temperature\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter 1 temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PDB power converter 1 temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5955,10 +6071,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter 1 tempera
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_crit}\newline \texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_lcrit}\newline \texttt{\small \$bsp\_path/thermal/pdb\_pwr\_conv\textless{}index\textgreater{}\_temp\textless{}index\textgreater{}\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter temperature thresholds (critical, lower critical, maximum)\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter 1 temperature thresholds: \texttt{\small cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_crit cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_lcrit cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PDB power converter 1 temperature thresholds: \texttt{\small cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_crit cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_lcrit cat \$bsp\_path/thermal/pdb\_pwr\_conv1\_temp1\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5975,10 +6091,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB power converter 1 tempera
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/pdb\_mosfet\_amb\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read PDB MOSFET ambient temperature sensor\newline Note: This attribute is for liquid-cooled systems only (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family)} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0050.3000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB MOSFET ambient temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_mosfet\_amb1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read PDB MOSFET ambient temperature: \texttt{\small cat \$bsp\_path/thermal/pdb\_mosfet\_amb1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -5995,10 +6111,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read PDB MOSFET ambient temperatur
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/system\_pwm1}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read system PWM1 value} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{pwm, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{pwm, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read system PWM1: \texttt{\small cat \$bsp\_path/thermal/system\_pwm1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read system PWM1: \texttt{\small cat \$bsp\_path/thermal/system\_pwm1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6015,10 +6131,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read system PWM1: \texttt{\small c
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} critical temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{module, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{module, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read module1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6035,10 +6151,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 critical temperature:
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_emergency}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} emergency temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{module, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{module, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_emergency}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read module1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_emergency}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6055,10 +6171,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 emergency temperature
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_trip\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} trip critical temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{module, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{module, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_trip\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read module1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_trip\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6075,10 +6191,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 trip critical tempera
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_fault}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} temperature fault status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{module, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{module, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 temperature fault: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_fault}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read module1 temperature fault: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_fault}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6095,10 +6211,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 temperature fault: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/module\textless{}index\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read module\textless{}index\textgreater{} temperature input} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{module, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{module, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 temperature input: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read module1 temperature input: \texttt{\small cat \$bsp\_path/thermal/module1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6115,10 +6231,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read module1 temperature input: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} critical temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{gearbox, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{gearbox, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read gearbox1 critical temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6135,10 +6251,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 critical temperature
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_emergency}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} emergency temperature threshold} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{gearbox, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{gearbox, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_emergency}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read gearbox1 emergency temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_emergency}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6155,10 +6271,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 emergency temperatur
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_trip\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} trip critical temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{gearbox, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{gearbox, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_trip\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read gearbox1 trip critical temperature: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_trip\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6175,10 +6291,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 trip critical temper
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/gearbox\textless{}index\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox\textless{}index\textgreater{} temperature input} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{gearbox, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{gearbox, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 temperature input: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_input}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read gearbox1 temperature input: \texttt{\small cat \$bsp\_path/thermal/gearbox1\_temp\_input}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6195,10 +6311,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read gearbox1 temperature input: \
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_cpu\_temp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch CPU temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch CPU temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_cpu\_temp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read switch CPU temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_cpu\_temp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6215,10 +6331,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch CPU temperature: \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_fan\_temp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch fan temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch fan temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_fan\_temp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read switch fan temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_fan\_temp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6235,10 +6351,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch fan temperature: \text
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_port\textless{}index\textgreater{}\_temp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch port\textless{}index\textgreater{} temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{port, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{port, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch port1 temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_port1\_temp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read switch port1 temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_port1\_temp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6255,10 +6371,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch port1 temperature: \te
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/switch\_psu\textless{}index\textgreater{}\_temp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch power supply\textless{}index\textgreater{} temperature} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{psu, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{psu, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch PSU1 temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_psu1\_temp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read switch PSU1 temperature: \texttt{\small cat \$bsp\_path/thermal/switch\_psu1\_temp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6275,10 +6391,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read switch PSU1 temperature: \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_input}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM (Small Outline Dual In-line Memory Module) temperature. SODIMMs are DDR memory modules with integrated temperature sensors.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family). SN5810\_LD and N6100\_LD use 2 SODIMM sensors on I2C bus 2 (addresses 0x1a, 0x1b). SN6600\_LD uses 2 JC42 sensors on I2C bus 10 (addresses 0x52, 0x53) per validated tree.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_input  \# SODIMM 1 cat \$bsp\_path/thermal/sodimm2\_temp\_input  \# SODIMM 2}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read SODIMM temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_input  \# SODIMM 1 cat \$bsp\_path/thermal/sodimm2\_temp\_input  \# SODIMM 2}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6295,10 +6411,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperatures: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_crit}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM critical temperature threshold.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM critical temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit cat \$bsp\_path/thermal/sodimm2\_temp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read SODIMM critical temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit cat \$bsp\_path/thermal/sodimm2\_temp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6315,10 +6431,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM critical temperatures:
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_max}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM maximum temperature threshold.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM max temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_max cat \$bsp\_path/thermal/sodimm2\_temp\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read SODIMM max temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_max cat \$bsp\_path/thermal/sodimm2\_temp\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6335,10 +6451,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM max temperatures: \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_min}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM minimum temperature threshold.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Temperature, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM min temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_min cat \$bsp\_path/thermal/sodimm2\_temp\_min}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read SODIMM min temperatures: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_min cat \$bsp\_path/thermal/sodimm2\_temp\_min}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6355,10 +6471,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM min temperatures: \tex
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_crit\_alarm}\newline \texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_max\_alarm}\newline \texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_min\_alarm}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature alarm status (critical, maximum, minimum).\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Alarm, Integer: 0 (clear), 1 (alarm)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Alarm, Integer: 0 (clear), 1 (alarm)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature alarms: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit\_alarm cat \$bsp\_path/thermal/sodimm1\_temp\_max\_alarm cat \$bsp\_path/thermal/sodimm1\_temp\_min\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_crit\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_max\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_min\_alarm}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read SODIMM temperature alarms: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit\_alarm cat \$bsp\_path/thermal/sodimm1\_temp\_max\_alarm cat \$bsp\_path/thermal/sodimm1\_temp\_min\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_crit\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_max\_alarm cat \$bsp\_path/thermal/sodimm2\_temp\_min\_alarm}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6375,10 +6491,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature alarms: \t
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_crit\_hyst}\newline \texttt{\small \$bsp\_path/thermal/sodimm\textless{}index\textgreater{}\_temp\_max\_hyst}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature hysteresis values for critical and max thresholds.\newline Note: This attribute is for systems with SODIMM temperature sensors (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family).} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Hysteresis, Integer: Value in millidegrees Celsius (m°C)} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-2 (N6100\_LD, SN6600\_LD); Hysteresis, Integer: Value in millidegrees Celsius (m°C)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature hysteresis: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit\_hyst cat \$bsp\_path/thermal/sodimm1\_temp\_max\_hyst cat \$bsp\_path/thermal/sodimm2\_temp\_crit\_hyst cat \$bsp\_path/thermal/sodimm2\_temp\_max\_hyst}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read SODIMM temperature hysteresis: \texttt{\small cat \$bsp\_path/thermal/sodimm1\_temp\_crit\_hyst cat \$bsp\_path/thermal/sodimm1\_temp\_max\_hyst cat \$bsp\_path/thermal/sodimm2\_temp\_crit\_hyst cat \$bsp\_path/thermal/sodimm2\_temp\_max\_hyst}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6395,10 +6511,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read SODIMM temperature hysteresis
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/swb\_asic\textless{}index\textgreater{}}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read switch-board (SWB) ASIC temperature when present on multi-board systems.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/swb\_asic1}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/swb\_asic1}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6415,10 +6531,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/the
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/thermal/drivetemp}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read NVMe/drive temperature from the \texttt{\small drivetemp} hwmon driver when linked by \texttt{\small hw-management-thermal-events.sh}.} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{temperature, Integer: millidegrees Celsius} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6437,7 +6553,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read drive critical temperature threshold.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_crit}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_crit}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6456,7 +6572,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read drive maximum temperature threshold.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_max}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_max}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6475,11 +6591,15 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/therm
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read drive minimum temperature threshold.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_min}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/thermal/drivetemp\_min}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## Watchdog
@@ -6498,10 +6618,10 @@ under `$bsp_path/watchdog/`.
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/bootstatus}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog boot status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{status, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{status, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog boot status: \texttt{\small cat \$bsp\_path/watchdog/bootstatus}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog boot status: \texttt{\small cat \$bsp\_path/watchdog/bootstatus}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6518,10 +6638,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog boot status: \texttt
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/identity}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog identity} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{identity, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{identity, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog identity: \texttt{\small cat \$bsp\_path/watchdog/identity}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog identity: \texttt{\small cat \$bsp\_path/watchdog/identity}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6538,10 +6658,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog identity: \texttt{\s
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/nowayout}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog no way out setting} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{nowayout, Integer: 0/1} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{nowayout, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog no way out: \texttt{\small cat \$bsp\_path/watchdog/nowayout}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog no way out: \texttt{\small cat \$bsp\_path/watchdog/nowayout}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6558,10 +6678,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog no way out: \texttt{
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/state}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog state} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{state, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{state, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog state: \texttt{\small cat \$bsp\_path/watchdog/state}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog state: \texttt{\small cat \$bsp\_path/watchdog/state}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6578,10 +6698,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog state: \texttt{\smal
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/status}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog status} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{status, String} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{status, String} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog status: \texttt{\small cat \$bsp\_path/watchdog/status}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog status: \texttt{\small cat \$bsp\_path/watchdog/status}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6598,10 +6718,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog status: \texttt{\sma
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/timeout}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog timeout value} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{timeout, Integer: seconds} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{timeout, Integer: seconds} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog timeout: \texttt{\small cat \$bsp\_path/watchdog/timeout}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog timeout: \texttt{\small cat \$bsp\_path/watchdog/timeout}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6618,20 +6738,24 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog timeout: \texttt{\sm
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/watchdog/timeleft}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog time left} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{timeleft, Integer: seconds} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{timeleft, Integer: seconds} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Read watchdog time left: \texttt{\small cat \$bsp\_path/watchdog/timeleft}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read watchdog time left: \texttt{\small cat \$bsp\_path/watchdog/timeleft}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
 ```
 
+```{=latex}
+\Needspace{0.35\textheight}
+```
+
 ## BMC status
 
-Sections §3.23.1–§3.23.2 describe **host-CPU** views of BMC presence and I2C ownership
-(`hw-management.sh` / platform GPIO and mlxreg-io). §3.23.3–§3.23.5 are
+Sections [BMC present](#bmc-present) and [BMC to CPU control](#bmc-to-cpu-control) describe **host-CPU** views of BMC presence and I2C ownership
+(`hw-management.sh` / platform GPIO and mlxreg-io). [MCTP address](#mctp-address), [MCTP bus](#mctp-bus) and [MCTP ready](#mctp-ready) are
 **host** config/status for MCTP setup where the platform defines it (`hw-management.sh`).
 
 On the **BMC** image, `bmc_to_cpu_ctrl` also appears under `$bsp_path/system/` via the
@@ -6650,7 +6774,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/syste
 Description & \multicolumn{3}{p{0.735\linewidth}}{GPIO indicating whether a BMC is present. Created by host \texttt{\small hw-management.sh} (platform-specific GPIO mapping).} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bmc\_present}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bmc\_present}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6670,7 +6794,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/syste
 Description & \multicolumn{3}{p{0.735\linewidth}}{I2C bus ownership between BMC and CPU (0 = CPU, 1 = BMC on supported platforms). On the host image the symlink targets \textbf{mlxplat} mlxreg-io; thermal control may read this node (\texttt{\small hw\_management\_thermal\_control.py}: \texttt{\small system/bmc\_to\_cpu\_ctrl}).} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write (platform-dependent)} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bmc\_to\_cpu\_ctrl}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/bmc\_to\_cpu\_ctrl}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6690,7 +6814,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{MCTP I2C client address used during host init to instantiate the MCTP device on \texttt{\small mctp\_bus}.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (after init)} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/mctp\_addr}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/mctp\_addr}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6710,7 +6834,7 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/confi
 Description & \multicolumn{3}{p{0.735\linewidth}}{I2C bus number for MCTP client binding during host init.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only (after init)} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/mctp\_bus}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/config/mctp\_bus}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6730,11 +6854,15 @@ Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/syste
 Description & \multicolumn{3}{p{0.735\linewidth}}{Indicates CPU MCTP readiness from platform mlxreg-io. Present in validated host trees (SN6600\_LD, SN5810\_LD, N6100\_LD). On the BMC image the same logical register is listed in \texttt{\small nvsw\_bmc\_hid189\_regio\_data} / \texttt{\small hw-management-bmc-system-sysfs.txt}.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/cpu\_mctp\_ready}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/system/cpu\_mctp\_ready}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
 \vspace{3mm}
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ## BMC reset cause
@@ -6742,7 +6870,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small cat \$bsp\_path/sys
 **Stack:** BMC (`hw-management-bmc` package on the BMC SoC)
 
 The BMC reset-cause exporter (`hw-management-bmc-get-reset-cause.sh`) writes a separate subtree under
-**`$bsp_path/bmc/`**. This is distinct from host CPLD reset causes documented in §3.18.39
+**`$bsp_path/bmc/`**. This is distinct from host CPLD reset causes documented in [Get Reset Cause](#get-reset-cause)
 (`$bsp_path/system/reset_*` on the switch CPU).
 
 Source priority for SCU register words: U-Boot environment (`fw_printenv`), then `/proc/cmdline`, then
@@ -6773,6 +6901,10 @@ HI189 / AST2700).
 cat $bsp_path/bmc/reset_pwr_cycle
 cat $bsp_path/bmc/reset_soft_reboot
 cat $bsp_path/bmc/reset_unknown
+```
+
+```{=latex}
+\Needspace{0.35\textheight}
 ```
 
 ### BMC reset domain detail
@@ -6830,6 +6962,10 @@ Raw 32-bit SCU reset-event register values (hex text), written at export time.
 cat $bsp_path/bmc/raw_scu0_reset_event_log0
 ```
 
+```{=latex}
+\Needspace{0.35\textheight}
+```
+
 ## BMC leakage A2D tree
 
 **Stack:** BMC
@@ -6846,7 +6982,7 @@ Layout reference: **`bmc/examples/hw-management-bmc-leakage-sysfs.txt`**.
 directory names follow hardware `Channels[].Id` and may be non-contiguous (for example `…/1/` and
 `…/4/` only).
 
-This tree is separate from host `$bsp_path/system/leakage<N>` mlxreg-io status (§3.19.1) and from
+This tree is separate from host `$bsp_path/system/leakage<N>` mlxreg-io status ([Leakage Sensor](#leakage-sensor)) and from
 `$bsp_path/events/leakage<N>` on the CPU image.
 
 ### Leak detector attributes
@@ -6904,6 +7040,10 @@ Note: On BMC images for HI189, mlxreg-hotplug also exposes aggregate status regi
 `$bsp_path/system/leakage1`, `$bsp_path/system/leakage2`, and `$bsp_path/system/leakage_aggr`
 (see `bmc/examples/hw-management-bmc-system-sysfs.txt`).
 
+```{=latex}
+\Needspace{0.35\textheight}
+```
+
 ## JTAG interface
 
 ### Enable / Disable JTAG mechanism
@@ -6920,7 +7060,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & enable & Integer & 0/1 \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Enable JTAG mechanism: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/enable}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Enable JTAG mechanism: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/enable}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6941,7 +7081,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & tck & Integer &  \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TCK pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tck}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set JTAG TCK pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tck}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6962,7 +7102,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & tdi & Integer &  \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TDI pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tdi}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set JTAG TDI pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tdi}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -6983,7 +7123,7 @@ Access & \multicolumn{3}{p{0.735\linewidth}}{Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
  & tms & Integer &  \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TMS pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tms}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set JTAG TMS pin: \texttt{\small echo 1 \textgreater{} \$bsp\_path/jtag/tms}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -7000,10 +7140,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Set JTAG TMS pin: \texttt{\small e
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/jtag/tdo}} \\
 \midrule
 Description & \multicolumn{3}{p{0.735\linewidth}}{Get JTAG TDO pin} \\
-Values & \multicolumn{3}{p{0.735\linewidth}}{tdo, Integer} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{tdo, Integer} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-Example & \multicolumn{3}{p{0.735\linewidth}}{Get JTAG TDO pin: \texttt{\small cat \$bsp\_path/jtag/tdo}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get JTAG TDO pin: \texttt{\small cat \$bsp\_path/jtag/tdo}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -7013,6 +7153,10 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Get JTAG TDO pin: \texttt{\small c
 # Thermal Control
 
 The thermal algorithm is described in a separate document - [Thermal Monitoring for NVIDIA Systems with Third Party OS](Thermal_Monitoring_for_NVIDIA_Systems_with_third_party_OS.md)
+
+```{=latex}
+\Needspace{0.35\textheight}
+```
 
 ## Thermal Control Versions
 
@@ -7161,7 +7305,7 @@ The driver uses two pages (`MP2855_PAGE_NUM` is 2). `MP2855_RAIL1_FUNC` includes
 
 Kernel module `isl68137` (`drivers/hwmon/pmbus/isl68137.c`). `MODULE_DESCRIPTION` is "PMBus driver for Renesas digital multiphase voltage regulators".
 
-`MODULE_DESCRIPTION` is "PMBus driver for Renesas digital multiphase voltage regulators". The I2C id table `raa_dmpvr_id` binds these parts: `isl68137`; `isl68220` through `isl68227`, `isl68229`, `isl68233`, `isl68239`; `isl69222` through `isl69225`, `isl69227`, `isl69228`, `isl69234`, `isl69236`, `isl69239`, `isl69242`, `isl69243`, `isl69247`, `isl69248`, `isl69254` through `isl69256`, `isl69259`, `isl69260`, `isl69268`, `isl69269`, `isl69298`; `raa228000`, `raa228004`, `raa228006`, `raa228228`, `raa228244`, `raa228246`, `raa228942`, `raa228943`, `raa229001`, `raa229004`, `raa229141`, and `raa229621`.
+The I2C id table `raa_dmpvr_id` binds these parts: `isl68137`; `isl68220` through `isl68227`, `isl68229`, `isl68233`, `isl68239`; `isl69222` through `isl69225`, `isl69227`, `isl69228`, `isl69234`, `isl69236`, `isl69239`, `isl69242`, `isl69243`, `isl69247`, `isl69248`, `isl69254` through `isl69256`, `isl69259`, `isl69260`, `isl69268`, `isl69269`, `isl69298`; `raa228000`, `raa228004`, `raa228006`, `raa228228`, `raa228244`, `raa228246`, `raa228942`, `raa228943`, `raa229001`, `raa229004`, `raa229141`, and `raa229621`.
 
 Page 0 of the driver info exposes input voltage, input current, input power, status input, temperature (including temp2 and temp3), status temperature, output voltage, status output voltage, output current, status output current, output power, and VMON. Some variants clear the VMON bit or the temp3 bit.
 
@@ -7176,6 +7320,162 @@ The driver reads the ADC voltage inputs of the Lattice POWR1220 and POWR1014 (`e
 Kernel module `emc2305` (`drivers/hwmon/emc2305.c`). `MODULE_DESCRIPTION` is "Microchip EMC2305 fan controller driver".
 
 The I2C ids are `emc2301`, `emc2302`, `emc2303`, and `emc2305`. Probe reads the product id and sets the PWM count: EMC2301 has 1, EMC2302 has 2, EMC2303 has 3, and EMC2305 has 5 (`EMC2305_PWM_MAX` is 5). PWM duty is 0 through `EMC2305_FAN_MAX` (`0xff`). The default cooling `max_state` is `EMC2305_FAN_MAX_STATE` (10). Tachometer counts are read from the per-fan tach registers and converted with `EMC2305_RPM_FACTOR` (3932160). hwmon files follow the PWM count: `fan[1-5]_input` and `fan[1-5]_fault` are read only, and `pwm[1-5]` is read/write. Platform data `pwm_separate` gives each channel its own PWM and cooling device. When `pwm_separate` is clear, every PWM is bound to one thermal zone and runs at the same speed. Cooling files are `cur_state` and `max_state`.
+
+### lm25066
+
+Kernel module `lm25066` (`drivers/hwmon/pmbus/lm25066.c`). `MODULE_DESCRIPTION` is "PMBus driver for LM25066 and compatible chips".
+
+The I2C ids are `lm25056`, `lm25066`, `lm5064`, `lm5066`, and `lm5066i`. hw-management uses the `lm5066i` id for the PDB hot-swap controller; its power and current scale factors are the `pdb_hotswap<N>_power1_scale` and `_curr1_scale` nodes in [Environment Control](#environment-control). The module is listed in `modules-load.d`.
+
+### tps53679
+
+Kernel module `tps53679` (`drivers/hwmon/pmbus/tps53679.c`). `MODULE_DESCRIPTION` is "PMBus driver for Texas Instruments TPS53679".
+
+The I2C ids are `bmr474`, `tps53647`, `tps53667`, `tps53676`, `tps53679`, `tps53681`, and `tps53688`. The module is listed in `modules-load.d`, and hw-management instantiates it from the platform connect tables.
+
+### xdpe12284
+
+Kernel module `xdpe12284` (`drivers/hwmon/pmbus/xdpe12284.c`). `MODULE_DESCRIPTION` is "PMBus driver for Infineon XDPE122 family".
+
+Upstream ids are `xdpe11280`, `xdpe12254`, and `xdpe12284`. The hw-mgmt Linux 6.12 patch `0019-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch` adds `xdpe15284` and `xdpe1a2g7` (and the matching `infineon,` device-tree compatibles). The platform tables in `hw-management-devtree.sh` use `xdpe12284` and `xdpe15284` for the COMEX voltage monitors and `xdpe1a2g7` for the board voltage monitors that name it.
+
+### xdpe1a2g7b
+
+hw-mgmt adds `drivers/hwmon/pmbus/xdpe1a2g7b.c` in the Linux 6.12 kernel patch `0059-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch`. `MODULE_DESCRIPTION` is "PMBus driver for Infineon XDPE1A2G7B/5B". It is enabled by `CONFIG_SENSORS_XDPE1A2G7B`.
+
+### mp2845
+
+hw-mgmt adds `drivers/hwmon/pmbus/mp2845.c` in the Linux 6.12 kernel patch `0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch`. `MODULE_DESCRIPTION` is "MP2845 driver". The I2C id is `mp2845`. The module is listed in `modules-load.d`.
+
+### mp2869
+
+hw-mgmt adds `drivers/hwmon/pmbus/mp2869.c` in the Linux 6.12 kernel patch `0041-hwmon-add-MP2869-MP29608-MP29612-and-MP29816-series-.patch`. `MODULE_DESCRIPTION` is "PMBus driver for MPS MP2869". The I2C ids are `mp2869`, `mp29608`, `mp29612`, and `mp29816`. The `mp29816` id is the one `hw-management-devtree.sh` uses for the MPS voltage monitors (`mp29816`, `mp29816-6x`, `mp29816-7x` board variants).
+
+### mp29502
+
+hw-mgmt adds `drivers/hwmon/pmbus/mp29502.c` in the Linux 6.12 kernel patch `0042-hwmon-add-MP29502-driver.patch`. `MODULE_DESCRIPTION` is "PMBus driver for MPS MP29502". The I2C id is `mp29502`.
+
+### mp5926
+
+Kernel module `mp5926` (`drivers/hwmon/pmbus/mp5926.c`), added by the hw-mgmt patches `0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch` (Linux 6.1) and `0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch` (Linux 6.12). The I2C id is `mp5926`. The BMC BOM files instantiate it as the PDB hot-swap controller (spec `mp5926 0x12 <bus> pdb_hotswap<N>`). It does not create `config/pdb_hotswap_scale`; that node exists only for `lm5066i`.
+
+## Temperature sensors
+
+hw-management links the attributes of these drivers into `$bsp_path/thermal/` and `$bsp_path/environment/` as the platform sensor configuration names them. Kernel version `6.12` is the reference.
+
+### lm75
+
+Kernel module `lm75` (`drivers/hwmon/lm75.c`). `MODULE_DESCRIPTION` is "LM75 driver". One module binds 29 I2C ids. The ids the platform tables use are `adt75`, `tmp75`, `tmp1075`, and `lm75`; the full list is in the driver. The BMC stack instantiates `lm75` for the BMC board temperature (see [Host and BMC software stacks](#host-and-bmc-software-stacks)).
+
+### tmp102
+
+Kernel module `tmp102` (`drivers/hwmon/tmp102.c`). `MODULE_DESCRIPTION` is "Texas Instruments TMP102 temperature sensor driver". The I2C id is `tmp102`. The module is listed in `modules-load.d`.
+
+### tmp421
+
+Kernel module `tmp421` (`drivers/hwmon/tmp421.c`). `MODULE_DESCRIPTION` is "Texas Instruments TMP421/422/423/441/442 temperature sensor driver". The I2C ids are `tmp421`, `tmp422`, `tmp423`, `tmp441`, and `tmp442`.
+
+### tmp401
+
+Kernel module `tmp401` (`drivers/hwmon/tmp401.c`). `MODULE_DESCRIPTION` is "Texas Instruments TMP401 temperature sensor driver". The I2C ids are `tmp401`, `tmp411`, `tmp431`, `tmp432`, and `tmp435`. hw-management uses `tmp411` from the device tree table.
+
+### lm90
+
+Kernel module `lm90` (`drivers/hwmon/lm90.c`). `MODULE_DESCRIPTION` is "LM90/ADM1032 driver". It binds 45 I2C ids including `lm90`, `adm1032`, `max6659`, and `tmp451`. hw-management uses `tmp451` from the platform tables.
+
+### emc1403
+
+Kernel module `emc1403` (`drivers/hwmon/emc1403.c`). The I2C ids are `emc1402`, `emc1403`, `emc1404`, `emc1412`, `emc1413`, `emc1414`, `emc1422`, and `emc1423`. hw-management uses `emc1403` from the device tree table. The module is enabled by `CONFIG_SENSORS_EMC1403`.
+
+### stts751
+
+Kernel module `stts751` (`drivers/hwmon/stts751.c`). `MODULE_DESCRIPTION` is "STTS751 sensor driver". The I2C id is `stts751`.
+
+### spd5118
+
+Kernel module `spd5118` (`drivers/hwmon/spd5118.c`). `MODULE_DESCRIPTION` is "SPD 5118 driver". It reads the temperature sensor of DDR5 SPD hubs. The hw-mgmt Linux 6.1 patch `0120-hwmon-Add-support-for-SPD5118-compliant-temperature-.patch` backports it; 6.12 has it upstream. It is enabled by `CONFIG_SENSORS_SPD5118`.
+
+### coretemp
+
+Kernel module `coretemp` (`drivers/hwmon/coretemp.c`). `MODULE_DESCRIPTION` is "Intel Core temperature monitor". `hw-management.sh` runs `modprobe coretemp` on every CPU type except AMD SNW, AMD V3000, AMD FRNG, and BF3, because the driver supports only Intel CPUs. It is also skipped on SimX.
+
+### jc42
+
+Kernel module `jc42` (`drivers/hwmon/jc42.c`). The I2C id is `jc42`. It reads the temperature sensor of DDR4 SODIMMs. `hw-management-helpers.sh` runs `modprobe jc42` when `/sys/bus/i2c/drivers/jc42` is missing, writes the SODIMM critical limit to each bound sensor, and `hw-management.sh` instantiates `jc42` by hand on AMD platforms where the driver does not probe the sensor itself. DDR5 SPD hubs use `spd5118` instead.
+
+### sbtsi
+
+I2C id `sbtsi` (the AMD SB-TSI CPU temperature interface). It exposes `temp1_input`, `temp1_max`, and `temp1_min`. Only the BMC stack uses it: the HI189 early-I2C map binds bus 15 / `0x4c` to it, and it is the source of `thermal/cpu_temp_input`, `cpu_temp`, and `cpu_min` (see [Host and BMC software stacks](#host-and-bmc-software-stacks)).
+
+### drivetemp
+
+Kernel module `drivetemp` (`drivers/hwmon/drivetemp.c`). It reports the temperature of SATA drives (it does not handle NVMe). `hw-management.sh` runs `modprobe drivetemp` only when the module file exists for the running kernel. `hw-management-thermal-events.sh` links its `temp1_*` attributes to `$bsp_path/thermal/drivetemp` and the `_crit`, `_max`, and `_min` nodes. NVMe drives reach the same virtual nodes through a separate branch of that script: for hwmon devices named `nvme` it links the composite temperature (`temp1_*`) to the same `drivetemp*` nodes and each additional labelled sensor to `drivetemp_<label>`, where the script first removes the spaces from the label and lowercases it (for example, the label `Sensor 1` becomes `drivetemp_sensor1`).
+
+## ADC, GPIO, EEPROM and I2C mux
+
+### max1363
+
+Kernel module `max1363` (`drivers/iio/adc/max1363.c`). `MODULE_DESCRIPTION` is "Maxim 1363 ADC". The id `max11603` is the A2D device the platform tables place at address `0x6d` (or `0x64`) for the voltage and current inputs of older systems. The module is listed in `modules-load.d`.
+
+### ti-ads1015
+
+Kernel module `ti-ads1015` (`drivers/iio/adc/ti-ads1015.c`). `MODULE_DESCRIPTION` is "Texas Instruments ADS1015 ADC driver". The I2C ids are `ads1015`, `ads1115`, and `tla2024`. It reads the leak detector inputs in the [BMC leakage A2D tree](#bmc-leakage-a2d-tree). The module is listed in `modules-load.d`.
+
+### ads7924
+
+I2C id `ads7924` (Texas Instruments ADS7924, 4-channel 12-bit ADC). The BMC leakage configuration script maps `DeviceType` `ADS7924` to this driver name and binds it through `new_device` when `Probe` is true. Its alarm thresholds are programmed with raw I2C transfers (`hw-management-bmc-ads7924-force-alarm.sh` and `hw-management-bmc-a2d-leakage-config.sh`). It is one of the devices behind the [BMC leakage A2D tree](#bmc-leakage-a2d-tree).
+
+### i2c-dev
+
+Kernel module `i2c-dev`. It creates the `/dev/i2c-<N>` character devices and the `i2c-dev` class entries. It is listed in `modules-load.d`. The udev rules handle the `i2c-dev` subsystem events for the CPLD I2C adapters and call `hw-management-chassis-events.sh` with `i2c_link`, which creates the per-bus links.
+
+### ledtrig-timer
+
+Kernel module `ledtrig-timer`. It provides the `timer` LED trigger, which blinks an LED at a configured rate, and it is listed in `modules-load.d`.
+
+### at24
+
+Kernel module `at24` (`drivers/misc/eeprom/at24.c`). `MODULE_DESCRIPTION` is "Driver for most I2C EEPROMs". hw-management creates the nodes under `$bsp_path/eeprom/` on top of the `24c02`, `24c512`, and related ids. See [EEPROM Control](#eeprom-control).
+
+### gpio-pca953x
+
+Kernel module `gpio-pca953x` (`drivers/gpio/gpio-pca953x.c`). `MODULE_DESCRIPTION` is "GPIO expander driver for PCA953x". It binds 37 I2C ids, for example `pca9535`, `pca9555`, `pca9557`, and `tca9539`. It is listed in `modules-load.d` (arm64 list).
+
+### i2c-mux-pca954x
+
+Kernel module `i2c-mux-pca954x` (`drivers/i2c/muxes/i2c-mux-pca954x.c`). `MODULE_DESCRIPTION` is "PCA954x I2C mux/switch driver". It binds 18 I2C ids, from `pca9540` to `pca9849` and the `max7356` to `max7369` family. Each downstream channel is a virtual I2C adapter. It is listed in `modules-load.d` (arm64 list).
+
+### i2c-mux-reg
+
+Kernel module `i2c-mux-reg` (`drivers/i2c/muxes/i2c-mux-reg.c`). `MODULE_DESCRIPTION` is "Register-based I2C multiplexer driver". It selects the downstream channel by writing a platform-data register. It is listed in `modules-load.d` and enabled by `CONFIG_I2C_MUX_REG`.
+
+## Host I2C controllers
+
+### i2c-i801
+
+Kernel module `i2c-i801` (`drivers/i2c/busses/i2c-i801.c`). `MODULE_DESCRIPTION` is "I801 SMBus driver". It is the SMBus controller of the Intel switch CPU PCH. It is listed in `modules-load.d`.
+
+### i2c-designware
+
+Kernel module `i2c_designware_platform` (`drivers/i2c/busses/i2c-designware-platdrv.c`). `MODULE_DESCRIPTION` is "Synopsys DesignWare I2C bus adapter". `hw-management.sh` runs `modprobe i2c_designware_platform` for SKUs HI162, HI166, HI167, HI169, HI170, HI176, and HI177 (N51XX_LD), and on AMD SNW CPUs.
+
+### i2c-asf
+
+hw-mgmt adds `drivers/i2c/busses/i2c-asf.c` in the Linux 6.12 kernel patch `0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch`. `MODULE_DESCRIPTION` is "ASF SMBus driver". `hw-management.sh` runs `modprobe i2c_asf` for SKUs HI162, HI166, HI167, HI169, HI170, HI176, and HI177 (N51XX_LD); see `config/mctp_bus` and `config/mctp_addr` in [BMC status](#bmc-status). It is enabled by `CONFIG_I2C_ASF`.
+
+## Other modules
+
+### mlxbf-ptm
+
+hw-mgmt adds `drivers/platform/mellanox/mlxbf-ptm.c` in the Linux 6.12 patches `0049` to `0051` (and the 5.10 and 6.1 equivalents). `MODULE_DESCRIPTION` is "Nvidia Bluefield power and thermal debugfs driver". It is listed in the arm64 `modules-load.d` list, and enabled by `CONFIG_MLXBF_PTM`. It exposes debugfs only; it does not create `$bsp_path` nodes.
+
+### icp201xx
+
+hw-mgmt adds the InvenSense ICP-201xx barometric pressure sensor driver (`drivers/iio/pressure/icp201xx*.c`) in `9003-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch`. `MODULE_DESCRIPTION` is "Invensense ICP201XX driver". The I2C id is `icp201xx`. The OPT-specific patch is built only for the images that carry it.
+
+### BMC and host helper modules
+
+These are not hw-management drivers. Scripts load them by name: `ftgmac100` (`drivers/net/ethernet/faraday/ftgmac100.c`, "FTGMAC100 driver", the BMC Ethernet MAC, loaded by `hw-management-bmc-helpers-common.sh`), `g_ether` (`drivers/usb/gadget/legacy/ether.c`, USB Ethernet gadget, loaded by `hw-management-bmc-ready-common.sh`), and `nvidia_drm` (the NVIDIA GPU driver, loaded by `hw-management-start-post.sh`).
 
 ## Watchdog (mlx-wdt)
 
