@@ -1,0 +1,26 @@
+name: Branch name check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject slashes in the PR branch name
+        env:
+          # Passed through the environment, never interpolated into the script,
+          # because the branch name is controlled by the PR author.
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          case "$HEAD_REF" in
+            */*)
+              echo "::error::Branch name '$HEAD_REF' contains a '/'. Use '-' or '_' instead, for example '${HEAD_REF//\//-}'."
+              exit 1
+              ;;
+          esac
+          echo "Branch name '$HEAD_REF' is OK"
