@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.6
+Rev. 3.2.7
 
 ## Table of Contents
 
@@ -282,6 +282,8 @@ Rev. 3.2.6
 | 3.18.52 | Clock Board Prog EN | 115 |
 | 3.18.53 | Cartridge | 116 |
 | 3.18.54 | ASIC PG Failure | 117 |
+| 3.18.55 | Management PHY Reset | 117 |
+| 3.18.56 | Management PHY Recovery Helper | 118 |
 | 3.19 | Leakage Sensors | 118 |
 | 3.19.1 | Leakage Sensor | 118 |
 | 3.20 | Thermal | 119 |
@@ -407,6 +409,7 @@ Rev. 3.2.6
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.7 | October 2026 | Added §3.18.55 **Management PHY Reset** (`sgmii_phy2_reset` for eth0, `sgmii_phy_reset` for eth1) and §3.18.56 **Management PHY Recovery Helper** (`hw-management-phy-recover.sh`) for N51XX_LD, N5240_LD, N6100_LD and N6300_LD (#5190348) |
 | 3.2.6 | June 2026 | §3.1.59 and §3.4 PDB hotswap scale (SN6600_LD / lm5066i); §3.24 AST2700 BMC reset cause tree; §3.25 BMC A2D leakage runtime layout; N6300_LD (HI185) platform notes; §3.18 cpu_shutdown_req hw-mgmt polling note |
 | 3.2.5 | June 2026 | §2.2 HI189 BMC peripheral table; §3.3.7–§3.3.8 BMC EEPROM bodies; §3.20 BMC stack tags and CPU-on-BMC thermal cross-refs; §3.23 BMC status bodies (present, bmc_to_cpu_ctrl, MCTP) |
 | 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
@@ -5596,6 +5599,58 @@ N6100_LD has 4 ASICs with individual failure tracking.
 **Example:** Get ASIC power good failure status:
 ```bash
 cat $bsp_path/system/asic_pg_fail
+```
+
+### Management PHY Reset
+
+**Node name:** `$bsp_path/system/sgmii_phy2_reset` (eth0), `$bsp_path/system/sgmii_phy_reset` (eth1)
+
+**Description:** Reset the PHY of one CPU management port: `sgmii_phy2_reset` is eth0, `sgmii_phy_reset` is eth1. Write `0`, wait 120 ms, then read the node. If it still reads `0`, write `1`. `hw-management-phy-recover.sh` does this sequence (see "Management PHY Recovery Helper").
+
+Note: These attributes are for the N51XX_LD family and the N61XX_LD family (N6100_LD, N6300_LD).
+
+**Access:** Read/Write
+
+**Release version:** `sgmii_phy_reset` on N51XX_LD V.7.0030.4000; the other nodes TBD (first release with this change)
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| reset | Integer | 0 (assert), 1 (release) |
+
+**Example:** Reset the eth0 PHY with a sequence that fits both bit types:
+```bash
+echo 0 > $bsp_path/system/sgmii_phy2_reset
+sleep 0.12
+echo 1 > $bsp_path/system/sgmii_phy2_reset
+```
+
+### Management PHY Recovery Helper
+
+**Command:** `hw-management-phy-recover.sh [-d|--dump-phy] [-t|--timeout <seconds>] <eth0|eth1>`
+
+**Description:** Reset the PHY of one CPU management port: write `0`, wait 120 ms, then write `1` unless the CPLD released the bit by itself. Use it when the port does not come up at boot and the kernel log shows `amd-xgbe ... ethN: get_phy_device failed`. The helper waits for the `hw-management` service to be active, up to 30 seconds by default. It does not open the port: after exit 0 the caller runs `ifup` again. Options come before the port name.
+
+**Release version:** TBD (first release with this change)
+
+**Options:**
+| Option | Meaning |
+|--------|---------|
+| `-d`, `--dump-phy` | Write a PHY snapshot line (`phy_id`, driver, link state) to `/var/log/hw-mgmt.trace.log` before and after the reset. The hw-management dump collects that log |
+| `-t <seconds>`, `--timeout <seconds>` | Wait time for the `hw-management` service. Default 30. With 0 the helper checks once and does not wait |
+
+**Exit codes:**
+| Code | Meaning |
+|------|---------|
+| 0 | Reset done |
+| 1 | Usage error |
+| 2 | No reset attribute for this port on this system |
+| 3 | Sysfs write or read failed or timed out, the bit stayed asserted, or a signal interrupted the reset |
+| 4 | `hw-management` service not active within the wait time |
+
+**Example:** Recover eth0 and bring it up:
+```bash
+hw-management-phy-recover.sh -d eth0 && ifup eth0
 ```
 
 ## Leakage Sensors
