@@ -86,6 +86,9 @@ CLEANED=0
 # scenario_11 replaces the lock file with a directory. cleanup
 # removes it, including when that scenario is interrupted.
 LOCK_DIR_BLOCK=
+# block_lock_dir ignores INT and TERM across mkdir, then puts
+# this action back. main installs the same text.
+ON_SIGNAL='cleanup; exit 1'
 
 usage() {
 	cat <<'EOF'
@@ -788,14 +791,13 @@ scenario_11() {
 	# work dir may belong to a collection in progress, and every
 	# collect starts by removing it.
 	rm -f "$LOCK_FILE"
-	if ! mkdir "$LOCK_FILE" 2>/dev/null; then
+	# The directory is recorded inside block_lock_dir before a
+	# signal can be delivered. One left at the lock file blocks
+	# every later collection.
+	if ! block_lock_dir "$LOCK_FILE"; then
 		fail "the lock file can be blocked" "mkdir $LOCK_FILE failed"
 		return 0
 	fi
-	# Recorded before the helper runs, so an interrupt here still
-	# reaches cleanup with the path. A directory left at the lock
-	# file blocks every later collection.
-	LOCK_DIR_BLOCK="$LOCK_FILE"
 	rm -rf "$SSD_LOG_DIR"
 	mkdir -p "$SSD_LOG_DIR"
 	printf 'in-progress collection\n' > "$SSD_LOG_DIR/nandlog_0.bin"
@@ -953,6 +955,25 @@ restore_path() { # path
 	return 0
 }
 
+# mkdir and the record have to finish together. The INT/TERM
+# trap runs cleanup, which removes this directory only once
+# LOCK_DIR_BLOCK names it. The shell drops a signal it is
+# ignoring, so one Ctrl-C in this window is lost. The path is
+# recorded before ON_SIGNAL is put back, and the next signal
+# still removes the directory.
+block_lock_dir() { # path
+	trap '' INT TERM
+	_lock_dir_rc=1
+	if mkdir "$1" 2>/dev/null; then
+		LOCK_DIR_BLOCK="$1"
+		_lock_dir_rc=0
+	fi
+	# Fixed text, expanded when the trap is installed.
+	# shellcheck disable=SC2064
+	trap "$ON_SIGNAL" INT TERM
+	return $_lock_dir_rc
+}
+
 cleanup() {
 	[ "$CLEANED" = "1" ] && return 0
 	CLEANED=1
@@ -965,12 +986,11 @@ cleanup() {
 	kill_holder
 	if [ -n "$BACKUP" ] && [ -d "$BACKUP" ]; then
 		if no_ssd_dump_procs 60; then
-			_ok=0
-			restore_path "$SSD_LOG_DIR" &&
-			restore_path "$SSD_TARBALL" &&
-			restore_path "$DUMP_FOLDER" &&
-			restore_path "$DUMP_TARBALL" &&
 			_ok=1
+			restore_path "$SSD_LOG_DIR" || _ok=0
+			restore_path "$SSD_TARBALL" || _ok=0
+			restore_path "$DUMP_FOLDER" || _ok=0
+			restore_path "$DUMP_TARBALL" || _ok=0
 			if [ "$_ok" != "1" ]; then
 				# A failed move leaves the only complete copy
 				# under $BACKUP. Deleting $WORK would delete it.
@@ -1172,7 +1192,9 @@ fi
 prerequisites
 make_work_area
 trap 'cleanup' EXIT
-trap 'cleanup; exit 1' INT TERM
+# Fixed text, expanded when the trap is installed.
+# shellcheck disable=SC2064
+trap "$ON_SIGNAL" INT TERM
 
 say "collector:    $SSD_DUMP_PY"
 say "helper:       $COLLECT_SH"
