@@ -1581,14 +1581,102 @@ class TestLockTestScript:
         )
         assert lock.read_text() == "holder\n"
 
-    def test_scenario_11_records_the_lock_directory_before_the_helper(self):
+    def _fn(self, name):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split(name + "() {", 1)[1]
+        return name + "() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+
+    def test_scenario_11_blocks_the_lock_before_the_helper(self):
         with open(LOCK_TEST_SH) as f:
             text = f.read()
         body = text.split("scenario_11() {", 1)[1]
         body = body.split("\n}\n", 1)[0]
-        assert body.index('LOCK_DIR_BLOCK="$LOCK_FILE"') < body.index(
+        assert body.index('block_lock_dir "$LOCK_FILE"') < body.index(
             "run_second"
         )
+
+    def test_block_lock_dir_registers_while_signals_are_ignored(self):
+        # cleanup only deletes a directory LOCK_DIR_BLOCK already
+        # names. The assignment has to land before INT/TERM can
+        # run again, and only after mkdir has succeeded.
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("block_lock_dir() {", 1)[1]
+        body = body.split("\n}\n", 1)[0]
+        code = "\n".join(
+            line
+            for line in body.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        assert code.index("trap '' INT TERM") < code.index('mkdir "$1"')
+        assert code.index('mkdir "$1"') < code.index('LOCK_DIR_BLOCK="$1"')
+        assert code.index('LOCK_DIR_BLOCK="$1"') < code.index(
+            'trap "$ON_SIGNAL" INT TERM'
+        )
+        assert "ON_SIGNAL='cleanup; exit 1'" in text
+        assert 'trap "$ON_SIGNAL" INT TERM' in text
+
+    def test_a_signal_during_mkdir_still_records_the_directory(
+        self, tmp_path
+    ):
+        # kill from inside mkdir is the gap: the directory exists,
+        # LOCK_DIR_BLOCK does not yet. The signal is ignored
+        # there, so cleanup runs only after the path is recorded.
+        blocked = tmp_path / "hw-management-ssd-dump.lock"
+        script = (
+            "ON_SIGNAL='cleanup; exit 1'\n"
+            "LOCK_DIR_BLOCK=\n"
+            "CLEANED=0\nKEEP_WORK=0\nWORK=\nBACKUP=\n"
+            "kill_holder() { :; }\n"
+            "%s"
+            "%s"
+            "mkdir() {\n"
+            '\tcommand mkdir "$1"\n'
+            "\tkill -TERM $$\n"
+            "}\n"
+            'block_lock_dir "$1"\n'
+            'echo "rc=$?"\n'
+            'echo "block=$LOCK_DIR_BLOCK"\n'
+            "cleanup\n"
+            'if [ -e "$1" ]; then echo still-there; else echo gone; fi\n'
+        ) % (self._fn("block_lock_dir"), self._cleanup_fn())
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(blocked)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        lines = out.stdout.splitlines()
+        assert lines[0] == "rc=0"
+        assert lines[1] == "block=%s" % blocked
+        assert lines[2] == "gone"
+        assert not blocked.exists()
+
+    def test_block_lock_dir_does_not_claim_a_path_it_did_not_create(
+        self, tmp_path
+    ):
+        lock = tmp_path / "hw-management-ssd-dump.lock"
+        lock.write_text("holder\n")
+        script = (
+            "ON_SIGNAL='cleanup; exit 1'\n"
+            "LOCK_DIR_BLOCK=\n"
+            "cleanup() { :; }\n"
+            "%s"
+            'block_lock_dir "$1"\n'
+            'echo "rc=$?"\n'
+            'echo "block=$LOCK_DIR_BLOCK"\n'
+        ) % self._fn("block_lock_dir")
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(lock)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert out.stdout.splitlines() == ["rc=1", "block="]
+        assert lock.read_text() == "holder\n"
 
     def test_reuse_scenarios_cross_the_wait_second(self):
         with open(LOCK_TEST_SH) as f:
@@ -3528,6 +3616,7 @@ class TestEndToEnd:
 
         def fake_popen(*_a, **k):
             assert k.get("start_new_session") is True
+            assert k.get("preexec_fn") is ssd._vendor_unblock_sigterm
             return FakeProc()
 
         monkeypatch.setattr(ssd.subprocess, "Popen", fake_popen)
@@ -3604,7 +3693,7 @@ class TestEndToEnd:
                 ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
         finally:
             logf.close()
-        assert killed == [ssd.signal.SIGTERM, ssd.signal.SIGKILL]
+        assert killed == [ssd.signal.SIGTERM, 0, ssd.signal.SIGKILL]
 
     def test_sigterm_stops_the_vendor_group(self, ssd, monkeypatch):
         killed = []

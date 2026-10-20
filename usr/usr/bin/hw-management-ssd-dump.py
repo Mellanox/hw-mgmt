@@ -853,6 +853,15 @@ def _stop_vendor_group(proc):
             return False
         return True
 
+    def _group_alive():
+        """True if any process remains in the vendor session."""
+        try:
+            os.killpg(proc.pid, 0)
+        except OSError as exc:
+            if getattr(exc, "errno", None) == errno.ESRCH:
+                return False
+        return True
+
     saved = []
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
@@ -861,33 +870,52 @@ def _stop_vendor_group(proc):
             pass
     try:
         _kill(signal.SIGTERM)
-        if _wait():
-            return
-        _kill(signal.SIGKILL)
         _wait()
+        # The leader can exit on SIGTERM while a child ignores it.
+        # proc.wait() only reaps the leader, so check the group.
+        if _group_alive():
+            _kill(signal.SIGKILL)
+            _wait()
     finally:
         for sig, previous in saved:
             signal.signal(sig, previous)
 
 
+def _vendor_unblock_sigterm():
+    """Run in the child, before exec. The collector blocks SIGTERM
+    around Popen, and the child inherits that mask."""
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
+
+
 def run_vendor_process(cmd, outdir, logf, timeout_sec):
     """New session so timeout can kill vendor children too."""
     global _vendor_proc
-    proc = subprocess.Popen(
-        cmd,
-        cwd=outdir,
-        stdout=logf,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-        start_new_session=True,
-    )
-    _vendor_proc = proc
+    proc = None
+    # SIGTERM between Popen and _vendor_proc would exit with the
+    # vendor still running. Hold the signal until the child is registered.
+    # The child unblocks SIGTERM in preexec so it can still stop normally.
+    blocked = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
     try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=outdir,
+            stdout=logf,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            start_new_session=True,
+            preexec_fn=_vendor_unblock_sigterm,
+        )
+        _vendor_proc = proc
+        signal.pthread_sigmask(signal.SIG_SETMASK, blocked)
+        blocked = None
         proc.communicate(timeout=timeout_sec)
     except BaseException:
-        _stop_vendor_group(proc)
+        if proc is not None:
+            _stop_vendor_group(proc)
         raise
     finally:
+        if blocked is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, blocked)
         _vendor_proc = None
     return proc
 
