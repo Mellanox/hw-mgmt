@@ -11,9 +11,145 @@ Acked-by: Damien Le Moal <dlemoal@kernel.org>
 Acked-by: Jon Hunter <jonathanh@nvidia.com>
 Signed-off-by: Thierry Reding <treding@nvidia.com>
 ---
- drivers/ata/ahci_tegra.c | 17 ++++++++++++-----
- 1 file changed, 12 insertions(+), 5 deletions(-)
+ drivers/ata/ahci_tegra.c       | 17 ++++++++++++-----
+ drivers/soc/tegra/pmc.c        | 48 +++++++++++++++++++++++++++++++++++++++++
+ include/soc/tegra/pmc.h        | 44 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 104 insertions(+), 5 deletions(-)
 
+diff --git a/include/soc/tegra/pmc.h b/include/soc/tegra/pmc.h
+index 00000000000000..11111111111111 100644
+--- a/include/soc/tegra/pmc.h
++++ b/include/soc/tegra/pmc.h
+@@ -10,12 +10,15 @@
+ #ifndef __SOC_TEGRA_PMC_H__
+ #define __SOC_TEGRA_PMC_H__
+ 
++#include <linux/err.h>
+ #include <linux/reboot.h>
+ 
+ #include <soc/tegra/pm.h>
+ 
+ struct clk;
+ struct reset_control;
++struct device;
++struct tegra_pmc;
+ 
+ bool tegra_pmc_cpu_is_powered(unsigned int cpuid);
+ int tegra_pmc_cpu_power_on(unsigned int cpuid);
+@@ -157,6 +160,16 @@
+ int tegra_powergate_sequence_power_up(unsigned int id, struct clk *clk,
+ 				      struct reset_control *rst);
+ 
++struct tegra_pmc *devm_tegra_pmc_get(struct device *dev);
++int tegra_pmc_powergate_power_on(struct tegra_pmc *pmc, unsigned int id);
++int tegra_pmc_powergate_power_off(struct tegra_pmc *pmc, unsigned int id);
++int tegra_pmc_powergate_remove_clamping(struct tegra_pmc *pmc, unsigned int id);
++
++/* Must be called with clk disabled, and returns with clk enabled */
++int tegra_pmc_powergate_sequence_power_up(struct tegra_pmc *pmc,
++					  unsigned int id, struct clk *clk,
++					  struct reset_control *rst);
++
+ int tegra_io_pad_power_enable(enum tegra_io_pad id);
+ int tegra_io_pad_power_disable(enum tegra_io_pad id);
+ 
+@@ -187,6 +200,37 @@
+ {
+ 	return -ENOSYS;
+ }
++
++static inline struct tegra_pmc *devm_tegra_pmc_get(struct device *dev)
++{
++	return ERR_PTR(-ENOSYS);
++}
++
++static inline int
++tegra_pmc_powergate_power_on(struct tegra_pmc *pmc, unsigned int id)
++{
++	return -ENOSYS;
++}
++
++static inline int
++tegra_pmc_powergate_power_off(struct tegra_pmc *pmc, unsigned int id)
++{
++	return -ENOSYS;
++}
++
++static inline int
++tegra_pmc_powergate_remove_clamping(struct tegra_pmc *pmc, unsigned int id)
++{
++	return -ENOSYS;
++}
++
++static inline int
++tegra_pmc_powergate_sequence_power_up(struct tegra_pmc *pmc, unsigned int id,
++				      struct clk *clk,
++				      struct reset_control *rst)
++{
++	return -ENOSYS;
++}
+ 
+ static inline int tegra_io_pad_power_enable(enum tegra_io_pad id)
+ {
+diff --git a/drivers/soc/tegra/pmc.c b/drivers/soc/tegra/pmc.c
+index 00000000000000..11111111111111 100644
+--- a/drivers/soc/tegra/pmc.c
++++ b/drivers/soc/tegra/pmc.c
+@@ -1037,6 +1037,54 @@
+ }
+ EXPORT_SYMBOL(tegra_powergate_sequence_power_up);
+ 
++struct tegra_pmc *devm_tegra_pmc_get(struct device *dev)
++{
++	if (!dev)
++		return ERR_PTR(-EINVAL);
++
++	return pmc;
++}
++EXPORT_SYMBOL(devm_tegra_pmc_get);
++
++int tegra_pmc_powergate_power_on(struct tegra_pmc *pmc_dev, unsigned int id)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_power_on(id);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_power_on);
++
++int tegra_pmc_powergate_power_off(struct tegra_pmc *pmc_dev, unsigned int id)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_power_off(id);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_power_off);
++
++int tegra_pmc_powergate_remove_clamping(struct tegra_pmc *pmc_dev,
++					unsigned int id)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_remove_clamping(id);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_remove_clamping);
++
++int tegra_pmc_powergate_sequence_power_up(struct tegra_pmc *pmc_dev,
++					  unsigned int id, struct clk *clk,
++					  struct reset_control *rst)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_sequence_power_up(id, clk, rst);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_sequence_power_up);
++
+ /**
+  * tegra_get_cpu_powergate_id() - convert from CPU ID to partition ID
+  * @pmc: power management controller
 diff --git a/drivers/ata/ahci_tegra.c b/drivers/ata/ahci_tegra.c
 index 44584eed637442..554f05e09f9833 100644
 --- a/drivers/ata/ahci_tegra.c

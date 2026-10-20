@@ -158,7 +158,7 @@ index 02dd4e26288a1d..2cb153091228a7 100644
 +		if (node->id != idx)
 +			continue;
 +
-+		ndata = kzalloc_obj(*ndata);
++		ndata = kzalloc(sizeof(*ndata), GFP_KERNEL);
 +		if (!ndata)
 +			return ERR_PTR(-ENOMEM);
 +

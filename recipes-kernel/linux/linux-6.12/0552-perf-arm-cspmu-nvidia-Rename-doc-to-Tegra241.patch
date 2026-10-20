@@ -10,18 +10,15 @@ SoC to have better distinction with other NVIDIA SoC.
 Signed-off-by: Besar Wicaksono <bwicaksono@nvidia.com>
 Signed-off-by: Will Deacon <will@kernel.org>
 ---
- Documentation/admin-guide/perf/index.rst           |   2 +-
- Documentation/admin-guide/perf/nvidia-pmu.rst      | 333 ---------------------
- .../admin-guide/perf/nvidia-tegra241-pmu.rst       | 333 +++++++++++++++++++++
- 3 files changed, 334 insertions(+), 334 deletions(-)
- delete mode 100644 Documentation/admin-guide/perf/nvidia-pmu.rst
- create mode 100644 Documentation/admin-guide/perf/nvidia-tegra241-pmu.rst
+ Documentation/admin-guide/perf/index.rst | 2
+ Documentation/admin-guide/perf/nvidia-pmu.rst | 299
+ Documentation/admin-guide/perf/nvidia-tegra241-pmu.rst | 299
+ 3 files changed, 300 insertions(+), 293 deletions(-)
 
 diff --git a/Documentation/admin-guide/perf/index.rst b/Documentation/admin-guide/perf/index.rst
-index 47d9a3df6329bc..c407bb44b08e36 100644
 --- a/Documentation/admin-guide/perf/index.rst
 +++ b/Documentation/admin-guide/perf/index.rst
-@@ -24,7 +24,7 @@ Performance monitor support
+@@ -22,7 +22,7 @@ Performance monitor support
     thunderx2-pmu
     alibaba_pmu
     dwc_pcie_pmu
@@ -32,10 +29,9 @@ index 47d9a3df6329bc..c407bb44b08e36 100644
     ampere_cspmu
 diff --git a/Documentation/admin-guide/perf/nvidia-pmu.rst b/Documentation/admin-guide/perf/nvidia-pmu.rst
 deleted file mode 100644
-index f538ef67e0e8f0..00000000000000
 --- a/Documentation/admin-guide/perf/nvidia-pmu.rst
 +++ /dev/null
-@@ -1,333 +0,0 @@
+@@ -1,299 +0,0 @@
 -=========================================================
 -NVIDIA Tegra SoC Uncore Performance Monitoring Unit (PMU)
 -=========================================================
@@ -72,7 +68,7 @@ index f538ef67e0e8f0..00000000000000
 -traffic coverage.
 -
 -The events and configuration options of this PMU device are described in sysfs,
--see /sys/bus/event_source/devices/nvidia_scf_pmu_<socket-id>.
+-see /sys/bus/event_sources/devices/nvidia_scf_pmu_<socket-id>.
 -
 -Example usage:
 -
@@ -104,7 +100,7 @@ index f538ef67e0e8f0..00000000000000
 -the PMU traffic coverage.
 -
 -The events and configuration options of this PMU device are described in sysfs,
--see /sys/bus/event_source/devices/nvidia_nvlink_c2c0_pmu_<socket-id>.
+-see /sys/bus/event_sources/devices/nvidia_nvlink_c2c0_pmu_<socket-id>.
 -
 -Example usage:
 -
@@ -124,22 +120,6 @@ index f538ef67e0e8f0..00000000000000
 -
 -   perf stat -a -e nvidia_nvlink_c2c0_pmu_3/event=0x0/
 -
--The NVLink-C2C has two ports that can be connected to one GPU (occupying both
--ports) or to two GPUs (one GPU per port). The user can use "port" bitmap
--parameter to select the port(s) to monitor. Each bit represents the port number,
--e.g. "port=0x1" corresponds to port 0 and "port=0x3" is for port 0 and 1. The
--PMU will monitor both ports by default if not specified.
--
--Example for port filtering:
--
--* Count event id 0x0 from the GPU connected with socket 0 on port 0::
--
--   perf stat -a -e nvidia_nvlink_c2c0_pmu_0/event=0x0,port=0x1/
--
--* Count event id 0x0 from the GPUs connected with socket 0 on port 0 and port 1::
--
--   perf stat -a -e nvidia_nvlink_c2c0_pmu_0/event=0x0,port=0x3/
--
 -NVLink-C2C1 PMU
 --------------------
 -
@@ -150,7 +130,7 @@ index f538ef67e0e8f0..00000000000000
 -the PMU traffic coverage.
 -
 -The events and configuration options of this PMU device are described in sysfs,
--see /sys/bus/event_source/devices/nvidia_nvlink_c2c1_pmu_<socket-id>.
+-see /sys/bus/event_sources/devices/nvidia_nvlink_c2c1_pmu_<socket-id>.
 -
 -Example usage:
 -
@@ -170,22 +150,6 @@ index f538ef67e0e8f0..00000000000000
 -
 -   perf stat -a -e nvidia_nvlink_c2c1_pmu_3/event=0x0/
 -
--The NVLink-C2C has two ports that can be connected to one GPU (occupying both
--ports) or to two GPUs (one GPU per port). The user can use "port" bitmap
--parameter to select the port(s) to monitor. Each bit represents the port number,
--e.g. "port=0x1" corresponds to port 0 and "port=0x3" is for port 0 and 1. The
--PMU will monitor both ports by default if not specified.
--
--Example for port filtering:
--
--* Count event id 0x0 from the GPU connected with socket 0 on port 0::
--
--   perf stat -a -e nvidia_nvlink_c2c1_pmu_0/event=0x0,port=0x1/
--
--* Count event id 0x0 from the GPUs connected with socket 0 on port 0 and port 1::
--
--   perf stat -a -e nvidia_nvlink_c2c1_pmu_0/event=0x0,port=0x3/
--
 -CNVLink PMU
 ----------------
 -
@@ -195,14 +159,13 @@ index f538ef67e0e8f0..00000000000000
 -for more info about the PMU traffic coverage.
 -
 -The events and configuration options of this PMU device are described in sysfs,
--see /sys/bus/event_source/devices/nvidia_cnvlink_pmu_<socket-id>.
+-see /sys/bus/event_sources/devices/nvidia_cnvlink_pmu_<socket-id>.
 -
 -Each SoC socket can be connected to one or more sockets via CNVLink. The user can
 -use "rem_socket" bitmap parameter to select the remote socket(s) to monitor.
 -Each bit represents the socket number, e.g. "rem_socket=0xE" corresponds to
--socket 1 to 3. The PMU will monitor all remote sockets by default if not
--specified.
--/sys/bus/event_source/devices/nvidia_cnvlink_pmu_<socket-id>/format/rem_socket
+-socket 1 to 3.
+-/sys/bus/event_sources/devices/nvidia_cnvlink_pmu_<socket-id>/format/rem_socket
 -shows the valid bits that can be set in the "rem_socket" parameter.
 -
 -The PMU can not distinguish the remote traffic initiator, therefore it does not
@@ -236,13 +199,12 @@ index f538ef67e0e8f0..00000000000000
 -for more info about the PMU traffic coverage.
 -
 -The events and configuration options of this PMU device are described in sysfs,
--see /sys/bus/event_source/devices/nvidia_pcie_pmu_<socket-id>.
+-see /sys/bus/event_sources/devices/nvidia_pcie_pmu_<socket-id>.
 -
 -Each SoC socket can support multiple root ports. The user can use
 -"root_port" bitmap parameter to select the port(s) to monitor, i.e.
--"root_port=0xF" corresponds to root port 0 to 3. The PMU will monitor all root
--ports by default if not specified.
--/sys/bus/event_source/devices/nvidia_pcie_pmu_<socket-id>/format/root_port
+-"root_port=0xF" corresponds to root port 0 to 3.
+-/sys/bus/event_sources/devices/nvidia_pcie_pmu_<socket-id>/format/root_port
 -shows the valid bits that can be set in the "root_port" parameter.
 -
 -Example usage:
@@ -371,10 +333,9 @@ index f538ef67e0e8f0..00000000000000
 -   PCIE2 traffic represents reads and relaxed ordered (RO) writes.
 diff --git a/Documentation/admin-guide/perf/nvidia-tegra241-pmu.rst b/Documentation/admin-guide/perf/nvidia-tegra241-pmu.rst
 new file mode 100644
-index 00000000000000..fad5bc4cee6c0e
 --- /dev/null
 +++ b/Documentation/admin-guide/perf/nvidia-tegra241-pmu.rst
-@@ -0,0 +1,333 @@
+@@ -0,0 +1,299 @@
 +============================================================
 +NVIDIA Tegra241 SoC Uncore Performance Monitoring Unit (PMU)
 +============================================================
@@ -411,7 +372,7 @@ index 00000000000000..fad5bc4cee6c0e
 +traffic coverage.
 +
 +The events and configuration options of this PMU device are described in sysfs,
-+see /sys/bus/event_source/devices/nvidia_scf_pmu_<socket-id>.
++see /sys/bus/event_sources/devices/nvidia_scf_pmu_<socket-id>.
 +
 +Example usage:
 +
@@ -443,7 +404,7 @@ index 00000000000000..fad5bc4cee6c0e
 +the PMU traffic coverage.
 +
 +The events and configuration options of this PMU device are described in sysfs,
-+see /sys/bus/event_source/devices/nvidia_nvlink_c2c0_pmu_<socket-id>.
++see /sys/bus/event_sources/devices/nvidia_nvlink_c2c0_pmu_<socket-id>.
 +
 +Example usage:
 +
@@ -463,22 +424,6 @@ index 00000000000000..fad5bc4cee6c0e
 +
 +   perf stat -a -e nvidia_nvlink_c2c0_pmu_3/event=0x0/
 +
-+The NVLink-C2C has two ports that can be connected to one GPU (occupying both
-+ports) or to two GPUs (one GPU per port). The user can use "port" bitmap
-+parameter to select the port(s) to monitor. Each bit represents the port number,
-+e.g. "port=0x1" corresponds to port 0 and "port=0x3" is for port 0 and 1. The
-+PMU will monitor both ports by default if not specified.
-+
-+Example for port filtering:
-+
-+* Count event id 0x0 from the GPU connected with socket 0 on port 0::
-+
-+   perf stat -a -e nvidia_nvlink_c2c0_pmu_0/event=0x0,port=0x1/
-+
-+* Count event id 0x0 from the GPUs connected with socket 0 on port 0 and port 1::
-+
-+   perf stat -a -e nvidia_nvlink_c2c0_pmu_0/event=0x0,port=0x3/
-+
 +NVLink-C2C1 PMU
 +-------------------
 +
@@ -489,7 +434,7 @@ index 00000000000000..fad5bc4cee6c0e
 +the PMU traffic coverage.
 +
 +The events and configuration options of this PMU device are described in sysfs,
-+see /sys/bus/event_source/devices/nvidia_nvlink_c2c1_pmu_<socket-id>.
++see /sys/bus/event_sources/devices/nvidia_nvlink_c2c1_pmu_<socket-id>.
 +
 +Example usage:
 +
@@ -509,22 +454,6 @@ index 00000000000000..fad5bc4cee6c0e
 +
 +   perf stat -a -e nvidia_nvlink_c2c1_pmu_3/event=0x0/
 +
-+The NVLink-C2C has two ports that can be connected to one GPU (occupying both
-+ports) or to two GPUs (one GPU per port). The user can use "port" bitmap
-+parameter to select the port(s) to monitor. Each bit represents the port number,
-+e.g. "port=0x1" corresponds to port 0 and "port=0x3" is for port 0 and 1. The
-+PMU will monitor both ports by default if not specified.
-+
-+Example for port filtering:
-+
-+* Count event id 0x0 from the GPU connected with socket 0 on port 0::
-+
-+   perf stat -a -e nvidia_nvlink_c2c1_pmu_0/event=0x0,port=0x1/
-+
-+* Count event id 0x0 from the GPUs connected with socket 0 on port 0 and port 1::
-+
-+   perf stat -a -e nvidia_nvlink_c2c1_pmu_0/event=0x0,port=0x3/
-+
 +CNVLink PMU
 +---------------
 +
@@ -534,14 +463,13 @@ index 00000000000000..fad5bc4cee6c0e
 +for more info about the PMU traffic coverage.
 +
 +The events and configuration options of this PMU device are described in sysfs,
-+see /sys/bus/event_source/devices/nvidia_cnvlink_pmu_<socket-id>.
++see /sys/bus/event_sources/devices/nvidia_cnvlink_pmu_<socket-id>.
 +
 +Each SoC socket can be connected to one or more sockets via CNVLink. The user can
 +use "rem_socket" bitmap parameter to select the remote socket(s) to monitor.
 +Each bit represents the socket number, e.g. "rem_socket=0xE" corresponds to
-+socket 1 to 3. The PMU will monitor all remote sockets by default if not
-+specified.
-+/sys/bus/event_source/devices/nvidia_cnvlink_pmu_<socket-id>/format/rem_socket
++socket 1 to 3.
++/sys/bus/event_sources/devices/nvidia_cnvlink_pmu_<socket-id>/format/rem_socket
 +shows the valid bits that can be set in the "rem_socket" parameter.
 +
 +The PMU can not distinguish the remote traffic initiator, therefore it does not
@@ -575,13 +503,12 @@ index 00000000000000..fad5bc4cee6c0e
 +for more info about the PMU traffic coverage.
 +
 +The events and configuration options of this PMU device are described in sysfs,
-+see /sys/bus/event_source/devices/nvidia_pcie_pmu_<socket-id>.
++see /sys/bus/event_sources/devices/nvidia_pcie_pmu_<socket-id>.
 +
 +Each SoC socket can support multiple root ports. The user can use
 +"root_port" bitmap parameter to select the port(s) to monitor, i.e.
-+"root_port=0xF" corresponds to root port 0 to 3. The PMU will monitor all root
-+ports by default if not specified.
-+/sys/bus/event_source/devices/nvidia_pcie_pmu_<socket-id>/format/root_port
++"root_port=0xF" corresponds to root port 0 to 3.
++/sys/bus/event_sources/devices/nvidia_pcie_pmu_<socket-id>/format/root_port
 +shows the valid bits that can be set in the "root_port" parameter.
 +
 +Example usage:
@@ -710,4 +637,3 @@ index 00000000000000..fad5bc4cee6c0e
 +   PCIE2 traffic represents reads and relaxed ordered (RO) writes.
 -- 
 cgit 1.3.1-korg
-

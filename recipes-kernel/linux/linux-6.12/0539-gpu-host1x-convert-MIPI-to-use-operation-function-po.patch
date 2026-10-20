@@ -350,12 +350,12 @@ index fea9f491df66c3..01513b775d8996 100644
  	if (err < 0)
  		return ERR_PTR(err);
  
--	dev = kzalloc_obj(*dev);
+-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 -	if (!dev) {
 +	if (provider.np != args.np)
 +		return ERR_PTR(-ENODEV);
 +
-+	mipidev = kzalloc_obj(*mipidev);
++	mipidev = kzalloc(sizeof(*mipidev), GFP_KERNEL);
 +	if (!mipidev) {
  		err = -ENOMEM;
  		goto out;

@@ -21,8 +21,8 @@ Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
  drivers/memory/tegra/mc.c       |   3 +
  drivers/memory/tegra/mc.h       |   9 +
  drivers/memory/tegra/tegra234.c |   2 +-
- drivers/memory/tegra/tegra238.c | 391 ++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 405 insertions(+), 1 deletion(-)
+ drivers/memory/tegra/tegra238.c | 402 ++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 416 insertions(+), 1 deletion(-)
  create mode 100644 drivers/memory/tegra/tegra238.c
 
 diff --git a/drivers/memory/tegra/Makefile b/drivers/memory/tegra/Makefile
@@ -96,7 +96,7 @@ new file mode 100644
 index 00000000000000..938c8985600e6a
 --- /dev/null
 +++ b/drivers/memory/tegra/tegra238.c
-@@ -0,0 +1,391 @@
+@@ -0,0 +1,402 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Copyright (C) 2026, NVIDIA CORPORATION.  All rights reserved.
@@ -459,6 +459,7 @@ index 00000000000000..938c8985600e6a
 +	}
 +};
 +
++#ifdef TEGRA_MC_SOC_HAS_INTMASKS
 +static const struct tegra_mc_intmask tegra238_mc_intmasks[] = {
 +	{
 +		.reg = MC_INTMASK,
@@ -467,6 +468,7 @@ index 00000000000000..938c8985600e6a
 +			MC_INT_SECURITY_VIOLATION | MC_INT_DECERR_EMEM,
 +	},
 +};
++#endif
 +
 +const struct tegra_mc_soc tegra238_mc_soc = {
 +	.num_clients = ARRAY_SIZE(tegra238_mc_clients),
@@ -474,8 +476,15 @@ index 00000000000000..938c8985600e6a
 +	.num_address_bits = 40,
 +	.num_channels = 8,
 +	.client_id_mask = 0x1ff,
++#ifdef TEGRA_MC_SOC_HAS_INTMASKS
 +	.intmasks = tegra238_mc_intmasks,
 +	.num_intmasks = ARRAY_SIZE(tegra238_mc_intmasks),
++#else
++	.intmask = MC_INT_DECERR_ROUTE_SANITY |
++		   MC_INT_DECERR_GENERALIZED_CARVEOUT | MC_INT_DECERR_MTS |
++		   MC_INT_SECERR_SEC | MC_INT_DECERR_VPR |
++		   MC_INT_SECURITY_VIOLATION | MC_INT_DECERR_EMEM,
++#endif
 +	.has_addr_hi_reg = true,
 +	.ops = &tegra186_mc_ops,
 +	.icc_ops = &tegra234_mc_icc_ops,
@@ -485,8 +494,10 @@ index 00000000000000..938c8985600e6a
 +	.regs = &tegra20_mc_regs,
 +	.handle_irq = tegra30_mc_irq_handlers,
 +	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
++#ifdef TEGRA_MC_SOC_HAS_INTMASKS
 +	.mc_addr_hi_mask = 0x3,
 +	.mc_err_status_type_mask = (0x7 << 28),
++#endif
 +};
 -- 
 cgit 1.3.1-korg

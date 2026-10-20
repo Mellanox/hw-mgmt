@@ -25,17 +25,15 @@ Tested-by: Jon Hunter <jonathanh@nvidia.com>
 Link: https://patch.msgid.link/20260226163115.1152181-7-ketanp@nvidia.com
 Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
 ---
- drivers/memory/tegra/mc.c       |   5 +-
- drivers/memory/tegra/mc.h       |  72 ++++++-
- drivers/memory/tegra/tegra20.c  |   6 +-
- drivers/memory/tegra/tegra264.c | 411 +++++++++++++++++++++++++++++++++++++++-
- 4 files changed, 484 insertions(+), 10 deletions(-)
+ drivers/memory/tegra/mc.c | 5
+ drivers/memory/tegra/mc.h | 71
+ drivers/memory/tegra/tegra20.c | 6
+ drivers/memory/tegra/tegra264.c | 411
+ 4 files changed, 483 insertions(+), 10 deletions(-)
 
-diff --git a/drivers/memory/tegra/mc.c b/drivers/memory/tegra/mc.c
-index dccebbed78339f..d620660da3311c 100644
 --- a/drivers/memory/tegra/mc.c
 +++ b/drivers/memory/tegra/mc.c
-@@ -690,7 +690,7 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
+@@ -700,7 +700,7 @@ irqreturn_t tegra30_mc_handle_irq(int ir
  
  		type = (value & mc->soc->mc_err_status_type_mask) >>
  		       MC_ERR_STATUS_TYPE_SHIFT;
@@ -44,7 +42,7 @@ index dccebbed78339f..d620660da3311c 100644
  
  		switch (value & mc->soc->mc_err_status_type_mask) {
  		case MC_ERR_STATUS_TYPE_INVALID_SMMU_PAGE:
-@@ -758,9 +758,10 @@ const char *const tegra_mc_status_names[32] = {
+@@ -768,9 +768,10 @@ const char *const tegra_mc_status_names[
  	[16] = "MTS carveout violation",
  	[17] = "Generalized carveout violation",
  	[20] = "Route Sanity error",
@@ -56,32 +54,35 @@ index dccebbed78339f..d620660da3311c 100644
  	[2] = "EMEM decode error",
  	[3] = "TrustZone violation",
  	[4] = "Carveout violation",
-diff --git a/drivers/memory/tegra/mc.h b/drivers/memory/tegra/mc.h
-index b286c2558fd527..649b54369263ac 100644
 --- a/drivers/memory/tegra/mc.h
 +++ b/drivers/memory/tegra/mc.h
-@@ -25,6 +25,7 @@
- #define MC_INT_DECERR_MTS				BIT(16)
- #define MC_INT_DECERR_GENERALIZED_CARVEOUT		BIT(17)
+@@ -44,6 +44,7 @@
+ #define MC_GLOBAL_INTSTATUS				0xf24
+ 
  #define MC_INT_DECERR_ROUTE_SANITY			BIT(20)
 +#define MC_INT_DECERR_ROUTE_SANITY_GIC_MSI		BIT(21)
+ #define MC_INT_DECERR_GENERALIZED_CARVEOUT		BIT(17)
+ #define MC_INT_DECERR_MTS				BIT(16)
+ #define MC_INT_SECERR_SEC				BIT(13)
+@@ -57,12 +58,17 @@
  
- #define MC_INTMASK					0x04
- #define MC_GART_ERROR_REQ				0x30
-@@ -76,13 +77,82 @@
- #define MC_ERR_STATUS_WRITABLE				BIT(26)
- #define MC_ERR_STATUS_READABLE				BIT(27)
- 
-+#define MC_ERR_STATUS_GSC_ADR_HI_MASK			0xffff
-+#define MC_ERR_STATUS_GSC_ADR_HI_SHIFT			16
-+#define MC_ERR_STATUS_RT_ADR_HI_SHIFT			15
-+
  #define MC_ERR_STATUS_TYPE_SHIFT			28
  #define MC_ERR_STATUS_TYPE_INVALID_SMMU_PAGE		(0x6 << 28)
 +#define MC_ERR_STATUS_RT_TYPE_MASK			(0xf << 28)
 +#define MC_ERR_STATUS_RT_TYPE_SHIFT			28
- 
+ #define MC_ERR_STATUS_READABLE				BIT(27)
+ #define MC_ERR_STATUS_WRITABLE				BIT(26)
+ #define MC_ERR_STATUS_NONSECURE				BIT(25)
  #define MC_ERR_STATUS_ADR_HI_SHIFT			20
+ #define MC_ERR_STATUS_SECURITY				BIT(17)
+ #define MC_ERR_STATUS_RW				BIT(16)
++#define MC_ERR_STATUS_GSC_ADR_HI_MASK			0xffff
++#define MC_ERR_STATUS_GSC_ADR_HI_SHIFT			16
++#define MC_ERR_STATUS_RT_ADR_HI_SHIFT			15
+ 
+ #define MC_EMEM_ADR_CFG_EMEM_NUMDEV			BIT(0)
+ 
+@@ -79,6 +85,69 @@
  
  #define MC_BROADCAST_CHANNEL				~0
  
@@ -151,7 +152,7 @@ index b286c2558fd527..649b54369263ac 100644
  static inline u32 tegra_mc_scale_percents(u64 val, unsigned int percents)
  {
  	val = val * percents;
-@@ -193,7 +263,7 @@ extern const struct tegra_mc_ops tegra186_mc_ops;
+@@ -189,7 +258,7 @@ extern const struct tegra_mc_ops tegra18
  irqreturn_t tegra30_mc_handle_irq(int irq, void *data);
  extern const irq_handler_t tegra30_mc_irq_handlers[1];
  extern const char * const tegra_mc_status_names[32];
@@ -160,11 +161,9 @@ index b286c2558fd527..649b54369263ac 100644
  
  /*
   * These IDs are for internal use of Tegra ICC drivers. The ID numbers are
-diff --git a/drivers/memory/tegra/tegra20.c b/drivers/memory/tegra/tegra20.c
-index ff9e151b5a4c7b..27dd6886f86e83 100644
 --- a/drivers/memory/tegra/tegra20.c
 +++ b/drivers/memory/tegra/tegra20.c
-@@ -713,7 +713,7 @@ static irqreturn_t tegra20_mc_handle_irq(int irq, void *data)
+@@ -713,7 +713,7 @@ static irqreturn_t tegra20_mc_handle_irq
  			value = mc_readl(mc, reg);
  
  			id = value & mc->soc->client_id_mask;
@@ -173,7 +172,7 @@ index ff9e151b5a4c7b..27dd6886f86e83 100644
  
  			if (value & BIT(31))
  				direction = "write";
-@@ -724,7 +724,7 @@ static irqreturn_t tegra20_mc_handle_irq(int irq, void *data)
+@@ -724,7 +724,7 @@ static irqreturn_t tegra20_mc_handle_irq
  			value = mc_readl(mc, reg);
  
  			id = (value >> 1) & mc->soc->client_id_mask;
@@ -182,7 +181,7 @@ index ff9e151b5a4c7b..27dd6886f86e83 100644
  
  			if (value & BIT(0))
  				direction = "write";
-@@ -736,7 +736,7 @@ static irqreturn_t tegra20_mc_handle_irq(int irq, void *data)
+@@ -736,7 +736,7 @@ static irqreturn_t tegra20_mc_handle_irq
  
  			id = value & mc->soc->client_id_mask;
  			type = (value & BIT(30)) ? 4 : 3;
@@ -191,11 +190,9 @@ index ff9e151b5a4c7b..27dd6886f86e83 100644
  			secure = "secure ";
  
  			if (value & BIT(31))
-diff --git a/drivers/memory/tegra/tegra264.c b/drivers/memory/tegra/tegra264.c
-index 172a48b56484a2..e43ef14da1ee73 100644
 --- a/drivers/memory/tegra/tegra264.c
 +++ b/drivers/memory/tegra/tegra264.c
-@@ -188,6 +188,41 @@ static const struct tegra_mc_client tegra264_mc_clients[] = {
+@@ -188,6 +188,41 @@ static const struct tegra_mc_client tegr
  	},
  };
  
@@ -237,7 +234,7 @@ index 172a48b56484a2..e43ef14da1ee73 100644
  /*
   * tegra264_mc_icc_set() - Pass MC client info to the BPMP-FW
   * @src: ICC node for Memory Controller's (MC) Client
-@@ -283,6 +318,312 @@ static int tegra264_mc_icc_get_init_bw(struct icc_node *node, u32 *avg, u32 *pea
+@@ -283,6 +318,312 @@ static int tegra264_mc_icc_get_init_bw(s
  	return 0;
  }
  
@@ -550,7 +547,7 @@ index 172a48b56484a2..e43ef14da1ee73 100644
  static const struct tegra_mc_icc_ops tegra264_mc_icc_ops = {
  	.xlate = tegra_mc_icc_xlate,
  	.aggregate = tegra264_mc_icc_aggregate,
-@@ -290,13 +631,70 @@ static const struct tegra_mc_icc_ops tegra264_mc_icc_ops = {
+@@ -290,13 +631,70 @@ static const struct tegra_mc_icc_ops teg
  	.set = tegra264_mc_icc_set,
  };
  
@@ -582,7 +579,7 @@ index 172a48b56484a2..e43ef14da1ee73 100644
 +			MC_INT_DECERR_GENERALIZED_CARVEOUT | MC_INT_DECERR_MTS |
 +			MC_INT_SECERR_SEC | MC_INT_DECERR_VPR | MC_INT_SECURITY_VIOLATION |
 +			MC_INT_DECERR_EMEM,
- 	},
++	},
 +	{
 +		.reg = MCF_INTPRIORITY_0,
 +		.mask = MC_INT_DECERR_ROUTE_SANITY_GIC_MSI | MC_INT_DECERR_ROUTE_SANITY |
@@ -596,7 +593,7 @@ index 172a48b56484a2..e43ef14da1ee73 100644
 +			MSS_HUB_ILLEGAL_TBUGRP_ID_INTMASK | MSS_HUB_MSI_ERR_INTMASK |
 +			MSS_HUB_POISON_RSP_INTMASK | MSS_HUB_RESTRICTED_ACCESS_ERR_INTMASK |
 +			MSS_HUB_RESERVED_PA_ERR_INTMASK,
-+	},
+ 	},
 +	{
 +		.reg = MSS_HUB_INTRPRIORITY_0,
 +		.mask = MSS_HUB_COALESCER_ERR_INTMASK | MSS_HUB_SMMU_BYPASS_ALLOW_ERR_INTMASK |
@@ -625,7 +622,7 @@ index 172a48b56484a2..e43ef14da1ee73 100644
  };
  
  const struct tegra_mc_soc tegra264_mc_soc = {
-@@ -317,4 +715,9 @@ const struct tegra_mc_soc tegra264_mc_soc = {
+@@ -317,4 +715,9 @@ const struct tegra_mc_soc tegra264_mc_so
  	 * supported.
  	 */
  	.num_carveouts = 32,
@@ -637,4 +634,3 @@ index 172a48b56484a2..e43ef14da1ee73 100644
  };
 -- 
 cgit 1.3.1-korg
-

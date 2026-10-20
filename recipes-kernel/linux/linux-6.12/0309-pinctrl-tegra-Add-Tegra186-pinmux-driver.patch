@@ -10,15 +10,13 @@ Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
 Link: https://lore.kernel.org/20250812-tegra186-pinctrl-v3-2-115714eeecb1@gmail.com
 Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
 ---
- drivers/pinctrl/tegra/Kconfig            |    4 +
- drivers/pinctrl/tegra/Makefile           |    1 +
- drivers/pinctrl/tegra/pinctrl-tegra186.c | 1979 ++++++++++++++++++++++++++++++
- drivers/soc/tegra/Kconfig                |    1 +
- 4 files changed, 1985 insertions(+)
- create mode 100644 drivers/pinctrl/tegra/pinctrl-tegra186.c
+ drivers/pinctrl/tegra/Kconfig | 4
+ drivers/pinctrl/tegra/Makefile | 1
+ drivers/pinctrl/tegra/pinctrl-tegra186.c | 1979
+ drivers/soc/tegra/Kconfig | 1
+ 4 files changed, 1985 insertions(+), 0 deletions(-)
 
 diff --git a/drivers/pinctrl/tegra/Kconfig b/drivers/pinctrl/tegra/Kconfig
-index 4e87d19323ba88..660d101ea3679a 100644
 --- a/drivers/pinctrl/tegra/Kconfig
 +++ b/drivers/pinctrl/tegra/Kconfig
 @@ -24,6 +24,10 @@ config PINCTRL_TEGRA210
@@ -33,10 +31,9 @@ index 4e87d19323ba88..660d101ea3679a 100644
  	bool
  	select PINCTRL_TEGRA
 diff --git a/drivers/pinctrl/tegra/Makefile b/drivers/pinctrl/tegra/Makefile
-index a93973701d4cce..82176526549e7d 100644
 --- a/drivers/pinctrl/tegra/Makefile
 +++ b/drivers/pinctrl/tegra/Makefile
-@@ -5,6 +5,7 @@ obj-$(CONFIG_PINCTRL_TEGRA30)		+= pinctrl-tegra30.o
+@@ -5,6 +5,7 @@ obj-$(CONFIG_PINCTRL_TEGRA30)		+= pinctr
  obj-$(CONFIG_PINCTRL_TEGRA114)		+= pinctrl-tegra114.o
  obj-$(CONFIG_PINCTRL_TEGRA124)		+= pinctrl-tegra124.o
  obj-$(CONFIG_PINCTRL_TEGRA210)		+= pinctrl-tegra210.o
@@ -46,7 +43,6 @@ index a93973701d4cce..82176526549e7d 100644
  obj-$(CONFIG_PINCTRL_TEGRA_XUSB)	+= pinctrl-tegra-xusb.o
 diff --git a/drivers/pinctrl/tegra/pinctrl-tegra186.c b/drivers/pinctrl/tegra/pinctrl-tegra186.c
 new file mode 100644
-index 00000000000000..4a1d6476af9bb4
 --- /dev/null
 +++ b/drivers/pinctrl/tegra/pinctrl-tegra186.c
 @@ -0,0 +1,1979 @@
@@ -2030,17 +2026,15 @@ index 00000000000000..4a1d6476af9bb4
 +}
 +arch_initcall(tegra186_pinctrl_init);
 diff --git a/drivers/soc/tegra/Kconfig b/drivers/soc/tegra/Kconfig
-index 9392c2c43cc80e..c0fc54c3cd35e4 100644
 --- a/drivers/soc/tegra/Kconfig
 +++ b/drivers/soc/tegra/Kconfig
-@@ -96,6 +96,7 @@ config ARCH_TEGRA_210_SOC
- config ARCH_TEGRA_186_SOC
+@@ -97,6 +97,7 @@ config ARCH_TEGRA_186_SOC
  	bool "NVIDIA Tegra186 SoC"
  	depends on !CPU_BIG_ENDIAN
-+	select PINCTRL_TEGRA186
  	select MAILBOX
- 	select SOC_TEGRA_PMC
- 	help
++	select PINCTRL_TEGRA186
+ 	select TEGRA_BPMP
+ 	select TEGRA_HSP_MBOX
+ 	select TEGRA_IVC
 -- 
 cgit 1.3.1-korg
-

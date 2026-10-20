@@ -31,32 +31,14 @@ Signed-off-by: Nicolin Chen <nicolinc@nvidia.com>
 Signed-off-by: Will Deacon <will@kernel.org>
 Signed-off-by: Sasha Levin <sashal@kernel.org>
 ---
- drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 10 ++++++++--
- 1 file changed, 8 insertions(+), 2 deletions(-)
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 6 ++++++
+ 1 file changed, 6 insertions(+), 0 deletions(-)
 
 diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
 index 43dc3bf9760aef..ef08367567d395 100644
 --- a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
 +++ b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
-@@ -708,7 +708,7 @@ static void tegra241_vintf_free_lvcmdq(struct tegra241_vintf *vintf, u16 lidx)
- 	dev_dbg(vintf->cmdqv->dev,
- 		"%sdeallocated\n", lvcmdq_error_header(vcmdq, header, 64));
- 	/* Guest-owned VCMDQ is free-ed with hw_queue by iommufd core */
--	if (vcmdq->vintf->hyp_own)
-+	if (!vcmdq->vintf->idx)
- 		kfree(vcmdq);
- }
- 
-@@ -806,7 +806,7 @@ static void tegra241_cmdqv_remove_vintf(struct tegra241_cmdqv *cmdqv, u16 idx)
- 
- 	dev_dbg(cmdqv->dev, "VINTF%u: deallocated\n", vintf->idx);
- 	tegra241_cmdqv_deinit_vintf(cmdqv, idx);
--	if (!vintf->hyp_own) {
-+	if (vintf->idx) {
- 		mutex_destroy(&vintf->lvcmdq_mutex);
- 		ida_destroy(&vintf->sids);
- 		/* Guest-owned VINTF is free-ed with viommu by iommufd core */
-@@ -923,6 +923,12 @@ static int tegra241_cmdqv_init_structures(struct arm_smmu_device *smmu)
+@@ -769,6 +769,12 @@
  	ret = tegra241_cmdqv_init_vintf(cmdqv, 0, vintf);
  	if (ret) {
  		dev_err(cmdqv->dev, "failed to init vintf0: %d\n", ret);
@@ -71,4 +53,3 @@ index 43dc3bf9760aef..ef08367567d395 100644
  
 -- 
 cgit 1.3.1-korg
-

@@ -62,7 +62,7 @@ index 7cd0e1a5edd1b5..398d56e94c732f 100644
 +#include <linux/host1x_context_bus.h>
  #include <linux/of.h>
  
- const struct bus_type host1x_context_device_bus_type = {
+ struct bus_type host1x_context_device_bus_type = {
 -- 
 cgit 1.3.1-korg
 

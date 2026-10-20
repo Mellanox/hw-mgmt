@@ -58,9 +58,11 @@ diff --git a/sound/soc/tegra/tegra210_amx.c b/sound/soc/tegra/tegra210_amx.c
 index d635046bbe81c0..930b080aec0ad7 100644
 --- a/sound/soc/tegra/tegra210_amx.c
 +++ b/sound/soc/tegra/tegra210_amx.c
-@@ -4,6 +4,7 @@
+@@ -4,8 +4,9 @@
  //
  // tegra210_amx.c - Tegra210 AMX driver
+ //
+ // Copyright (c) 2021-2023 NVIDIA CORPORATION.  All rights reserved.
  
 +#include <linux/bits.h>
  #include <linux/clk.h>

@@ -15,14 +15,12 @@ Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
 Link: https://patch.msgid.link/20251024064952.775883-1-kkartik@nvidia.com
 Signed-off-by: Alexandre Belloni <alexandre.belloni@bootlin.com>
 ---
- drivers/rtc/rtc-tegra.c | 26 ++++----------------------
+ drivers/rtc/rtc-tegra.c | 26
  1 file changed, 4 insertions(+), 22 deletions(-)
 
-diff --git a/drivers/rtc/rtc-tegra.c b/drivers/rtc/rtc-tegra.c
-index 46788db899533d..e8c83a6a96b30e 100644
 --- a/drivers/rtc/rtc-tegra.c
 +++ b/drivers/rtc/rtc-tegra.c
-@@ -300,14 +300,10 @@ static int tegra_rtc_probe(struct platform_device *pdev)
+@@ -300,14 +300,10 @@ static int tegra_rtc_probe(struct platfo
  	info->rtc->ops = &tegra_rtc_ops;
  	info->rtc->range_max = U32_MAX;
  
@@ -38,7 +36,7 @@ index 46788db899533d..e8c83a6a96b30e 100644
  	/* set context info */
  	info->pdev = pdev;
  	spin_lock_init(&info->lock);
-@@ -324,29 +320,16 @@ static int tegra_rtc_probe(struct platform_device *pdev)
+@@ -324,29 +320,16 @@ static int tegra_rtc_probe(struct platfo
  	ret = devm_request_irq(&pdev->dev, info->irq, tegra_rtc_irq_handler,
  			       IRQF_TRIGGER_HIGH, dev_name(&pdev->dev),
  			       &pdev->dev);
@@ -71,14 +69,13 @@ index 46788db899533d..e8c83a6a96b30e 100644
  }
  
  #ifdef CONFIG_PM_SLEEP
-@@ -399,7 +382,6 @@ static void tegra_rtc_shutdown(struct platform_device *pdev)
+@@ -399,7 +382,6 @@ static void tegra_rtc_shutdown(struct pl
  
  static struct platform_driver tegra_rtc_driver = {
  	.probe = tegra_rtc_probe,
--	.remove = tegra_rtc_remove,
+-	.remove_new = tegra_rtc_remove,
  	.shutdown = tegra_rtc_shutdown,
  	.driver = {
  		.name = "tegra_rtc",
 -- 
 cgit 1.3.1-korg
-

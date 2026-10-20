@@ -56,7 +56,7 @@ index d2bae88ad545f4..2377e2b76397a3 100644
  	kfree(map);
  }
  
-@@ -509,17 +508,9 @@ free:
+@@ -504,16 +503,8 @@ free:
  void tegra_bo_free_object(struct drm_gem_object *gem)
  {
  	struct tegra_drm *tegra = gem->dev->dev_private;
@@ -73,7 +73,7 @@ index d2bae88ad545f4..2377e2b76397a3 100644
 -	}
 +	host1x_bo_clear_cached_mappings(&bo->base);
  
- 	if (tegra->domain) {
+ 	if (tegra->domain)
  		tegra_bo_iommu_unmap(tegra, bo);
 diff --git a/drivers/gpu/drm/tegra/submit.c b/drivers/gpu/drm/tegra/submit.c
 index 3009b8b9e61977..e5841857c9378f 100644

@@ -14,11 +14,9 @@ Acked-by: Rob Herring (Arm) <robh@kernel.org>
 Acked-by: Thierry Reding <treding@nvidia.com>
 Signed-off-by: Wolfram Sang <wsa+renesas@sang-engineering.com>
 ---
- Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml | 6 ++++++
- 1 file changed, 6 insertions(+)
+ Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml | 6
+ 1 file changed, 6 insertions(+), 0 deletions(-)
 
-diff --git a/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml b/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
-index 6b6f6762d122f9..32c3b69ccf3420 100644
 --- a/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
 +++ b/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
 @@ -80,6 +80,11 @@ properties:
@@ -30,17 +28,16 @@ index 6b6f6762d122f9..32c3b69ccf3420 100644
 +          the previous generations, but have a different parent clock and hence
 +          the timing parameters are configured differently.
 +        const: nvidia,tegra256-i2c
- 
-   reg:
-     maxItems: 1
-@@ -186,6 +191,7 @@ allOf:
+       - description:
+           Tegra264 has 17 generic I2C controllers, two of which are in the AON
+           (always-on) partition of the SoC. In addition to the features from
+@@ -192,6 +197,7 @@ allOf:
              contains:
                enum:
                  - nvidia,tegra194-i2c
 +                - nvidia,tegra256-i2c
+                 - nvidia,tegra264-i2c
      then:
        required:
-         - resets
 -- 
 cgit 1.3.1-korg
-

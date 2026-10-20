@@ -15,22 +15,13 @@ Signed-off-by: Sheetal <sheetal@nvidia.com>
 Link: https://patch.msgid.link/20250512051747.1026770-9-sheetal@nvidia.com
 Signed-off-by: Mark Brown <broonie@kernel.org>
 ---
- sound/soc/tegra/tegra210_amx.c | 229 ++++++++++++++++++++++++++++++---
- sound/soc/tegra/tegra210_amx.h |  34 ++++-
- 2 files changed, 241 insertions(+), 22 deletions(-)
+ sound/soc/tegra/tegra210_amx.c | 227
+ sound/soc/tegra/tegra210_amx.h | 34
+ 2 files changed, 240 insertions(+), 21 deletions(-)
 
-diff --git a/sound/soc/tegra/tegra210_amx.c b/sound/soc/tegra/tegra210_amx.c
-index 1981b94009cff..7f558c40e097b 100644
 --- a/sound/soc/tegra/tegra210_amx.c
 +++ b/sound/soc/tegra/tegra210_amx.c
-@@ -1,5 +1,5 @@
- // SPDX-License-Identifier: GPL-2.0-only
--// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
-+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES.
- // All rights reserved.
- //
- // tegra210_amx.c - Tegra210 AMX driver
-@@ -46,21 +46,35 @@ static const struct reg_default tegra210_amx_reg_defaults[] = {
+@@ -46,21 +46,35 @@ static const struct reg_default tegra210
  	{ TEGRA210_AMX_CFG_RAM_CTRL, 0x00004000},
  };
  
@@ -71,7 +62,7 @@ index 1981b94009cff..7f558c40e097b 100644
  }
  
  static int tegra210_amx_startup(struct snd_pcm_substream *substream,
-@@ -157,7 +171,10 @@ static int tegra210_amx_set_audio_cif(struct snd_soc_dai *dai,
+@@ -156,7 +170,10 @@ static int tegra210_amx_set_audio_cif(st
  	cif_conf.audio_bits = audio_bits;
  	cif_conf.client_bits = audio_bits;
  
@@ -83,7 +74,7 @@ index 1981b94009cff..7f558c40e097b 100644
  
  	return 0;
  }
-@@ -170,9 +187,10 @@ static int tegra210_amx_in_hw_params(struct snd_pcm_substream *substream,
+@@ -169,9 +186,10 @@ static int tegra210_amx_in_hw_params(str
  
  	if (amx->soc_data->auto_disable) {
  		regmap_write(amx->regmap,
@@ -96,7 +87,7 @@ index 1981b94009cff..7f558c40e097b 100644
  	}
  
  	return tegra210_amx_set_audio_cif(dai, params,
-@@ -194,14 +212,11 @@ static int tegra210_amx_get_byte_map(struct snd_kcontrol *kcontrol,
+@@ -193,14 +211,11 @@ static int tegra210_amx_get_byte_map(str
  	struct soc_mixer_control *mc =
  		(struct soc_mixer_control *)kcontrol->private_value;
  	struct tegra210_amx *amx = snd_soc_component_get_drvdata(cmpnt);
@@ -113,7 +104,7 @@ index 1981b94009cff..7f558c40e097b 100644
  
  	/*
  	 * TODO: Simplify this logic to just return from bytes_map[]
-@@ -228,7 +243,7 @@ static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
+@@ -227,7 +242,7 @@ static int tegra210_amx_put_byte_map(str
  		(struct soc_mixer_control *)kcontrol->private_value;
  	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
  	struct tegra210_amx *amx = snd_soc_component_get_drvdata(cmpnt);
@@ -122,7 +113,7 @@ index 1981b94009cff..7f558c40e097b 100644
  	int reg = mc->reg;
  	int value = ucontrol->value.integer.value[0];
  	unsigned int mask_val = amx->byte_mask[reg / 32];
-@@ -418,7 +433,90 @@ static struct snd_kcontrol_new tegra210_amx_controls[] = {
+@@ -413,7 +428,90 @@ static struct snd_kcontrol_new tegra210_
  	TEGRA210_AMX_BYTE_MAP_CTRL(63),
  };
  
@@ -213,7 +204,7 @@ index 1981b94009cff..7f558c40e097b 100644
  	.dapm_widgets		= tegra210_amx_widgets,
  	.num_dapm_widgets	= ARRAY_SIZE(tegra210_amx_widgets),
  	.dapm_routes		= tegra210_amx_routes,
-@@ -450,6 +548,22 @@ static bool tegra194_amx_wr_reg(struct device *dev, unsigned int reg)
+@@ -445,6 +543,22 @@ static bool tegra194_amx_wr_reg(struct d
  	}
  }
  
@@ -236,7 +227,7 @@ index 1981b94009cff..7f558c40e097b 100644
  static bool tegra210_amx_rd_reg(struct device *dev, unsigned int reg)
  {
  	switch (reg) {
-@@ -470,6 +584,21 @@ static bool tegra194_amx_rd_reg(struct device *dev, unsigned int reg)
+@@ -465,6 +579,21 @@ static bool tegra194_amx_rd_reg(struct d
  	}
  }
  
@@ -258,7 +249,7 @@ index 1981b94009cff..7f558c40e097b 100644
  static bool tegra210_amx_volatile_reg(struct device *dev, unsigned int reg)
  {
  	switch (reg) {
-@@ -492,6 +621,29 @@ static bool tegra210_amx_volatile_reg(struct device *dev, unsigned int reg)
+@@ -487,6 +616,29 @@ static bool tegra210_amx_volatile_reg(st
  	return false;
  }
  
@@ -288,7 +279,7 @@ index 1981b94009cff..7f558c40e097b 100644
  static const struct regmap_config tegra210_amx_regmap_config = {
  	.reg_bits		= 32,
  	.reg_stride		= 4,
-@@ -518,18 +670,51 @@ static const struct regmap_config tegra194_amx_regmap_config = {
+@@ -513,18 +665,51 @@ static const struct regmap_config tegra1
  	.cache_type		= REGCACHE_FLAT,
  };
  
@@ -340,7 +331,7 @@ index 1981b94009cff..7f558c40e097b 100644
  	{},
  };
  MODULE_DEVICE_TABLE(of, tegra210_amx_of_match);
-@@ -562,6 +747,20 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
+@@ -557,6 +742,20 @@ static int tegra210_amx_platform_probe(s
  
  	regcache_cache_only(amx->regmap, true);
  
@@ -361,8 +352,6 @@ index 1981b94009cff..7f558c40e097b 100644
  	err = devm_snd_soc_register_component(dev, &tegra210_amx_cmpnt,
  					      tegra210_amx_dais,
  					      ARRAY_SIZE(tegra210_amx_dais));
-diff --git a/sound/soc/tegra/tegra210_amx.h b/sound/soc/tegra/tegra210_amx.h
-index e277741e4258d..50a237b197ba7 100644
 --- a/sound/soc/tegra/tegra210_amx.h
 +++ b/sound/soc/tegra/tegra210_amx.h
 @@ -1,8 +1,7 @@
@@ -437,3 +426,5 @@ index e277741e4258d..50a237b197ba7 100644
  };
  
  #endif
+-- 
+cgit 1.3.1-korg

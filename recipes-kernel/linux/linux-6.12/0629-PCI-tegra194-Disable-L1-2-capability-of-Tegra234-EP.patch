@@ -21,11 +21,9 @@ Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
 Reviewed-by: Vidya Sagar <vidyas@nvidia.com>
 Link: https://patch.msgid.link/20260324190755.1094879-14-mmaddireddy@nvidia.com
 ---
- drivers/pci/controller/dwc/pcie-tegra194.c | 19 +++++++++++++++++++
+ drivers/pci/controller/dwc/pcie-tegra194.c | 19
  1 file changed, 19 insertions(+)
 
-diff --git a/drivers/pci/controller/dwc/pcie-tegra194.c b/drivers/pci/controller/dwc/pcie-tegra194.c
-index 688da5a73d02ef..eb24f88e0175b2 100644
 --- a/drivers/pci/controller/dwc/pcie-tegra194.c
 +++ b/drivers/pci/controller/dwc/pcie-tegra194.c
 @@ -234,6 +234,7 @@ struct tegra_pcie_dw_of_data {
@@ -36,9 +34,9 @@ index 688da5a73d02ef..eb24f88e0175b2 100644
  	u32 cdm_chk_int_en_bit;
  	u32 gen4_preset_vec;
  	u8 n_fts[2];
-@@ -679,6 +680,23 @@ static void init_host_aspm(struct tegra_pcie_dw *pcie)
- 	if (pcie->supports_clkreq)
- 		pci->l1ss_support = true;
+@@ -697,6 +698,23 @@ static void init_host_aspm(struct tegra_
+ 	val |= (pcie->aspm_pwr_on_t << 19);
+ 	dw_pcie_writel_dbi(pci, pcie->cfg_link_cap_l1sub, val);
  
 +	/*
 +	 * Disable L1.2 capability advertisement for Tegra234 Endpoint mode.
@@ -52,15 +50,15 @@ index 688da5a73d02ef..eb24f88e0175b2 100644
 +	 */
 +	if (pcie->of_data->disable_l1_2 &&
 +	    pcie->of_data->mode == DW_PCIE_EP_TYPE) {
-+		val = dw_pcie_readl_dbi(pci, l1ss + PCI_L1SS_CAP);
++		val = dw_pcie_readl_dbi(pci, pcie->cfg_link_cap_l1sub);
 +		val &= ~(PCI_L1SS_CAP_PCIPM_L1_2 | PCI_L1SS_CAP_ASPM_L1_2);
-+		dw_pcie_writel_dbi(pci, l1ss + PCI_L1SS_CAP, val);
++		dw_pcie_writel_dbi(pci, pcie->cfg_link_cap_l1sub, val);
 +	}
 +
  	/* Program L0s and L1 entrance latencies */
  	val = dw_pcie_readl_dbi(pci, PCIE_PORT_AFR);
  	val &= ~PORT_AFR_L0S_ENTRANCE_LAT_MASK;
-@@ -2444,6 +2462,7 @@ static const struct tegra_pcie_dw_of_data tegra234_pcie_dw_ep_of_data = {
+@@ -2476,6 +2494,7 @@ static const struct tegra_pcie_dw_of_dat
  	.mode = DW_PCIE_EP_TYPE,
  	.has_l1ss_exit_fix = true,
  	.has_ltr_req_fix = true,
@@ -70,4 +68,3 @@ index 688da5a73d02ef..eb24f88e0175b2 100644
  	.gen4_preset_vec = 0x340,
 -- 
 cgit 1.3.1-korg
-

@@ -28,8 +28,8 @@ Signed-off-by: Nicolin Chen <nicolinc@nvidia.com>
 Signed-off-by: Will Deacon <will@kernel.org>
 Signed-off-by: Sasha Levin <sashal@kernel.org>
 ---
- drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 25 +++++++++++++++++--------
- 1 file changed, 17 insertions(+), 8 deletions(-)
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 21 ++++++++++++++-------
+ 1 file changed, 14 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
 index e5f52c0f6e9adf..6e14ed32072424 100644
@@ -85,23 +85,7 @@ index e5f52c0f6e9adf..6e14ed32072424 100644
  free_vcmdq:
  	kfree(vcmdq);
  	return ERR_PTR(ret);
-@@ -1142,13 +1149,15 @@ static int tegra241_vintf_alloc_lvcmdq_user(struct iommufd_hw_queue *hw_queue,
- 	if (ret)
- 		goto unmap_lvcmdq;
- 
-+	/* No lockless reader of a user VINTF's lvcmdqs[]; mutex-serialized */
-+	vintf->lvcmdqs[lidx] = vcmdq;
-+
- 	hw_queue->destroy = &tegra241_vintf_destroy_lvcmdq_user;
- 	mutex_unlock(&vintf->lvcmdq_mutex);
- 	return 0;
- 
- unmap_lvcmdq:
- 	tegra241_vcmdq_unmap_lvcmdq(vcmdq);
--	tegra241_vintf_deinit_lvcmdq(vintf, lidx);
- undepend_vcmdq:
- 	if (vcmdq->prev)
- 		iommufd_hw_queue_undepend(vcmdq, vcmdq->prev, core);
 -- 
 cgit 1.3.1-korg
+
 

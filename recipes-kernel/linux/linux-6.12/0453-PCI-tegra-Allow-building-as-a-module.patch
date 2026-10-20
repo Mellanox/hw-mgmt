@@ -12,15 +12,13 @@ Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
 Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
 Link: https://patch.msgid.link/20250731-pci-tegra-module-v7-3-cad4b088b8fb@gmail.com
 ---
- drivers/pci/controller/Kconfig     |  2 +-
- drivers/pci/controller/pci-tegra.c | 35 ++++-------------------------------
+ drivers/pci/controller/Kconfig | 2
+ drivers/pci/controller/pci-tegra.c | 35
  2 files changed, 5 insertions(+), 32 deletions(-)
 
-diff --git a/drivers/pci/controller/Kconfig b/drivers/pci/controller/Kconfig
-index c254d2b8bf17b0..f1621f87f05b73 100644
 --- a/drivers/pci/controller/Kconfig
 +++ b/drivers/pci/controller/Kconfig
-@@ -232,7 +232,7 @@ config PCI_HYPERV_INTERFACE
+@@ -225,7 +225,7 @@ config PCI_HYPERV_INTERFACE
  	  driver.
  
  config PCI_TEGRA
@@ -28,12 +26,10 @@ index c254d2b8bf17b0..f1621f87f05b73 100644
 +	tristate "NVIDIA Tegra PCIe controller"
  	depends on ARCH_TEGRA || COMPILE_TEST
  	depends on PCI_MSI
- 	select IRQ_MSI_LIB
-diff --git a/drivers/pci/controller/pci-tegra.c b/drivers/pci/controller/pci-tegra.c
-index 942ddfca3bf6b7..512309763d1fbf 100644
+ 	help
 --- a/drivers/pci/controller/pci-tegra.c
 +++ b/drivers/pci/controller/pci-tegra.c
-@@ -2545,12 +2545,6 @@ static const struct seq_operations tegra_pcie_ports_sops = {
+@@ -2545,12 +2545,6 @@ static const struct seq_operations tegra
  
  DEFINE_SEQ_ATTRIBUTE(tegra_pcie_ports);
  
@@ -76,11 +72,11 @@ index 942ddfca3bf6b7..512309763d1fbf 100644
  static int tegra_pcie_pm_suspend(struct device *dev)
  {
  	struct tegra_pcie *pcie = dev_get_drvdata(dev);
-@@ -2750,6 +2721,8 @@ static struct platform_driver tegra_pcie_driver = {
+@@ -2750,6 +2721,8 @@ static struct platform_driver tegra_pcie
  		.pm = &tegra_pcie_pm_ops,
  	},
  	.probe = tegra_pcie_probe,
--	.remove = tegra_pcie_remove,
+-	.remove_new = tegra_pcie_remove,
  };
 -module_platform_driver(tegra_pcie_driver);
 +builtin_platform_driver(tegra_pcie_driver);
@@ -89,4 +85,3 @@ index 942ddfca3bf6b7..512309763d1fbf 100644
 +MODULE_LICENSE("GPL");
 -- 
 cgit 1.3.1-korg
-

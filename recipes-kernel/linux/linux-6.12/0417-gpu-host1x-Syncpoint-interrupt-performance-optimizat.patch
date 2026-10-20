@@ -11,16 +11,14 @@ Signed-off-by: Mikko Perttunen <mperttunen@nvidia.com>
 Signed-off-by: Thierry Reding <treding@nvidia.com>
 Link: https://patch.msgid.link/20250917-host1x-syncpt-irq-perf-v2-1-736ef69b1347@nvidia.com
 ---
- drivers/gpu/host1x/dev.c        |  9 +++++++
- drivers/gpu/host1x/dev.h        |  3 +++
- drivers/gpu/host1x/hw/intr_hw.c | 56 ++++++++++++++++++++++++++++++++++-------
+ drivers/gpu/host1x/dev.c | 9
+ drivers/gpu/host1x/dev.h | 3
+ drivers/gpu/host1x/hw/intr_hw.c | 56
  3 files changed, 59 insertions(+), 9 deletions(-)
 
-diff --git a/drivers/gpu/host1x/dev.c b/drivers/gpu/host1x/dev.c
-index e365df6af353b6..3f475f0e65458f 100644
 --- a/drivers/gpu/host1x/dev.c
 +++ b/drivers/gpu/host1x/dev.c
-@@ -71,6 +71,15 @@ u32 host1x_sync_readl(struct host1x *host1x, u32 r)
+@@ -71,6 +71,15 @@ u32 host1x_sync_readl(struct host1x *hos
  	return readl(sync_regs + r);
  }
  
@@ -36,22 +34,18 @@ index e365df6af353b6..3f475f0e65458f 100644
  void host1x_ch_writel(struct host1x_channel *ch, u32 v, u32 r)
  {
  	writel(v, ch->regs + r);
-diff --git a/drivers/gpu/host1x/dev.h b/drivers/gpu/host1x/dev.h
-index d3855a1c6b472a..ef44618ed88a12 100644
 --- a/drivers/gpu/host1x/dev.h
 +++ b/drivers/gpu/host1x/dev.h
-@@ -179,6 +179,9 @@ void host1x_hypervisor_writel(struct host1x *host1x, u32 v, u32 r);
+@@ -179,6 +179,9 @@ void host1x_hypervisor_writel(struct hos
  u32 host1x_hypervisor_readl(struct host1x *host1x, u32 r);
- void host1x_sync_writel(struct host1x *host1x, u32 v, u32 r);
+ void host1x_sync_writel(struct host1x *host1x, u32 r, u32 v);
  u32 host1x_sync_readl(struct host1x *host1x, u32 r);
 +#ifdef CONFIG_64BIT
 +u64 host1x_sync_readq(struct host1x *host1x, u32 r);
 +#endif
- void host1x_ch_writel(struct host1x_channel *ch, u32 v, u32 r);
+ void host1x_ch_writel(struct host1x_channel *ch, u32 r, u32 v);
  u32 host1x_ch_readl(struct host1x_channel *ch, u32 r);
  
-diff --git a/drivers/gpu/host1x/hw/intr_hw.c b/drivers/gpu/host1x/hw/intr_hw.c
-index 415f8d7e42021b..bd5b5ef62f3512 100644
 --- a/drivers/gpu/host1x/hw/intr_hw.c
 +++ b/drivers/gpu/host1x/hw/intr_hw.c
 @@ -11,26 +11,64 @@
@@ -125,7 +119,7 @@ index 415f8d7e42021b..bd5b5ef62f3512 100644
  
  	return IRQ_HANDLED;
  }
-@@ -68,12 +106,12 @@ host1x_intr_init_host_sync(struct host1x *host, u32 cpm)
+@@ -68,12 +106,12 @@ host1x_intr_init_host_sync(struct host1x
  
  	/*
  	 * Program threshold interrupt destination among 8 lines per VM,
@@ -143,4 +137,3 @@ index 415f8d7e42021b..bd5b5ef62f3512 100644
  		host1x_sync_writel(host, irq_index, HOST1X_SYNC_SYNCPT_INTR_DEST(id));
 -- 
 cgit 1.3.1-korg
-

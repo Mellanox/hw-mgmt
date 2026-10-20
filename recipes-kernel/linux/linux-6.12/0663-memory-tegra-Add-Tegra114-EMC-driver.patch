@@ -42,7 +42,7 @@ index 92671f9df67213..cf0bfead8c456f 100644
 +
  config TEGRA124_EMC
  	tristate "NVIDIA Tegra124 External Memory Controller driver"
- 	default ARCH_TEGRA_124_SOC
+ 	default y
 diff --git a/drivers/memory/tegra/Makefile b/drivers/memory/tegra/Makefile
 index 218361cdaf2d7c..908a5046454f61 100644
 --- a/drivers/memory/tegra/Makefile
@@ -1207,7 +1207,7 @@ index 00000000000000..be6c699cb65615
 +		if (node->id != TEGRA_ICC_EMEM)
 +			continue;
 +
-+		ndata = kzalloc_obj(*ndata);
++		ndata = kzalloc(sizeof(*ndata), GFP_KERNEL);
 +		if (!ndata)
 +			return ERR_PTR(-ENOMEM);
 +

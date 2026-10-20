@@ -25,8 +25,8 @@ Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
  drivers/memory/tegra/tegra234.c | 15 +++++++++++----
  drivers/memory/tegra/tegra264.c | 17 ++++++++++++-----
  drivers/memory/tegra/tegra30.c  | 12 ++++++++++--
- include/soc/tegra/mc.h          |  8 +++++++-
- 11 files changed, 125 insertions(+), 40 deletions(-)
+ include/soc/tegra/mc.h          |  9 ++++++++-
+ 11 files changed, 126 insertions(+), 40 deletions(-)
 
 diff --git a/drivers/memory/tegra/mc.c b/drivers/memory/tegra/mc.c
 index 5d0d9b7fc53490..dccebbed78339f 100644
@@ -391,7 +391,7 @@ diff --git a/include/soc/tegra/mc.h b/include/soc/tegra/mc.h
 index b9b1763b10b5fc..e6da035d1306d8 100644
 --- a/include/soc/tegra/mc.h
 +++ b/include/soc/tegra/mc.h
-@@ -185,6 +185,11 @@ struct tegra_mc_regs {
+@@ -185,6 +185,12 @@ struct tegra_mc_regs {
  	unsigned int err_route_add;
  };
  
@@ -399,6 +399,7 @@ index b9b1763b10b5fc..e6da035d1306d8 100644
 +	u32 reg;
 +	u32 mask;
 +};
++#define TEGRA_MC_SOC_HAS_INTMASKS	1
 +
  struct tegra_mc_soc {
  	const struct tegra_mc_client *clients;

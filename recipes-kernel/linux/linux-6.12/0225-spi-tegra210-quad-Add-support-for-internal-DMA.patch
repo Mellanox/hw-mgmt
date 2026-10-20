@@ -13,11 +13,9 @@ Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
 Link: https://patch.msgid.link/20250513200043.608292-2-va@nvidia.com
 Signed-off-by: Mark Brown <broonie@kernel.org>
 ---
- drivers/spi/spi-tegra210-quad.c | 225 +++++++++++++++++++-------------
+ drivers/spi/spi-tegra210-quad.c | 225
  1 file changed, 131 insertions(+), 94 deletions(-)
 
-diff --git a/drivers/spi/spi-tegra210-quad.c b/drivers/spi/spi-tegra210-quad.c
-index a93e19911ef17..3581757a269be 100644
 --- a/drivers/spi/spi-tegra210-quad.c
 +++ b/drivers/spi/spi-tegra210-quad.c
 @@ -111,6 +111,9 @@
@@ -41,7 +39,7 @@ index a93e19911ef17..3581757a269be 100644
  	unsigned int cs_count;
  };
  
-@@ -605,13 +608,16 @@ static void tegra_qspi_dma_unmap_xfer(struct tegra_qspi *tqspi, struct spi_trans
+@@ -605,13 +608,16 @@ static void tegra_qspi_dma_unmap_xfer(st
  
  	len = DIV_ROUND_UP(tqspi->curr_dma_words * tqspi->bytes_per_word, 4) * 4;
  
@@ -60,7 +58,7 @@ index a93e19911ef17..3581757a269be 100644
  	unsigned int len;
  	u8 dma_burst;
  	int ret = 0;
-@@ -634,60 +640,86 @@ static int tegra_qspi_start_dma_based_transfer(struct tegra_qspi *tqspi, struct
+@@ -634,60 +640,86 @@ static int tegra_qspi_start_dma_based_tr
  		len = tqspi->curr_dma_words * 4;
  
  	/* set attention level based on length of transfer */
@@ -189,7 +187,7 @@ index a93e19911ef17..3581757a269be 100644
  		}
  	}
  
-@@ -726,9 +758,6 @@ static int tegra_qspi_start_cpu_based_transfer(struct tegra_qspi *qspi, struct s
+@@ -726,9 +758,6 @@ static int tegra_qspi_start_cpu_based_tr
  
  static void tegra_qspi_deinit_dma(struct tegra_qspi *tqspi)
  {
@@ -199,7 +197,7 @@ index a93e19911ef17..3581757a269be 100644
  	if (tqspi->tx_dma_buf) {
  		dma_free_coherent(tqspi->dev, tqspi->dma_buf_size,
  				  tqspi->tx_dma_buf, tqspi->tx_dma_phys);
-@@ -759,16 +788,29 @@ static int tegra_qspi_init_dma(struct tegra_qspi *tqspi)
+@@ -759,16 +788,29 @@ static int tegra_qspi_init_dma(struct te
  	u32 *dma_buf;
  	int err;
  
@@ -237,7 +235,7 @@ index a93e19911ef17..3581757a269be 100644
  
  	dma_buf = dma_alloc_coherent(tqspi->dev, tqspi->dma_buf_size, &dma_phys, GFP_KERNEL);
  	if (!dma_buf) {
-@@ -779,14 +821,6 @@ static int tegra_qspi_init_dma(struct tegra_qspi *tqspi)
+@@ -779,14 +821,6 @@ static int tegra_qspi_init_dma(struct te
  	tqspi->rx_dma_buf = dma_buf;
  	tqspi->rx_dma_phys = dma_phys;
  
@@ -252,7 +250,7 @@ index a93e19911ef17..3581757a269be 100644
  	dma_buf = dma_alloc_coherent(tqspi->dev, tqspi->dma_buf_size, &dma_phys, GFP_KERNEL);
  	if (!dma_buf) {
  		err = -ENOMEM;
-@@ -1128,15 +1162,14 @@ static int tegra_qspi_combined_seq_xfer(struct tegra_qspi *tqspi,
+@@ -1134,15 +1168,14 @@ static int tegra_qspi_combined_seq_xfer(
  			if (WARN_ON_ONCE(ret == 0)) {
  				dev_err_ratelimited(tqspi->dev,
  						    "QSPI Transfer failed with timeout\n");
@@ -276,7 +274,7 @@ index a93e19911ef17..3581757a269be 100644
  
  				/* Abort transfer by resetting pio/dma bit */
  				if (!tqspi->is_curr_dma_xfer) {
-@@ -1251,10 +1284,12 @@ static int tegra_qspi_non_combined_seq_xfer(struct tegra_qspi *tqspi,
+@@ -1266,10 +1299,12 @@ static int tegra_qspi_non_combined_seq_x
  						  QSPI_DMA_TIMEOUT);
  		if (WARN_ON(ret == 0)) {
  			dev_err(tqspi->dev, "transfer timeout\n");
@@ -293,7 +291,7 @@ index a93e19911ef17..3581757a269be 100644
  			tegra_qspi_handle_error(tqspi);
  			ret = -EIO;
  			goto complete_xfer;
-@@ -1323,7 +1358,7 @@ static bool tegra_qspi_validate_cmb_seq(struct tegra_qspi *tqspi,
+@@ -1342,7 +1377,7 @@ static bool tegra_qspi_validate_cmb_seq(
  			return false;
  		xfer = list_next_entry(xfer, transfer_list);
  	}
@@ -302,7 +300,7 @@ index a93e19911ef17..3581757a269be 100644
  		return false;
  
  	return true;
-@@ -1384,41 +1419,43 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi *tqspi)
+@@ -1410,34 +1445,36 @@ static irqreturn_t handle_dma_based_xfer
  	unsigned int total_fifo_words;
  	unsigned long flags;
  	long wait_status;
@@ -348,15 +346,16 @@ index a93e19911ef17..3581757a269be 100644
  			}
  		}
  	}
- 
- 	spin_lock_irqsave(&tqspi->lock, flags);
+@@ -1450,7 +1487,7 @@ static irqreturn_t handle_dma_based_xfer
+ 		return IRQ_HANDLED;
+ 	}
  
 -	if (err) {
 +	if (num_errors) {
  		tegra_qspi_dma_unmap_xfer(tqspi, t);
  		tegra_qspi_handle_error(tqspi);
  		complete(&tqspi->xfer_completion);
-@@ -1444,9 +1481,9 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi *tqspi)
+@@ -1476,9 +1513,9 @@ static irqreturn_t handle_dma_based_xfer
  	/* continue transfer in current message */
  	total_fifo_words = tegra_qspi_calculate_curr_xfer_param(tqspi, t);
  	if (total_fifo_words > QSPI_FIFO_DEPTH)
@@ -368,7 +367,7 @@ index a93e19911ef17..3581757a269be 100644
  
  exit:
  	spin_unlock_irqrestore(&tqspi->lock, flags);
-@@ -1474,28 +1511,28 @@ static irqreturn_t tegra_qspi_isr_thread(int irq, void *context_data)
+@@ -1540,28 +1577,28 @@ static irqreturn_t tegra_qspi_isr_thread
  }
  
  static struct tegra_qspi_soc_data tegra210_qspi_soc_data = {
@@ -401,3 +400,5 @@ index a93e19911ef17..3581757a269be 100644
  	.cmb_xfer_capable = true,
  	.supports_tpm = true,
  	.cs_count = 4,
+-- 
+cgit 1.3.1-korg
