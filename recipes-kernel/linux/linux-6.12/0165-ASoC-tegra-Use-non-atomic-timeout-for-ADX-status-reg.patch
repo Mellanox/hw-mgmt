@@ -20,20 +20,13 @@ Signed-off-by: Sheetal <sheetal@nvidia.com>
 Link: https://patch.msgid.link/20250311062010.33412-1-sheetal@nvidia.com
 Signed-off-by: Mark Brown <broonie@kernel.org>
 ---
- sound/soc/tegra/tegra210_adx.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ sound/soc/tegra/tegra210_adx.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/sound/soc/tegra/tegra210_adx.c b/sound/soc/tegra/tegra210_adx.c
 index 0aa93b948378f3..3c10e09976ad00 100644
 --- a/sound/soc/tegra/tegra210_adx.c
 +++ b/sound/soc/tegra/tegra210_adx.c
-@@ -1,5 +1,5 @@
- // SPDX-License-Identifier: GPL-2.0-only
--// SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
-+// SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES.
- // All rights reserved.
- //
- // tegra210_adx.c - Tegra210 ADX driver
 @@ -57,8 +57,8 @@ static int tegra210_adx_startup(struct snd_pcm_substream *substream,
  	int err;
  
@@ -47,4 +40,3 @@ index 0aa93b948378f3..3c10e09976ad00 100644
  		return err;
 -- 
 cgit 1.3.1-korg
-

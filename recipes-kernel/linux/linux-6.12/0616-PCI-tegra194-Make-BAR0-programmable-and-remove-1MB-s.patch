@@ -16,28 +16,25 @@ Signed-off-by: Manivannan Sadhasivam <mani@kernel.org>
 Reviewed-by: Niklas Cassel <cassel@kernel.org>
 Link: https://patch.msgid.link/20260324080857.916263-3-mmaddireddy@nvidia.com
 ---
- drivers/pci/controller/dwc/pcie-tegra194.c | 4 ++--
+ drivers/pci/controller/dwc/pcie-tegra194.c | 4
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/pci/controller/dwc/pcie-tegra194.c b/drivers/pci/controller/dwc/pcie-tegra194.c
-index 6881f0b94c7398..c5381ffdf1eba1 100644
 --- a/drivers/pci/controller/dwc/pcie-tegra194.c
 +++ b/drivers/pci/controller/dwc/pcie-tegra194.c
-@@ -1978,12 +1978,12 @@ static int tegra_pcie_ep_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
+@@ -1993,12 +1993,12 @@ static int tegra_pcie_ep_raise_irq(struc
  	return 0;
  }
  
 +/* Tegra EP: BAR0 = 64-bit programmable BAR */
  static const struct pci_epc_features tegra_pcie_epc_features = {
- 	DWC_EPC_COMMON_FEATURES,
  	.linkup_notifier = true,
  	.msi_capable = true,
+ 	.msix_capable = false,
 -	.bar[BAR_0] = { .type = BAR_FIXED, .fixed_size = SZ_1M,
 -			.only_64bit = true, },
 +	.bar[BAR_0] = { .only_64bit = true, },
- 	.bar[BAR_2] = { .type = BAR_DISABLED, },
- 	.bar[BAR_3] = { .type = BAR_DISABLED, },
- 	.bar[BAR_4] = { .type = BAR_DISABLED, },
+ 	.bar[BAR_1] = { .type = BAR_RESERVED, },
+ 	.bar[BAR_2] = { .type = BAR_RESERVED, },
+ 	.bar[BAR_3] = { .type = BAR_RESERVED, },
 -- 
 cgit 1.3.1-korg
-

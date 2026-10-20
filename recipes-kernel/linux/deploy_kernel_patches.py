@@ -67,6 +67,12 @@ class CONST(object):
                            "cumulus": "./linux-{kver}/cumulus",
                            "nvos": "./linux-{kver}/nvos",
                            "dvs": "./linux-{kver}/dvs"}
+    # ARM point-release overlay dir names. Used only for --arch arm64.
+    # x86 keeps linux-<major.minor>/<nos>/ (os[...]). amd64/aspeed reserved for later.
+    PATCH_ARCH_FOLDERS = {"amd64": "amd64",
+                          "arm64": "arm",
+                          "aspeed": "aspeed"}
+    ARM_KVER_OVERLAY_ARCHES = ("arm64",)
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
@@ -322,15 +328,48 @@ def skip_patch_filter(patch, accepted_folder, candidate_folder, kver):
 # ----------------------------------------------------------------------
 
 
-def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder, kver, nos=None):
+def resolve_patch_src(src_folder, patch_name, kver, kver_major, nos, os_list, arch, kver_list):
+    """Pick a NOS or ARM point-release overlay when present, else linux-x.y.
+
+    Order:
+      1. ARM (--arch arm64) only: linux-<major.minor>/<nos>/<arch>/<kver>/<patch>
+         (<arch> folder is arm). Overwrites linux-x.y/<patch> for that NOS/kver.
+      2. linux-<major.minor>/<nos>/<patch> when status has os[<nos>]
+         (existing x86 and all-arch NOS copy; amd64 does not walk <arch>/<kver>/).
+      3. linux-<major.minor>/<patch>
+    kver[6.12.94] documents an overlay; a matching file is also auto-selected.
+    """
+    base = os.path.join(src_folder, "linux-{}".format(kver_major))
+    candidates = []
+    nos_ok = nos and nos != "None" and nos in CONST.PATCH_OS_SUBFOLDERS and nos != "default"
+    use_arm_kver_overlay = (
+        arch in CONST.ARM_KVER_OVERLAY_ARCHES
+        and nos_ok
+        and ((not kver_list) or (kver in kver_list))
+    )
+    if use_arm_kver_overlay:
+        arch_folder = CONST.PATCH_ARCH_FOLDERS.get(arch, "arm")
+        candidates.append(os.path.join(base, nos, arch_folder, kver, patch_name))
+    if nos in os_list and nos in CONST.PATCH_OS_SUBFOLDERS:
+        candidates.append(os.path.join(base, nos, patch_name))
+    candidates.append(os.path.join(base, patch_name))
+
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return candidates[-1]
+
+
+def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder, kver, nos=None, arch=None):
     kver_major = ".".join(kver.split('.')[0:2])
 
     for patch in patch_list:
         patch_status = patch[CONST.STATUS]
-        os_folder = CONST.PATCH_OS_SUBFOLDERS["default"]
         take_list = patch_status.get(CONST.TAKE_PATCH, [])
         skip_list = patch_status.get(CONST.SKIP_PATCH, [])
         os_list = patch_status.get(CONST.OS_ALT_PATCH, [])
+        kver_list = [v.strip() for v in patch_status.get("kver", []) if v.strip()]
+        from_list = [v.strip() for v in patch_status.get("from", []) if v.strip()]
 
         filter_name = patch_status[CONST.FILTER]
         filter_fn = globals()[filter_name]
@@ -338,6 +377,8 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
 
         take_strong = nos in take_list or nos in os_list
         skip_strong = nos in skip_list
+        if from_list and not any(is_version_greater(kver, v) for v in from_list):
+            continue
         if (take_strong and skip_strong) or ("ALL" in take_list and "ALL" in skip_list) or "ALL" in os_list:
             print("ERR: Conflict in patch status options\n{} : {}".format(patch[CONST.PATCH_NAME], patch[CONST.STATUS]))
             sys.exit(1)
@@ -347,16 +388,18 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         elif take_strong:
             if not dst_folder:
                 dst_folder = candidate_folder
-            if nos in os_list:
-                os_folder = CONST.PATCH_OS_SUBFOLDERS[nos]
         elif "ALL" in take_list:
             if not dst_folder:
                 dst_folder = candidate_folder
         elif "ALL" in skip_list or dst_folder is None:
             continue
 
-        patch_src_folder = src_folder + os_folder.format(kver=kver_major)
-        patch[CONST.SRC] = "{}/{}".format(patch_src_folder, patch[CONST.PATCH_NAME])
+        src_path = resolve_patch_src(src_folder, patch[CONST.PATCH_NAME], kver, kver_major,
+                                     nos, os_list, arch, kver_list)
+        default_src = os.path.join(src_folder, "linux-{}".format(kver_major), patch[CONST.PATCH_NAME])
+        if src_path != default_src:
+            print("Using overlay {} for {}".format(src_path, patch[CONST.PATCH_NAME]))
+        patch[CONST.SRC] = src_path
         patch[CONST.DST] = "{}/{}".format(dst_folder, patch[CONST.PATCH_NAME])
 
 # ----------------------------------------------------------------------
@@ -381,6 +424,9 @@ def process_patch_list(patch_list):
         if CONST.DST in patch.keys():
             src_path = patch[CONST.SRC]
             dst_path = patch[CONST.DST]
+            if not os.path.isfile(src_path):
+                print("Err: patch source missing: {}".format(src_path))
+                return False
             if not os_cmd('cp {} {}'.format(src_path, dst_path)):
                 files_copyed += 1
     print("Copyed {} files".format(files_copyed))
@@ -659,14 +705,16 @@ if __name__ == '__main__':
                           candidate_folder,
                           candidate_folder,
                           k_version,
-                          args["os_type"])
+                          args["os_type"],
+                          args["arch"])
     else:
         filter_patch_list(patch_table,
                           src_folder,
                           accepted_folder,
                           candidate_folder,
                           k_version,
-                          args["os_type"])
+                          args["os_type"],
+                          args["arch"])
 
     if args["verbose"]:
         print_patch_all(patch_table)

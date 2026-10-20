@@ -39,8 +39,8 @@ Signed-off-by: Nicolin Chen <nicolinc@nvidia.com>
 Signed-off-by: Will Deacon <will@kernel.org>
 Signed-off-by: Sasha Levin <sashal@kernel.org>
 ---
- drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 37 +++++++++++++++++++++++---
- 1 file changed, 33 insertions(+), 4 deletions(-)
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 26 +++++++++++++++++++++---
+ 1 file changed, 23 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
 index 6e14ed32072424..f6f2eb693e07a9 100644
@@ -60,7 +60,7 @@ index 6e14ed32072424..f6f2eb693e07a9 100644
  static irqreturn_t tegra241_cmdqv_isr(int irq, void *devid)
  {
  	struct tegra241_cmdqv *cmdqv = (struct tegra241_cmdqv *)devid;
-@@ -359,16 +366,27 @@ static irqreturn_t tegra241_cmdqv_isr(int irq, void *devid)
+@@ -292,8 +299,14 @@ static irqreturn_t tegra241_cmdqv_isr(int irq, void *devid)
  
  	/* Handle VINTF0 and its LVCMDQs */
  	if (vintf_map & BIT_ULL(0)) {
@@ -73,20 +73,6 @@ index 6e14ed32072424..f6f2eb693e07a9 100644
 +		vintf0 = smp_load_acquire(&cmdqv->vintfs[0]);
 +		if (vintf0)
 +			tegra241_vintf0_handle_error(vintf0);
- 	}
- 
- 	/* Handle other user VINTFs and their LVCMDQs */
- 	while (vintf_map) {
- 		unsigned long idx = __ffs64(vintf_map);
-+		struct tegra241_vintf *vintf;
- 
--		tegra241_vintf_user_handle_error(cmdqv->vintfs[idx]);
- 		vintf_map &= ~BIT_ULL(idx);
-+
-+		/* The slot may be published or torn down (NULL'd) concurrently */
-+		vintf = smp_load_acquire(&cmdqv->vintfs[idx]);
-+		if (vintf)
-+			tegra241_vintf_user_handle_error(vintf);
  	}
  
  	return IRQ_HANDLED;

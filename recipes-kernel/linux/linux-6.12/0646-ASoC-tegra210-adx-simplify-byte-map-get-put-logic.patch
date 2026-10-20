@@ -58,9 +58,11 @@ diff --git a/sound/soc/tegra/tegra210_adx.c b/sound/soc/tegra/tegra210_adx.c
 index d2f742ffc59dbc..12371f89523404 100644
 --- a/sound/soc/tegra/tegra210_adx.c
 +++ b/sound/soc/tegra/tegra210_adx.c
-@@ -4,6 +4,7 @@
+@@ -4,8 +4,9 @@
  //
  // tegra210_adx.c - Tegra210 ADX driver
+ //
+ // Copyright (c) 2021-2023 NVIDIA CORPORATION.  All rights reserved.
  
 +#include <linux/bits.h>
  #include <linux/clk.h>

@@ -66,7 +66,7 @@ index bfdd457f740c18..c237ba7531de03 100644
  		return -EINVAL;
  
  	if (mixer->duration[id] == duration)
-@@ -614,10 +626,17 @@ static int tegra210_mixer_fade_status_info(struct snd_kcontrol *kcontrol,
+@@ -614,10 +626,16 @@ static int tegra210_mixer_fade_status_info(struct snd_kcontrol *kcontrol,
  }
  
  #define FADE_CTRL(id)							\
@@ -81,7 +81,6 @@ index bfdd457f740c18..c237ba7531de03 100644
 +		.get = tegra210_mixer_get_fade_duration,			\
 +		.put = tegra210_mixer_put_fade_duration,			\
 +		.private_value = SOC_SINGLE_VALUE((id) - 1, 0,		\
-+				TEGRA210_MIXER_FADE_DURATION_MIN,	\
 +				TEGRA210_MIXER_FADE_DURATION_MAX,	\
 +				0, 0),					\
 +	},								\

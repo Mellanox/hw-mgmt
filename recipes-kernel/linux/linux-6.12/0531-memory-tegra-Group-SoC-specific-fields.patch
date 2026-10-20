@@ -21,24 +21,22 @@ Link: https://patch.msgid.link/20260226163115.1152181-5-ketanp@nvidia.com
 [krzk: Fix checkpatch warning]
 Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
 ---
- drivers/memory/tegra/mc.c       | 11 +++++++----
- drivers/memory/tegra/mc.h       |  2 --
- drivers/memory/tegra/tegra114.c |  1 +
- drivers/memory/tegra/tegra124.c |  4 ++++
- drivers/memory/tegra/tegra186.c |  2 ++
- drivers/memory/tegra/tegra194.c |  2 ++
- drivers/memory/tegra/tegra20.c  |  1 +
- drivers/memory/tegra/tegra210.c |  2 ++
- drivers/memory/tegra/tegra234.c |  2 ++
- drivers/memory/tegra/tegra30.c  |  1 +
- include/soc/tegra/mc.h          |  2 ++
+ drivers/memory/tegra/mc.c | 11
+ drivers/memory/tegra/mc.h | 2
+ drivers/memory/tegra/tegra114.c | 1
+ drivers/memory/tegra/tegra124.c | 4
+ drivers/memory/tegra/tegra186.c | 2
+ drivers/memory/tegra/tegra194.c | 2
+ drivers/memory/tegra/tegra20.c | 1
+ drivers/memory/tegra/tegra210.c | 2
+ drivers/memory/tegra/tegra234.c | 2
+ drivers/memory/tegra/tegra30.c | 1
+ include/soc/tegra/mc.h | 2
  11 files changed, 24 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/memory/tegra/mc.c b/drivers/memory/tegra/mc.c
-index 8114574374d5c7..5d0d9b7fc53490 100644
 --- a/drivers/memory/tegra/mc.c
 +++ b/drivers/memory/tegra/mc.c
-@@ -658,9 +658,12 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
+@@ -668,9 +668,12 @@ irqreturn_t tegra30_mc_handle_irq(int ir
  					addr = mc_ch_readl(mc, channel, addr_hi_reg);
  				else
  					addr = mc_readl(mc, addr_hi_reg);
@@ -53,7 +51,7 @@ index 8114574374d5c7..5d0d9b7fc53490 100644
  			}
  			addr <<= 32;
  		}
-@@ -685,11 +688,11 @@ irqreturn_t tegra30_mc_handle_irq(int irq, void *data)
+@@ -695,11 +698,11 @@ irqreturn_t tegra30_mc_handle_irq(int ir
  			}
  		}
  
@@ -67,36 +65,32 @@ index 8114574374d5c7..5d0d9b7fc53490 100644
  		case MC_ERR_STATUS_TYPE_INVALID_SMMU_PAGE:
  			perm[0] = ' ';
  			perm[1] = '[';
-diff --git a/drivers/memory/tegra/mc.h b/drivers/memory/tegra/mc.h
-index 34ce03ebc51cae..b286c2558fd527 100644
 --- a/drivers/memory/tegra/mc.h
 +++ b/drivers/memory/tegra/mc.h
-@@ -78,10 +78,8 @@
+@@ -57,12 +57,10 @@
  
  #define MC_ERR_STATUS_TYPE_SHIFT			28
  #define MC_ERR_STATUS_TYPE_INVALID_SMMU_PAGE		(0x6 << 28)
 -#define MC_ERR_STATUS_TYPE_MASK				(0x7 << 28)
- 
+ #define MC_ERR_STATUS_READABLE				BIT(27)
+ #define MC_ERR_STATUS_WRITABLE				BIT(26)
+ #define MC_ERR_STATUS_NONSECURE				BIT(25)
  #define MC_ERR_STATUS_ADR_HI_SHIFT			20
 -#define MC_ERR_STATUS_ADR_HI_MASK			0x3
+ #define MC_ERR_STATUS_SECURITY				BIT(17)
+ #define MC_ERR_STATUS_RW				BIT(16)
  
- #define MC_BROADCAST_CHANNEL				~0
- 
-diff --git a/drivers/memory/tegra/tegra114.c b/drivers/memory/tegra/tegra114.c
-index fffb28eea57f04..3a061a2d881eae 100644
 --- a/drivers/memory/tegra/tegra114.c
 +++ b/drivers/memory/tegra/tegra114.c
-@@ -1117,4 +1117,5 @@ const struct tegra_mc_soc tegra114_mc_soc = {
+@@ -1117,4 +1117,5 @@ const struct tegra_mc_soc tegra114_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
-diff --git a/drivers/memory/tegra/tegra124.c b/drivers/memory/tegra/tegra124.c
-index 2cf733198782c2..4d394889c1e92c 100644
 --- a/drivers/memory/tegra/tegra124.c
 +++ b/drivers/memory/tegra/tegra124.c
-@@ -1278,6 +1278,8 @@ const struct tegra_mc_soc tegra124_mc_soc = {
+@@ -1278,6 +1278,8 @@ const struct tegra_mc_soc tegra124_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
@@ -105,7 +99,7 @@ index 2cf733198782c2..4d394889c1e92c 100644
  };
  #endif /* CONFIG_ARCH_TEGRA_124_SOC */
  
-@@ -1313,5 +1315,7 @@ const struct tegra_mc_soc tegra132_mc_soc = {
+@@ -1313,5 +1315,7 @@ const struct tegra_mc_soc tegra132_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
@@ -113,11 +107,9 @@ index 2cf733198782c2..4d394889c1e92c 100644
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
  #endif /* CONFIG_ARCH_TEGRA_132_SOC */
-diff --git a/drivers/memory/tegra/tegra186.c b/drivers/memory/tegra/tegra186.c
-index eb1eaaffc79a82..94cad76c52ac84 100644
 --- a/drivers/memory/tegra/tegra186.c
 +++ b/drivers/memory/tegra/tegra186.c
-@@ -916,5 +916,7 @@ const struct tegra_mc_soc tegra186_mc_soc = {
+@@ -916,5 +916,7 @@ const struct tegra_mc_soc tegra186_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
@@ -125,61 +117,49 @@ index eb1eaaffc79a82..94cad76c52ac84 100644
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
  #endif
-diff --git a/drivers/memory/tegra/tegra194.c b/drivers/memory/tegra/tegra194.c
-index cb0e7886857d90..38852b2a0f4480 100644
 --- a/drivers/memory/tegra/tegra194.c
 +++ b/drivers/memory/tegra/tegra194.c
-@@ -1361,4 +1361,6 @@ const struct tegra_mc_soc tegra194_mc_soc = {
+@@ -1361,4 +1361,6 @@ const struct tegra_mc_soc tegra194_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
 +	.mc_addr_hi_mask = 0x3,
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
-diff --git a/drivers/memory/tegra/tegra20.c b/drivers/memory/tegra/tegra20.c
-index 6750b08d875fe9..a5cc770437ae24 100644
 --- a/drivers/memory/tegra/tegra20.c
 +++ b/drivers/memory/tegra/tegra20.c
-@@ -784,4 +784,5 @@ const struct tegra_mc_soc tegra20_mc_soc = {
+@@ -784,4 +784,5 @@ const struct tegra_mc_soc tegra20_mc_soc
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra20_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra20_mc_irq_handlers),
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
-diff --git a/drivers/memory/tegra/tegra210.c b/drivers/memory/tegra/tegra210.c
-index 8283601ab52cda..aa606df8a67980 100644
 --- a/drivers/memory/tegra/tegra210.c
 +++ b/drivers/memory/tegra/tegra210.c
-@@ -1290,4 +1290,6 @@ const struct tegra_mc_soc tegra210_mc_soc = {
+@@ -1290,4 +1290,6 @@ const struct tegra_mc_soc tegra210_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
 +	.mc_addr_hi_mask = 0x3,
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
-diff --git a/drivers/memory/tegra/tegra234.c b/drivers/memory/tegra/tegra234.c
-index 9586d7528fb702..67d5d4e01a65bd 100644
 --- a/drivers/memory/tegra/tegra234.c
 +++ b/drivers/memory/tegra/tegra234.c
-@@ -1155,4 +1155,6 @@ const struct tegra_mc_soc tegra234_mc_soc = {
+@@ -1155,4 +1155,6 @@ const struct tegra_mc_soc tegra234_mc_so
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
 +	.mc_addr_hi_mask = 0x3,
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
-diff --git a/drivers/memory/tegra/tegra30.c b/drivers/memory/tegra/tegra30.c
-index ff89b907877216..8a26a2f204e9b9 100644
 --- a/drivers/memory/tegra/tegra30.c
 +++ b/drivers/memory/tegra/tegra30.c
-@@ -1403,4 +1403,5 @@ const struct tegra_mc_soc tegra30_mc_soc = {
+@@ -1403,4 +1403,5 @@ const struct tegra_mc_soc tegra30_mc_soc
  	.regs = &tegra20_mc_regs,
  	.handle_irq = tegra30_mc_irq_handlers,
  	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
 +	.mc_err_status_type_mask = (0x7 << 28),
  };
-diff --git a/include/soc/tegra/mc.h b/include/soc/tegra/mc.h
-index d07de04c0f337b..b9b1763b10b5fc 100644
 --- a/include/soc/tegra/mc.h
 +++ b/include/soc/tegra/mc.h
 @@ -217,6 +217,8 @@ struct tegra_mc_soc {
@@ -193,4 +173,3 @@ index d07de04c0f337b..b9b1763b10b5fc 100644
  struct tegra_mc {
 -- 
 cgit 1.3.1-korg
-

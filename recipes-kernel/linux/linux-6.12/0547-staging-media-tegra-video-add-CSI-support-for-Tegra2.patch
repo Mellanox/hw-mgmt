@@ -46,18 +46,17 @@ Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
 Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
 Signed-off-by: Hans Verkuil <hverkuil+cisco@kernel.org>
 ---
- drivers/staging/media/tegra-video/csi.c     |  17 +
- drivers/staging/media/tegra-video/csi.h     |  10 +
- drivers/staging/media/tegra-video/tegra20.c | 620 ++++++++++++++++++++++++++--
- drivers/staging/media/tegra-video/vi.h      |   2 -
- drivers/staging/media/tegra-video/video.c   |   6 +
+ drivers/staging/media/tegra-video/csi.c | 23
+ drivers/staging/media/tegra-video/csi.h | 4
+ drivers/staging/media/tegra-video/tegra20.c | 620
+ drivers/staging/media/tegra-video/vi.h | 2
+ drivers/staging/media/tegra-video/video.c | 6
  5 files changed, 608 insertions(+), 47 deletions(-)
 
 diff --git a/drivers/staging/media/tegra-video/csi.c b/drivers/staging/media/tegra-video/csi.c
-index c4d3514f19b369..41d57dac61a71d 100644
 --- a/drivers/staging/media/tegra-video/csi.c
 +++ b/drivers/staging/media/tegra-video/csi.c
-@@ -827,6 +827,17 @@ static int tegra_csi_probe(struct platform_device *pdev)
+@@ -805,6 +805,17 @@ static int tegra_csi_probe(struct platfo
  
  	csi->dev = &pdev->dev;
  	csi->ops = csi->soc->ops;
@@ -75,8 +74,19 @@ index c4d3514f19b369..41d57dac61a71d 100644
  	platform_set_drvdata(pdev, csi);
  	pm_runtime_enable(&pdev->dev);
  
-@@ -859,6 +870,12 @@ static void tegra_csi_remove(struct platform_device *pdev)
+@@ -836,11 +847,23 @@ static void tegra_csi_remove(struct plat
+ 	pm_runtime_disable(&pdev->dev);
  }
+ 
++#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
++extern const struct tegra_csi_soc tegra20_csi_soc;
++#endif
++#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
++extern const struct tegra_csi_soc tegra30_csi_soc;
++#endif
+ #if defined(CONFIG_ARCH_TEGRA_210_SOC)
+ extern const struct tegra_csi_soc tegra210_csi_soc;
+ #endif
  
  static const struct of_device_id tegra_csi_of_id_table[] = {
 +#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
@@ -89,7 +99,6 @@ index c4d3514f19b369..41d57dac61a71d 100644
  	{ .compatible = "nvidia,tegra210-csi", .data = &tegra210_csi_soc },
  #endif
 diff --git a/drivers/staging/media/tegra-video/csi.h b/drivers/staging/media/tegra-video/csi.h
-index 5344088aa02203..f0277cb4244699 100644
 --- a/drivers/staging/media/tegra-video/csi.h
 +++ b/drivers/staging/media/tegra-video/csi.h
 @@ -115,6 +115,7 @@ struct tegra_csi_ops {
@@ -108,29 +117,16 @@ index 5344088aa02203..f0277cb4244699 100644
  	unsigned int csi_max_channels;
  	const char * const *clk_names;
  	unsigned int num_clks;
-@@ -130,6 +132,12 @@ struct tegra_csi_soc {
- 	unsigned int tpg_frmrate_table_size;
- };
- 
-+#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
-+extern const struct tegra_csi_soc tegra20_csi_soc;
-+#endif
-+#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
-+extern const struct tegra_csi_soc tegra30_csi_soc;
-+#endif
- #if defined(CONFIG_ARCH_TEGRA_210_SOC)
- extern const struct tegra_csi_soc tegra210_csi_soc;
- #endif
-@@ -144,6 +152,7 @@ extern const struct tegra_csi_soc tegra210_csi_soc;
-  * @vdd: vdd regulator for CSI hardware, usually avdd_dsi_csi
+@@ -139,6 +141,7 @@ struct tegra_csi_soc {
+  * @clks: clock for CSI and CIL
   * @soc: pointer to SoC data structure
   * @ops: csi operations
 + * @mipi_lock: for MIPI calibration operations
   * @csi_chans: list head for CSI channels
   */
  struct tegra_csi {
-@@ -154,6 +163,7 @@ struct tegra_csi {
- 	struct regulator *vdd;
+@@ -148,6 +151,7 @@ struct tegra_csi {
+ 	struct clk_bulk_data *clks;
  	const struct tegra_csi_soc *soc;
  	const struct tegra_csi_ops *ops;
 +	struct mutex mipi_lock; /* for register access */
@@ -138,7 +134,6 @@ index 5344088aa02203..f0277cb4244699 100644
  };
  
 diff --git a/drivers/staging/media/tegra-video/tegra20.c b/drivers/staging/media/tegra-video/tegra20.c
-index 1b8f2a2213f241..e513e6ccb776fd 100644
 --- a/drivers/staging/media/tegra-video/tegra20.c
 +++ b/drivers/staging/media/tegra-video/tegra20.c
 @@ -4,6 +4,9 @@
@@ -294,7 +289,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
   */
  
  static void tegra20_vi_write(struct tegra_vi_channel *chan, unsigned int addr, u32 val)
-@@ -161,6 +272,35 @@ static void tegra20_vi_write(struct tegra_vi_channel *chan, unsigned int addr, u
+@@ -161,6 +272,35 @@ static void tegra20_vi_write(struct tegr
  	writel(val, chan->vi->iomem + addr);
  }
  
@@ -330,7 +325,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  /*
   * Get the main input format (YUV/RGB...) and the YUV variant as values to
   * be written into registers for the current VI input mbus code.
-@@ -283,20 +423,27 @@ static int tegra20_vi_enable(struct tegra_vi *vi, bool on)
+@@ -283,20 +423,27 @@ static int tegra20_vi_enable(struct tegr
  static int tegra20_channel_host1x_syncpt_init(struct tegra_vi_channel *chan)
  {
  	struct tegra_vi *vi = chan->vi;
@@ -360,7 +355,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  }
  
  static void tegra20_fmt_align(struct v4l2_pix_format *pix, unsigned int bpp)
-@@ -424,41 +571,91 @@ static void tegra20_channel_vi_buffer_setup(struct tegra_vi_channel *chan,
+@@ -424,41 +571,91 @@ static void tegra20_channel_vi_buffer_se
  }
  
  static int tegra20_channel_capture_frame(struct tegra_vi_channel *chan,
@@ -466,7 +461,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  	while (1) {
  		/*
  		 * Source is not streaming if error is non-zero.
-@@ -483,7 +680,7 @@ static int tegra20_chan_capture_kthread_start(void *data)
+@@ -483,7 +680,7 @@ static int tegra20_chan_capture_kthread_
  		list_del_init(&buf->queue);
  		spin_unlock(&chan->start_lock);
  
@@ -475,7 +470,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  		if (!err) {
  			retries = 0;
  			continue;
-@@ -510,28 +707,6 @@ static void tegra20_camera_capture_setup(struct tegra_vi_channel *chan)
+@@ -510,28 +707,6 @@ static void tegra20_camera_capture_setup
  	enum tegra_vi_out output_channel = (data_type == TEGRA_IMAGE_DT_RAW8 ||
  					    data_type == TEGRA_IMAGE_DT_RAW10) ?
  					    TEGRA_VI_OUT_2 : TEGRA_VI_OUT_1;
@@ -504,7 +499,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  
  	/* Set up frame size */
  	tegra20_vi_write(chan, TEGRA_VI_OUTPUT_FRAME_SIZE(output_channel),
-@@ -562,18 +737,28 @@ static int tegra20_vi_start_streaming(struct vb2_queue *vq, u32 count)
+@@ -562,18 +737,28 @@ static int tegra20_vi_start_streaming(st
  	struct media_pipeline *pipe = &chan->video.pipe;
  	int err;
  
@@ -536,11 +531,10 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  	chan->sequence = 0;
  
  	chan->kthread_start_capture = kthread_run(tegra20_chan_capture_kthread_start,
-@@ -668,6 +853,345 @@ const struct tegra_vi_soc tegra20_vi_soc = {
- 	.has_h_v_flip = true,
+@@ -669,6 +854,345 @@ const struct tegra_vi_soc tegra20_vi_soc
  };
  
-+/* --------------------------------------------------------------------------
+ /* --------------------------------------------------------------------------
 + * MIPI Calibration
 + */
 +static int tegra20_start_pad_calibration(struct tegra_mipi_device *mipi)
@@ -879,10 +873,11 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
 +	.num_clks = ARRAY_SIZE(tegra30_csi_clks),
 +};
 +
- /* --------------------------------------------------------------------------
++/* --------------------------------------------------------------------------
   * VIP
   */
-@@ -687,10 +1211,11 @@ static int tegra20_vip_start_streaming(struct tegra_vip_channel *vip_chan)
+ 
+@@ -687,10 +1211,11 @@ static int tegra20_vip_start_streaming(s
  	enum tegra_vi_out output_channel = (data_type == TEGRA_IMAGE_DT_RAW8 ||
  					    data_type == TEGRA_IMAGE_DT_RAW10) ?
  					    TEGRA_VI_OUT_2 : TEGRA_VI_OUT_1;
@@ -896,7 +891,7 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  
  	tegra20_vi_write(vi_chan, TEGRA_VI_VI_CORE_CONTROL, 0);
  
-@@ -723,6 +1248,11 @@ static int tegra20_vip_start_streaming(struct tegra_vip_channel *vip_chan)
+@@ -723,6 +1248,11 @@ static int tegra20_vip_start_streaming(s
  
  	tegra20_vi_write(vi_chan, TEGRA_VI_CAMERA_CONTROL, VI_CAMERA_CONTROL_STOP_CAPTURE);
  
@@ -909,10 +904,9 @@ index 1b8f2a2213f241..e513e6ccb776fd 100644
  }
  
 diff --git a/drivers/staging/media/tegra-video/vi.h b/drivers/staging/media/tegra-video/vi.h
-index bfadde8858d4fc..46328e488aa384 100644
 --- a/drivers/staging/media/tegra-video/vi.h
 +++ b/drivers/staging/media/tegra-video/vi.h
-@@ -125,7 +125,6 @@ struct tegra_vi {
+@@ -127,7 +127,6 @@ struct tegra_vi {
   *		frame through host1x syncpoint counters (On Tegra20 used for the
   *              OUT_1 syncpt)
   * @sp_incr_lock: protects cpu syncpoint increment.
@@ -920,7 +914,7 @@ index bfadde8858d4fc..46328e488aa384 100644
   *
   * @kthread_start_capture: kthread to start capture of single frame when
   *		vb buffer is available. This thread programs VI CSI hardware
-@@ -188,7 +187,6 @@ struct tegra_vi_channel {
+@@ -190,7 +189,6 @@ struct tegra_vi_channel {
  	struct host1x_syncpt *mw_ack_sp[GANG_PORTS_MAX];
  	/* protects the cpu syncpoint increment */
  	spinlock_t sp_incr_lock[GANG_PORTS_MAX];
@@ -929,10 +923,9 @@ index bfadde8858d4fc..46328e488aa384 100644
  	struct task_struct *kthread_start_capture;
  	wait_queue_head_t start_wait;
 diff --git a/drivers/staging/media/tegra-video/video.c b/drivers/staging/media/tegra-video/video.c
-index b009ceefda149b..2e84385708bac5 100644
 --- a/drivers/staging/media/tegra-video/video.c
 +++ b/drivers/staging/media/tegra-video/video.c
-@@ -125,6 +125,12 @@ static const struct of_device_id host1x_video_subdevs[] = {
+@@ -125,6 +125,12 @@ static const struct of_device_id host1x_
  	{ .compatible = "nvidia,tegra20-vip", },
  	{ .compatible = "nvidia,tegra20-vi", },
  #endif
@@ -947,4 +940,3 @@ index b009ceefda149b..2e84385708bac5 100644
  	{ .compatible = "nvidia,tegra210-vi", },
 -- 
 cgit 1.3.1-korg
-

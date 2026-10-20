@@ -13,6 +13,10 @@ Tested-by: Jon Hunter <jonathanh@nvidia.com>
 Link: https://patch.msgid.link/20260123095346.1258556-4-sheetal@nvidia.com
 Signed-off-by: Mark Brown <broonie@kernel.org>
 ---
+ include/linux/regmap.h                | 14 ++++++++++++++
+ drivers/base/regmap/internal.h        |  3 +++
+ drivers/base/regmap/regmap.c          |  2 ++
+ drivers/base/regmap/regcache-flat.c   | 20 ++++++++++++++++++
  sound/soc/tegra/tegra186_asrc.c   | 1 +
  sound/soc/tegra/tegra186_dspk.c   | 1 +
  sound/soc/tegra/tegra210_admaif.c | 3 +++
@@ -27,8 +31,112 @@ Signed-off-by: Mark Brown <broonie@kernel.org>
  sound/soc/tegra/tegra210_ope.c    | 1 +
  sound/soc/tegra/tegra210_peq.c    | 1 +
  sound/soc/tegra/tegra210_sfc.c    | 1 +
- 14 files changed, 22 insertions(+)
+ 18 files changed, 61 insertions(+)
 
+diff --git a/include/linux/regmap.h b/include/linux/regmap.h
+index 00000000000000..11111111111111 100644
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -347,6 +347,10 @@
+  * @reg_defaults: Power on reset values for registers (for use with
+  *                register cache support).
+  * @num_reg_defaults: Number of elements in reg_defaults.
++ * @reg_default_cb: Optional callback to return default values for registers
++ *                  not listed in reg_defaults. This is only used for
++ *                  REGCACHE_FLAT population; drivers must ensure the readable_reg/
++ *                  writeable_reg callbacks are defined to handle holes.
+  *
+  * @read_flag_mask: Mask to be set in the top bytes of the register when doing
+  *                  a read.
+@@ -437,6 +441,8 @@
+ 	const struct regmap_access_table *rd_noinc_table;
+ 	const struct reg_default *reg_defaults;
+ 	unsigned int num_reg_defaults;
++	int (*reg_default_cb)(struct device *dev, unsigned int reg,
++			      unsigned int *def);
+ 	enum regcache_type cache_type;
+ 	const void *reg_defaults_raw;
+ 	unsigned int num_reg_defaults_raw;
+@@ -1278,6 +1284,14 @@
+ 	return regmap_update_bits_base(map, reg, mask, val, NULL, false, true);
+ }
+ 
++static inline int regmap_default_zero_cb(struct device *dev,
++					 unsigned int reg,
++					 unsigned int *def)
++{
++	*def = 0;
++	return 0;
++}
++
+ int regmap_get_val_bytes(struct regmap *map);
+ int regmap_get_max_register(struct regmap *map);
+ int regmap_get_reg_stride(struct regmap *map);
+diff --git a/drivers/base/regmap/internal.h b/drivers/base/regmap/internal.h
+index 00000000000000..11111111111111 100644
+--- a/drivers/base/regmap/internal.h
++++ b/drivers/base/regmap/internal.h
+@@ -117,6 +117,9 @@
+ 		    void *val_buf, size_t val_size);
+ 	int (*write)(void *context, const void *data, size_t count);
+ 
++	int (*reg_default_cb)(struct device *dev, unsigned int reg,
++			      unsigned int *val);
++
+ 	bool defer_caching;
+ 
+ 	unsigned long read_flag_mask;
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index 00000000000000..11111111111111 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -814,6 +814,7 @@
+ 	map->precious_reg = config->precious_reg;
+ 	map->writeable_noinc_reg = config->writeable_noinc_reg;
+ 	map->readable_noinc_reg = config->readable_noinc_reg;
++	map->reg_default_cb = config->reg_default_cb;
+ 	map->cache_type = config->cache_type;
+ 
+ 	spin_lock_init(&map->async_lock);
+@@ -1436,6 +1437,7 @@
+ 	map->precious_reg = config->precious_reg;
+ 	map->writeable_noinc_reg = config->writeable_noinc_reg;
+ 	map->readable_noinc_reg = config->readable_noinc_reg;
++	map->reg_default_cb = config->reg_default_cb;
+ 	map->cache_type = config->cache_type;
+ 
+ 	ret = regmap_set_name(map, config);
+diff --git a/drivers/base/regmap/regcache-flat.c b/drivers/base/regmap/regcache-flat.c
+index 00000000000000..11111111111111 100644
+--- a/drivers/base/regmap/regcache-flat.c
++++ b/drivers/base/regmap/regcache-flat.c
+@@ -40,6 +40,26 @@
+ 		cache[index] = map->reg_defaults[i].def;
+ 	}
+ 
++	if (map->reg_default_cb) {
++		unsigned int reg, value;
++		unsigned int stride = map->reg_stride ?: 1;
++
++		for (reg = 0; reg <= map->max_register; reg += stride) {
++			unsigned int index = regcache_flat_get_index(map, reg);
++
++			if (map->reg_default_cb(map->dev, reg, &value))
++				continue;
++			cache[index] = value;
++		}
++
++		for (i = 0; i < map->num_reg_defaults; i++) {
++			unsigned int reg = map->reg_defaults[i].reg;
++			unsigned int index = regcache_flat_get_index(map, reg);
++
++			cache[index] = map->reg_defaults[i].def;
++		}
++	}
++
+ 	return 0;
+ }
+ 
 diff --git a/sound/soc/tegra/tegra186_asrc.c b/sound/soc/tegra/tegra186_asrc.c
 index 2c0220e14a570d..d2a5ec7c54cc7d 100644
 --- a/sound/soc/tegra/tegra186_asrc.c

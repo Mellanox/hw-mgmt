@@ -15,12 +15,10 @@ Signed-off-by: Sheetal <sheetal@nvidia.com>
 Link: https://patch.msgid.link/20250512051747.1026770-10-sheetal@nvidia.com
 Signed-off-by: Mark Brown <broonie@kernel.org>
 ---
- sound/soc/tegra/tegra210_adx.c | 229 +++++++++++++++++++++++++++++++--
- sound/soc/tegra/tegra210_adx.h |  36 +++++-
+ sound/soc/tegra/tegra210_adx.c | 229
+ sound/soc/tegra/tegra210_adx.h | 36
  2 files changed, 248 insertions(+), 17 deletions(-)
 
-diff --git a/sound/soc/tegra/tegra210_adx.c b/sound/soc/tegra/tegra210_adx.c
-index b6c798baedeaa..ad7cd86550478 100644
 --- a/sound/soc/tegra/tegra210_adx.c
 +++ b/sound/soc/tegra/tegra210_adx.c
 @@ -9,6 +9,7 @@
@@ -31,7 +29,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  #include <linux/platform_device.h>
  #include <linux/pm_runtime.h>
  #include <linux/regmap.h>
-@@ -32,21 +33,37 @@ static const struct reg_default tegra210_adx_reg_defaults[] = {
+@@ -32,21 +33,37 @@ static const struct reg_default tegra210
  	{ TEGRA210_ADX_CFG_RAM_CTRL, 0x00004000},
  };
  
@@ -74,7 +72,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  }
  
  static int tegra210_adx_startup(struct snd_pcm_substream *substream,
-@@ -117,7 +134,7 @@ static int tegra210_adx_set_audio_cif(struct snd_soc_dai *dai,
+@@ -117,7 +134,7 @@ static int tegra210_adx_set_audio_cif(st
  
  	memset(&cif_conf, 0, sizeof(struct tegra_cif_conf));
  
@@ -83,7 +81,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  		return -EINVAL;
  
  	switch (format) {
-@@ -140,7 +157,10 @@ static int tegra210_adx_set_audio_cif(struct snd_soc_dai *dai,
+@@ -139,7 +156,10 @@ static int tegra210_adx_set_audio_cif(st
  	cif_conf.audio_bits = audio_bits;
  	cif_conf.client_bits = audio_bits;
  
@@ -95,7 +93,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  
  	return 0;
  }
-@@ -169,7 +189,7 @@ static int tegra210_adx_get_byte_map(struct snd_kcontrol *kcontrol,
+@@ -168,7 +188,7 @@ static int tegra210_adx_get_byte_map(str
  	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
  	struct tegra210_adx *adx = snd_soc_component_get_drvdata(cmpnt);
  	struct soc_mixer_control *mc;
@@ -104,7 +102,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	int enabled;
  
  	mc = (struct soc_mixer_control *)kcontrol->private_value;
-@@ -198,7 +218,7 @@ static int tegra210_adx_put_byte_map(struct snd_kcontrol *kcontrol,
+@@ -197,7 +217,7 @@ static int tegra210_adx_put_byte_map(str
  {
  	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
  	struct tegra210_adx *adx = snd_soc_component_get_drvdata(cmpnt);
@@ -113,7 +111,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	int value = ucontrol->value.integer.value[0];
  	struct soc_mixer_control *mc =
  		(struct soc_mixer_control *)kcontrol->private_value;
-@@ -402,7 +422,90 @@ static struct snd_kcontrol_new tegra210_adx_controls[] = {
+@@ -397,7 +417,90 @@ static struct snd_kcontrol_new tegra210_
  	TEGRA210_ADX_BYTE_MAP_CTRL(63),
  };
  
@@ -204,7 +202,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	.dapm_widgets		= tegra210_adx_widgets,
  	.num_dapm_widgets	= ARRAY_SIZE(tegra210_adx_widgets),
  	.dapm_routes		= tegra210_adx_routes,
-@@ -460,6 +563,58 @@ static bool tegra210_adx_volatile_reg(struct device *dev,
+@@ -455,6 +558,58 @@ static bool tegra210_adx_volatile_reg(st
  	return false;
  }
  
@@ -263,7 +261,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  static const struct regmap_config tegra210_adx_regmap_config = {
  	.reg_bits		= 32,
  	.reg_stride		= 4,
-@@ -473,8 +628,40 @@ static const struct regmap_config tegra210_adx_regmap_config = {
+@@ -468,8 +623,40 @@ static const struct regmap_config tegra2
  	.cache_type		= REGCACHE_FLAT,
  };
  
@@ -305,7 +303,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	{},
  };
  MODULE_DEVICE_TABLE(of, tegra210_adx_of_match);
-@@ -483,6 +670,8 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
+@@ -478,6 +665,8 @@ static int tegra210_adx_platform_probe(s
  {
  	struct device *dev = &pdev->dev;
  	struct tegra210_adx *adx;
@@ -314,7 +312,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	void __iomem *regs;
  	int err;
  
-@@ -490,6 +679,10 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
+@@ -485,6 +674,10 @@ static int tegra210_adx_platform_probe(s
  	if (!adx)
  		return -ENOMEM;
  
@@ -325,7 +323,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	dev_set_drvdata(dev, adx);
  
  	regs = devm_platform_ioremap_resource(pdev, 0);
-@@ -497,7 +690,7 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
+@@ -492,7 +685,7 @@ static int tegra210_adx_platform_probe(s
  		return PTR_ERR(regs);
  
  	adx->regmap = devm_regmap_init_mmio(dev, regs,
@@ -334,7 +332,7 @@ index b6c798baedeaa..ad7cd86550478 100644
  	if (IS_ERR(adx->regmap)) {
  		dev_err(dev, "regmap init failed\n");
  		return PTR_ERR(adx->regmap);
-@@ -505,6 +698,20 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
+@@ -500,6 +693,20 @@ static int tegra210_adx_platform_probe(s
  
  	regcache_cache_only(adx->regmap, true);
  
@@ -355,8 +353,6 @@ index b6c798baedeaa..ad7cd86550478 100644
  	err = devm_snd_soc_register_component(dev, &tegra210_adx_cmpnt,
  					      tegra210_adx_dais,
  					      ARRAY_SIZE(tegra210_adx_dais));
-diff --git a/sound/soc/tegra/tegra210_adx.h b/sound/soc/tegra/tegra210_adx.h
-index d7dcb64979785..176a4e40de0a7 100644
 --- a/sound/soc/tegra/tegra210_adx.h
 +++ b/sound/soc/tegra/tegra210_adx.h
 @@ -1,8 +1,7 @@
@@ -417,3 +413,5 @@ index d7dcb64979785..176a4e40de0a7 100644
  };
  
  #endif
+-- 
+cgit 1.3.1-korg

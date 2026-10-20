@@ -13,7 +13,8 @@ Signed-off-by: Linus Walleij <linusw@kernel.org>
  drivers/pinctrl/tegra/Kconfig            |   10 +
  drivers/pinctrl/tegra/Makefile           |    1 +
  drivers/pinctrl/tegra/pinctrl-tegra264.c | 2216 ++++++++++++++++++++++
- 3 files changed, 2227 insertions(+)
+ drivers/soc/tegra/Kconfig                |    9 +
+ 4 files changed, 2236 insertions(+)
  create mode 100644 drivers/pinctrl/tegra/pinctrl-tegra264.c
 
 diff --git a/drivers/pinctrl/tegra/Kconfig b/drivers/pinctrl/tegra/Kconfig
@@ -41,7 +42,8 @@ diff --git a/drivers/pinctrl/tegra/Makefile b/drivers/pinctrl/tegra/Makefile
 index 7614102..c515b4a 100644
 --- a/drivers/pinctrl/tegra/Makefile
 +++ b/drivers/pinctrl/tegra/Makefile
-@@ -8,4 +8,5 @@ obj-$(CONFIG_PINCTRL_TEGRA210)		+= pinctrl-tegra210.o
+@@ -8,5 +8,6 @@ obj-$(CONFIG_PINCTRL_TEGRA210)		+= pinctrl-tegra210.o
+ obj-$(CONFIG_PINCTRL_TEGRA186)		+= pinctrl-tegra186.o
  obj-$(CONFIG_PINCTRL_TEGRA194)		+= pinctrl-tegra194.o
  obj-$(CONFIG_PINCTRL_TEGRA234)		+= pinctrl-tegra234.o
  obj-$(CONFIG_PINCTRL_TEGRA238)		+= pinctrl-tegra238.o
@@ -2269,6 +2271,26 @@ index 0000000..5a0c91a
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("NVIDIA Corporation");
 +MODULE_DESCRIPTION("NVIDIA Tegra264 pinctrl driver");
+diff --git a/drivers/soc/tegra/Kconfig b/drivers/soc/tegra/Kconfig
+index a1b2c3d4e5f6..b2c3d4e5f607 100644
+--- a/drivers/soc/tegra/Kconfig
++++ b/drivers/soc/tegra/Kconfig
+@@ -148,6 +148,15 @@ config ARCH_TEGRA_241_SOC
+ 	bool "NVIDIA Tegra241 SoC"
+ 	help
+ 	  Enable support for the NVIDIA Tegra241 SoC.
++
++config ARCH_TEGRA_264_SOC
++	bool "NVIDIA Tegra264 SoC"
++	default ARCH_TEGRA
++	depends on !CPU_BIG_ENDIAN
++	select MAILBOX
++	select SOC_TEGRA_PMC
++	help
++	  Enable support for the NVIDIA Tegra264 SoC.
+ 
+ endif
+ endif
 -- 
 2.34.1
 

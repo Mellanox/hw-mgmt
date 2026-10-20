@@ -10,18 +10,21 @@ This requires four changes:
 * Adding a exit routine to handle cleaning up the driver
 * Populating module license
 
+On Linux 6.12, cpufreq_dt_pdev_register() is not present, so keep
+platform_device_register_full() for the cpufreq-dt child device.
+
 Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
 Signed-off-by: Viresh Kumar <viresh.kumar@linaro.org>
 ---
  drivers/cpufreq/Kconfig.arm        |  2 +-
- drivers/cpufreq/tegra124-cpufreq.c | 44 +++++++++++++++++++++++-------
- 2 files changed, 35 insertions(+), 11 deletions(-)
+ drivers/cpufreq/tegra124-cpufreq.c | 37 ++++++++++++++++++++++++------
+ 2 files changed, 31 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/cpufreq/Kconfig.arm b/drivers/cpufreq/Kconfig.arm
 index 4346629d3bc09..9be0503df55a0 100644
 --- a/drivers/cpufreq/Kconfig.arm
 +++ b/drivers/cpufreq/Kconfig.arm
-@@ -237,7 +237,7 @@ config ARM_TEGRA20_CPUFREQ
+@@ -231,7 +231,7 @@ config ARM_TEGRA20_CPUFREQ
  	  This adds the CPUFreq driver support for Tegra20/30 SOCs.
  
  config ARM_TEGRA124_CPUFREQ
@@ -34,39 +37,16 @@ diff --git a/drivers/cpufreq/tegra124-cpufreq.c b/drivers/cpufreq/tegra124-cpufr
 index 514146d98bca2..b8bccde8b298a 100644
 --- a/drivers/cpufreq/tegra124-cpufreq.c
 +++ b/drivers/cpufreq/tegra124-cpufreq.c
-@@ -16,6 +16,10 @@
+@@ -16,6 +16,8 @@
  #include <linux/pm_opp.h>
  #include <linux/types.h>
  
-+#include "cpufreq-dt.h"
-+
 +static struct platform_device *tegra124_cpufreq_pdev;
 +
  struct tegra124_cpufreq_priv {
  	struct clk *cpu_clk;
  	struct clk *pllp_clk;
-@@ -55,7 +59,6 @@ static int tegra124_cpufreq_probe(struct platform_device *pdev)
- 	struct device_node *np __free(device_node) = of_cpu_device_node_get(0);
- 	struct tegra124_cpufreq_priv *priv;
- 	struct device *cpu_dev;
--	struct platform_device_info cpufreq_dt_devinfo = {};
- 	int ret;
- 
- 	if (!np)
-@@ -95,11 +98,7 @@ static int tegra124_cpufreq_probe(struct platform_device *pdev)
- 	if (ret)
- 		goto out_put_pllp_clk;
- 
--	cpufreq_dt_devinfo.name = "cpufreq-dt";
--	cpufreq_dt_devinfo.parent = &pdev->dev;
--
--	priv->cpufreq_dt_pdev =
--		platform_device_register_full(&cpufreq_dt_devinfo);
-+	priv->cpufreq_dt_pdev = cpufreq_dt_pdev_register(&pdev->dev);
- 	if (IS_ERR(priv->cpufreq_dt_pdev)) {
- 		ret = PTR_ERR(priv->cpufreq_dt_pdev);
- 		goto out_put_pllp_clk;
-@@ -173,6 +172,21 @@ static int __maybe_unused tegra124_cpufreq_resume(struct device *dev)
+@@ -173,6 +175,21 @@ static int __maybe_unused tegra124_cpufreq_resume(struct device *dev)
  	return err;
  }
  
@@ -88,7 +68,7 @@ index 514146d98bca2..b8bccde8b298a 100644
  static const struct dev_pm_ops tegra124_cpufreq_pm_ops = {
  	SET_SYSTEM_SLEEP_PM_OPS(tegra124_cpufreq_suspend,
  				tegra124_cpufreq_resume)
-@@ -182,12 +196,12 @@ static struct platform_driver tegra124_cpufreq_platdrv = {
+@@ -182,12 +199,12 @@ static struct platform_driver tegra124_cpufreq_platdrv = {
  	.driver.name	= "cpufreq-tegra124",
  	.driver.pm	= &tegra124_cpufreq_pm_ops,
  	.probe		= tegra124_cpufreq_probe,
@@ -102,7 +82,7 @@ index 514146d98bca2..b8bccde8b298a 100644
  
  	if (!(of_machine_is_compatible("nvidia,tegra124") ||
  		of_machine_is_compatible("nvidia,tegra210")))
-@@ -201,15 +215,25 @@ static int __init tegra_cpufreq_init(void)
+@@ -201,15 +218,25 @@ static int __init tegra_cpufreq_init(void)
  	if (ret)
  		return ret;
  

@@ -130,8 +130,8 @@ index 9bea2ffb3b9e5b..939eb5462d0a8e 100644
 +		tdc->stream_id = stream_id;
 +	}
 +
- 	ret = devm_of_dma_controller_register(&pdev->dev, pdev->dev.of_node,
- 					      tegra_dma_of_xlate, tdma);
+ 	ret = of_dma_controller_register(pdev->dev.of_node,
+ 					 tegra_dma_of_xlate, tdma);
  	if (ret < 0) {
 -- 
 cgit 1.3.1-korg
