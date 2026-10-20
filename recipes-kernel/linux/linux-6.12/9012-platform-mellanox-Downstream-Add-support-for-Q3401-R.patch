@@ -311,7 +311,7 @@ index aa1116fcb..69c4bbb7d 100644
  	{
  		.label = "bios_safe_mode",
  		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
-@@ -8675,6 +8911,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8687,6 +8923,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_MVER_OFFSET:
@@ -319,7 +319,7 @@ index aa1116fcb..69c4bbb7d 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9844,14 +10081,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9856,14 +10093,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  			mlxplat_mlxcpld_xdr_pwr_nr_fixup[i];
  	}
  
