@@ -6,7 +6,7 @@
 # Comprehensive Test Suite for hw_management_lib.py
 # Tests all functions with simple, medium, and complex scenarios
 
-from hw_management_lib import HW_Mgmt_Logger, current_milli_time
+from hw_management_lib import HW_Mgmt_Logger, current_milli_time, run_shell_cmd
 import sys
 import os
 import pytest
@@ -14,6 +14,7 @@ import tempfile
 import shutil
 import threading
 import time
+import subprocess
 import syslog
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call, mock_open
@@ -119,6 +120,61 @@ class TestCurrentMilliTime:
         assert len(results) == 50
         assert all(isinstance(t, int) for t in results)
         assert all(t > 0 for t in results)
+
+
+class TestRunShellCmd:
+    """Tests for child output handling and cleanup."""
+
+    def test_captures_output_by_default(self):
+        """Callers that consume command output retain the PIPE behavior."""
+        proc = MagicMock()
+        proc.communicate.return_value = ("stdout\n", "stderr\n")
+        proc.returncode = 0
+
+        with patch("hw_management_lib.subprocess.Popen", return_value=proc) as popen:
+            rc, output = run_shell_cmd("echo test", shell=True)
+
+        assert (rc, output) == (0, "stdoutstderr")
+        popen.assert_called_once_with(
+            "echo test",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            start_new_session=True,
+        )
+
+    def test_discards_output_when_requested(self):
+        """Fire-and-forget callers must not buffer arbitrary child output."""
+        proc = MagicMock()
+        proc.communicate.return_value = (None, None)
+        proc.returncode = 0
+
+        with patch("hw_management_lib.subprocess.Popen", return_value=proc) as popen:
+            rc, output = run_shell_cmd("echo test", shell=True, capture_output=False)
+
+        assert (rc, output) == (0, "")
+        popen.assert_called_once_with(
+            "echo test",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            universal_newlines=True,
+            start_new_session=True,
+        )
+
+    def test_timeout_stops_child_process_group(self):
+        """A timeout requests process-group cleanup before reporting failure."""
+        proc = MagicMock()
+        proc.communicate.side_effect = subprocess.TimeoutExpired("echo test", 0.1)
+
+        with patch("hw_management_lib.subprocess.Popen", return_value=proc), \
+                patch("hw_management_lib._stop_process_group") as stop_process_group:
+            rc, output = run_shell_cmd("echo test", shell=True, timeout=0.1)
+
+        assert rc == -1
+        assert "timed out" in output
+        stop_process_group.assert_called_once_with(proc)
 
 
 class TestLoggerInitialization:
