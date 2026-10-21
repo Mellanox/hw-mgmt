@@ -1,11 +1,28 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** October 5, 2026
+**Last Updated:** October 13, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.13 - October 13, 2026
+
+#### Added: Management PHY reset nodes and recovery helper (#5190348, #5248970)
+
+**Affected platforms:** N51XX_LD platform family and N5240_LD (both nodes). SN5640 (HI171) and SN5610 (HI172): `sgmii_phy2_reset` only.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| System / Power Control | New section "Management PHY Reset": `sgmii_phy2_reset` (eth0) and `sgmii_phy_reset` (eth1) |
+| System / Power Control | New section "Management PHY Recovery Helper": `hw-management-phy-recover.sh [-d] [-t <seconds>] <eth0|eth1>`, exit codes 0 to 4, `-d` snapshot lines in `/var/log/hw-mgmt.trace.log`, collected by `hw-management-generate-dump.sh` |
+
+**Validation source:** `mlxplat_mlxcpld_l1_scale_out_regs_io_data` and `mlxplat_mlxcpld_ng800_hi171_regs_io_data` in the mlx-platform driver, `usr/usr/bin/hw-management-phy-recover.sh`.
+
+---
 
 ### Rev. 3.2.12 - October 5, 2026
 
