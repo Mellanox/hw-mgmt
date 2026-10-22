@@ -13,6 +13,9 @@
 # table. --os-type picks the NOS (nvos, opt, cumulus, sonic, dvs). The
 # deploy tool reads markers such as os[nvos] and skip[sonic] and, when
 # needed, takes the patch from recipes-kernel/linux/linux-<major.minor>/<nos>/.
+# An ARM (--arch arm64) point-release overlay at
+# linux-<major.minor>/<nos>/arm/<kver>/ overwrites linux-<major.minor>/<patch>.
+# x86 keeps linux-<major.minor>/<nos>/ only.
 #
 
 set -euo pipefail
@@ -46,6 +49,7 @@ DEPLOY_ARCH_SET=""
 THIRD_PARTY_PATCHES=()
 THIRD_PARTY_STRIPS=()
 TARBALL=""
+DEPLOY_SRC=""
 JOBS=""
 FORCE=0
 SKIP_BUILD=0
@@ -80,7 +84,11 @@ ${SERIES_NOTE}
 The status table decides which patches apply. --os-type selects the NOS.
 Patches marked for another NOS are skipped. A patch that the table ties to
 one NOS is taken from recipes-kernel/linux/linux-<major.minor>/<nos>/ when
-that directory is the one the deploy tool selects.
+that directory is the one the deploy tool selects (x86 and all-arch).
+An ARM (--arch arm64) point-release overlay at
+linux-<major.minor>/<nos>/arm/<kver>/ overwrites linux-<major.minor>/<patch>
+when that file exists. amd64 does not look under <arch>/<kver>/.
+Status marker kver[6.12.94] documents the overlay.
 
 Options may be placed before or after the three arguments.
 
@@ -113,6 +121,11 @@ Options:
   --config FILE    Starting .config, copied in before hw-mgmt kconfig flags
                    are merged. If omitted and this file exists, it is used:
                    <parent of build_path>/.config_<major.minor>
+                   If that file is missing, the closest older .config_X.Y is
+                   used: same major first (.config_7.2 for 7.3), then an older
+                   major (.config_6.12). kconfig_<major>_<minor>.txt is resolved
+                   the same way. A missing kconfig is mapped in a per-build
+                   folder under build_path, not in the shared hw-mgmt tree.
   --patch-table FILE
                    Status table. Default: Patch_Status_Table.txt under
                    recipes-kernel/linux/. A basename is looked up in that
@@ -126,10 +139,22 @@ Options:
                    --third-party-patches. kernel_build_${KERNEL_SERIES}_x_sonic_bmc.sh
                    passes Patch_BMC_Status_Table.txt.
   --tarball FILE   Use this source archive instead of downloading it.
+                   If omitted, linux-<version>.tar.xz is fetched from kernel.org.
+                   Linus releases are named linux-<major.minor>.tar.xz (no .0/.1).
+                   When the point-release archive is missing, the script tries
+                   linux-<major.minor>.0.tar.xz then linux-<major.minor>.tar.xz,
+                   locally under build_path first, then cdn.kernel.org and
+                   mirrors.edge.kernel.org. The archive is unpacked in a
+                   temporary directory, then moved to linux-<version>/. A
+                   sibling linux-<major.minor>/ tree in build_path is not
+                   overwritten. The unpacked Makefile VERSION/PATCHLEVEL/SUBLEVEL
+                   must match the requested major.minor. A Linus X.Y (SUBLEVEL 0)
+                   archive may stand in for X.Y.Z; a different series cannot.
   --jobs N         Parallel jobs for the first build. Default: 3/4 of nproc,
                    at least 1.
-  --force          Delete an existing linux-<version> tree and patches/
-                   under build_path before starting. The tarball is kept.
+  --force          Delete an existing linux-<version> tree, patches/, and
+                   deploy-src/ under build_path before starting. The tarball
+                   and any sibling linux-<major.minor>/ tree are kept.
   --skip-build     Import patches, then stop before olddefconfig and deb-pkg.
   --no-retry       Do not start a second build after a failure.
   --dry-run        Check arguments, the patch table, and host tools, then exit.
@@ -417,14 +442,320 @@ abspath_existing() {
 }
 
 download() {
-    local url=$1 dest=$2
+    local url=$1 dest=$2 tmp
+    tmp="${dest}.part"
+    rm -f "$tmp"
     if command -v wget >/dev/null 2>&1; then
-        wget -c -O "$dest" "$url"
+        wget -O "$tmp" "$url" || { rm -f "$tmp"; return 1; }
     elif command -v curl >/dev/null 2>&1; then
-        curl -fL --retry 3 -C - -o "$dest" "$url"
+        curl -fL --retry 3 -o "$tmp" "$url" || { rm -f "$tmp"; return 1; }
     else
         die "wget or curl is required to download $url"
     fi
+    mv "$tmp" "$dest"
+}
+
+# kernel.org ships Linus X.Y as linux-X.Y.tar.xz, not linux-X.Y.0.tar.xz.
+tarball_archive_names() {
+    printf '%s\n' "linux-${KERNEL_VER}.tar.xz"
+    if [[ "${KERNEL_VER##*.}" != "0" ]]; then
+        printf '%s\n' "linux-${KERNEL_BASE}.0.tar.xz"
+    fi
+    printf '%s\n' "linux-${KERNEL_BASE}.tar.xz"
+}
+
+tarball_mirror_bases() {
+    printf '%s\n' \
+        "https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_SERIES}.x" \
+        "https://mirrors.edge.kernel.org/pub/linux/kernel/v${KERNEL_SERIES}.x"
+}
+
+unique_lines() {
+    awk 'NF && !seen[$0]++'
+}
+
+local_tarball_exists() {
+    local name dest
+    while IFS= read -r name; do
+        dest="$BUILD_PATH/$name"
+        if [[ -f "$dest" ]] && xz -t "$dest" >/dev/null 2>&1; then
+            return 0
+        fi
+    done < <(tarball_archive_names | unique_lines)
+    return 1
+}
+
+# Prefer a usable local archive, then download the first kernel.org name that exists.
+resolve_kernel_tarball() {
+    local name dest url mirror used_fallback=0
+
+    if [[ -n "$TARBALL" ]]; then
+        ARCHIVE_NAME=$(basename "$TARBALL")
+        return 0
+    fi
+
+    while IFS= read -r name; do
+        dest="$BUILD_PATH/$name"
+        if [[ -f "$dest" ]] && xz -t "$dest"; then
+            if [[ "$name" != "linux-${KERNEL_VER}.tar.xz" ]]; then
+                warn "linux-${KERNEL_VER}.tar.xz not present; using local $dest"
+            else
+                info "using existing $dest"
+            fi
+            TARBALL=$dest
+            ARCHIVE_NAME=$name
+            return 0
+        fi
+        if [[ -f "$dest" ]]; then
+            warn "removing corrupt $dest"
+            rm -f "$dest"
+        fi
+    done < <(tarball_archive_names | unique_lines)
+
+    while IFS= read -r name; do
+        dest="$BUILD_PATH/$name"
+        [[ "$name" == "linux-${KERNEL_VER}.tar.xz" ]] || used_fallback=1
+        while IFS= read -r mirror; do
+            url="${mirror}/${name}"
+            info "downloading $url"
+            if download "$url" "$dest" && xz -t "$dest"; then
+                if [[ "$used_fallback" -eq 1 ]]; then
+                    warn "linux-${KERNEL_VER}.tar.xz not on kernel.org; using $name"
+                fi
+                TARBALL=$dest
+                ARCHIVE_NAME=$name
+                return 0
+            fi
+            rm -f "$dest"
+        done < <(tarball_mirror_bases)
+    done < <(tarball_archive_names | unique_lines)
+
+    die "failed to download linux-${KERNEL_VER}.tar.xz (also tried linux-${KERNEL_BASE}.tar.xz)"
+}
+
+# Auto-fetched names are linux-X.Y.Z, linux-X.Y.0, or linux-X.Y.
+# --tarball may use another filename; the unpacked Makefile is still checked.
+check_archive_filename() {
+    local name allowed
+    name=$(basename "$TARBALL")
+    while IFS= read -r allowed; do
+        if [[ "$name" == "$allowed" ]]; then
+            return 0
+        fi
+    done < <(tarball_archive_names | unique_lines)
+    if [[ "$USER_TARBALL" -eq 1 ]]; then
+        warn "tarball name $name is not linux-${KERNEL_VER}.tar.xz; checking the unpacked Makefile"
+        return 0
+    fi
+    die "unexpected archive name $name for kernel ${KERNEL_VER}"
+}
+
+makefile_field() {
+    local makefile=$1 field=$2
+    awk -F '[[:space:]]*=[[:space:]]*' -v field="$field" '
+        $1 == field { gsub(/[[:space:]]/, "", $2); print $2; exit }
+    ' "$makefile"
+}
+
+# Reject an unrelated tree renamed to linux-<requested>/. Linus X.Y (SUBLEVEL 0)
+# is the only allowed stand-in for requested X.Y.Z.
+check_extracted_kernel_release() {
+    local dir=$1
+    local top makefile major minor sub extra found req_major req_minor req_sub
+    top=$(basename "$dir")
+    makefile="$dir/Makefile"
+    if [[ ! -f "$makefile" ]]; then
+        printf 'error: archive has no Makefile in %s\n' "$top" >&2
+        return 1
+    fi
+    case "$top" in
+        "linux-${KERNEL_VER}"|"linux-${KERNEL_BASE}"|"linux-${KERNEL_BASE}.0") ;;
+        *)
+            printf 'error: archive unpacked as %s; expected linux-%s or linux-%s[.0]\n' \
+                "$top" "$KERNEL_VER" "$KERNEL_BASE" >&2
+            return 1
+            ;;
+    esac
+    major=$(makefile_field "$makefile" VERSION)
+    minor=$(makefile_field "$makefile" PATCHLEVEL)
+    sub=$(makefile_field "$makefile" SUBLEVEL)
+    extra=$(makefile_field "$makefile" EXTRAVERSION)
+    if [[ -z "$major" || -z "$minor" || -z "$sub" ]]; then
+        printf 'error: cannot read VERSION/PATCHLEVEL/SUBLEVEL from %s\n' "$makefile" >&2
+        return 1
+    fi
+    found="${major}.${minor}.${sub}"
+    req_major=${KERNEL_BASE%.*}
+    req_minor=${KERNEL_BASE#*.}
+    req_sub=${KERNEL_VER##*.}
+    if [[ -n "$extra" ]]; then
+        printf 'error: archive is Linux %s%s, requested released %s\n' "$found" "$extra" "$KERNEL_VER" >&2
+        return 1
+    fi
+    if [[ "$major" != "$req_major" || "$minor" != "$req_minor" ]]; then
+        printf 'error: archive is Linux %s, requested %s\n' "$found" "$KERNEL_VER" >&2
+        return 1
+    fi
+    if [[ "$sub" == "$req_sub" ]]; then
+        info "archive release $found matches ${KERNEL_VER}"
+        return 0
+    fi
+    if [[ "$sub" == "0" && "$req_sub" != "0" ]]; then
+        warn "archive is Linux ${found} (Linus ${major}.${minor}); requested ${KERNEL_VER}"
+        return 0
+    fi
+    printf 'error: archive is Linux %s, requested %s\n' "$found" "$KERNEL_VER" >&2
+    return 1
+}
+
+# Unpack into a fresh directory, then rename to linux-<version>/.
+# Direct extract into BUILD_PATH would overwrite a sibling linux-X.Y/ tree
+# (Linus archives unpack as linux-X.Y/, while SRC_DIR is linux-X.Y.Z/).
+extract_kernel_tarball() {
+    local unpack extracted path nullglob_was_off=0
+    local -a tops=()
+    info "extracting $TARBALL"
+    unpack=$(mktemp -d "$BUILD_PATH/unpack.XXXXXX") || die "cannot create unpack directory"
+    if ! tar -xf "$TARBALL" -C "$unpack"; then
+        rm -rf "$unpack"
+        die "failed to extract $TARBALL"
+    fi
+    shopt -q nullglob || nullglob_was_off=1
+    shopt -s nullglob
+    for path in "$unpack"/*; do
+        tops+=("$path")
+    done
+    if [[ "$nullglob_was_off" -eq 1 ]]; then
+        shopt -u nullglob
+    fi
+    if [[ ${#tops[@]} -ne 1 || ! -d "${tops[0]}" ]]; then
+        rm -rf "$unpack"
+        die "archive did not contain a single source directory"
+    fi
+    extracted=${tops[0]}
+    if ! check_extracted_kernel_release "$extracted"; then
+        rm -rf "$unpack"
+        die "archive release does not match requested kernel ${KERNEL_VER}"
+    fi
+    if [[ -e "$SRC_DIR" ]]; then
+        rm -rf "$unpack"
+        die "output already exists: $SRC_DIR (pass --force to replace linux-${KERNEL_VER} and patches/)"
+    fi
+    if [[ "$(basename "$extracted")" != "linux-${KERNEL_VER}" ]]; then
+        info "archive unpacked as $(basename "$extracted"); moving to linux-${KERNEL_VER}"
+    fi
+    if ! mv "$extracted" "$SRC_DIR"; then
+        rm -rf "$unpack"
+        die "failed to move $(basename "$extracted") to $SRC_DIR"
+    fi
+    rm -rf "$unpack"
+}
+
+# <parent>/.config_7.3, then .config_7.2 .. .config_7.0, then older majors.
+resolve_default_config() {
+    local parent major minor i candidate f bn maj min
+    local best="" best_maj=-1 best_min=-1
+    parent=$(dirname "$BUILD_PATH")
+    major=${KERNEL_BASE%.*}
+    minor=${KERNEL_BASE#*.}
+    DEFAULT_CONFIG="$parent/.config_${KERNEL_BASE}"
+    [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || return 0
+    for ((i=minor; i>=0; i--)); do
+        candidate="$parent/.config_${major}.${i}"
+        if [[ -f "$candidate" ]]; then
+            if [[ "$i" -ne "$minor" ]]; then
+                warn "no .config_${KERNEL_BASE}; using closest $candidate"
+            fi
+            DEFAULT_CONFIG=$candidate
+            return 0
+        fi
+    done
+    local nullglob_was_off=0
+    shopt -q nullglob || nullglob_was_off=1
+    shopt -s nullglob
+    for f in "$parent"/.config_*.*; do
+        bn=$(basename "$f")
+        if [[ "$bn" =~ ^\.config_([0-9]+)\.([0-9]+)$ ]]; then
+            maj=${BASH_REMATCH[1]}
+            min=${BASH_REMATCH[2]}
+            if (( maj > major || (maj == major && min >= minor) )); then
+                continue
+            fi
+            if (( maj > best_maj || (maj == best_maj && min > best_min) )); then
+                best=$f
+                best_maj=$maj
+                best_min=$min
+            fi
+        fi
+    done
+    if [[ "$nullglob_was_off" -eq 1 ]]; then
+        shopt -u nullglob
+    fi
+    if [[ -n "$best" ]]; then
+        warn "no .config_${KERNEL_BASE}; using closest $best"
+        DEFAULT_CONFIG=$best
+    fi
+}
+
+# Newest kconfig_X_Y.txt with version < requested. Same major wins (7.2 over 6.12).
+find_closest_kconfig() {
+    local want_major=$1 want_minor=$2
+    local path name major minor
+    local -a same=() other=()
+    [[ -d "$LINUX_RECIPES" ]] || return 1
+    for path in "$LINUX_RECIPES"/kconfig_*.txt; do
+        [[ -f "$path" ]] || continue
+        name=$(basename "$path")
+        if [[ "$name" =~ ^kconfig_([0-9]+)_([0-9]+)\.txt$ ]]; then
+            major=${BASH_REMATCH[1]}
+            minor=${BASH_REMATCH[2]}
+            if (( major > want_major || (major == want_major && minor >= want_minor) )); then
+                continue
+            fi
+            if (( major == want_major )); then
+                same+=("${major}.${minor} ${path}")
+            else
+                other+=("${major}.${minor} ${path}")
+            fi
+        fi
+    done
+    if [[ ${#same[@]} -gt 0 ]]; then
+        printf '%s\n' "${same[@]}" | sort -V | tail -1 | awk '{print $2}'
+        return 0
+    fi
+    if [[ ${#other[@]} -gt 0 ]]; then
+        printf '%s\n' "${other[@]}" | sort -V | tail -1 | awk '{print $2}'
+        return 0
+    fi
+    return 1
+}
+
+# Older deploy.py only opens kconfig_<major>_<minor>.txt. Map the closest
+# file under build_path/deploy-src so concurrent builds do not write or
+# delete kconfig in the shared hw-mgmt checkout.
+prepare_deploy_src() {
+    local major minor exact closest path name
+    major=${KERNEL_BASE%.*}
+    minor=${KERNEL_BASE#*.}
+    exact="$LINUX_RECIPES/kconfig_${major}_${minor}.txt"
+    DEPLOY_SRC="$LINUX_RECIPES"
+    if [[ -f "$exact" ]]; then
+        return 0
+    fi
+    closest=$(find_closest_kconfig "$major" "$minor" || true)
+    if [[ -z "$closest" || ! -f "$closest" ]]; then
+        warn "no $(basename "$exact") and no older kconfig_*.txt; deploy will not merge flags"
+        return 0
+    fi
+    DEPLOY_SRC="$BUILD_PATH/deploy-src"
+    rm -rf "$DEPLOY_SRC"
+    mkdir -p "$DEPLOY_SRC"
+    for path in "$LINUX_RECIPES"/*; do
+        name=$(basename "$path")
+        ln -s "$path" "$DEPLOY_SRC/$name"
+    done
+    ln -s "$closest" "$DEPLOY_SRC/kconfig_${major}_${minor}.txt"
+    warn "no $(basename "$exact"); deploy src uses closest $(basename "$closest")"
 }
 
 require_series_patches() {
@@ -481,10 +812,15 @@ list_third_party_patches() {
 }
 
 run_deploy() {
-    local table=$1 series=$2
+    local table=$1 series=$2 src_folder
+    # Older deploy.py does src_folder + "./linux-<version>"; a path without
+    # a trailing slash becomes deploy-src./linux-<version> and copies nothing.
+    src_folder="${DEPLOY_SRC:-$LINUX_RECIPES}"
+    src_folder="${src_folder%/}/"
     info "selecting patches from $(basename "$table")"
     python3 "$DEPLOY" \
         --kernel_version "$KERNEL_VER" \
+        --src_folder "$src_folder" \
         --patch_table "$table" \
         --dst_candidate_folder "$PATCH_DIR/" \
         --series_file "$series" \
@@ -806,7 +1142,7 @@ fi
 SRC_DIR="$BUILD_PATH/linux-${KERNEL_VER}"
 PATCH_DIR="$BUILD_PATH/patches"
 SERIES_FILE="$PATCH_DIR/series"
-DEFAULT_CONFIG="$(dirname "$BUILD_PATH")/.config_${KERNEL_BASE}"
+resolve_default_config
 
 case "$BUILD_PATH/" in
     "$HW_MGMT_PATH"/*)
@@ -820,7 +1156,7 @@ need_cmd git
 need_cmd stg
 need_cmd python3
 need_cmd make
-if [[ -z "$TARBALL" && ! -f "$BUILD_PATH/linux-${KERNEL_VER}.tar.xz" ]]; then
+if [[ -z "$TARBALL" ]] && ! local_tarball_exists; then
     if ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
         die "wget or curl is required to download the kernel"
     fi
@@ -861,6 +1197,22 @@ if [[ -n "$BMC_PATCH_TABLE" ]]; then
     info "bmc table:   $BMC_PATCH_TABLE"
 fi
 info "jobs:        $JOBS"
+if [[ -n "$TARBALL" ]]; then
+    info "tarball:     $TARBALL"
+else
+    info "tarball try: $(tarball_archive_names | unique_lines | awk 'NR>1{printf ", "} {printf "%s", $0}')"
+fi
+kconfig_exact="$LINUX_RECIPES/kconfig_${KERNEL_BASE%.*}_${KERNEL_BASE#*.}.txt"
+if [[ -f "$kconfig_exact" ]]; then
+    info "kconfig:     $kconfig_exact"
+else
+    kconfig_closest=$(find_closest_kconfig "${KERNEL_BASE%.*}" "${KERNEL_BASE#*.}" || true)
+    if [[ -n "$kconfig_closest" ]]; then
+        info "kconfig:     missing $(basename "$kconfig_exact"), closest $kconfig_closest"
+    else
+        info "kconfig:     missing $(basename "$kconfig_exact") (no older kconfig_*.txt)"
+    fi
+fi
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
     info "dry-run: not downloading, patching, or building"
@@ -870,37 +1222,18 @@ fi
 if [[ -d "$SRC_DIR" || -d "$PATCH_DIR" ]]; then
     if [[ "$FORCE" -eq 1 ]]; then
         info "removing existing $SRC_DIR and $PATCH_DIR"
-        rm -rf "$SRC_DIR" "$PATCH_DIR"
+        rm -rf "$SRC_DIR" "$PATCH_DIR" "$BUILD_PATH/deploy-src"
     else
         die "output already exists under $BUILD_PATH (pass --force to replace linux-${KERNEL_VER} and patches/)"
     fi
 fi
 
-ARCHIVE_NAME="linux-${KERNEL_VER}.tar.xz"
 USER_TARBALL=0
 if [[ -n "$TARBALL" ]]; then
     USER_TARBALL=1
 fi
-if [[ -z "$TARBALL" ]]; then
-    TARBALL="$BUILD_PATH/$ARCHIVE_NAME"
-fi
-if [[ -f "$TARBALL" ]] && ! xz -t "$TARBALL"; then
-    if [[ "$USER_TARBALL" -eq 1 ]]; then
-        die "tarball failed xz check: $TARBALL"
-    fi
-    warn "removing corrupt $TARBALL"
-    rm -f "$TARBALL"
-fi
-if [[ ! -f "$TARBALL" ]]; then
-    url="https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_SERIES}.x/${ARCHIVE_NAME}"
-    info "downloading $url"
-    if ! download "$url" "$TARBALL"; then
-        rm -f "$TARBALL"
-        die "failed to download $url"
-    fi
-else
-    info "using existing $TARBALL"
-fi
+resolve_kernel_tarball
+check_archive_filename
 info "checking $TARBALL"
 if ! xz -t "$TARBALL"; then
     if [[ "$USER_TARBALL" -eq 0 ]]; then
@@ -908,9 +1241,7 @@ if ! xz -t "$TARBALL"; then
     fi
     die "tarball failed xz check: $TARBALL"
 fi
-info "extracting $TARBALL"
-tar -xf "$TARBALL" -C "$BUILD_PATH"
-[[ -d "$SRC_DIR" ]] || die "archive did not contain $SRC_DIR"
+extract_kernel_tarball
 
 mkdir -p "$PATCH_DIR"
 : >"$SERIES_FILE"
@@ -930,6 +1261,7 @@ elif [[ -f "$DEFAULT_CONFIG" ]]; then
     cp "$DEFAULT_CONFIG" "$SRC_DIR/.config"
 fi
 
+prepare_deploy_src
 run_deploy "$PATCH_TABLE" "$SERIES_FILE"
 require_series_patches "$SERIES_FILE" "$PATCH_DIR"
 import_series "$SERIES_FILE"
