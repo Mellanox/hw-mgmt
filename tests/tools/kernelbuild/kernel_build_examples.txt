@@ -44,8 +44,16 @@ Arguments:
   kernel_version   Upstream release, three numeric components.
                    6.x scripts require a 6.* version, for example 6.12.94.
                    7.x scripts require a 7.* version, for example 7.0.1.
-                   kernel.org ships the Linus 7.0 tree as linux-7.0.tar.xz,
-                   not linux-7.0.0.tar.xz; use a point release.
+                   kernel.org ships the Linus X.Y tree as linux-X.Y.tar.xz,
+                   not linux-X.Y.0.tar.xz. The script still takes a three-part
+                   version (7.3.1 or 7.3.0). If that archive 404s, it tries
+                   linux-X.Y.0.tar.xz then linux-X.Y.tar.xz, locally under
+                   build_path first, then cdn.kernel.org and
+                   mirrors.edge.kernel.org. The archive is unpacked in a
+                   temporary directory, then moved to linux-<version>/. A
+                   sibling linux-X.Y/ tree in build_path is left unchanged.
+                   The unpacked Makefile must be the requested major.minor;
+                   Linus X.Y (SUBLEVEL 0) may stand in for X.Y.Z.
 
 Options:
   -h, --help
@@ -73,6 +81,10 @@ Options:
   --config FILE    Starting .config, copied in before hw-mgmt kconfig flags
                    are merged. If omitted and this file exists, it is used:
                    <parent of build_path>/.config_<major.minor>
+                   If that file is missing, the closest older .config_X.Y
+                   is used (same major, then older major). kconfig_X_Y.txt
+                   is resolved the same way. A missing kconfig is mapped
+                   under build_path/deploy-src, not in the hw-mgmt tree.
   --patch-table FILE, --patch_table=FILE
                    Status table. Default: Patch_Status_Table.txt under
                    recipes-kernel/linux/. A basename is looked up in that
@@ -140,6 +152,8 @@ tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=
 
 Linux 7.x uses the same options. The version selects linux-7.<minor>/,
 kconfig_7_<minor>.txt, and the Kernel-7.<minor> status-table section.
+A 7.3.1 request downloads linux-7.3.tar.xz when linux-7.3.1.tar.xz is
+absent, and kconfig_7_3.txt falls back to kconfig_7_2.txt when missing.
 
 native x86_64:
 tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos
@@ -150,6 +164,9 @@ tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nv
 
 arm64, arm64 kconfig, default toolchain aarch64-linux-gnu-:
 tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos --arch arm64
+
+Linus 7.3 (no linux-7.3.1.tar.xz on kernel.org; script falls back to linux-7.3.tar.xz):
+tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.3.1 --os_type=nvos --arch arm64
 
 arm64, same build through the arm64 entry point:
 tests/tools/kernelbuild/kernel_build_7_x_arm.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos

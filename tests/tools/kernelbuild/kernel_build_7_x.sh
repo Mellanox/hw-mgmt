@@ -9,6 +9,8 @@
 # Patch selection uses the Kernel-7.<minor> section, and the deploy tool
 # reads recipes-kernel/linux/linux-7.<minor>/ and kconfig_7_<minor>.txt
 # (for example linux-7.0/ and kconfig_7_0.txt).
+# Missing linux-7.3.1.tar.xz falls back to linux-7.3.tar.xz. Missing
+# kconfig_7_3.txt falls back to the closest older kconfig_*.txt.
 #
 
 set -euo pipefail
