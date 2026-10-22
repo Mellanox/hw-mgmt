@@ -747,6 +747,7 @@ Kernel-6.1
 |8012-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
 |8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
 |8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
+|8015-hwmon-pmbus-mp2975-Get-vout-fault-limits-dynamically.patch  |                    | Downstream accepted                      |            | Fix false vout over-voltage report (SN5600)    |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
@@ -857,6 +858,7 @@ Kernel-6.12
 |8012-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
 |8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
 |8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
+|8015-hwmon-pmbus-mp2975-Get-vout-fault-limits-dynamically.patch  |                    | Downstream accepted                      |            | Fix false vout over-voltage report (SN5600)    |
 |9001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Rejected                                 |            | Add dedicated match for QMB8700                |
 |9002-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9003-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
