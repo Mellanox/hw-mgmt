@@ -23,7 +23,7 @@ import pdb
 #############################
 # pylint: disable=c0301,W0105
 
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 
 
 class CONST(object):
@@ -36,6 +36,12 @@ class CONST(object):
                            "cumulus": "./linux-{kver}/cumulus",
                            "nvos": "./linux-{kver}/nvos",
                            "dvs": "./linux-{kver}/dvs"}
+    # ARM point-release overlay dir names. Used only for --arch arm64.
+    # x86 keeps linux-<major.minor>/<nos>/ (os[...]). amd64/aspeed reserved for later.
+    PATCH_ARCH_FOLDERS = {"amd64": "amd64",
+                          "arm64": "arm",
+                          "aspeed": "aspeed"}
+    ARM_KVER_OVERLAY_ARCHES = ("arm64",)
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
@@ -291,15 +297,48 @@ def skip_patch_filter(patch, accepted_folder, candidate_folder, kver):
 # ----------------------------------------------------------------------
 
 
-def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder, kver, nos=None):
+def resolve_patch_src(src_folder, patch_name, kver, kver_major, nos, os_list, arch, kver_list):
+    """Pick a NOS or ARM point-release overlay when present, else linux-x.y.
+
+    Order:
+      1. ARM (--arch arm64) only: linux-<major.minor>/<nos>/<arch>/<kver>/<patch>
+         (<arch> folder is arm). Overwrites linux-x.y/<patch> for that NOS/kver.
+      2. linux-<major.minor>/<nos>/<patch> when status has os[<nos>]
+         (existing x86 and all-arch NOS copy; amd64 does not walk <arch>/<kver>/).
+      3. linux-<major.minor>/<patch>
+    kver[6.12.94] documents an overlay; a matching file is also auto-selected.
+    """
+    base = os.path.join(src_folder, "linux-{}".format(kver_major))
+    candidates = []
+    nos_ok = nos and nos != "None" and nos in CONST.PATCH_OS_SUBFOLDERS and nos != "default"
+    use_arm_kver_overlay = (
+        arch in CONST.ARM_KVER_OVERLAY_ARCHES and
+        nos_ok and
+        ((not kver_list) or (kver in kver_list))
+    )
+    if use_arm_kver_overlay:
+        arch_folder = CONST.PATCH_ARCH_FOLDERS.get(arch, "arm")
+        candidates.append(os.path.join(base, nos, arch_folder, kver, patch_name))
+    if nos in os_list and nos in CONST.PATCH_OS_SUBFOLDERS:
+        candidates.append(os.path.join(base, nos, patch_name))
+    candidates.append(os.path.join(base, patch_name))
+
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return candidates[-1]
+
+
+def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder, kver, nos=None, arch=None):
     kver_major = ".".join(kver.split('.')[0:2])
 
     for patch in patch_list:
         patch_status = patch[CONST.STATUS]
-        os_folder = CONST.PATCH_OS_SUBFOLDERS["default"]
         take_list = patch_status.get(CONST.TAKE_PATCH, [])
         skip_list = patch_status.get(CONST.SKIP_PATCH, [])
         os_list = patch_status.get(CONST.OS_ALT_PATCH, [])
+        kver_list = [v.strip() for v in patch_status.get("kver", []) if v.strip()]
+        from_list = [v.strip() for v in patch_status.get("from", []) if v.strip()]
 
         filter_name = patch_status[CONST.FILTER]
         filter_fn = globals()[filter_name]
@@ -307,6 +346,8 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
 
         take_strong = nos in take_list or nos in os_list
         skip_strong = nos in skip_list
+        if from_list and not any(is_version_greater(kver, v) for v in from_list):
+            continue
         if (take_strong and skip_strong) or ("ALL" in take_list and "ALL" in skip_list) or "ALL" in os_list:
             print("ERR: Conflict in patch status options\n{} : {}".format(patch[CONST.PATCH_NAME], patch[CONST.STATUS]))
             sys.exit(1)
@@ -316,16 +357,18 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         elif take_strong:
             if not dst_folder:
                 dst_folder = candidate_folder
-            if nos in os_list:
-                os_folder = CONST.PATCH_OS_SUBFOLDERS[nos]
         elif "ALL" in take_list:
             if not dst_folder:
                 dst_folder = candidate_folder
         elif "ALL" in skip_list or dst_folder is None:
             continue
 
-        patch_src_folder = src_folder + os_folder.format(kver=kver_major)
-        patch[CONST.SRC] = "{}/{}".format(patch_src_folder, patch[CONST.PATCH_NAME])
+        src_path = resolve_patch_src(src_folder, patch[CONST.PATCH_NAME], kver, kver_major,
+                                     nos, os_list, arch, kver_list)
+        default_src = os.path.join(src_folder, "linux-{}".format(kver_major), patch[CONST.PATCH_NAME])
+        if src_path != default_src:
+            print("Using overlay {} for {}".format(src_path, patch[CONST.PATCH_NAME]))
+        patch[CONST.SRC] = src_path
         patch[CONST.DST] = "{}/{}".format(dst_folder, patch[CONST.PATCH_NAME])
 
 # ----------------------------------------------------------------------
@@ -350,6 +393,9 @@ def process_patch_list(patch_list):
         if CONST.DST in patch.keys():
             src_path = patch[CONST.SRC]
             dst_path = patch[CONST.DST]
+            if not os.path.isfile(src_path):
+                print("Err: patch source missing: {}".format(src_path))
+                return False
             if not os_cmd('cp {} {}'.format(src_path, dst_path)):
                 files_copyed += 1
     print("Copyed {} files".format(files_copyed))
@@ -453,9 +499,54 @@ def load_config_to_dict(config_path, section):
 # ----------------------------------------------------------------------
 
 
+def parse_kconfig_filename(path):
+    """Return (major, minor) for kconfig_7_2.txt, else None. Ignore kconfig_*_full.txt."""
+    name = os.path.basename(path)
+    match = re.match(r'^kconfig_(\d+)_(\d+)\.txt$', name)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def resolve_kconfig_file(src_folder, kver_arr):
+    """kconfig_<major>_<minor>.txt, else closest older file.
+
+    Example: kconfig_7_3.txt missing -> kconfig_7_2.txt, then 7.1, 7.0.
+    If this major has no kconfig, use the newest lower major (6.12 for 7.3).
+    Never pick a newer kconfig than the requested kernel.
+    """
+    want_major = int(kver_arr[0])
+    want_minor = int(kver_arr[1])
+    exact = os.path.join(src_folder, "kconfig_{}_{}.txt".format(want_major, want_minor))
+    if os.path.isfile(exact):
+        return exact
+
+    found = []
+    if os.path.isdir(src_folder):
+        for name in os.listdir(src_folder):
+            parsed = parse_kconfig_filename(name)
+            if not parsed:
+                continue
+            major, minor = parsed
+            if (major, minor) >= (want_major, want_minor):
+                continue
+            found.append((major, minor, os.path.join(src_folder, name)))
+    if not found:
+        print("Err. File {} missing.".format(exact))
+        return None
+
+    same_major = [item for item in found if item[0] == want_major]
+    pool = sorted(same_major if same_major else found)
+    path = pool[-1][2]
+    print("Warn. {} missing; using closest {}".format(exact, path))
+    return path
+
+
 def process_config(ref_cfg_filename, dst_cfg, delimiter="", arch="amd64", sub_type=""):
     # Load src config file
     ref_config = load_config_to_dict(ref_cfg_filename, "{}:{}".format(arch, sub_type))
+    if ref_config is False:
+        ref_config = {}
     if not ref_config:
         print("Info. Not found config for [{}:{}] in ref config file {}".format(arch, sub_type, ref_cfg_filename))
     else:
@@ -628,14 +719,16 @@ if __name__ == '__main__':
                           candidate_folder,
                           candidate_folder,
                           k_version,
-                          args["os_type"])
+                          args["os_type"],
+                          args["arch"])
     else:
         filter_patch_list(patch_table,
                           src_folder,
                           accepted_folder,
                           candidate_folder,
                           k_version,
-                          args["os_type"])
+                          args["os_type"],
+                          args["arch"])
 
     if args["verbose"]:
         print_patch_all(patch_table)
@@ -660,9 +753,12 @@ if __name__ == '__main__':
 
     config_file_name = args["config_file"]
     if config_file_name:
+        src_cfg_filename = resolve_kconfig_file(src_folder, kver_arr)
+        if not src_cfg_filename:
+            print("Warn. No kconfig_*.txt found; leaving {} unchanged".format(config_file_name))
+            sys.exit(0)
         print("-> Processing upstream config {}".format(args["config_file"]))
         delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-        src_cfg_filename = "{}/kconfig_{}.txt".format(src_folder, "_".join(kver_arr[0:2]))
         config_res = process_config(src_cfg_filename, config_file_name, delimiter_line, arch=args["arch"], sub_type="upstream")
 
         if config_res:
