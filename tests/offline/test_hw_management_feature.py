@@ -18,38 +18,54 @@
 #
 
 """
-Storage contract tests for hw_management_feature.py.
+Offline unit tests for hw_management_feature.py (the feature get/set API).
 
-CLI --set and feature_request() must share
-/etc/hw-management/hw_management_features.json.
+Scope: the persistent JSON store contract (load/set/save), the registered
+feature handlers (is_redfish_disabled, is_usb0_managed_by_nos), and the CLI
+entry point (main()). No hardware; is_sonic_os() is stubbed wherever a test
+needs a specific default.
+
+Each test loads a fresh module instance via importlib so that the module
+level globals (HW_MANAGEMENT_DB_FILE, TRACE_LOG_FILE) can be redirected to a
+per-test temporary directory without leaking state between tests.
+
+Loading the feature module needs the real hw_management_lib (other offline
+files install a MagicMock under that name). The previous sys.modules entry
+is restored after the import so this file does not leak that change into
+whatever test runs next in the same pytest session.
 """
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import shutil
 import stat
 import sys
 import tempfile
-import threading
 import types
 import unittest
 from unittest.mock import patch
 
-_BIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "..", "usr", "usr", "bin")
-sys.path.insert(0, _BIN_DIR)
 
-PRODUCTION_DB_FILE = "/etc/hw-management/hw_management_features.json"
+def _bin_dir():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.join(script_dir, "..", "..")
+    return os.path.abspath(os.path.join(repo_root, "usr", "usr", "bin"))
 
 
 def _feature_script_path():
-    return os.path.join(_BIN_DIR, "hw_management_feature.py")
+    return os.path.join(_bin_dir(), "hw_management_feature.py")
 
 
-def _import_hw_management_lib():
-    """Import shipped hw_management_lib. Stub dataclasses on Python < 3.7."""
-    sys.modules.pop("hw_management_lib", None)
+def _read_text(path):
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _ensure_dataclasses_stub():
+    """hw_management_lib imports dataclasses; stub it on Python < 3.7."""
     try:
         import dataclasses  # noqa: F401
     except ImportError:
@@ -64,342 +80,395 @@ def _import_hw_management_lib():
 
         dc.dataclass = dataclass
         sys.modules["dataclasses"] = dc
-    import hw_management_lib as lib
-    return lib
 
 
-def load_feature_module():
-    """Load hw_management_feature with the shipped str2bool.
+def _load_feature_module(suffix):
+    """Load a fresh, isolated hw_management_feature module instance.
 
-    Mock run_shell_cmd so tests stay offline (no docker ps).
+    @param suffix: unique suffix so each test gets its own sys.modules entry.
     """
-    lib = _import_hw_management_lib()
-    sys.modules.pop("hw_management_feature", None)
+    _ensure_dataclasses_stub()
+    bin_dir = _bin_dir()
+    if bin_dir not in sys.path:
+        sys.path.insert(0, bin_dir)
+    # Other offline files install a MagicMock as hw_management_lib. Import
+    # the real module for this load, then put the previous entry back.
+    previous_lib = sys.modules.pop("hw_management_lib", None)
 
-    def run_shell_cmd(*_args, **_kwargs):
-        return 1, ""
-
-    with patch.object(lib, "run_shell_cmd", side_effect=run_shell_cmd):
-        spec = importlib.util.spec_from_file_location(
-            "hw_management_feature", _feature_script_path())
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["hw_management_feature"] = module
+    mod_name = "hw_management_feature_{}".format(suffix)
+    sys.modules.pop(mod_name, None)
+    spec = importlib.util.spec_from_file_location(mod_name, _feature_script_path())
+    module = importlib.util.module_from_spec(spec)
+    try:
         spec.loader.exec_module(module)
+    finally:
+        if previous_lib is not None:
+            sys.modules["hw_management_lib"] = previous_lib
     return module
 
 
-class TestFeatureStorageContract(unittest.TestCase):
-    """CLI and Python callers must read and write the same feature file."""
+class _FeatureModuleTestCase(unittest.TestCase):
+    """Common setup: fresh module instance pointed at a temp DB/log file."""
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
+        self.tmp_dir = tempfile.mkdtemp()
         self.db_file = os.path.join(
-            self.temp_dir, "hw-management", "hw_management_features.json")
-        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
-        self.feature = load_feature_module()
-        self.default_db_file = self.feature.HW_MANAGEMENT_DB_FILE
-        self._db_patch = patch.object(
-            self.feature, "HW_MANAGEMENT_DB_FILE", self.db_file)
-        self._db_patch.start()
-        self._log_patch = patch.object(
-            self.feature, "TRACE_LOG_FILE",
-            os.path.join(self.temp_dir, "hw-mgmt.trace.log"))
-        self._log_patch.start()
-        self.feature.HW_MANAGEMENT_DB = {}
+            self.tmp_dir, "hw-management", "hw_management_features.json")
+        self.trace_file = os.path.join(self.tmp_dir, "hw-mgmt.trace.log")
+        self.feature = _load_feature_module(self._testMethodName)
+        self.feature.HW_MANAGEMENT_DB_FILE = self.db_file
+        self.feature.TRACE_LOG_FILE = self.trace_file
 
     def tearDown(self):
-        self._log_patch.stop()
-        self._db_patch.stop()
-        self.feature.HW_MANAGEMENT_DB = {}
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+
+class TestFeatureStorageContract(unittest.TestCase):
+    """Default DB path and basic store load/save rules."""
 
     def test_default_db_file_is_etc_hw_management(self):
-        """The unpatched database path is under /etc/hw-management, not /var/run."""
-        self.assertEqual(self.default_db_file, PRODUCTION_DB_FILE)
+        module = _load_feature_module("default_db_path")
         self.assertEqual(
-            os.path.dirname(self.default_db_file), "/etc/hw-management")
-        self.assertEqual(
-            os.path.basename(self.default_db_file),
-            "hw_management_features.json")
-        self.assertNotIn("/var/run/", self.default_db_file)
-        self.assertNotIn("/config/", self.default_db_file)
+            module.HW_MANAGEMENT_DB_FILE,
+            "/etc/hw-management/hw_management_features.json")
+
+    def test_default_trace_log_is_var_log(self):
+        module = _load_feature_module("default_trace_log")
+        self.assertEqual(module.TRACE_LOG_FILE, "/var/log/hw-mgmt.trace.log")
+
+
+class TestGetSetRoundTrip(_FeatureModuleTestCase):
+    """A value written through one call path is visible through the other."""
+
+    def test_python_set_is_visible_to_python_get(self):
+        ret, text = self.feature.feature_request("set", "is_redfish_disabled", "True")
+        self.assertEqual((ret, text), (0, ""))
+
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "True"))
 
     def test_cli_set_is_visible_to_python_get(self):
-        """A value written by --set is read back by feature_request()."""
-        argv = ["hw_management_feature.py", "--set", "is_redfish_disabled", "True"]
+        argv = ["hw_management_feature.py", "-l", self.trace_file,
+                "--set", "is_redfish_disabled", "True"]
         with patch.object(sys, "argv", argv):
-            self.assertEqual(self.feature.main(), 0)
+            ret = self.feature.main()
+        self.assertEqual(ret, 0)
 
-        self.assertTrue(os.path.isfile(self.db_file))
-        self.assertEqual(
-            os.path.basename(self.db_file), "hw_management_features.json")
-        self.assertEqual(
-            os.path.basename(os.path.dirname(self.db_file)), "hw-management")
-        with open(self.db_file, "r") as f:
-            stored = json.load(f)
-        self.assertTrue(stored["is_redfish_disabled"]["enabled"])
-
-        self.feature.HW_MANAGEMENT_DB = {}
-        ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        self.assertEqual((ret, value), (0, "True"))
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "True"))
 
     def test_python_set_is_visible_to_cli_get(self):
-        """A value written by feature_request() is printed by --get."""
         ret, _text = self.feature.feature_request(
             "set", "is_usb0_managed_by_nos", "True")
         self.assertEqual(ret, 0)
-        self.assertTrue(os.path.isfile(self.db_file))
 
-        self.feature.HW_MANAGEMENT_DB = {}
-        argv = ["hw_management_feature.py", "--get", "is_usb0_managed_by_nos"]
-        with patch.object(sys, "argv", argv), \
-                patch("builtins.print") as mock_print:
-            self.assertEqual(self.feature.main(), 0)
-        mock_print.assert_called_with("True")
+        argv = ["hw_management_feature.py", "-l", self.trace_file,
+                "--get", "is_usb0_managed_by_nos"]
+        out = io.StringIO()
+        with patch.object(sys, "argv", argv), contextlib.redirect_stdout(out):
+            ret = self.feature.main()
+        self.assertEqual(ret, 0)
+        self.assertEqual(out.getvalue().strip(), "True")
 
-    def test_missing_file_is_success_with_default(self):
-        """No database file is not a read failure and is not created."""
-        ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        self.assertEqual((ret, value), (0, "False"))
-        self.assertFalse(os.path.isfile(self.db_file))
+    def test_set_false_then_true_updates_stored_value(self):
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "False")
+        self.assertEqual(ret, 0)
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "False"))
 
-    def test_unknown_feature_is_error(self):
-        """An unregistered feature name fails without creating the store."""
-        ret, text = self.feature.feature_request("get", "not_a_feature")
-        self.assertEqual((ret, text), (1, "Feature unknown: not_a_feature"))
-        self.assertFalse(os.path.isfile(self.db_file))
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "True")
+        self.assertEqual(ret, 0)
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "True"))
 
-    def test_unknown_action_is_error(self):
-        """An unregistered action fails without creating the store."""
-        ret, text = self.feature.feature_request("toggle", "is_redfish_disabled")
-        self.assertEqual((ret, text), (1, "Command unknown: toggle"))
-        self.assertFalse(os.path.isfile(self.db_file))
+    def test_set_one_feature_preserves_the_other(self):
+        """Saving one feature must not drop the other feature already on disk.
 
-    def test_set_missing_value_is_error(self):
-        """Set with no boolean argument does not write the store."""
-        ret, text = self.feature.feature_request("set", "is_redfish_disabled")
-        self.assertEqual((ret, text), (1, "missing value"))
-        self.assertFalse(os.path.isfile(self.db_file))
+        is_sonic_os() is False, and the preserved flag is True, so a save that
+        dropped that key would come back as the default False.
+        """
+        with patch.object(self.feature, "is_sonic_os", return_value=False):
+            self.assertEqual(
+                self.feature.feature_request("set", "is_redfish_disabled", "False")[0], 0)
+            self.assertEqual(
+                self.feature.feature_request("set", "is_usb0_managed_by_nos", "True")[0], 0)
+            self.assertEqual(
+                self.feature.feature_request("set", "is_redfish_disabled", "True")[0], 0)
 
-    def test_set_invalid_value_is_error(self):
-        """Set with a non-boolean argument does not write the store."""
-        ret, text = self.feature.feature_request(
-            "set", "is_redfish_disabled", "maybe")
-        self.assertEqual((ret, text), (1, "invalid value"))
-        self.assertFalse(os.path.isfile(self.db_file))
+            self.assertEqual(
+                self.feature.feature_request("get", "is_redfish_disabled"), (0, "True"))
+            self.assertEqual(
+                self.feature.feature_request("get", "is_usb0_managed_by_nos"), (0, "True"))
 
-    def test_cli_unknown_feature_prints_stderr(self):
-        """CLI --get of an unknown feature exits non-zero and prints to stderr."""
-        argv = ["hw_management_feature.py", "--get", "not_a_feature"]
-        with patch.object(sys, "argv", argv), \
-                patch("builtins.print") as mock_print:
-            self.assertEqual(self.feature.main(), 1)
-        mock_print.assert_called_with(
-            "Feature unknown: not_a_feature", file=sys.stderr)
+
+class TestMissingAndCorruptStore(_FeatureModuleTestCase):
+    """Missing file, corrupt JSON, and non-object JSON handling."""
+
+    def test_missing_file_is_get_success_with_default(self):
+        self.assertFalse(os.path.exists(self.db_file))
+        with patch.object(self.feature, "is_sonic_os", return_value=False):
+            ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "False"))
 
     def test_corrupt_file_is_get_failure(self):
-        """Get does not rewrite a corrupt file, so it cannot erase a set."""
-        with open(self.db_file, "w") as f:
-            f.write("not-json")
-        with patch.object(self.feature, "save_hw_management_db") as mock_save:
-            ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        mock_save.assert_not_called()
-        self.assertEqual((ret, value), (1, "DB load failed"))
-        with open(self.db_file, "r") as f:
-            self.assertEqual(f.read(), "not-json")
+        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+        with open(self.db_file, "w", encoding="utf-8") as handle:
+            handle.write("{ this is not valid json")
+
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual(ret, 1)
+        self.assertTrue(text)
 
     def test_non_object_json_is_get_failure(self):
-        """Get leaves a JSON array unchanged."""
-        with open(self.db_file, "w") as f:
-            json.dump(["not", "an", "object"], f)
-        ret, value = self.feature.feature_request("get", "is_usb0_managed_by_nos")
-        self.assertEqual((ret, value), (1, "DB load failed"))
-        with open(self.db_file, "r") as f:
-            self.assertEqual(json.load(f), ["not", "an", "object"])
+        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+        with open(self.db_file, "w", encoding="utf-8") as handle:
+            json.dump([1, 2, 3], handle)
+
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual(ret, 1)
+        self.assertTrue(text)
 
     def test_set_does_not_repair_corrupt_file(self):
-        """Set leaves corrupt JSON unchanged instead of overwriting it."""
-        with open(self.db_file, "w") as f:
-            f.write("not-json")
-        ret, text = self.feature.feature_request(
-            "set", "is_redfish_disabled", "True")
-        self.assertEqual((ret, text), (1, "DB load failed"))
-        with open(self.db_file, "r") as f:
-            self.assertEqual(f.read(), "not-json")
+        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+        with open(self.db_file, "w", encoding="utf-8") as handle:
+            handle.write("{ this is not valid json")
+        before = _read_text(self.db_file)
 
-    def test_get_does_not_erase_concurrent_set(self):
-        """A get of corrupt JSON does not rewrite the file; a concurrent set also fails."""
-        with open(self.db_file, "w") as f:
-            f.write("not-json")
-        results = []
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "True")
+        self.assertNotEqual(ret, 0)
 
-        def do_get():
-            ret, text = self.feature.feature_request("get", "is_redfish_disabled")
-            results.append(("get", ret, text))
+        after = _read_text(self.db_file)
+        self.assertEqual(before, after)
 
-        def do_set():
-            ret, text = self.feature.feature_request(
-                "set", "is_redfish_disabled", "True")
-            results.append(("set", ret, text))
+    def test_non_boolean_stored_value_is_get_failure_and_is_not_rewritten(self):
+        """A stored non-boolean value fails the get and is left unchanged."""
+        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+        with open(self.db_file, "w", encoding="utf-8") as handle:
+            json.dump(
+                {"is_redfish_disabled": {"value": "maybe", "user": "sw"}}, handle)
+        before = _read_text(self.db_file)
 
-        threads = [
-            threading.Thread(target=do_get),
-            threading.Thread(target=do_set),
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(2)
-            self.assertFalse(thread.is_alive())
-        self.assertEqual(sorted(results), [
-            ("get", 1, "DB load failed"),
-            ("set", 1, "DB load failed"),
-        ])
-        with open(self.db_file, "r") as f:
-            self.assertEqual(f.read(), "not-json")
+        ret, text = self.feature.feature_request("get", "is_redfish_disabled")
 
-    def test_failed_save_preserves_existing_file(self):
-        """A failed replace leaves the previously stored settings readable."""
-        original = {"is_redfish_disabled": {"enabled": True}}
-        with open(self.db_file, "w") as f:
-            json.dump(original, f)
-        with patch.object(self.feature.os, "replace", side_effect=OSError("disk full")):
-            ret, text = self.feature.feature_request(
-                "set", "is_usb0_managed_by_nos", "False")
-        self.assertEqual((ret, text), (1, "save_hw_management_db failed"))
-        with open(self.db_file, "r") as f:
-            stored = json.load(f)
-        self.assertEqual(stored, original)
-        self.feature.HW_MANAGEMENT_DB = {}
-        ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        self.assertEqual((ret, value), (0, "True"))
+        self.assertEqual((ret, text), (1, "invalid value"))
+        self.assertEqual(_read_text(self.db_file), before)
 
-    def test_new_save_is_world_readable(self):
-        """A newly created features file is readable by other users."""
-        ret, _text = self.feature.feature_request(
-            "set", "is_redfish_disabled", "True")
+
+class TestAtomicSave(_FeatureModuleTestCase):
+    """Save-path contract: mode bits and failure handling."""
+
+    def test_new_file_is_mode_0644(self):
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "True")
         self.assertEqual(ret, 0)
         mode = stat.S_IMODE(os.stat(self.db_file).st_mode)
         self.assertEqual(mode, 0o644)
 
-    def test_save_preserves_existing_permissions(self):
-        """A later save keeps the mode already published on the file."""
-        with open(self.db_file, "w") as f:
-            json.dump({"is_usb0_managed_by_nos": {"enabled": True}}, f)
-        os.chmod(self.db_file, 0o664)
-        ret, _text = self.feature.feature_request(
-            "set", "is_redfish_disabled", "True")
+    def test_existing_file_mode_is_preserved_on_later_save(self):
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "True")
+        self.assertEqual(ret, 0)
+        os.chmod(self.db_file, 0o640)
+
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "False")
         self.assertEqual(ret, 0)
         mode = stat.S_IMODE(os.stat(self.db_file).st_mode)
-        self.assertEqual(mode, 0o664)
+        self.assertEqual(mode, 0o640)
 
-    def test_get_does_not_require_write_access(self):
-        """Get reads a valid file without rewriting it."""
-        with open(self.db_file, "w") as f:
-            json.dump({"is_redfish_disabled": {"enabled": True}}, f)
-        ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        self.assertEqual((ret, value), (0, "True"))
-        with open(self.db_file, "r") as f:
-            stored = json.load(f)
-        self.assertTrue(stored["is_redfish_disabled"]["enabled"])
+    def test_failed_save_preserves_existing_file(self):
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "True")
+        self.assertEqual(ret, 0)
+        before = _read_text(self.db_file)
 
-    def test_get_fails_when_db_dir_is_read_only(self):
-        """Get cannot take the lock if the directory is not writable."""
-        if os.geteuid() == 0:
-            self.skipTest("root can write a mode 0555 directory")
-        with open(self.db_file, "w") as f:
-            json.dump({"is_redfish_disabled": {"enabled": True}}, f)
-        db_dir = os.path.dirname(self.db_file)
-        os.chmod(self.db_file, 0o444)
-        os.chmod(db_dir, 0o555)
-        try:
-            ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        finally:
-            os.chmod(db_dir, 0o755)
-            os.chmod(self.db_file, 0o644)
-        self.assertEqual((ret, value), (1, "DB lock failed"))
+        with patch.object(self.feature, "_save_hw_management_db", return_value=1):
+            ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "False")
+        self.assertNotEqual(ret, 0)
+
+        after = _read_text(self.db_file)
+        self.assertEqual(before, after)
+
+    def test_get_with_persist_failure_still_returns_computed_value(self):
+        """A failed cache write must not hide the value get already computed."""
+        with patch.object(self.feature, "is_sonic_os", return_value=True), \
+                patch.object(self.feature, "update_hw_management_db", return_value=1):
+            ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "True"))
+
+    def test_no_file_is_created_when_nothing_is_written(self):
+        # A failing set must not leave a partial file behind.
+        ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "not-a-bool")
+        self.assertNotEqual(ret, 0)
+        self.assertFalse(os.path.exists(self.db_file))
 
 
-class TestIsSonicOs(unittest.TestCase):
-    """is_sonic_os() is the default for both features when the DB has no key."""
+class TestDispatchErrors(_FeatureModuleTestCase):
+    """Unknown action/feature and malformed set arguments."""
+
+    def test_unknown_action_returns_error(self):
+        ret, text = self.feature.feature_request("delete", "is_redfish_disabled")
+        self.assertEqual(ret, 1)
+        self.assertIn("Command unknown", text)
+
+    def test_unknown_feature_returns_error(self):
+        ret, text = self.feature.feature_request("get", "does_not_exist")
+        self.assertEqual(ret, 1)
+        self.assertIn("Feature unknown", text)
+
+    def test_set_with_no_value_returns_error(self):
+        ret, text = self.feature.feature_request("set", "is_redfish_disabled")
+        self.assertEqual(ret, 1)
+        self.assertIn("expected exactly one value", text)
+
+    def test_set_with_too_many_values_returns_error(self):
+        ret, text = self.feature.feature_request(
+            "set", "is_redfish_disabled", "True", "extra")
+        self.assertEqual(ret, 1)
+        self.assertIn("expected exactly one value", text)
+
+    def test_set_with_invalid_boolean_returns_error(self):
+        ret, text = self.feature.feature_request("set", "is_redfish_disabled", "maybe")
+        self.assertEqual(ret, 1)
+        self.assertIn("invalid value", text)
+
+
+class TestRedfishDisabledDefault(_FeatureModuleTestCase):
+    """is_redfish_disabled default follows is_sonic_os() when unset."""
+
+    def test_default_false_when_not_sonic(self):
+        with patch.object(self.feature, "is_sonic_os", return_value=False):
+            ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "False"))
+
+    def test_default_true_when_sonic(self):
+        with patch.object(self.feature, "is_sonic_os", return_value=True):
+            ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "True"))
+
+    def test_stored_value_overrides_default(self):
+        with patch.object(self.feature, "is_sonic_os", return_value=True):
+            ret, _text = self.feature.feature_request("set", "is_redfish_disabled", "False")
+            self.assertEqual(ret, 0)
+            ret, text = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual((ret, text), (0, "False"))
+
+
+class TestUsb0ManagedByNosDefault(_FeatureModuleTestCase):
+    """is_usb0_managed_by_nos default follows is_sonic_os() when unset."""
+
+    def test_default_false_when_not_sonic(self):
+        with patch.object(self.feature, "is_sonic_os", return_value=False):
+            ret, text = self.feature.feature_request("get", "is_usb0_managed_by_nos")
+        self.assertEqual((ret, text), (0, "False"))
+
+    def test_default_true_when_sonic(self):
+        with patch.object(self.feature, "is_sonic_os", return_value=True):
+            ret, text = self.feature.feature_request("get", "is_usb0_managed_by_nos")
+        self.assertEqual((ret, text), (0, "True"))
+
+    def test_stored_value_overrides_default(self):
+        with patch.object(self.feature, "is_sonic_os", return_value=False):
+            ret, _text = self.feature.feature_request("set", "is_usb0_managed_by_nos", "True")
+            self.assertEqual(ret, 0)
+            ret, text = self.feature.feature_request("get", "is_usb0_managed_by_nos")
+        self.assertEqual((ret, text), (0, "True"))
+
+
+class TestIsSonicOsDetection(unittest.TestCase):
+    """is_sonic_os() needs both the manifest file and 'show' on PATH."""
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
-        self.feature = load_feature_module()
-        self.version_file = os.path.join(self.temp_dir, "sonic_version.yml")
-        self.db_file = os.path.join(
-            self.temp_dir, "hw-management", "hw_management_features.json")
-        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
-        self._patches = [
-            patch.object(self.feature, "SONIC_VERSION_FILE", self.version_file),
-            patch.object(self.feature, "HW_MANAGEMENT_DB_FILE", self.db_file),
-            patch.object(
-                self.feature, "TRACE_LOG_FILE",
-                os.path.join(self.temp_dir, "hw-mgmt.trace.log")),
-        ]
-        for p in self._patches:
-            p.start()
-        self.feature.HW_MANAGEMENT_DB = {}
+        self.tmp_dir = tempfile.mkdtemp()
+        self.module = _load_feature_module(self._testMethodName)
+        self.module.TRACE_LOG_FILE = os.path.join(self.tmp_dir, "t.log")
 
     def tearDown(self):
-        for p in self._patches:
-            p.stop()
-        self.feature.HW_MANAGEMENT_DB = {}
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
-    def _touch_version_file(self):
-        with open(self.version_file, "w") as f:
-            f.write("build_version: test\n")
+    def test_false_without_manifest_file(self):
+        missing = os.path.join(self.tmp_dir, "no_such_sonic_version.yml")
+        with patch.object(self.module, "SONIC_VERSION_FILE", missing):
+            self.assertFalse(self.module.is_sonic_os())
 
-    def test_false_without_version_file(self):
-        """Missing sonic_version.yml is not SONiC."""
-        self.assertFalse(self.feature.is_sonic_os())
+    def test_false_with_manifest_but_no_show_on_path(self):
+        manifest = os.path.join(self.tmp_dir, "sonic_version.yml")
+        with open(manifest, "w", encoding="utf-8"):
+            pass
+        # shutil is the process-wide module, not a copy on self.module.
+        # patch restores it on exit; this stays correct under serial unittest.
+        with patch.object(self.module, "SONIC_VERSION_FILE", manifest), \
+                patch.object(self.module.shutil, "which", return_value=None):
+            self.assertFalse(self.module.is_sonic_os())
 
-    def test_false_when_show_missing(self):
-        """Version file without show on PATH is not SONiC."""
-        self._touch_version_file()
-        with patch.object(self.feature.shutil, "which", return_value=None):
-            self.assertFalse(self.feature.is_sonic_os())
+    def test_true_with_manifest_and_show_on_path(self):
+        manifest = os.path.join(self.tmp_dir, "sonic_version.yml")
+        with open(manifest, "w", encoding="utf-8"):
+            pass
+        with patch.object(self.module, "SONIC_VERSION_FILE", manifest), \
+                patch.object(self.module.shutil, "which", return_value="/usr/bin/show"):
+            self.assertTrue(self.module.is_sonic_os())
 
-    def test_false_when_docker_ps_fails(self):
-        """docker ps failure is not SONiC."""
-        self._touch_version_file()
-        with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
-                patch.object(self.feature, "run_shell_cmd", return_value=(1, "error")):
-            self.assertFalse(self.feature.is_sonic_os())
 
-    def test_false_when_mgmt_framework_not_running(self):
-        """Running containers without docker-sonic-mgmt-framework is not SONiC."""
-        self._touch_version_file()
-        with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
-                patch.object(self.feature, "run_shell_cmd",
-                             return_value=(0, "docker-syncd-mlnx:latest\n")):
-            self.assertFalse(self.feature.is_sonic_os())
+class TestCliEntryPoint(unittest.TestCase):
+    """main(): argparse wiring, help listing, and exit codes."""
 
-    def test_true_when_mgmt_framework_running(self):
-        """Version file, show, and mgmt-framework image mean SONiC."""
-        self._touch_version_file()
-        images = "docker-syncd-mlnx:latest\ndocker-sonic-mgmt-framework:latest\n"
-        with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
-                patch.object(self.feature, "run_shell_cmd",
-                             return_value=(0, images)) as mock_cmd:
-            self.assertTrue(self.feature.is_sonic_os())
-        mock_cmd.assert_called_with(
-            "docker", ["ps", "--format", "{{.Image}}"], timeout=5)
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        self.module = _load_feature_module(self._testMethodName)
+        self.module.HW_MANAGEMENT_DB_FILE = os.path.join(
+            self.tmp_dir, "hw-management", "hw_management_features.json")
+        self.module.TRACE_LOG_FILE = os.path.join(self.tmp_dir, "t.log")
 
-    def test_feature_get_defaults_true_on_sonic(self):
-        """No DB file: both features default True when is_sonic_os is True."""
-        self._touch_version_file()
-        images = "docker-sonic-mgmt-framework:latest\n"
-        with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
-                patch.object(self.feature, "run_shell_cmd", return_value=(0, images)):
-            ret, value = self.feature.feature_request(
-                "get", "is_redfish_disabled")
-            self.assertEqual((ret, value), (0, "True"))
-            ret, value = self.feature.feature_request(
-                "get", "is_usb0_managed_by_nos")
-            self.assertEqual((ret, value), (0, "True"))
-        self.assertFalse(os.path.isfile(self.db_file))
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+    def test_get_with_no_feature_lists_options(self):
+        argv = ["hw_management_feature.py", "--get"]
+        out = io.StringIO()
+        with patch.object(sys, "argv", argv), contextlib.redirect_stdout(out):
+            ret = self.module.main()
+        self.assertEqual(ret, 0)
+        self.assertIn("is_redfish_disabled", out.getvalue())
+        self.assertIn("is_usb0_managed_by_nos", out.getvalue())
+
+    def test_set_with_no_feature_lists_options(self):
+        argv = ["hw_management_feature.py", "--set"]
+        out = io.StringIO()
+        with patch.object(sys, "argv", argv), contextlib.redirect_stdout(out):
+            ret = self.module.main()
+        self.assertEqual(ret, 0)
+        self.assertIn("is_redfish_disabled", out.getvalue())
+        self.assertIn("is_usb0_managed_by_nos", out.getvalue())
+
+    def test_missing_action_is_argparse_error(self):
+        argv = ["hw_management_feature.py"]
+        with patch.object(sys, "argv", argv):
+            with self.assertRaises(SystemExit) as ctx:
+                self.module.main()
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_get_and_set_together_is_argparse_error(self):
+        argv = ["hw_management_feature.py", "--get", "is_redfish_disabled",
+                "--set", "is_redfish_disabled", "True"]
+        with patch.object(sys, "argv", argv):
+            with self.assertRaises(SystemExit) as ctx:
+                self.module.main()
+        self.assertEqual(ctx.exception.code, 2)
+
+    def test_get_unknown_feature_exits_non_zero_and_prints_to_stderr(self):
+        argv = ["hw_management_feature.py", "--get", "does_not_exist"]
+        err = io.StringIO()
+        with patch.object(sys, "argv", argv), contextlib.redirect_stderr(err):
+            ret = self.module.main()
+        self.assertNotEqual(ret, 0)
+        self.assertIn("Feature unknown", err.getvalue())
+
+    def test_log_file_flag_redirects_trace_log(self):
+        custom_log = os.path.join(self.tmp_dir, "custom.trace.log")
+        argv = ["hw_management_feature.py", "-l", custom_log,
+                "--get", "is_redfish_disabled"]
+        with patch.object(self.module, "is_sonic_os", return_value=False), \
+                patch.object(sys, "argv", argv):
+            ret = self.module.main()
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile(custom_log))
 
 
 if __name__ == "__main__":

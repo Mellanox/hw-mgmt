@@ -59,7 +59,6 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 
-
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
     from hw_management_platform_config import get_module_count, get_platform_config
