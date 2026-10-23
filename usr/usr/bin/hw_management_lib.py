@@ -87,6 +87,27 @@ def str2bool(val):
 # ----------------------------------------------------------------------
 
 
+def get_nested_value(d: dict, keys: list, default=None):
+    """
+    @summary:
+        Get a nested value from a dictionary
+    @param d: dictionary
+    @param keys: list of keys
+    @param default: default value if the key is not found
+    @return: value of the nested key
+    """
+    if not isinstance(d, dict):
+        return default
+    for key in keys:
+        if isinstance(d, dict) and key in d:
+            d = d[key]
+        else:
+            return default
+    return d
+
+# ----------------------------------------------------------------------
+
+
 def read_dmi_data(dmi_field_name):
     """
     @summary:

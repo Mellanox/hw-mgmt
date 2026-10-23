@@ -137,7 +137,11 @@ class TestFeatureStorageContract(unittest.TestCase):
             os.path.basename(os.path.dirname(self.db_file)), "hw-management")
         with open(self.db_file, "r") as f:
             stored = json.load(f)
-        self.assertTrue(stored["is_redfish_disabled"]["enabled"])
+        record = stored["is_redfish_disabled"]
+        self.assertTrue(record["value"])
+        self.assertEqual(record["user"], "sw")
+        self.assertRegex(
+            record["timestamp"], r"^\d{4}_\d{2}_\d{2}_\d{2}-\d{2}-\d{2}\.\d{3}$")
 
         self.feature.HW_MANAGEMENT_DB = {}
         ret, value = self.feature.feature_request("get", "is_redfish_disabled")
@@ -157,11 +161,14 @@ class TestFeatureStorageContract(unittest.TestCase):
             self.assertEqual(self.feature.main(), 0)
         mock_print.assert_called_with("True")
 
-    def test_missing_file_is_success_with_default(self):
-        """No database file is not a read failure and is not created."""
+    def test_missing_file_is_success_with_persisted_default(self):
+        """No database file creates and persists the detected default."""
         ret, value = self.feature.feature_request("get", "is_redfish_disabled")
         self.assertEqual((ret, value), (0, "False"))
-        self.assertFalse(os.path.isfile(self.db_file))
+        with open(self.db_file, "r") as f:
+            stored = json.load(f)
+        self.assertEqual(stored["is_redfish_disabled"]["value"], False)
+        self.assertEqual(stored["is_redfish_disabled"]["user"], "def")
 
     def test_unknown_feature_is_error(self):
         """An unregistered feature name fails without creating the store."""
@@ -178,7 +185,7 @@ class TestFeatureStorageContract(unittest.TestCase):
     def test_set_missing_value_is_error(self):
         """Set with no boolean argument does not write the store."""
         ret, text = self.feature.feature_request("set", "is_redfish_disabled")
-        self.assertEqual((ret, text), (1, "missing value"))
+        self.assertEqual((ret, text), (1, "expected exactly one value"))
         self.assertFalse(os.path.isfile(self.db_file))
 
     def test_set_invalid_value_is_error(self):
@@ -201,10 +208,9 @@ class TestFeatureStorageContract(unittest.TestCase):
         """Get does not rewrite a corrupt file, so it cannot erase a set."""
         with open(self.db_file, "w") as f:
             f.write("not-json")
-        with patch.object(self.feature, "save_hw_management_db") as mock_save:
-            ret, value = self.feature.feature_request("get", "is_redfish_disabled")
-        mock_save.assert_not_called()
-        self.assertEqual((ret, value), (1, "DB load failed"))
+        ret, value = self.feature.feature_request("get", "is_redfish_disabled")
+        self.assertEqual(
+            (ret, value), (1, f"Cannot load DB file: {self.db_file}"))
         with open(self.db_file, "r") as f:
             self.assertEqual(f.read(), "not-json")
 
@@ -213,7 +219,8 @@ class TestFeatureStorageContract(unittest.TestCase):
         with open(self.db_file, "w") as f:
             json.dump(["not", "an", "object"], f)
         ret, value = self.feature.feature_request("get", "is_usb0_managed_by_nos")
-        self.assertEqual((ret, value), (1, "DB load failed"))
+        self.assertEqual(
+            (ret, value), (1, f"Cannot load DB file: {self.db_file}"))
         with open(self.db_file, "r") as f:
             self.assertEqual(json.load(f), ["not", "an", "object"])
 
@@ -223,7 +230,8 @@ class TestFeatureStorageContract(unittest.TestCase):
             f.write("not-json")
         ret, text = self.feature.feature_request(
             "set", "is_redfish_disabled", "True")
-        self.assertEqual((ret, text), (1, "DB load failed"))
+        self.assertEqual(
+            (ret, text), (1, f"Cannot load DB file: {self.db_file}"))
         with open(self.db_file, "r") as f:
             self.assertEqual(f.read(), "not-json")
 
@@ -252,21 +260,21 @@ class TestFeatureStorageContract(unittest.TestCase):
             thread.join(2)
             self.assertFalse(thread.is_alive())
         self.assertEqual(sorted(results), [
-            ("get", 1, "DB load failed"),
-            ("set", 1, "DB load failed"),
+            ("get", 1, f"Cannot load DB file: {self.db_file}"),
+            ("set", 1, f"Cannot load DB file: {self.db_file}"),
         ])
         with open(self.db_file, "r") as f:
             self.assertEqual(f.read(), "not-json")
 
     def test_failed_save_preserves_existing_file(self):
         """A failed replace leaves the previously stored settings readable."""
-        original = {"is_redfish_disabled": {"enabled": True}}
+        original = {"is_redfish_disabled": {"value": True}}
         with open(self.db_file, "w") as f:
             json.dump(original, f)
         with patch.object(self.feature.os, "replace", side_effect=OSError("disk full")):
             ret, text = self.feature.feature_request(
                 "set", "is_usb0_managed_by_nos", "False")
-        self.assertEqual((ret, text), (1, "save_hw_management_db failed"))
+        self.assertEqual((ret, text), (1, "update_hw_management_db failed"))
         with open(self.db_file, "r") as f:
             stored = json.load(f)
         self.assertEqual(stored, original)
@@ -285,7 +293,7 @@ class TestFeatureStorageContract(unittest.TestCase):
     def test_save_preserves_existing_permissions(self):
         """A later save keeps the mode already published on the file."""
         with open(self.db_file, "w") as f:
-            json.dump({"is_usb0_managed_by_nos": {"enabled": True}}, f)
+            json.dump({"is_usb0_managed_by_nos": {"value": True}}, f)
         os.chmod(self.db_file, 0o664)
         ret, _text = self.feature.feature_request(
             "set", "is_redfish_disabled", "True")
@@ -296,12 +304,12 @@ class TestFeatureStorageContract(unittest.TestCase):
     def test_get_does_not_require_write_access(self):
         """Get reads a valid file without rewriting it."""
         with open(self.db_file, "w") as f:
-            json.dump({"is_redfish_disabled": {"enabled": True}}, f)
+            json.dump({"is_redfish_disabled": {"value": True}}, f)
         ret, value = self.feature.feature_request("get", "is_redfish_disabled")
         self.assertEqual((ret, value), (0, "True"))
         with open(self.db_file, "r") as f:
             stored = json.load(f)
-        self.assertTrue(stored["is_redfish_disabled"]["enabled"])
+        self.assertTrue(stored["is_redfish_disabled"]["value"])
 
     def test_get_fails_when_db_dir_is_read_only(self):
         """Get cannot take the lock if the directory is not writable."""
@@ -317,7 +325,106 @@ class TestFeatureStorageContract(unittest.TestCase):
         finally:
             os.chmod(db_dir, 0o755)
             os.chmod(self.db_file, 0o644)
-        self.assertEqual((ret, value), (1, "DB lock failed"))
+        self.assertEqual((ret, value), (1, "update_hw_management_db failed"))
+
+
+class TestUpdatedFlag(unittest.TestCase):
+    """hw_management_db_set() marks changed records "updated"; only those
+    are persisted by update_hw_management_db(), and the flag itself is
+    never written to db_file."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_file = os.path.join(
+            self.temp_dir, "hw-management", "hw_management_features.json")
+        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+        self.feature = load_feature_module()
+        self._db_patch = patch.object(
+            self.feature, "HW_MANAGEMENT_DB_FILE", self.db_file)
+        self._db_patch.start()
+        self._log_patch = patch.object(
+            self.feature, "TRACE_LOG_FILE",
+            os.path.join(self.temp_dir, "hw-mgmt.trace.log"))
+        self._log_patch.start()
+        self.feature.HW_MANAGEMENT_DB = {}
+
+    def tearDown(self):
+        self._log_patch.stop()
+        self._db_patch.stop()
+        self.feature.HW_MANAGEMENT_DB = {}
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_set_marks_new_record_updated_in_memory(self):
+        """A freshly created record is flagged "updated" in memory."""
+        self.feature.hw_management_db_set("is_redfish_disabled", True, user="sw")
+        entry = self.feature.HW_MANAGEMENT_DB["is_redfish_disabled"]
+        self.assertIs(entry["updated"], True)
+
+    def test_set_does_not_flag_unchanged_record(self):
+        """Re-setting the same value/user does not mark the record updated."""
+        self.feature.hw_management_db_set("is_redfish_disabled", True, user="sw")
+        self.feature.HW_MANAGEMENT_DB["is_redfish_disabled"]["updated"] = False
+        self.feature.hw_management_db_set("is_redfish_disabled", True, user="sw")
+        entry = self.feature.HW_MANAGEMENT_DB["is_redfish_disabled"]
+        self.assertIs(entry["updated"], False)
+
+    def test_updated_flag_is_stripped_from_saved_file(self):
+        """The "updated" flag is in-memory only; it never reaches db_file."""
+        self.feature.hw_management_db_set("is_redfish_disabled", True, user="sw")
+        ret = self.feature.update_hw_management_db(
+            self.db_file, self.feature.HW_MANAGEMENT_DB)
+        self.assertEqual(ret, 0)
+        with open(self.db_file, "r") as f:
+            stored = json.load(f)
+        self.assertNotIn("updated", stored["is_redfish_disabled"])
+        self.assertTrue(stored["is_redfish_disabled"]["value"])
+
+    def test_unflagged_record_is_not_persisted(self):
+        """A record without "updated": True is not written, even if its
+        content differs from what is already on disk."""
+        with open(self.db_file, "w") as f:
+            json.dump({"is_redfish_disabled": {
+                "value": False, "timestamp": "t0", "user": "def"}}, f)
+        db_dict = {"is_redfish_disabled": {
+            "value": True, "timestamp": "t1", "user": "sw"}}
+        ret = self.feature.update_hw_management_db(self.db_file, db_dict)
+        self.assertEqual(ret, 0)
+        with open(self.db_file, "r") as f:
+            stored = json.load(f)
+        self.assertEqual(stored["is_redfish_disabled"]["value"], False)
+
+    def test_flagged_record_overwrites_disk_without_comparison(self):
+        """A record marked "updated" is written even if unrelated keys
+        would otherwise look unchanged; no equality check is performed."""
+        with open(self.db_file, "w") as f:
+            json.dump({"is_redfish_disabled": {
+                "value": True, "timestamp": "t0", "user": "sw"}}, f)
+        db_dict = {"is_redfish_disabled": {
+            "value": True, "timestamp": "t0", "user": "sw", "updated": True}}
+        ret = self.feature.update_hw_management_db(self.db_file, db_dict)
+        self.assertEqual(ret, 0)
+        with open(self.db_file, "r") as f:
+            stored = json.load(f)
+        self.assertEqual(
+            stored["is_redfish_disabled"],
+            {"value": True, "timestamp": "t0", "user": "sw"})
+
+    def test_untouched_key_added_by_another_writer_is_kept(self):
+        """A feature present on disk but absent/unflagged in db_dict is
+        left untouched."""
+        with open(self.db_file, "w") as f:
+            json.dump({"is_usb0_managed_by_nos": {
+                "value": True, "timestamp": "t0", "user": "other"}}, f)
+        db_dict = {"is_redfish_disabled": {
+            "value": True, "timestamp": "t1", "user": "sw", "updated": True}}
+        ret = self.feature.update_hw_management_db(self.db_file, db_dict)
+        self.assertEqual(ret, 0)
+        with open(self.db_file, "r") as f:
+            stored = json.load(f)
+        self.assertEqual(
+            stored["is_usb0_managed_by_nos"],
+            {"value": True, "timestamp": "t0", "user": "other"})
+        self.assertEqual(stored["is_redfish_disabled"]["value"], True)
 
 
 class TestIsSonicOs(unittest.TestCase):
@@ -361,31 +468,23 @@ class TestIsSonicOs(unittest.TestCase):
         with patch.object(self.feature.shutil, "which", return_value=None):
             self.assertFalse(self.feature.is_sonic_os())
 
-    def test_false_when_docker_ps_fails(self):
-        """docker ps failure is not SONiC."""
+    def test_true_without_docker_check(self):
+        """SONiC detection currently relies on version file and show only."""
         self._touch_version_file()
         with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
-                patch.object(self.feature, "run_shell_cmd", return_value=(1, "error")):
-            self.assertFalse(self.feature.is_sonic_os())
-
-    def test_false_when_mgmt_framework_not_running(self):
-        """Running containers without docker-sonic-mgmt-framework is not SONiC."""
-        self._touch_version_file()
-        with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
-                patch.object(self.feature, "run_shell_cmd",
-                             return_value=(0, "docker-syncd-mlnx:latest\n")):
-            self.assertFalse(self.feature.is_sonic_os())
+                patch.object(self.feature, "run_shell_cmd") as mock_cmd:
+            self.assertTrue(self.feature.is_sonic_os())
+        mock_cmd.assert_not_called()
 
     def test_true_when_mgmt_framework_running(self):
-        """Version file, show, and mgmt-framework image mean SONiC."""
+        """A mgmt-framework image is not queried by the current detector."""
         self._touch_version_file()
         images = "docker-syncd-mlnx:latest\ndocker-sonic-mgmt-framework:latest\n"
         with patch.object(self.feature.shutil, "which", return_value="/usr/bin/show"), \
                 patch.object(self.feature, "run_shell_cmd",
                              return_value=(0, images)) as mock_cmd:
             self.assertTrue(self.feature.is_sonic_os())
-        mock_cmd.assert_called_with(
-            "docker", ["ps", "--format", "{{.Image}}"], timeout=5)
+        mock_cmd.assert_not_called()
 
     def test_feature_get_defaults_true_on_sonic(self):
         """No DB file: both features default True when is_sonic_os is True."""
@@ -399,7 +498,10 @@ class TestIsSonicOs(unittest.TestCase):
             ret, value = self.feature.feature_request(
                 "get", "is_usb0_managed_by_nos")
             self.assertEqual((ret, value), (0, "True"))
-        self.assertFalse(os.path.isfile(self.db_file))
+        with open(self.db_file, "r") as f:
+            stored = json.load(f)
+        self.assertTrue(stored["is_redfish_disabled"]["value"])
+        self.assertTrue(stored["is_usb0_managed_by_nos"]["value"])
 
 
 if __name__ == "__main__":
