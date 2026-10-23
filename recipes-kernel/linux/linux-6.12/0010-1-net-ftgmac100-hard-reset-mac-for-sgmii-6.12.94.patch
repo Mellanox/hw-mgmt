@@ -1,0 +1,65 @@
+From: Sergejs Hatinecs <shatinecs@nvidia.com>
+Date: Thu, 12 Jun 2026 12:00:00 +0300
+Subject: [PATCH 6.12.94 1/1] net: ftgmac100: hard-reset MAC for SGMII to clear RX stall
+
+Upstream-Status: Pending
+
+On AST2700 + Marvell 88E151x over SGMII, an "ifconfig down/up" (or a
+partner-side link flap) intermittently leaves the MAC receive path wedged:
+the link comes back up and reports resolved, TX works, but RX stays frozen
+(no DHCP, no ping). The MDIO/serdes registers look identical to a healthy
+link in this state, so the wedge is below the register layer.
+
+The 6.12.94 Aspeed 00.07.04 baseline already hard-resets every Aspeed MAC
+(if (priv->is_aspeed)), which recovers NVIDIA SGMII but breaks other
+vendors that use a different SGMII PHY (for example Broadcom BCM54210S
+on Arista Goldfinch). Keep the Aspeed SCU reset, but only for RMII and
+for SGMII when CONFIG_MELLANOX_PLATFORM is enabled.
+
+This patch is for 6.12.94 / Aspeed 00.07.04. Do not apply it on SONiC
+6.12.58; that tree still has the RMII-only condition and is handled by
+0010-net-ftgmac100-hard-reset-mac-for-sgmii.patch.
+
+Signed-off-by: Sergejs Hatinecs <shatinecs@nvidia.com>
+---
+ drivers/net/ethernet/faraday/ftgmac100.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/faraday/ftgmac100.c b/drivers/net/ethernet/faraday/ftgmac100.c
+index e357dc1a..5f6d80cd 100644
+--- a/drivers/net/ethernet/faraday/ftgmac100.c
++++ b/drivers/net/ethernet/faraday/ftgmac100.c
+@@ -15,6 +15,7 @@
+ #include <linux/ethtool.h>
+ #include <linux/interrupt.h>
+ #include <linux/io.h>
++#include <linux/kconfig.h>
+ #include <linux/module.h>
+ #include <linux/netdevice.h>
+ #include <linux/of.h>
+@@ -154,8 +155,23 @@ static int ftgmac100_reset_and_config_mac(struct ftgmac100 *priv)
+ {
+ 	u32 maccr = 0;
+ 
+-	/* Aspeed SoC needs SCU reset */
+-	if (priv->is_aspeed) {
++	/* Aspeed SoC needs SCU reset.
++	 *
++	 * SGMII (AST2700 + Marvell 88E151x) depends on this full
++	 * reset_control cycle too: after an "ifconfig down/up" the soft
++	 * MACCR reset alone leaves the MAC RX path wedged (the link reads
++	 * resolved and TX works, but RX stays frozen). Only the hard reset
++	 * below clears it - this is why "modprobe -r/modprobe" (which
++	 * hard-resets the IP block at probe) always recovers while down/up
++	 * does not.
++	 *
++	 * Restrict the SGMII hard reset to CONFIG_MELLANOX_PLATFORM so other
++	 * vendors' SGMII PHYs keep the original RMII-only behaviour.
++	 */
++	if (priv->is_aspeed &&
++	    (priv->netdev->phydev->interface == PHY_INTERFACE_MODE_RMII ||
++	     (IS_ENABLED(CONFIG_MELLANOX_PLATFORM) &&
++	      priv->netdev->phydev->interface == PHY_INTERFACE_MODE_SGMII))) {
+ 		int err;
+ 
+ 		err = reset_control_assert(priv->rst);
