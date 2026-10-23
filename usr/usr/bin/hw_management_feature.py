@@ -49,10 +49,15 @@
     usb0 as NOS-owned.
 
     is_redfish_disabled returns (0, "True") or (0, "False"). If the database
-    has no value, it is True when the host is SONiC (SONIC_VERSION_FILE exists,
-    the "show" executable is on PATH, and a running container image contains
-    docker-sonic-mgmt-framework). Otherwise the default is False, so Redfish
-    login and BMC sensor polling stay enabled.
+    has no value, it is True when the host is SONiC (SONIC_VERSION_FILE exists
+    and the "show" executable is on PATH). Otherwise the default is False, so
+    Redfish login and BMC sensor polling stay enabled.
+
+    feature_request holds an exclusive flock on <db file>.lock from the
+    database load until the save, so concurrent processes and threads cannot
+    lose each other's updates. If the lock cannot be taken within
+    DB_LOCK_TIMEOUT seconds, set fails; get still returns the computed value
+    but does not write the database.
 
 Usage:
     As a module:
@@ -72,7 +77,7 @@ Usage:
 """
 
 import argparse
-import datetime
+import errno
 import fcntl
 import os
 import shutil
@@ -80,8 +85,9 @@ import stat
 import sys
 import json
 import tempfile
-import threading
-from hw_management_lib import str2bool, run_shell_cmd
+import time
+from datetime import datetime
+from hw_management_lib import str2bool
 
 # Action -> metadata and feature name -> handler function name and help text.
 # CLI flags are built from this tree.
@@ -121,31 +127,107 @@ _COMMAND_META_KEYS = ("help",)
 
 # SONiC version manifest. Present only on SONiC hosts.
 SONIC_VERSION_FILE = "/etc/sonic/sonic_version.yml"
-SONIC_MGMT_FRAMEWORK_IMAGE = "docker-sonic-mgmt-framework"
 # Persistent feature flags.
 HW_MANAGEMENT_DB_FILE = "/etc/hw-management/hw_management_features.json"
-HW_MANAGEMENT_DB = {}
-# Serializes in-process threads. flock does not block a second thread in this process.
-_DB_THREAD_LOCK = threading.Lock()
 # Same path and line format as hw-management-helpers.sh print_function_call.
 TRACE_LOG_FILE = "/var/log/hw-mgmt.trace.log"
+# Bounded so a stuck lock holder cannot hang usb0 ifup or hw-management start.
+DB_LOCK_TIMEOUT = 5.0
+DB_LOCK_POLL_INTERVAL = 0.05
+
+"""
+@summary: hw-mgmt DB structure example:
+{
+    "feature_name1": {
+        "value": True,
+        "timestamp": "2026_10_23_12-00-00.000",
+        "user": "root",
+    },
+    "feature_name2": {
+        "value": "test",
+        "timestamp": "2026_10_23_12-00-00.000",
+        "user": "root",
+    },
+    "feature_name3": {
+        "value": 123,
+        "timestamp": "2026_10_23_12-00-00.000",
+        "user": "root",
+    },
+    "feature_name4": {
+        "value": {"key1": "value1", "key2": "value2"},
+        "timestamp": "2026_10_23_12-00-00.000",
+        "user": "root",
+    },
+}
+"""
+
+class _DbFileLock(object):
+    """
+    @summary: Exclusive flock on <db_file>.lock.
+              flock belongs to the open file description, so every acquire
+              opens its own fd. That serializes other processes and other
+              threads of this process alike.
+    """
+
+    def __init__(self, db_file_name, timeout=None):
+        self._lock_file_name = db_file_name + ".lock"
+        self._timeout = DB_LOCK_TIMEOUT if timeout is None else timeout
+        self._fd = None
+
+    def acquire(self):
+        """
+        @summary: Take the lock, waiting up to the timeout.
+        @raise OSError: The lock file cannot be opened, or the timeout expired
+                        (TimeoutError).
+        """
+        os.makedirs(os.path.dirname(self._lock_file_name), exist_ok=True)
+        fd = os.open(self._lock_file_name,
+                     os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
+        deadline = time.monotonic() + self._timeout
+        try:
+            while True:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except OSError as e:
+                    if e.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                        raise
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(
+                            "DB lock timeout: %s" % self._lock_file_name)
+                    time.sleep(DB_LOCK_POLL_INTERVAL)
+        except BaseException:
+            os.close(fd)
+            raise
+        self._fd = fd
+
+    def release(self):
+        """
+        @summary: Drop the lock. Safe to call when it is not held.
+        """
+        fd = self._fd
+        if fd is None:
+            return
+        self._fd = None
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
 
 
-def print_log(function_name, argument=""):
+def print_log(function_name, *args):
     """
     @summary: Append one function-call trace line to TRACE_LOG_FILE.
               Format matches hw-management-helpers.sh print_function_call:
               script(pid) [YYYY_mm_dd_HH-MM-SS.mmm]: function_name argument
               The file is opened, written, and closed. No FD is kept.
     @param function_name: Name of the calling function.
-    @param argument: Optional argument string.
+    @param args: Variable length argument list.
     """
     script_name = os.path.basename(__file__)
     pid = os.getpid()
-    now = datetime.datetime.now()
-    ts = now.strftime("%Y_%m_%d_%H-%M-%S.") + "%03d" % (now.microsecond // 1000)
-    line = "%s(%s) [%s]: %s %s\n" % (
-        script_name, pid, ts, function_name, argument)
+    ts = datetime.now().strftime("%Y_%m_%d_%H-%M-%S.%f")[:-3]
+    line = "%s(%s) [%s]: %s %s\n" % (script_name, pid, ts, function_name, " ".join(args))
     try:
         with open(TRACE_LOG_FILE, "a") as log_f:
             log_f.write(line)
@@ -156,106 +238,108 @@ def print_log(function_name, argument=""):
 def is_sonic_os():
     """
     @summary: Detect whether this host is running SONiC.
-    @return: True when SONIC_VERSION_FILE exists, "show" is on PATH, and a
-             running container image contains docker-sonic-mgmt-framework.
+    @return: True or False. True when SONIC_VERSION_FILE exists and the "show"
+             executable is on PATH.
     """
     if not os.path.isfile(SONIC_VERSION_FILE):
-        print_log("is_sonic_os", "SONIC_VERSION_FILE not found: %s" % SONIC_VERSION_FILE)
+        print_log("is_sonic_os", f"SONIC_VERSION_FILE not found: {SONIC_VERSION_FILE}")
         return False
 
     if not shutil.which("show"):
         print_log("is_sonic_os", "show not found on PATH")
         return False
 
-    ret, images = run_shell_cmd(
-        "docker", ["ps", "--format", "{{.Image}}"], timeout=5)
-    if ret != 0 or SONIC_MGMT_FRAMEWORK_IMAGE not in (images or ""):
-        print_log("is_sonic_os", "docker-sonic-mgmt-framework not running")
-        return False
     return True
 
 
-def is_redfish_disabled(*_args):
+def is_redfish_disabled(hw_mgmt_db, *_args):
     """
     @summary: Check whether Redfish is disabled on this host.
+    @param hw_mgmt_db: The hw-management database.
     @param _args: Optional arguments. Unused by this check.
     @return: (0, "True") or (0, "False"). Defaults to True on SONiC hosts.
     """
-    enabled = get_hw_management_db(["is_redfish_disabled", "enabled"])
-    print_log("is_redfish_disabled", "get_hw_management_db: %s" % enabled)
+    enabled = hw_management_db_get(hw_mgmt_db, "is_redfish_disabled")
+    print_log("is_redfish_disabled", f"hw_management_db_get: {enabled}")
+    # missing value in db.
     if enabled is None:
+        # set the value to the default value based on OS version
+        # At this moment, only Sonic requires to disable Redfish
+        # save value in DB for future faster access
         enabled = is_sonic_os()
-        print_log("is_redfish_disabled", "is_sonic_os: %s" % enabled)
-    print_log("is_redfish_disabled", "enabled: %s" % enabled)
+        hw_management_db_set(hw_mgmt_db, "is_redfish_disabled", enabled, user="def")
+        print_log("is_redfish_disabled", f"is_sonic_os: {enabled}")
+
+    print_log("is_redfish_disabled", f"enabled: {enabled}")
     val = str2bool(enabled)
     if val is None:
         return 1, "invalid value"
     return 0, str(val)
 
 
-def is_redfish_disabled_set(*_args):
+def is_redfish_disabled_set(hw_mgmt_db, *_args):
     """
     @summary: Set whether Redfish is disabled on this host.
+    @param hw_mgmt_db: The hw-management database.
     @param _args: Optional arguments. First argument is the value to set.
     @return: (retcode, message). 0 and "" on success. Non-zero and an
              error string on failure.
     """
-    if not _args:
-        print_log("is_redfish_disabled_set", "no args")
-        return 1, "missing value"
+    if len(_args) != 1:
+        print_log("is_redfish_disabled_set", f"expected exactly one value, got {len(_args)}")
+        return 1, "expected exactly one value"
 
     val = str2bool(_args[0])
     if val is None:
-        print_log("is_redfish_disabled_set", "invalid value: %s" % _args[0])
+        print_log("is_redfish_disabled_set", f"invalid value: {_args[0]}")
         return 1, "invalid value"
-    print_log("is_redfish_disabled_set", "setting to: %s" % val)
-    ret = set_hw_management_db(["is_redfish_disabled", "enabled"], val)
-    if save_hw_management_db(HW_MANAGEMENT_DB_FILE) != 0:
-        print_log("is_redfish_disabled_set", "save_hw_management_db failed")
-        return 1, "save_hw_management_db failed"
-    print_log("is_redfish_disabled_set", "save_hw_management_db success")
+    print_log("is_redfish_disabled_set", f"setting to: {val}")
+    ret = hw_management_db_set(hw_mgmt_db, "is_redfish_disabled", val, user="sw")
     return ret, ""
 
 
-def is_usb0_managed_by_nos(*_args):
+def is_usb0_managed_by_nos(hw_mgmt_db, *_args):
     """
     @summary: Check whether USB0 is managed by the NOS.
+    @param hw_mgmt_db: The hw-management database.
     @param _args: Optional arguments. Unused by this check.
     @return: (0, "True") when USB0 is NOS-managed, (0, "False") otherwise.
              Uses the database override if present, else is_sonic_os().
     """
-    enabled = get_hw_management_db(["is_usb0_managed_by_nos", "enabled"])
-    print_log("is_usb0_managed_by_nos", "get_hw_management_db: %s" % enabled)
+    enabled = hw_management_db_get(hw_mgmt_db, "is_usb0_managed_by_nos")
+    print_log("is_usb0_managed_by_nos", f"hw_management_db_get: {enabled}")
     if enabled is None:
+        # set the value to the default value based on OS version
+        # At this moment, only Sonic requires to manage USB0 by NOS
+        # save value in DB for future faster access
         enabled = is_sonic_os()
-        print_log("is_usb0_managed_by_nos", "is_sonic_os: %s" % enabled)
-    print_log("is_usb0_managed_by_nos", "enabled: %s" % enabled)
+        hw_management_db_set(hw_mgmt_db, "is_usb0_managed_by_nos", enabled, user="def")
+        print_log("is_usb0_managed_by_nos", f"is_sonic_os: {enabled}")
+    print_log("is_usb0_managed_by_nos", f"enabled: {enabled}")
     val = str2bool(enabled)
     if val is None:
         return 1, "invalid value"
     return 0, str(val)
 
 
-def is_usb0_managed_by_nos_set(*_args):
+def is_usb0_managed_by_nos_set(hw_mgmt_db, *_args):
     """
     @summary: Set whether USB0 is managed by NOS on this host.
+    @param hw_mgmt_db: The hw-management database.
     @param _args: Optional arguments. First argument is the value to set.
     @return: (retcode, message). 0 and "" on success. Non-zero and an
              error string on failure.
     """
-    if not _args:
-        print_log("is_usb0_managed_by_nos_set", "no args")
-        return 1, "missing value"
+    if len(_args) != 1:
+        print_log("is_usb0_managed_by_nos_set", f"expected exactly one value, got {len(_args)}")
+        return 1, "expected exactly one value"
+
     val = str2bool(_args[0])
     if val is None:
-        print_log("is_usb0_managed_by_nos_set", "invalid value: %s" % _args[0])
+        print_log("is_usb0_managed_by_nos_set", f"invalid value: {_args[0]}")
         return 1, "invalid value"
-    print_log("is_usb0_managed_by_nos_set", "setting to: %s" % val)
-    ret = set_hw_management_db(["is_usb0_managed_by_nos", "enabled"], val)
-    if save_hw_management_db(HW_MANAGEMENT_DB_FILE) != 0:
-        print_log("is_usb0_managed_by_nos_set", "save_hw_management_db failed")
-        return 1, "save_hw_management_db failed"
-    print_log("is_usb0_managed_by_nos_set", "save_hw_management_db success")
+    print_log("is_usb0_managed_by_nos_set", f"setting to: {val}")
+    ret = hw_management_db_set(hw_mgmt_db, "is_usb0_managed_by_nos", val, user="sw")
     return ret, ""
 
 
@@ -275,69 +359,64 @@ def _action_features(command):
 def feature_request(action, feature_name, *args):
     """
     @summary: Call the function registered for an action and feature name.
+          If the handler succeeds, the records it changed are merged into
+          the database file.
     @param action: Command key in COMMANDS ("get" or "set").
     @param feature_name: Feature key under that action.
     @param args: Optional arguments forwarded to the handler.
     @return: (retcode, result string). retcode 0 is success. On error,
              retcode is non-zero and the string is an error message.
-
-    Get and set both fail if the database file exists but cannot be read
-    or is not a JSON object. A missing file is not an error.
-
-    An exclusive flock on db_file.lock is held for load, handler, and save.
-    In-process threads take _DB_THREAD_LOCK first; flock does not block a
-    second thread in the same process.
     """
     extra = " ".join(str(a) for a in args)
     print_log(
         "feature_request",
         " ".join((str(action), str(feature_name), extra)).strip())
-    lock_fd = None
-    _DB_THREAD_LOCK.acquire()
+
     try:
-        try:
-            lock_path = HW_MANAGEMENT_DB_FILE + ".lock"
-            db_dir = os.path.dirname(lock_path)
-            if db_dir:
-                os.makedirs(db_dir, exist_ok=True)
-            lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
-        except (OSError, IOError):
-            print_log("feature_request", "lock failed: %s" % HW_MANAGEMENT_DB_FILE)
-            return 1, "DB lock failed"
-        ret = load_hw_management_db(HW_MANAGEMENT_DB_FILE)
-        if ret != 0:
-            print_log("feature_request", "load_hw_management_db: %s" % HW_MANAGEMENT_DB_FILE)
-            return 1, "DB load failed"
         command = COMMANDS.get(action)
         if command is None:
-            print_log("feature_request", "command: %s is None" % action)
-            return 1, "Command unknown: %s" % action
+            print_log("feature_request", f"command: {action} is None")
+            return 1, f"Command unknown: {action}"
         feature = _action_features(command).get(feature_name)
         if feature is None:
-            print_log("feature_request", "feature: %s is None" % feature_name)
-            return 1, "Feature unknown: %s" % feature_name
+            print_log("feature_request", f"feature: {feature_name} is None")
+            return 1, f"Feature unknown: {feature_name}"
         handler_name = feature["handler"]
-        print_log("feature_request", "feature_name: %s handler_name: %s" % (feature_name, handler_name))
+        print_log("feature_request", f"feature_name: {feature_name} handler_name: {handler_name}")
         handler = globals().get(handler_name)
         if handler is None:
-            print_log("feature_request", "handler: %s is None" % handler_name)
-            return 1, "Handler unknown: %s" % handler_name
-        return handler(*args)
-    finally:
-        if lock_fd is not None:
-            try:
-                fcntl.flock(lock_fd, fcntl.LOCK_UN)
-            except (OSError, IOError):
-                pass
-            try:
-                os.close(lock_fd)
-            except (OSError, IOError):
-                pass
+            print_log("feature_request", f"handler: {handler_name} is None")
+            return 1, f"Handler unknown: {handler_name}"
+
+        db_lock = _DbFileLock(HW_MANAGEMENT_DB_FILE)
         try:
-            _DB_THREAD_LOCK.release()
-        except RuntimeError:
-            pass
+            db_lock.acquire()
+        except OSError as e:
+            print_log("feature_request", f"DB lock failed: {e}")
+            if action == "set":
+                return 1, "DB lock failed"
+            # get stays readable without the lock but must not write.
+            db_lock = None
+
+        try:
+            hw_mgmt_db = load_hw_management_db(HW_MANAGEMENT_DB_FILE)
+            if hw_mgmt_db is None:
+                print_log("feature_request", f"Cannot load DB file: {HW_MANAGEMENT_DB_FILE}")
+                return 1, f"Cannot load DB file: {HW_MANAGEMENT_DB_FILE}"
+
+            result, text = handler(hw_mgmt_db, *args)
+            if result == 0 and db_lock is not None:
+                saved = update_hw_management_db(HW_MANAGEMENT_DB_FILE, hw_mgmt_db)
+                if saved != 0 and action == "set":
+                    print_log("feature_request", f"update_hw_management_db failed: {HW_MANAGEMENT_DB_FILE}")
+                    return 1, "update_hw_management_db failed"
+            return result, text
+        finally:
+            if db_lock is not None:
+                db_lock.release()
+    except Exception as e:
+        print_log("feature_request", f"Exception: {e}")
+        return 1, f"Exception: {e}"
 
 
 def print_feature_help(action):
@@ -347,13 +426,13 @@ def print_feature_help(action):
     @return: 0
     """
     features = _action_features(COMMANDS[action])
-    print("Available --%s options:" % action)
+    print(f"Available --{action} options:")
     if not features:
         print("  (none)")
         return 0
     width = max(len(name) for name in features)
     for name in sorted(features):
-        print("  %-*s  %s" % (width, name, features[name].get("help", "")))
+        print(f"  {name:<{width}}  {features[name].get('help', '')}")
     return 0
 
 
@@ -376,118 +455,150 @@ def run_action(action, values):
     return ret
 
 
-def get_hw_management_db(path):
+def hw_management_db_get(hw_mgmt_db, feature_name):
     """
-    @summary: Return the nested value at path, or None if a key is missing.
-    @param path: Dict keys from the outermost level to the leaf.
-    @return: The value at path, or None.
+    @summary: Return the value of a feature from the hw-management database, or None if the feature is missing.
+    @param hw_mgmt_db: The hw-management database.
+    @param feature_name: The feature name to get.
+    @return: The stored value, or None.
     """
-    dict_in = HW_MANAGEMENT_DB
-    for sub_path in path:
-        if not isinstance(dict_in, dict):
-            return None
-        dict_in = dict_in.get(sub_path, None)
-        if dict_in is None:
-            break
-    return dict_in
+    entry = hw_mgmt_db.get(feature_name)
+    if not isinstance(entry, dict):
+        return None
+    return entry.get("value", None)
 
 
-def set_hw_management_db(path, val):
+def hw_management_db_set(hw_mgmt_db, feature_name, value, user="def"):
     """
-    @summary: Set the value of a key in the hw-management database.
-              create new key:val if key missing.if pat does not exist, create it.
-              create key tree if not exists.
-    @param path: dict_in keys organized in array.
-    @param val: The value to set.
+    @summary: Set or update record in the hw-management database.
+              If record does not exist, create it with value, timestamp, and user.
+              If record exists:
+                update record timestamp if user or value changed.
+                do not update if value or user not changed
+    @param hw_mgmt_db: The hw-management database.
+    @param feature_name: The feature name to set.
+    @param value: The value to set.
+    @param user: The user who is setting the value.
     @return: 0
     """
-    dict_in = HW_MANAGEMENT_DB
-    for sub_path in path[:-1]:
-        child = dict_in.get(sub_path)
-        if not isinstance(child, dict):
-            child = {}
-            dict_in[sub_path] = child
-        dict_in = child
-    dict_in[path[-1]] = val
+    entry = hw_mgmt_db.get(feature_name)
+    new_entry = {
+        "value": value,
+        "timestamp": datetime.now().strftime("%Y_%m_%d_%H-%M-%S.%f")[:-3],
+        "user": user,
+        "updated": True,
+    }
+    if not isinstance(entry, dict):
+        entry = None
+    if entry is None:
+        hw_mgmt_db[feature_name] = new_entry
+    elif entry.get("user", None) != user or entry.get("value", None) != value:
+        hw_mgmt_db[feature_name] = new_entry
     return 0
 
 
-def save_hw_management_db(db_file):
+def _save_hw_management_db(db_file_name, hw_mgmt_db):
     """
-    @summary: Write the in-memory hw-management database to db_file.
+    @summary: Write the database dict to db_file_name.
               Writes a unique temp file in the same directory, then replaces
               db_file so an interrupted write cannot truncate stored settings.
               New files are 0644; an existing file keeps its mode.
-    @param db_file: Destination JSON path.
-    @return: 0 on success, 1 on I/O error. An empty database is left unchanged.
+    @param db_file_name: Destination JSON path.
+    @param hw_mgmt_db: Database dict to save.
+    @return: 0 on success, not 0 on failure.
     """
-    if not HW_MANAGEMENT_DB:
-        print_log("save_hw_management_db", "HW_MANAGEMENT_DB is empty")
-        return 0
-    db_dir = os.path.dirname(db_file)
-    tmp_dir = db_dir if db_dir else "."
-    print_log("save_hw_management_db", "db_dir: %s" % db_dir)
-    fd = None
-    tmp = None
+    result = 0
+    tmp_file_path = None
+    db_dir = os.path.dirname(db_file_name)
     try:
-        if db_dir:
-            os.makedirs(db_dir, exist_ok=True)
-        print_log("save_hw_management_db", "db_dir exists: %s" % db_dir)
-        fd, tmp = tempfile.mkstemp(prefix=".tmp_", dir=tmp_dir)
-        print_log("save_hw_management_db", "tmp: %s" % tmp)
-        with os.fdopen(fd, "w") as f:
-            fd = None
-            json.dump(HW_MANAGEMENT_DB, f)
-            f.write("\n")
-        print_log("save_hw_management_db", "json.dump success")
-        prev_mode = 0o644
-        try:
-            prev_mode = stat.S_IMODE(os.stat(db_file).st_mode)
-        except (OSError, IOError):
-            pass
-        os.chmod(tmp, prev_mode)
-        os.replace(tmp, db_file)
-        tmp = None
-    except (OSError, IOError):
-        print_log("save_hw_management_db", "OSError or IOError")
-        if fd is not None:
+        os.makedirs(db_dir, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            dir=db_dir, mode="w", delete=False, encoding="utf-8"
+        ) as tf:
+            tmp_file_path = tf.name
+            json.dump(hw_mgmt_db, tf)
+            tf.write("\n")
+            tf.flush()
+            os.fsync(tf.fileno())
+        if os.path.exists(db_file_name):
+            mode = stat.S_IMODE(os.stat(db_file_name).st_mode)
+        else:
+            mode = 0o644
+        os.chmod(tmp_file_path, mode)
+        os.replace(tmp_file_path, db_file_name)
+        tmp_file_path = None
+        result = 0
+    except OSError:
+        print_log("_save_hw_management_db", "OSError")
+        result = 1
+    finally:
+        if tmp_file_path:
             try:
-                os.close(fd)
-            except (OSError, IOError):
-                pass
-        if tmp:
-            try:
-                os.unlink(tmp)
-            except (OSError, IOError):
-                pass
+                os.unlink(tmp_file_path)
+            except OSError:
+                print_log("_save_hw_management_db", "unlink failed: %s" % tmp_file_path)
+                result = 1
+    print_log("_save_hw_management_db", f"result: {result}")
+    return result
+
+
+def update_hw_management_db(db_file_name, hw_mgmt_db):
+    """
+    @summary: Update the database file from the records flagged "updated" in hw_mgmt_db.
+        1. Load DB from file
+        2. Update DB with new(updated) fields from hw_mgmt_db. Replace existing fields.
+        3. Save DB to file
+    @param db_file_name: Database file path.
+    @param hw_mgmt_db: Database dict to update.
+    @return: 0 on success, not 0 on failure
+    """
+    db_modified = False
+    try:
+        os.makedirs(os.path.dirname(db_file_name), exist_ok=True)
+        loaded_db_dict = load_hw_management_db(db_file_name)
+        if loaded_db_dict is None:
+            print_log("update_hw_management_db", f"Cannot load DB file: {db_file_name}")
+            return 1
+
+        for feature_name, feature_data in hw_mgmt_db.items():
+            if not isinstance(feature_data, dict) or not feature_data.get("updated"):
+                continue
+            loaded_db_dict[feature_name] = {
+                key: val for key, val in feature_data.items() if key != "updated"
+            }
+            db_modified = True
+        if db_modified:
+            result = _save_hw_management_db(db_file_name, loaded_db_dict)
+            if result != 0:
+                print_log("update_hw_management_db", f"_save_hw_management_db failed: {db_file_name}")
+                return result
+        return 0
+    except OSError:
+        print_log("update_hw_management_db", f"DB update failed: {db_file_name}")
         return 1
-    print_log("save_hw_management_db", "save_hw_management_db success")
-    return 0
 
 
-def load_hw_management_db(db_file):
+def load_hw_management_db(db_file_name):
     """
-    @summary: Load the hw-management database from db_file.
-    @param db_file: Source JSON path.
-    @return: 0 on success or when the file is missing. 1 if the file
-             exists but cannot be read or is not a JSON object.
+    @summary: Load the hw-management database from db_file_name.
+    @param db_file_name: Database file path.
+    @return: Dict - in case json load from file was successful
+             empty dict {} - if file is absent
+             None - if exists but cannot be read or is not a JSON object
     """
-    global HW_MANAGEMENT_DB
-    HW_MANAGEMENT_DB = {}
-    if not os.path.exists(db_file):
-        print_log("load_hw_management_db", "file does not exist: %s" % db_file)
-        return 0
+    if not os.path.exists(db_file_name):
+        print_log("load_hw_management_db", "file does not exist: %s" % db_file_name)
+        return {}
     try:
-        with open(db_file, 'r') as f:
-            loaded = json.load(f)
+        with open(db_file_name, "r", encoding="utf-8") as handle:
+            loaded = json.load(handle)
     except (ValueError, OSError, IOError):
-        print_log("load_hw_management_db", "json.load failed: %s" % db_file)
-        return 1
+        print_log("load_hw_management_db", "json.load failed: %s" % db_file_name)
+        return None
     if not isinstance(loaded, dict):
-        print_log("load_hw_management_db", "loaded is not a dict: %s" % db_file)
-        return 1
-    HW_MANAGEMENT_DB = loaded
-    return 0
+        print_log("load_hw_management_db", "loaded is not a dict: %s" % db_file_name)
+        return None
+    return loaded
 
 
 def main():
@@ -514,18 +625,19 @@ def main():
     action_group = parser.add_mutually_exclusive_group(required=True)
     for name in COMMANDS:
         action_group.add_argument(
-            "--%s" % name,
+            f"--{name}",
             nargs="*",
             metavar=("FEATURE", "ARG"),
             help=COMMANDS[name]["help"])
     args = parser.parse_args()
     TRACE_LOG_FILE = args.log_file
 
+    ret = 2
     for name in COMMANDS:
         values = getattr(args, name)
         if values is not None:
-            return run_action(name, values)
-    return 2
+            ret = run_action(name, values)
+    return ret
 
 
 if __name__ == "__main__":
