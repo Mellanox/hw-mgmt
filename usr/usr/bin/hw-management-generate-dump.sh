@@ -102,6 +102,7 @@ fi
 
 if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
 	dump_cmd "journalctl -o short-precise --no-pager" "journalctl" "45"
+	dump_cmd "journalctl --list-boots --no-pager" "journalctl-boots" "5"
 fi
 
 [ -f /var/log/tc_log ] && cp /var/log/tc_* "$DUMP_FOLDER/" 2>/dev/null || true
