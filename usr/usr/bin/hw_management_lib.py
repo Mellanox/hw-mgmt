@@ -44,7 +44,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
-ALLOWED_SHELL_CMDS = ["iorw", "/usr/bin/hw-management-chassis-events.sh", "docker"]
+ALLOWED_SHELL_CMDS = ["iorw", "/usr/bin/hw-management-chassis-events.sh"]
 
 
 def to_int(value: Any, default: int = 0) -> int:
@@ -83,6 +83,27 @@ def str2bool(val):
     except AttributeError:
         return None
     return None
+
+# ----------------------------------------------------------------------
+
+
+def get_nested_value(d: dict, keys: list, default=None):
+    """
+    @summary:
+        Get a nested value from a dictionary
+    @param d: dictionary
+    @param keys: list of keys
+    @param default: default value if the key is not found
+    @return: value of the nested key
+    """
+    if not isinstance(d, dict):
+        return default
+    for key in keys:
+        if isinstance(d, dict) and key in d:
+            d = d[key]
+        else:
+            return default
+    return d
 
 # ----------------------------------------------------------------------
 
