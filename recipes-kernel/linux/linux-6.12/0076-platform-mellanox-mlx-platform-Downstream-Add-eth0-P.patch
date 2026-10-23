@@ -1,0 +1,63 @@
+From fbbecbd01ce7c5395c4565ff65da56f2aa315a55 Mon Sep 17 00:00:00 2001
+From: Nadav Hugi <nhugi@nvidia.com>
+Date: Wed, 21 Oct 2026 23:52:14 +0300
+Subject: [PATCH] platform: mellanox: mlx-platform: Downstream: Add eth0 PHY
+ reset for SN5640 and SN5610
+
+Add a dedicated register access table for the SN5640 and SN5610 systems.
+It extends the default next generation table with the "sgmii_phy2_reset"
+attribute, which controls the reset line of the eth0 management PHY in
+the Comex CPLD (register 0x2517, bit 5). The CPLD pulses the reset when 0
+is written and returns the bit to 1 by itself.
+
+Signed-off-by: Nadav Hugi <nhugi@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 25 +++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 7820ec7da..01e035c8a 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -5105,6 +5105,24 @@ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
+ 		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data),
+ };
+ 
++/* Platform register access for SN5640 and SN5610 systems data: the default
++ * next generation table plus the eth0 PHY reset, filled at init.
++ */
++static struct mlxreg_core_data
++mlxplat_mlxcpld_ng800_hi171_regs_io_data[ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data) + 1];
++
++static struct mlxreg_core_data mlxplat_mlxcpld_ng800_hi171_phy_reset_data = {
++	.label = "sgmii_phy2_reset",
++	.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET,
++	.mask = GENMASK(7, 0) & ~BIT(5),
++	.mode = 0644,
++};
++
++static struct mlxreg_core_platform_data mlxplat_ng800_hi171_regs_io_data = {
++		.data = mlxplat_mlxcpld_ng800_hi171_regs_io_data,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_ng800_hi171_regs_io_data),
++};
++
+ /* Platform register access for next generation systems families data */
+ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+ 	{
+@@ -8431,7 +8449,12 @@ static int __init mlxplat_dmi_ng400_hi171_matched(const struct dmi_system_id *dm
+ 	mlxplat_hotplug->deferred_nr =
+ 		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
+ 	mlxplat_led = &mlxplat_xdr_led_data;
+-	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
++	memcpy(mlxplat_mlxcpld_ng800_hi171_regs_io_data,
++	       mlxplat_mlxcpld_default_ng_regs_io_data,
++	       sizeof(mlxplat_mlxcpld_default_ng_regs_io_data));
++	i = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data);
++	mlxplat_mlxcpld_ng800_hi171_regs_io_data[i] = mlxplat_mlxcpld_ng800_hi171_phy_reset_data;
++	mlxplat_regs_io = &mlxplat_ng800_hi171_regs_io_data;
+ 	mlxplat_fan = &mlxplat_xdr_fan_data;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type3); i++)
+-- 
+2.47.3
+

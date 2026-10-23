@@ -1,13 +1,30 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** October 13, 2026
+**Last Updated:** October 21, 2026
 
 ---
 
 ## Change History
 
 Section links in Rev. 3.2.6 and later point to the manual heading. Entries from Rev. 3.2.5 and earlier keep the section numbers that the manual used when they were written. The manual no longer numbers its headings.
+
+### Rev. 3.2.14 - October 21, 2026
+
+#### Added: Management PHY reset nodes and recovery helper (#5190348, #5248970)
+
+**Affected platforms:** N51XX_LD platform family, N6100_LD (HI180), N6300_LD (HI185), SN6600 (HI186), SN6600_LD (HI193), SN6800_LD (HI187) and SN6810_LD (HI183): both nodes. SN5640 (HI171) and SN5610 (HI172): `sgmii_phy2_reset` only.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| [Management PHY Reset](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#management-phy-reset) | New section: `sgmii_phy2_reset` (eth0) and `sgmii_phy_reset` (eth1) reset the PHY of one CPU management port |
+| [Management PHY Recovery Helper](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#management-phy-recovery-helper) | New section: `hw-management-phy-recover.sh [-d] [-t <seconds>] <eth0|eth1>`, exit codes 0 to 4, `-d` snapshot lines in `/var/log/hw-mgmt.trace.log`, collected by `hw-management-generate-dump.sh` |
+
+**Validation source:** `mlxplat_mlxcpld_l1_scale_out_regs_io_data` and `mlxplat_mlxcpld_ng800_hi171_regs_io_data` in the mlx-platform driver, `nvsw_host_nvl6_regs_io_data` in the nvsw-host-nvl6 driver, `nvsw_host_spc6_regs_io_data` and `nvsw_host_spc6_hid186_regs_io_data` in the nvsw-host-spc6 driver, `usr/usr/bin/hw-management-phy-recover.sh`.
+
+---
 
 ### Rev. 3.2.13 - October 13, 2026
 

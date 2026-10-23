@@ -320,6 +320,7 @@ Kernel-5.10
 |0311-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          |            | NVME SSD fallback recovery                     |
 |0312-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |0313-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
+|0314-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
 |7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
 |7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
@@ -736,6 +737,9 @@ Kernel-6.1
 |0120-hwmon-Add-support-for-SPD5118-compliant-temperature-.patch  | 09262e9814ca       | Feature upstream                         |            |                                                |
 |0121-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch  |                    | Downstream accepted                      |            | SN6600                                         |
 |0122-i2c-dev-Fix-duplicate-chardev-registration-during-mo.patch|                    | Bugfix pending                           |            | Fix duplicate /dev/i2c-N node race at init     |
+|0123-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600 SN6600_LD SN6800_LD SN6810_LD PHY reset |
+|0124-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
+|0125-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
@@ -850,6 +854,9 @@ Kernel-6.12
 |0072-iio-adc-max1363-Add-ability-to-set-scale-of-the-ADC.patch   |                    | Downstream accepted                      |            | MAX1363 Vdd reference for leakage A2D          |
 |0073-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch  |                    | Downstream accepted                      |            | SN6600                                         |
 |0074-i2c-dev-Fix-duplicate-chardev-registration-during-mo.patch|                    | Bugfix pending                           |            | Fix duplicate /dev/i2c-N node race at init     |
+|0075-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600 SN6600_LD SN6800_LD SN6810_LD PHY reset |
+|0076-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
+|0077-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
