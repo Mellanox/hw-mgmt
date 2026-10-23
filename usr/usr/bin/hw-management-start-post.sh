@@ -86,10 +86,16 @@ case $sku in
 		if [ -e "$ui_tree_archive_file" ]; then
 			# Extract the ui_tree archive to /var/run/hw-management
 			tar xfz "$ui_tree_archive_file" -C "$hw_management_path"
+			rm -f "$labels_pending_file"
 			echo 1 > "$config_path"/labels_ready
 			log_info "Labels data base is ready"
 		else
-		    hw-management-label-init-complete.sh &
+			# No archive for this SKU: the tree is built link by link by the
+			# makers that check_n_link spawns. Hand the indicator over to
+			# hw-management-sysfs-monitor.sh, which already waits for the very
+			# event that completes the tree.
+			echo 0 > "$config_path"/labels_ready
+			touch "$labels_pending_file"
 		fi
 		;;
 	*)
