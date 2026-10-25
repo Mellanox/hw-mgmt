@@ -1,0 +1,43 @@
+From 22bb96c5129d514bef7f8c91ccc7c5484015e036 Mon Sep 17 00:00:00 2001
+From: Nadav Hugi <nhugi@nvidia.com>
+Date: Wed, 21 Oct 2026 23:52:15 +0300
+Subject: [PATCH] platform/mellanox: nvsw-host-nvl6: Fix the management PHY
+ reset attributes
+
+On the N6100_LD and N6300_LD systems the eth0 PHY reset is RESET_GP2 bit
+4, a level bit, and the eth1 PHY reset is RESET_GP1 bit 5, pulsed by the
+ComEx CPLD. Expose them as "sgmii_phy2_reset" (eth0) and "sgmii_phy_reset"
+(eth1), the same names as on the other NVLink switches, so the names keep
+their port meaning.
+
+Signed-off-by: Nadav Hugi <nhugi@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-host-nvl6.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
+index 0f26e758f..ae15ac354 100644
+--- a/drivers/platform/mellanox/nvsw-host-nvl6.c
++++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
+@@ -273,11 +273,17 @@ static struct mlxreg_core_data nvsw_host_nvl6_regs_io_data[] = {
+ 		.mode = 0644,
+ 	},
+ 	{
+-		.label = "sgmii_phy_reset",
++		.label = "sgmii_phy2_reset",
+ 		.reg = NVSW_REG_RESET_GP2_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(4),
+ 		.mode = 0644,
+ 	},
++	{
++		.label = "sgmii_phy_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
+ 	{
+ 		.label = "cpu_erot_reset",
+ 		.reg = NVSW_REG_RESET_GP2_OFFSET,
+-- 
+2.47.3
+
