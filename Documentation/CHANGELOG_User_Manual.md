@@ -1,11 +1,28 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** October 5, 2026
+**Last Updated:** November 9, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.13 - November 9, 2026
+
+#### Added: Management PHY reset nodes and recovery helper (#5190348)
+
+**Affected platforms:** N51XX_LD platform family, N6100_LD (HI180) and N6300_LD (HI185): both nodes.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| [Management PHY Reset](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#management-phy-reset) | New section: `sgmii_phy2_reset` (eth0) and `sgmii_phy_reset` (eth1) reset the PHY of one CPU management port |
+| [Management PHY Recovery Helper](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#management-phy-recovery-helper) | New section: `hw-management-phy-recover.sh [-d] [-t <seconds>] <eth0|eth1>`, exit codes 0 to 4, `-d` snapshot lines in `/var/log/hw-mgmt.trace.log`, collected by `hw-management-generate-dump.sh` |
+
+**Validation source:** `mlxplat_mlxcpld_l1_scale_out_regs_io_data` in the mlx-platform driver, `nvsw_host_l1_regs_io_data` in the nvsw-host-l1 driver, `usr/usr/bin/hw-management-phy-recover.sh`.
+
+---
 
 ### Rev. 3.2.12 - October 5, 2026
 
