@@ -114,13 +114,19 @@ def exit_wait(exit_event, timeout, chunk_sec=0.2):
     """
     @summary:
         Wait up to timeout seconds in short chunks for graceful shutdown visibility.
-    @param exit_event: threading.Event cleared on run, set by signal handler
+    @param exit_event: ExitFlag (or threading.Event-like object) cleared on run,
+                       set by signal handler
     @param timeout: Total seconds to wait (may end early if exit_event is set)
     @param chunk_sec: Maximum duration of a single wait; smaller reacts faster to signals
 
     The main-thread Python signal handler does not run while blocked in a single
     long exit_event.wait(); chunking returns to the interpreter so SIGTERM/SIGINT
     handlers can run and systemd stop timeouts are respected.
+
+    A daemon whose signal handler sets the exit flag should use ExitFlag rather
+    than threading.Event: Event.set()/wait() take a non-reentrant lock, which is
+    unsafe to touch from a signal handler that interrupts the main thread inside
+    Event.wait() (CPython bpo-34486).
     """
     if timeout <= 0:
         return
@@ -129,6 +135,97 @@ def exit_wait(exit_event, timeout, chunk_sec=0.2):
         wait_time = min(chunk_sec, timeout - elapsed)
         exit_event.wait(wait_time)
         elapsed += wait_time
+
+# ----------------------------------------------------------------------
+
+
+class _InterruptibleSection:
+    """
+    @summary: Context manager marking a region where a signal may abort the code.
+    Created by ExitFlag.interruptible(); not meant to be instantiated directly.
+    """
+
+    def __init__(self, owner):
+        self._owner = owner
+
+    def __enter__(self):
+        self._owner._interruptible = True
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self._owner._interruptible = False
+        return False
+
+
+class ExitFlag:
+    """
+    @summary:
+        Signal-handler-safe exit flag for single-threaded daemons.
+
+    Replacement for the subset of threading.Event used with exit_wait()
+    (set/clear/is_set/wait), implemented without any lock. A signal handler runs
+    on the main thread at an arbitrary bytecode boundary. With threading.Event
+    it can interrupt Condition.wait() between its lock release and re-acquire,
+    so an exception raised by the handler surfaces as "RuntimeError: release
+    unlocked lock", and Event.set() called from the handler can self-deadlock on
+    the non-reentrant lock if the main thread holds it.
+
+    The flag is written by the signal handler / main thread only (a plain bool
+    store is atomic under the GIL), and wait() is a plain time.sleep().
+
+    Interruptible section:
+        A signal handler normally only sets the flag and lets the main loop exit
+        at the next check. Code that can block for a long time in the kernel
+        (e.g. sysfs reads) is wrapped in `with flag.interruptible():`. If a
+        signal arrives there, the handler calls take_interruptible() and raises
+        to abort the blocking call. Outside such sections the handler must not
+        raise, so the exception can never land in non-reentrant stdlib code.
+    """
+
+    def __init__(self):
+        self._flag = False
+        self._interruptible = False
+
+    def set(self):
+        self._flag = True
+
+    def clear(self):
+        self._flag = False
+
+    def is_set(self):
+        return self._flag
+
+    def wait(self, timeout=None):
+        """
+        @summary: Sleep up to timeout seconds (None = until set); True if set.
+
+        If a signal handler returns normally, the interrupted time.sleep() resumes
+        (PEP 475), so the flag is noticed after at most one wait() call; callers
+        should wait in short chunks (see exit_wait()).
+        """
+        if timeout is None:
+            while not self._flag:
+                time.sleep(0.2)
+        elif timeout > 0 and not self._flag:
+            time.sleep(timeout)
+        return self._flag
+
+    def interruptible(self):
+        """
+        @summary: Context manager: a signal received inside may abort the code.
+        """
+        return _InterruptibleSection(self)
+
+    def take_interruptible(self):
+        """
+        @summary: Signal-handler side of interruptible().
+        @return: True once if called inside an interruptible() section (the
+                 caller should then raise); the section is disarmed so a second
+                 signal cannot raise again during cleanup. False otherwise.
+        """
+        armed = self._interruptible
+        self._interruptible = False
+        return armed
 
 # ----------------------------------------------------------------------
 

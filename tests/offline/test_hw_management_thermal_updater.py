@@ -475,6 +475,13 @@ class TestModuleTempPopulate(unittest.TestCase):
         self._logger_patch = patch.object(self.thermal_module, 'LOGGER', MagicMock())
         self._logger_patch.start()
         self.addCleanup(self._logger_patch.stop)
+        # hw_management_lib is mocked wholesale above, so the module-level
+        # EXIT = ExitFlag() is a MagicMock whose is_set() is truthy and would
+        # make module_temp_populate() bail out of its loop. Use a not-set flag.
+        self._exit_patch = patch.object(
+            self.thermal_module, 'EXIT', MagicMock(is_set=MagicMock(return_value=False)))
+        self._exit_patch.start()
+        self.addCleanup(self._exit_patch.stop)
 
     @staticmethod
     def _arg_list(module_count=1, offset=1):
