@@ -1,0 +1,10 @@
+{
+    "devices": [
+        {
+            "bus": 15,
+            "address": "0x4c",
+            "driver": "sbtsi",
+            "description": "CPU temperature sensor interface (AMD SB-TSI, host power domain)"
+        }
+    ]
+}
