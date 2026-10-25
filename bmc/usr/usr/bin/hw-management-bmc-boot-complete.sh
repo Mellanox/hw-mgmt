@@ -37,16 +37,32 @@ fi
 : "${SYSFS_EEPROM_COUNTER:?SYSFS_EEPROM_COUNTER missing in $CONF}"
 
 need_sys=$SYSFS_SYSTEM_COUNTER
-need_thr=$SYSFS_THERMAL_COUNTER
 need_eep=$SYSFS_EEPROM_COUNTER
 max_wait=${BOOT_COMPLETE_MAX_WAIT_SEC:-1800}
 poll=${BOOT_COMPLETE_POLL_SEC:-2}
+POWER_LOST_FLAG="${BOOT_COMPLETE_POWER_LOST_FLAG:-/run/hw-management-bmc-host-power-lost}"
+
+attr_set() {
+	[ "$(cat "$SYS_DIR/$1" 2>/dev/null)" = "1" ]
+}
+
+# cpu_temp* exist only while the host is on; SYSFS_THERMAL_COUNTER_HOST_OFF
+# applies while it is off (same definition as hw-management-bmc-host-i2c-devices.sh).
+thermal_needed() {
+	if [ -n "${SYSFS_THERMAL_COUNTER_HOST_OFF:-}" ] &&
+	   { attr_set pwr_down || attr_set pwr_button_halt || [ -e "$POWER_LOST_FLAG" ]; }; then
+		echo "$SYSFS_THERMAL_COUNTER_HOST_OFF"
+	else
+		echo "$SYSFS_THERMAL_COUNTER"
+	fi
+}
 
 elapsed=0
 while :; do
 	c_sys=$(count_entries "$SYS_DIR")
 	c_thr=$(count_entries "$THERMAL_DIR")
 	c_eep=$(count_entries "$EEPROM_DIR")
+	need_thr=$(thermal_needed)
 
 	if [ "$c_sys" -ge "$need_sys" ] && [ "$c_thr" -ge "$need_thr" ] && [ "$c_eep" -ge "$need_eep" ]; then
 		echo "hw-management-bmc-boot-complete: thresholds met (system=$c_sys>=$need_sys thermal=$c_thr>=$need_thr eeprom=$c_eep>=$need_eep)" >&2
