@@ -61,7 +61,7 @@ import psutil
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time
 from hw_management_lib import RepeatedTimer
-from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd, ExitFlag
 
 #############################
 # Global const
@@ -3252,10 +3252,12 @@ class ThermalManagement(hw_management_file_op):
             self.log.error("Failed to load configuration: {}".format(e), repeat=1)
             sys.exit(1)
 
+        # Lock-free exit flag: safe to set from the signal handler (threading.Event is not).
+        # Create it before the handlers are installed so sig_handler can never see it missing.
+        self.exit = ExitFlag()
         signal.signal(signal.SIGTERM, self.sig_handler)
         signal.signal(signal.SIGINT, self.sig_handler)
         signal.signal(signal.SIGHUP, self.sig_handler)
-        self.exit = threading.Event()
 
         if not str2bool(self.sys_config.get("platform_support", 1)):
             self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), repeat=1)
