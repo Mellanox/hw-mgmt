@@ -11,7 +11,6 @@ Kernel-6.12
 |0007-JTAG-Aspeed-Fix-kernel-configuration.patch                  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0008-arm64-dts-aspeed-spc6-bmc-ext-phram-env-tpm-i3c-pull.patch  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; SPC6 AST2700 A2 DTS                       |
 |0009-arm64-dts-aspeed-split-SPC6-BMC-DTS-for-SONiC-and-Op.patch  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; SPC6 SONiC/OpenBMC DTS split (ramrofs)   |
-|0010-net-ftgmac100-hard-reset-mac-for-sgmii.patch                |                    | Downstream;skip[ALL];take[sonic]         |            | SONiC 6.12.58 RMII baseline; MELLANOX_PLATFORM |
 |0010-1-net-ftgmac100-hard-reset-mac-for-sgmii-6.12.94.patch      |                    | Downstream;skip[ALL]                     |            | BMC 6.12.94+ is_aspeed; not taken currently    |
 |0011-arm64-dts-aspeed-spc6-bmc-fix-sgmii-phy-names.patch         |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; mac2 phy-names match ftgmac100 "sgmii"    |
 |0012-usb-ehci-Add-Aspeed-AST2700-support.patch                   | 274f2232a94f       | Bugfix upstream;skip[ALL];take[sonic]    |            | BMC; AST2700 ehci1 probe ENOMEM - 64-bit DMA   |
