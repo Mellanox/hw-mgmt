@@ -15,7 +15,12 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
-ALLOWED_SHELL_CMDS = ["iorw", "/usr/bin/hw-management-chassis-events.sh"]
+ALLOWED_SHELL_CMDS = [
+    "iorw",
+    "logger",
+    "/usr/bin/hw-management-chassis-events.sh",
+    "/usr/bin/hw-management-user-dump",
+]
 
 
 def to_int(value: Any, default: int = 0) -> int:
