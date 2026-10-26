@@ -663,6 +663,93 @@ class TestModuleTempPopulate(unittest.TestCase):
             self.assertEqual(writes[path], "0\n")
 
 
+class TestThermalExitCode(unittest.TestCase):
+    """Stop signals must log 128+signum, matching the peripheral updater."""
+
+    @classmethod
+    def setUpClass(cls):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hw_mgmt_dir = os.path.abspath(
+            os.path.join(script_dir, '..', '..', 'usr', 'usr', 'bin')
+        )
+        if hw_mgmt_dir not in sys.path:
+            sys.path.insert(0, hw_mgmt_dir)
+        thermal_path = os.path.join(hw_mgmt_dir, 'hw_management_thermal_updater.py')
+        spec = importlib.util.spec_from_file_location(
+            "hw_management_thermal_updater_exit", thermal_path
+        )
+        cls.module = importlib.util.module_from_spec(spec)
+        sys.modules["hw_management_lib"] = MagicMock()
+        if "psutil" not in sys.modules:
+            sys.modules["psutil"] = MagicMock()
+        spec.loader.exec_module(cls.module)
+
+    def test_sigterm_sets_143(self):
+        module = self.module
+        with self.assertRaises(SystemExit) as ctx:
+            module.handle_signal(module.signal.SIGTERM, None)
+        self.assertEqual(ctx.exception.code, 143)
+        self.assertEqual(module.EXIT_CODE, 143)
+
+    def test_main_preserves_signal_code_and_disables_restart(self):
+        module = self.module
+        bound = {}
+        restart_disabled = set()
+
+        def fake_signal(signum, handler):
+            bound[signum] = handler
+
+        def fake_siginterrupt(signum, flag):
+            if flag:
+                restart_disabled.add(signum)
+
+        argv = ["hw_management_thermal_updater.py", "-s", "HI162"]
+        with patch.object(sys, "argv", argv), \
+                patch.object(module, "update_thermal_attr"), \
+                patch.object(module.signal, "signal", side_effect=fake_signal), \
+                patch.object(module.signal, "siginterrupt", side_effect=fake_siginterrupt), \
+                patch.object(module.time, "sleep", side_effect=SystemExit(143)):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+
+        self.assertEqual(ctx.exception.code, 143)
+        self.assertEqual(module.EXIT_CODE, 143)
+        expected = {module.signal.SIGHUP, module.signal.SIGTERM, module.signal.SIGINT}
+        for signum in expected:
+            self.assertEqual(bound.get(signum), module.handle_signal)
+        self.assertEqual(restart_disabled, expected)
+
+    def test_unexpected_exception_exits_1(self):
+        module = self.module
+        argv = ["hw_management_thermal_updater.py", "-s", "HI162"]
+        with patch.object(sys, "argv", argv), \
+                patch.object(module, "update_thermal_attr", side_effect=RuntimeError("boom")), \
+                patch.object(module.signal, "signal"), \
+                patch.object(module.signal, "siginterrupt"), \
+                patch.object(module.time, "sleep"):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+
+        self.assertEqual(ctx.exception.code, 1)
+        self.assertEqual(module.EXIT_CODE, 1)
+        module.LOGGER.warning.assert_called_with("Unexpected error in main loop")
+
+    def test_log_exit_uses_logger(self):
+        module = self.module
+        module.LOGGER = MagicMock()
+        module.EXIT_CODE = 143
+        module.log_exit()
+        module.LOGGER.notice.assert_called_with("hw-management-thermal-updater: exit rc=143")
+
+    def test_log_exit_skips_help_exit(self):
+        module = self.module
+        module.LOGGER = None
+        module.EXIT_CODE = 0
+        with patch.object(module.sys.stderr, "write") as mock_write:
+            module.log_exit()
+        mock_write.assert_not_called()
+
+
 def main():
     """Main test runner"""
     print("=" * 80)

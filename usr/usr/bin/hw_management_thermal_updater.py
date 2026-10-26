@@ -20,11 +20,13 @@ try:
     import traceback
     import signal
     import threading
+    import sys
+    import time
+    import atexit
     import psutil
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
         atomic_file_write,
-        exit_wait,
         current_milli_time,
     )
     from collections import Counter
@@ -38,6 +40,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 VERSION = "1.0.0"
+EXIT_CODE = 0
 
 
 class CONST(object):
@@ -135,19 +138,6 @@ thermal_config = _build_thermal_config()
 LOGGER = None
 PROCESS = None
 _memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
-
-EXIT = threading.Event()
-_sig_condition_name = ""
-
-
-class ShutdownRequested(BaseException):
-    """
-    @summary: Abort the daemon on SIGTERM/SIGINT/SIGHUP.
-
-    Must not subclass Exception: the main-loop safety net would swallow it.
-    Raising from the signal handler prevents CPython PEP 475 from restarting
-    a blocking sysfs read, which can exceed systemd TimeoutStopSec.
-    """
 
 # ----------------------------------------------------------------------
 
@@ -252,8 +242,6 @@ def asic_temp_populate(arg_list, arg):
     @param arg: Unused parameter (for interface compatibility)
     """
     for asic_name, asic_attr in arg_list.items():
-        if EXIT.is_set():
-            break
         cntrs_obj = asic_attr.get("counters")
         if not cntrs_obj:
             cntrs_obj = Counter()
@@ -347,8 +335,6 @@ def module_temp_populate(arg_list, _dummy):
     offset = arg_list["fout_idx_offset"]
     LOGGER.debug("module_temp_populate")
     for idx in range(module_count):
-        if EXIT.is_set():
-            break
         module_name = "module{}".format(idx + offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
@@ -486,11 +472,6 @@ def update_thermal_attr(attr_prop):
 
         try:
             globals()[fn_name](argv, None)
-        except ShutdownRequested:
-            raise
-        except InterruptedError:
-            # SIGTERM during sysfs I/O: do not treat as a normal read error
-            raise ShutdownRequested()
         except (OSError, ValueError, KeyError, TypeError):
             # Catch common errors from dynamically called functions
             # to prevent daemon crash
@@ -579,22 +560,42 @@ def print_periodic_info(_argv, _val):
 # ----------------------------------------------------------------------
 
 
-def handle_shutdown(sig, _frame):
+def handle_signal(signum, frame):
     """
-    @summary: Handle application signal
-    @param sig: Signal
-    @param _frame: Unused frame
+    @summary: Handle signal
+    @param signum: Signal number
+    @param frame: Frame
+    """
+    global EXIT_CODE
+    EXIT_CODE = 128 + signum
+    sys.exit(EXIT_CODE)
 
-    Raise ShutdownRequested so a blocking sx_core sysfs read is not restarted
-    (PEP 475) and the process can exit before systemd TimeoutStopSec.
+def log_exit():
     """
-    global _sig_condition_name
+    @summary:
+        Best-effort exit RC log. atexit runs this on normal interpreter
+        shutdown, sys.exit(), uncaught Python exceptions, and handled
+        signals (SIGINT, SIGTERM, SIGHUP, which exit through sys.exit).
+
+        SIGKILL, os._exit(), and fatal crashes such as a segfault skip
+        atexit. Those exits are visible only to an external observer,
+        for example systemd's process status.
+    """
+    global EXIT_CODE
+
+    if LOGGER is None and EXIT_CODE == 0:
+        return
+    msg = "hw-management-thermal-updater: exit rc={}".format(EXIT_CODE)
     try:
-        _sig_condition_name = signal.Signals(sig).name
-    except (ValueError, AttributeError):
-        _sig_condition_name = str(sig)
-    EXIT.set()
-    raise ShutdownRequested()
+        if LOGGER is not None:
+            LOGGER.notice(msg)
+        else:
+            sys.stderr.write(msg + "\n")
+    except Exception:
+        sys.stderr.write(msg + "\n")
+
+# Best-effort: interpreter shutdown only. SIGKILL and fatal crashes skip this.
+atexit.register(log_exit)
 
 # ----------------------------------------------------------------------
 
@@ -628,7 +629,7 @@ def main():
     CMD_PARSER.add_argument("-s", "--system_type", nargs='?', help="System type (optional) for custom system emulation.")
 
     args = vars(CMD_PARSER.parse_args())
-    global LOGGER, PROCESS
+    global EXIT_CODE, LOGGER, PROCESS
 
     try:
         LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
@@ -638,84 +639,64 @@ def main():
         LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
     except Exception as e:
         print("Failed to initialize logger: {}. Stopping service.".format(e))
-        exit(1)
-
-    if args["system_type"] is None:
-        try:
-            with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
-                product_sku = f.read()
-        except OSError:
-            product_sku = ""
-    else:
-        product_sku = args["system_type"]
-    product_sku = product_sku.strip()
-
-    LOGGER.notice("hw-management-thermal-updater: load config ({})".format(product_sku))
-    thermal_attr = thermal_config["def"]
-    for key, val in thermal_config.items():
-        if re.match(key, product_sku):
-            thermal_attr.extend(val)
-            break
-
-    EXIT.clear()
-
-    PROCESS = psutil.Process(os.getpid())
-    LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
-    if CONST.DBG_MEMORY_INFO:
-        thermal_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
+        EXIT_CODE = 1
+        sys.exit(EXIT_CODE)
 
     try:
-        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-            signal.signal(sig, handle_shutdown)
-            # Disable SA_RESTART so EINTR is not retried on sx_core sysfs reads
-            signal.siginterrupt(sig, True)
-
-        LOGGER.notice("hw-management-thermal-updater: start main loop")
-        while not EXIT.is_set():
+        if args["system_type"] is None:
             try:
-                for attr in thermal_attr:
-                    if EXIT.is_set():
-                        break
-                    update_thermal_attr(attr)
-                try:
-                    log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
-                    if os.path.isfile(log_level_filename):
-                        with open(log_level_filename, 'r', encoding="utf-8") as f:
-                            log_level = f.read().rstrip('\n')
-                            log_level = int(log_level)
-                            LOGGER.set_loglevel(log_level)
-                except InterruptedError:
-                    raise ShutdownRequested()
-                except (OSError, ValueError):
-                    # Expected errors when reading/parsing log level file
-                    # These are non-critical, just skip and continue
-                    pass
-            except ShutdownRequested:
-                raise
-            except Exception as e:
-                # Safety net: catch any unexpected exceptions to keep daemon alive
-                LOGGER.error("Unexpected error in main loop: {}".format(e))
-                LOGGER.notice(traceback.format_exc())
-                # Continue running despite error
+                with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
+                    product_sku = f.read()
+            except OSError:
+                product_sku = ""
+        else:
+            product_sku = args["system_type"]
+        product_sku = product_sku.strip()
 
-            exit_wait(EXIT, 1)
-    except ShutdownRequested:
-        pass
+        LOGGER.notice("hw-management-thermal-updater: load config ({})".format(product_sku))
+        thermal_attr = thermal_config["def"]
+        for key, val in thermal_config.items():
+            if re.match(key, product_sku):
+                thermal_attr.extend(val)
+                break
 
-    try:
-        LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
-    except ShutdownRequested:
-        pass
-    finally:
-        try:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-                signal.signal(sig, signal.SIG_DFL)
-        except ShutdownRequested:
-            pass
+        PROCESS = psutil.Process(os.getpid())
+        LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
+        if CONST.DBG_MEMORY_INFO:
+            thermal_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
+
+        # Bind OS termination signals. SIGHUP is included because this daemon has
+        # no config to reload; without a handler the default action kills the
+        # process before log_exit() runs. siginterrupt disables SA_RESTART so a
+        # blocking sx_core sysfs read returns and the handler can sys.exit().
+        for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            signal.signal(sig, handle_signal)
+            signal.siginterrupt(sig, True)
+        LOGGER.notice("hw-management-thermal-updater: start main loop")
+
+        while True:
+            for attr in thermal_attr:
+                update_thermal_attr(attr)
+            try:
+                log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
+                if os.path.isfile(log_level_filename):
+                    with open(log_level_filename, 'r', encoding="utf-8") as f:
+                        log_level = f.read().rstrip('\n')
+                        log_level = int(log_level)
+                        LOGGER.set_loglevel(log_level)
+            except (OSError, ValueError):
+                # Expected errors when reading/parsing log level file.
+                pass
+            time.sleep(1)
+    except SystemExit as e:
+        EXIT_CODE = e.code if isinstance(e.code, int) else 1
+        raise SystemExit(EXIT_CODE)
+    except Exception:
+        EXIT_CODE = 1
+        LOGGER.warning("Unexpected error in main loop")
+        LOGGER.notice(traceback.format_exc())
+        raise SystemExit(EXIT_CODE)
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except ShutdownRequested:
-        pass
+    main()

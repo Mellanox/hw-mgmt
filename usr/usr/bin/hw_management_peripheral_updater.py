@@ -13,11 +13,15 @@ try:
     import threading
     import shlex
     import psutil
+    import sys
+    import time
+    import atexit
+    import subprocess
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
-        exit_wait,
         current_milli_time,
-        run_shell_cmd
+        run_shell_cmd,
+        to_int
     )
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
@@ -47,7 +51,7 @@ except ImportError:
         return []
 
 VERSION = "1.0.0"
-
+EXIT_CODE = 0
 
 class CONST(object):
     # *************************
@@ -67,9 +71,6 @@ class CONST(object):
     # *************************
     # default hw-management folder
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
-    # File which defined current level filename.
-    # User can dynamically change loglevel without svc restarting.
-    LOG_LEVEL_FILENAME = "config/log_level"
     LOG_FILE = "/var/log/hw-management-peripheral-updater.log"
 
     # Log rotation size
@@ -81,20 +82,6 @@ class CONST(object):
     DBG_MEMORY_USAGE_ALERT = 30000    # KB
     DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
     PERIODIC_MEMORY_REPORT_TIME = 5 * 60  # 5 min
-
-
-EXIT = threading.Event()
-_sig_condition_name = ""
-
-
-class ShutdownRequested(BaseException):
-    """
-    @summary: Abort the daemon on SIGTERM/SIGINT/SIGHUP.
-
-    Must not subclass Exception: the main-loop safety net would swallow it.
-    Raising from the signal handler prevents CPython PEP 475 from restarting
-    a blocking sysfs read, which can exceed systemd TimeoutStopSec.
-    """
 
 
 def _build_attrib_list():
@@ -438,20 +425,21 @@ def redfish_get_sensor(argv, _dummy):
 
 # ----------------------------------------------------------------------
 
-
 def run_power_button_event(argv, val):
     """
     @summary: Handle power button and graceful power-off events
     @param argv: Unused argument list (for interface compatibility)
     @param val: Event value (1=pressed/triggered, 0=released/cleared)
     """
+    # timeout=None: run_shell_cmd still waits in Python, so SIGTERM/SIGINT
+    # interrupt the wait and the exit code gets logged.
     cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
-    os.system(cmd)
+    run_shell_cmd(cmd, shell=True, timeout=None, capture_output=False)
     cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event GRACEFUL_PWR_OFF {}".format(val)
-    os.system(cmd)
+    run_shell_cmd(cmd, shell=True, timeout=None, capture_output=False)
     if str(val) == "1":
         cmd = """logger -t hw-management-peripheral-updater -p daemon.info "Graceful CPU power off request " """
-        os.system(cmd)
+        run_shell_cmd(cmd, shell=True, timeout=None, capture_output=False)
 
 # ----------------------------------------------------------------------
 
@@ -463,8 +451,9 @@ def run_cmd(cmd_list, arg):
     @param arg: Argument value to substitute into commands
     """
     for cmd in cmd_list:
-        cmd = cmd + " 2> /dev/null 1> /dev/null"
-        os.system(cmd.format(arg1=arg))
+        # timeout=None keeps a long helper running; SIGTERM still interrupts
+        # the wait inside run_shell_cmd and logs the process exit code.
+        run_shell_cmd(cmd.format(arg1=arg), shell=True, timeout=None, capture_output=False)
 
 # ----------------------------------------------------------------------
 
@@ -731,16 +720,22 @@ def sync_fan(fan_id, val):
     @param fan_id: Fan number/identifier (1-based index)
     @param val: Fan presence value (0=absent/fault, non-zero=present)
     """
+
+    # check if val is int
+    val = to_int(val, None)
+    if val is None:
+        return
+
     if int(val) == 0:
         status = 1
     else:
         status = 0
 
     cmd = "echo {} > /var/run/hw-management/thermal/fan{}_status".format(status, fan_id)
-    os.system(cmd)
+    run_shell_cmd(cmd, shell=True, timeout=None, capture_output=False)
 
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event FAN{} {} 2> /dev/null 1> /dev/null".format(fan_id, status)
-    os.system(cmd)
+    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event FAN{} {}".format(fan_id, status)
+    run_shell_cmd(cmd, shell=True, timeout=None, capture_output=False)
 
 # ----------------------------------------------------------------------
 
@@ -771,11 +766,6 @@ def update_peripheral_attr(attr_prop):
                     if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
                         globals()[fn_name](argv, val)
                         attr_prop["oldval"] = val
-                except ShutdownRequested:
-                    raise
-                except InterruptedError:
-                    # SIGTERM during sysfs I/O: do not treat as a normal read error
-                    raise ShutdownRequested()
                 except (OSError, ValueError):
                     # File exists but read error
                     globals()[fn_name](argv, "")
@@ -785,11 +775,6 @@ def update_peripheral_attr(attr_prop):
         else:
             try:
                 globals()[fn_name](argv, None)
-            except ShutdownRequested:
-                raise
-            except InterruptedError:
-                # SIGTERM during sysfs I/O: do not treat as a normal read error
-                raise ShutdownRequested()
             except (OSError, ValueError, KeyError, TypeError):
                 # Catch common errors from dynamically called functions
                 # to prevent daemon crash
@@ -919,26 +904,45 @@ def print_periodic_info(_argv, _val):
         print_memory_info()
     LOGGER.info("=" * 40)
 
-
-def handle_shutdown(sig, _frame):
-    """
-    @summary: Handle application signal
-    @param sig: Signal number
-    @param _frame: Unused frame
-
-    Raise ShutdownRequested so a blocking sysfs read is not restarted
-    (PEP 475) and the process can exit before systemd TimeoutStopSec.
-    """
-    global _sig_condition_name
-    try:
-        _sig_condition_name = signal.Signals(sig).name
-    except (ValueError, AttributeError):
-        _sig_condition_name = str(sig)
-    EXIT.set()
-    raise ShutdownRequested()
-
 # ----------------------------------------------------------------------
 
+
+def handle_signal(signum, frame):
+    """
+    @summary: Handle signal
+    @param signum: Signal number
+    @param frame: Frame
+    """
+    global EXIT_CODE
+    EXIT_CODE = 128 + signum
+    sys.exit(EXIT_CODE)
+
+def log_exit():
+    """
+    @summary:
+        Best-effort exit RC log. atexit runs this on normal interpreter
+        shutdown, sys.exit(), uncaught Python exceptions, and handled
+        signals (SIGINT, SIGTERM, SIGHUP, which exit through sys.exit).
+
+        SIGKILL, os._exit(), and fatal crashes such as a segfault skip
+        atexit. Those exits are visible only to an external observer,
+        for example systemd's process status.
+    """
+    global EXIT_CODE
+
+    if LOGGER is None and EXIT_CODE == 0:
+        return
+    msg = "hw-management-peripheral-updater: exit rc={}".format(EXIT_CODE)
+    try:
+        if LOGGER is not None:
+            LOGGER.notice(msg)
+        else:
+            sys.stderr.write(msg + "\n")
+    except Exception:
+        sys.stderr.write(msg + "\n")
+
+# Best-effort: interpreter shutdown only. SIGKILL and fatal crashes skip this.
+atexit.register(log_exit)
 
 def main():
     """
@@ -968,106 +972,76 @@ def main():
     CMD_PARSER.add_argument("-s", "--system_type", nargs='?', help="System type (optional) for custom system emulation.")
 
     args = vars(CMD_PARSER.parse_args())
-    global LOGGER, PROCESS, _periodic_memory_timer
+    global EXIT_CODE, LOGGER, PROCESS, _periodic_memory_timer
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
     LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
 
-    if not FEATURE_REQUEST_AVAILABLE:
-        LOGGER.warning("hw-management-peripheral-updater: feature_request unavailable, assuming Redfish enabled host")
-
-    if args["system_type"] is None:
-        try:
-            with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
-                product_sku = f.read()
-        except OSError:
-            product_sku = ""
-    else:
-        product_sku = args["system_type"]
-    product_sku = product_sku.strip()
-
-    LOGGER.notice("hw-management-peripheral-updater: load config ({})".format(product_sku))
-    sys_attr = attrib_list["def"]
-    for key, val in attrib_list.items():
-        if re.match(key, product_sku):
-            sys_attr.extend(val)
-            break
-
-    # On Redfish disabled hosts, drop the BMC Redfish
-    # entries so this daemon never logs in to the BMC or polls BMC sensors over
-    # Redfish. On any other host OS the configuration is left unchanged.
-    if feature_request("get", "is_redfish_disabled"):
-        sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
-        LOGGER.notice("hw-management-peripheral-updater: Redfish disabled host detected, BMC Redfish sync disabled")
-
-    # Write module_counter for other services (must be done before they start)
-    # This is done here in peripheral_updater to ensure it's written even if
-    # thermal_updater is disabled by the customer
-    write_module_counter(product_sku)
-
-    LOGGER.notice("hw-management-peripheral-updater: init attributes")
-    for attr in sys_attr:
-        init_attr(attr)
-
-    EXIT.clear()
-
-    PROCESS = psutil.Process(os.getpid())
-    LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
-    if CONST.DBG_MEMORY_INFO:
-        sys_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
-
     try:
-        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-            signal.signal(sig, handle_shutdown)
-            # Disable SA_RESTART so EINTR is not retried on blocking sysfs reads
-            signal.siginterrupt(sig, True)
+        if not FEATURE_REQUEST_AVAILABLE:
+            LOGGER.warning("hw-management-peripheral-updater: feature_request unavailable, assuming Redfish enabled host")
 
-        LOGGER.notice("hw-management-peripheral-updater: start main loop")
-        while not EXIT.is_set():
+        if args["system_type"] is None:
             try:
-                for attr in sys_attr:
-                    if EXIT.is_set():
-                        break
-                    update_peripheral_attr(attr)
-                try:
-                    log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
-                    if os.path.isfile(log_level_filename):
-                        with open(log_level_filename, 'r', encoding="utf-8") as f:
-                            log_level = f.read().rstrip('\n')
-                            log_level = int(log_level)
-                            LOGGER.set_loglevel(log_level)
-                except InterruptedError:
-                    raise ShutdownRequested()
-                except (OSError, ValueError):
-                    # Expected errors when reading/parsing log level file
-                    # These are non-critical, just skip and continue
-                    pass
-            except ShutdownRequested:
-                raise
-            except Exception as e:
-                # Safety net: catch any unexpected exceptions to keep daemon alive
-                LOGGER.error("Unexpected error in main loop: {}".format(e))
-                LOGGER.notice(traceback.format_exc())
-                # Continue running despite error
+                with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
+                    product_sku = f.read()
+            except OSError:
+                product_sku = ""
+        else:
+            product_sku = args["system_type"]
+        product_sku = product_sku.strip()
 
-            exit_wait(EXIT, 1)
-    except ShutdownRequested:
-        pass
+        LOGGER.notice("hw-management-peripheral-updater: load config ({})".format(product_sku))
+        sys_attr = attrib_list["def"]
+        for key, val in attrib_list.items():
+            if re.match(key, product_sku):
+                sys_attr.extend(val)
+                break
 
-    try:
-        LOGGER.notice("hw-management-peripheral-updater: stopped main loop ({})".format(_sig_condition_name))
-    except ShutdownRequested:
-        pass
-    finally:
-        try:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-                signal.signal(sig, signal.SIG_DFL)
-        except ShutdownRequested:
-            pass
+        # On Redfish disabled hosts, drop the BMC Redfish
+        # entries so this daemon never logs in to the BMC or polls BMC sensors over
+        # Redfish. On any other host OS the configuration is left unchanged.
+        if feature_request("get", "is_redfish_disabled"):
+            sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
+            LOGGER.notice("hw-management-peripheral-updater: Redfish disabled host detected, BMC Redfish sync disabled")
+
+        # Write module_counter for other services (must be done before they start)
+        # This is done here in peripheral_updater to ensure it's written even if
+        # thermal_updater is disabled by the customer
+        write_module_counter(product_sku)
+
+        LOGGER.notice("hw-management-peripheral-updater: init attributes")
+        for attr in sys_attr:
+            init_attr(attr)
+
+        PROCESS = psutil.Process(os.getpid())
+        LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
+        if CONST.DBG_MEMORY_INFO:
+            sys_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
+
+        # Bind OS termination signals. SIGHUP is included because this daemon has
+        # no config to reload; systemd and users send SIGHUP as another way to
+        # stop it, and without a handler it would kill the process before
+        # log_exit() runs (default SIGHUP action is terminate, not reload).
+        for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            signal.signal(sig, handle_signal)
+            signal.siginterrupt(sig, True)
+        LOGGER.notice("hw-management-peripheral-updater: start main loop")
+
+        while True:
+            for attr in sys_attr:
+                update_peripheral_attr(attr)
+            time.sleep(1)
+    except SystemExit as e:
+        # Captures explicit sys.exit() calls and preserves their code
+        EXIT_CODE = e.code if isinstance(e.code, int) else 1
+        raise SystemExit(EXIT_CODE)
+    except Exception as e:
+        EXIT_CODE = 1
+        LOGGER.warning("Unexpected error in main loop")
+        LOGGER.notice(traceback.format_exc())
+        raise SystemExit(EXIT_CODE)
     return
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except ShutdownRequested:
-        pass
+    main()
