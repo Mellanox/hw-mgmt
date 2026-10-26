@@ -1,0 +1,48 @@
+From d1008a8e29b09ea57c77ddf82d688f8c2ea6cbe8 Mon Sep 17 00:00:00 2001
+From: Felix Gu <ustc.gu@gmail.com>
+Date: Sat, 7 Mar 2026 15:24:45 +0800
+Subject: [PATCH 0535/0797] spi: tegra210-quad: Remove redundant pm_runtime_mark_last_busy() calls
+
+pm_runtime_put_autosuspend() already internally updates the last_busy
+timestamp before scheduling the autosuspend, making explicit
+pm_runtime_mark_last_busy() calls immediately before it redundant.
+
+Fixes: 7c12f6ead467 ("spi: tegra210-quad: Add runtime autosuspend support")
+Signed-off-by: Felix Gu <ustc.gu@gmail.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+Link: https://patch.msgid.link/20260307-quad-v1-1-f103515db501@gmail.com
+---
+ drivers/spi/spi-tegra210-quad.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/drivers/spi/spi-tegra210-quad.c b/drivers/spi/spi-tegra210-quad.c
+index 7fac695b514219..7cca5578eba314 100644
+--- a/drivers/spi/spi-tegra210-quad.c
++++ b/drivers/spi/spi-tegra210-quad.c
+@@ -1000,7 +1000,6 @@ static int tegra_qspi_setup(struct spi_device *spi)
+ 
+ 	spin_unlock_irqrestore(&tqspi->lock, flags);
+ 
+-	pm_runtime_mark_last_busy(tqspi->dev);
+ 	pm_runtime_put_autosuspend(tqspi->dev);
+ 
+ 	return 0;
+@@ -1790,7 +1789,6 @@ static int tegra_qspi_probe(struct platform_device *pdev)
+ 	tqspi->spi_cs_timing2 = tegra_qspi_readl(tqspi, QSPI_CS_TIMING2);
+ 	tqspi->def_command2_reg = tegra_qspi_readl(tqspi, QSPI_COMMAND2);
+ 
+-	pm_runtime_mark_last_busy(&pdev->dev);
+ 	pm_runtime_put_autosuspend(&pdev->dev);
+ 
+ 	ret = request_threaded_irq(tqspi->irq, NULL,
+@@ -1851,7 +1849,6 @@ static int __maybe_unused tegra_qspi_resume(struct device *dev)
+ 
+ 	tegra_qspi_writel(tqspi, tqspi->command1_reg, QSPI_COMMAND1);
+ 	tegra_qspi_writel(tqspi, tqspi->def_command2_reg, QSPI_COMMAND2);
+-	pm_runtime_mark_last_busy(dev);
+ 	pm_runtime_put_autosuspend(dev);
+ 
+ 	return spi_controller_resume(host);
+-- 
+cgit 1.3.1-korg
+

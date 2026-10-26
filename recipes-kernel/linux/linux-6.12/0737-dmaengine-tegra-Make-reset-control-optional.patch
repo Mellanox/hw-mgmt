@@ -1,0 +1,39 @@
+From 680e1b928a6adc1b2d95038ffe9c9887ceafd478 Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Tue, 31 Mar 2026 15:52:57 +0530
+Subject: [PATCH 0737/0797] dmaengine: tegra: Make reset control optional
+
+On Tegra264, reset is not available for the driver to control as
+this is handled by the boot firmware. Hence make the reset control
+optional and update the error message to reflect the correct error.
+
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Reviewed-by: Frank Li <Frank.Li@nxp.com>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260331102303.33181-5-akhilrajeev@nvidia.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ drivers/dma/tegra186-gpc-dma.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/dma/tegra186-gpc-dma.c b/drivers/dma/tegra186-gpc-dma.c
+index 5948fbf32c21e6..a0522a992ebc98 100644
+--- a/drivers/dma/tegra186-gpc-dma.c
++++ b/drivers/dma/tegra186-gpc-dma.c
+@@ -1381,10 +1381,10 @@ static int tegra_dma_probe(struct platform_device *pdev)
+ 	if (IS_ERR(tdma->base_addr))
+ 		return PTR_ERR(tdma->base_addr);
+ 
+-	tdma->rst = devm_reset_control_get_exclusive(&pdev->dev, "gpcdma");
++	tdma->rst = devm_reset_control_get_optional_exclusive(&pdev->dev, "gpcdma");
+ 	if (IS_ERR(tdma->rst)) {
+ 		return dev_err_probe(&pdev->dev, PTR_ERR(tdma->rst),
+-			      "Missing controller reset\n");
++			      "Failed to get controller reset\n");
+ 	}
+ 	reset_control_reset(tdma->rst);
+ 
+-- 
+cgit 1.3.1-korg
+

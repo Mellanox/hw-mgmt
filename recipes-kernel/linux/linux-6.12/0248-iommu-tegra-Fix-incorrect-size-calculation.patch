@@ -1,0 +1,43 @@
+From f9705d66fa7107fcd619083f7aae2afb0554a593 Mon Sep 17 00:00:00 2001
+From: Jason Gunthorpe <jgg@nvidia.com>
+Date: Tue, 3 Jun 2025 16:14:45 -0300
+Subject: [PATCH 0248/0797] iommu/tegra: Fix incorrect size calculation
+
+This driver uses a mixture of ways to get the size of a PTE,
+tegra_smmu_set_pde() did it as sizeof(*pd) which became wrong when pd
+switched to a struct tegra_pd.
+
+Switch pd back to a u32* in tegra_smmu_set_pde() so the sizeof(*pd)
+returns 4.
+
+Fixes: 50568f87d1e2 ("iommu/terga: Do not use struct page as the handle for as->pd memory")
+Reported-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Closes: https://lore.kernel.org/all/62e7f7fe-6200-4e4f-ad42-d58ad272baa6@tecnico.ulisboa.pt/
+Signed-off-by: Jason Gunthorpe <jgg@nvidia.com>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Reviewed-by: Jerry Snitselaar <jsnitsel@redhat.com>
+Tested-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Link: https://lore.kernel.org/r/0-v1-da7b8b3d57eb+ce-iommu_terga_sizeof_jgg@nvidia.com
+Signed-off-by: Joerg Roedel <joerg.roedel@amd.com>
+---
+ drivers/iommu/tegra-smmu.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/iommu/tegra-smmu.c b/drivers/iommu/tegra-smmu.c
+index 61897d50162dd..e58fe9d8b9e77 100644
+--- a/drivers/iommu/tegra-smmu.c
++++ b/drivers/iommu/tegra-smmu.c
+@@ -559,11 +559,11 @@ static void tegra_smmu_set_pde(struct tegra_smmu_as *as, unsigned long iova,
+ {
+ 	unsigned int pd_index = iova_pd_index(iova);
+ 	struct tegra_smmu *smmu = as->smmu;
+-	struct tegra_pd *pd = as->pd;
++	u32 *pd = &as->pd->val[pd_index];
+ 	unsigned long offset = pd_index * sizeof(*pd);
+ 
+ 	/* Set the page directory entry first */
+-	pd->val[pd_index] = value;
++	*pd = value;
+ 
+ 	/* The flush the page directory entry from caches */
+ 	dma_sync_single_range_for_device(smmu->dev, as->pd_dma, offset,

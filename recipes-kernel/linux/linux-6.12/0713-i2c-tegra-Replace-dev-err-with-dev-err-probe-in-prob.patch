@@ -1,0 +1,60 @@
+From c2b2bf9989568f9430e1f3dc06f56fd68452a311 Mon Sep 17 00:00:00 2001
+From: Enrico Zanda <e.zanda1@gmail.com>
+Date: Tue, 20 May 2025 21:43:52 +0200
+Subject: [PATCH 0713/0797] i2c: tegra: Replace dev_err() with dev_err_probe() in probe function
+
+This simplifies the code while improving log.
+
+Signed-off-by: Enrico Zanda <e.zanda1@gmail.com>
+Signed-off-by: Andi Shyti <andi.shyti@kernel.org>
+Link: https://lore.kernel.org/r/20250520194400.341079-3-e.zanda1@gmail.com
+---
+ drivers/i2c/busses/i2c-tegra.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-tegra.c b/drivers/i2c/busses/i2c-tegra.c
+index 9fd5ade774a0b9..3e9327e3750a51 100644
+--- a/drivers/i2c/busses/i2c-tegra.c
++++ b/drivers/i2c/busses/i2c-tegra.c
+@@ -719,8 +719,8 @@ static int tegra_i2c_init_dma(struct tegra_i2c_dev *i2c_dev)
+ 	dma_buf = dma_alloc_coherent(i2c_dev->dma_dev, i2c_dev->dma_buf_size,
+ 				     &dma_phys, GFP_KERNEL | __GFP_NOWARN);
+ 	if (!dma_buf) {
+-		dev_err(i2c_dev->dev, "failed to allocate DMA buffer\n");
+-		err = -ENOMEM;
++		err = dev_err_probe(i2c_dev->dev, -ENOMEM,
++				    "failed to allocate DMA buffer\n");
+ 		goto err_out;
+ 	}
+ 
+@@ -732,8 +732,7 @@ static int tegra_i2c_init_dma(struct tegra_i2c_dev *i2c_dev)
+ err_out:
+ 	tegra_i2c_release_dma(i2c_dev);
+ 	if (err != -EPROBE_DEFER) {
+-		dev_err(i2c_dev->dev, "cannot use DMA: %d\n", err);
+-		dev_err(i2c_dev->dev, "falling back to PIO\n");
++		dev_err(i2c_dev->dev, "cannot use DMA, falling back to PIO\n");
+ 		return 0;
+ 	}
+ 
+@@ -2208,7 +2207,7 @@ static int tegra_i2c_init_clocks(struct tegra_i2c_dev *i2c_dev)
+ 
+ 	err = clk_enable(i2c_dev->div_clk);
+ 	if (err) {
+-		dev_err(i2c_dev->dev, "failed to enable div-clk: %d\n", err);
++		dev_err_probe(i2c_dev->dev, err, "failed to enable div-clk\n");
+ 		goto unprepare_clocks;
+ 	}
+ 
+@@ -2234,7 +2233,7 @@ static int tegra_i2c_init_hardware(struct tegra_i2c_dev *i2c_dev)
+ 
+ 	ret = pm_runtime_get_sync(i2c_dev->dev);
+ 	if (ret < 0)
+-		dev_err(i2c_dev->dev, "runtime resume failed: %d\n", ret);
++		dev_err_probe(i2c_dev->dev, ret, "runtime resume failed\n");
+ 	else
+ 		ret = tegra_i2c_init(i2c_dev);
+ 
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,60 @@
+From fab823d82ee50c7953bd67d152e35e0bddaeee86 Mon Sep 17 00:00:00 2001
+From: Vamsee Vardhan Thummala <vthummala@nvidia.com>
+Date: Tue, 8 Jul 2025 21:18:08 +0900
+Subject: [PATCH 0341/0797] gpu: host1x: Allow loading tegra-drm without enabled engines
+
+Add support to register host1x devices without requiring subdevices.
+This ensures syncpoint functionality remains available even when engine
+subdevices are not present.
+
+Add softdep for tegra-drm to make userspace interface available
+without module autoloading through device tree entries.
+
+Signed-off-by: Vamsee Vardhan Thummala <vthummala@nvidia.com>
+[mperttunen@nvidia.com: some rewording]
+Signed-off-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://lore.kernel.org/r/20250708-host1x-allow-no-subdevs-v1-1-93c66c251f03@nvidia.com
+---
+ drivers/gpu/host1x/bus.c | 12 ++++++++++++
+ drivers/gpu/host1x/dev.c |  1 +
+ 2 files changed, 13 insertions(+)
+
+diff --git a/drivers/gpu/host1x/bus.c b/drivers/gpu/host1x/bus.c
+index 344cc9e741c135..723a80895cd43b 100644
+--- a/drivers/gpu/host1x/bus.c
++++ b/drivers/gpu/host1x/bus.c
+@@ -471,6 +471,18 @@ static int host1x_device_add(struct host1x *host1x,
+ 
+ 	mutex_unlock(&clients_lock);
+ 
++	/*
++	 * Add device even if there are no subdevs to ensure syncpoint functionality
++	 * is available regardless of whether any engine subdevices are present
++	 */
++	if (list_empty(&device->subdevs)) {
++		err = device_add(&device->dev);
++		if (err < 0)
++			dev_err(&device->dev, "failed to add device: %d\n", err);
++		else
++			device->registered = true;
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/drivers/gpu/host1x/dev.c b/drivers/gpu/host1x/dev.c
+index 1f93e5e276c083..e1a9246d35f4b7 100644
+--- a/drivers/gpu/host1x/dev.c
++++ b/drivers/gpu/host1x/dev.c
+@@ -821,6 +821,7 @@ u64 host1x_get_dma_mask(struct host1x *host1x)
+ }
+ EXPORT_SYMBOL(host1x_get_dma_mask);
+ 
++MODULE_SOFTDEP("post: tegra-drm");
+ MODULE_AUTHOR("Thierry Reding <thierry.reding@avionic-design.de>");
+ MODULE_AUTHOR("Terje Bergstrom <tbergstrom@nvidia.com>");
+ MODULE_DESCRIPTION("Host1x driver for Tegra products");
+-- 
+cgit 1.3.1-korg
+

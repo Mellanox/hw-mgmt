@@ -1,0 +1,35 @@
+From 856ffd8f4aae227dd008e718dbb1cf7d3474a626 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 25 Mar 2026 10:14:35 +0000
+Subject: [PATCH 0570/0797] ASoC: tegra: Use dev_err_probe() in tegra210_sfc probe
+
+Log errors in the Tegra210 SFC probe path using dev_err_probe().
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260325101437.3059693-13-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_sfc.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_sfc.c b/sound/soc/tegra/tegra210_sfc.c
+index b298bf0421b122..09e3c718d29f06 100644
+--- a/sound/soc/tegra/tegra210_sfc.c
++++ b/sound/soc/tegra/tegra210_sfc.c
+@@ -3608,10 +3608,9 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
+ 	err = devm_snd_soc_register_component(dev, &tegra210_sfc_cmpnt,
+ 					      tegra210_sfc_dais,
+ 					      ARRAY_SIZE(tegra210_sfc_dais));
+-	if (err) {
+-		dev_err(dev, "can't register SFC component, err: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't register SFC component\n");
+ 
+ 	pm_runtime_enable(&pdev->dev);
+ 
+-- 
+cgit 1.3.1-korg
+

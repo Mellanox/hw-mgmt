@@ -1,0 +1,250 @@
+From 628dafc476eb658544ad6b5b3592bfcd82597051 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Mon, 12 May 2025 05:17:38 +0000
+Subject: [PATCH 0237/0797] dt-bindings: ASoC: Document Tegra264 APE support
+
+Add Tegra264 compatible strings to APE subsystem device bindings:
+- audio-graph-card: Due to different PLL clock rate.
+- admaif: Due to 32 channels supported and register offset changes.
+- i2s: Due to 32 channels supported and register offset changes.
+- amx/adx: Due to 32 channels supported and register offset changes.
+- asrc: Due to different ARAM address.
+- ahub: Due to AHUB IPs number of instances updates.
+- for future proofing the T264 compatibility is added for other device
+  nodes.
+
+These bindings enable the enhanced audio features of Tegra264
+while maintaining compatibility with existing platforms.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Link: https://patch.msgid.link/20250512051747.1026770-3-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../devicetree/bindings/bus/nvidia,tegra210-aconnect.yaml   | 1 +
+ .../bindings/sound/nvidia,tegra-audio-graph-card.yaml       | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra186-asrc.yaml     | 4 +++-
+ .../devicetree/bindings/sound/nvidia,tegra186-dspk.yaml     | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-admaif.yaml   | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-adx.yaml      | 4 +++-
+ .../devicetree/bindings/sound/nvidia,tegra210-ahub.yaml     | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-amx.yaml      | 6 ++++--
+ .../devicetree/bindings/sound/nvidia,tegra210-dmic.yaml     | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-i2s.yaml      | 4 +++-
+ .../devicetree/bindings/sound/nvidia,tegra210-mbdrc.yaml    | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-mixer.yaml    | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-mvc.yaml      | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-ope.yaml      | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-peq.yaml      | 1 +
+ .../devicetree/bindings/sound/nvidia,tegra210-sfc.yaml      | 1 +
+ 16 files changed, 25 insertions(+), 5 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/bus/nvidia,tegra210-aconnect.yaml b/Documentation/devicetree/bindings/bus/nvidia,tegra210-aconnect.yaml
+index 26362c9006e27..81a65e9f93f1f 100644
+--- a/Documentation/devicetree/bindings/bus/nvidia,tegra210-aconnect.yaml
++++ b/Documentation/devicetree/bindings/bus/nvidia,tegra210-aconnect.yaml
+@@ -21,6 +21,7 @@ properties:
+       - const: nvidia,tegra210-aconnect
+       - items:
+           - enum:
++              - nvidia,tegra264-aconnect
+               - nvidia,tegra234-aconnect
+               - nvidia,tegra186-aconnect
+               - nvidia,tegra194-aconnect
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml
+index b4bee466d67a2..da89523ccf5f8 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml
+@@ -23,6 +23,7 @@ properties:
+     enum:
+       - nvidia,tegra210-audio-graph-card
+       - nvidia,tegra186-audio-graph-card
++      - nvidia,tegra264-audio-graph-card
+ 
+   clocks:
+     minItems: 2
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra186-asrc.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra186-asrc.yaml
+index e15f387c4c298..66b56e71599b8 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra186-asrc.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra186-asrc.yaml
+@@ -31,7 +31,9 @@ properties:
+ 
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra186-asrc
++      - enum:
++          - nvidia,tegra186-asrc
++          - nvidia,tegra264-asrc
+       - items:
+           - enum:
+               - nvidia,tegra234-asrc
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra186-dspk.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra186-dspk.yaml
+index e1362c77472bb..46ba167081ef0 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra186-dspk.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra186-dspk.yaml
+@@ -29,6 +29,7 @@ properties:
+       - const: nvidia,tegra186-dspk
+       - items:
+           - enum:
++              - nvidia,tegra264-dspk
+               - nvidia,tegra234-dspk
+               - nvidia,tegra194-dspk
+           - const: nvidia,tegra186-dspk
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
+index bcecac5d9018c..b32f33214ba60 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
+@@ -26,6 +26,7 @@ properties:
+       - enum:
+           - nvidia,tegra210-admaif
+           - nvidia,tegra186-admaif
++          - nvidia,tegra264-admaif
+       - items:
+           - enum:
+               - nvidia,tegra234-admaif
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-adx.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-adx.yaml
+index e4c871797fa6c..19a80929f93e6 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-adx.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-adx.yaml
+@@ -27,7 +27,9 @@ properties:
+ 
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra210-adx
++      - enum:
++          - nvidia,tegra210-adx
++          - nvidia,tegra264-adx
+       - items:
+           - enum:
+               - nvidia,tegra234-adx
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-ahub.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-ahub.yaml
+index c4abac81f2074..1c9f24d268190 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-ahub.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-ahub.yaml
+@@ -27,6 +27,7 @@ properties:
+           - nvidia,tegra210-ahub
+           - nvidia,tegra186-ahub
+           - nvidia,tegra234-ahub
++          - nvidia,tegra264-ahub
+       - items:
+           - const: nvidia,tegra194-ahub
+           - const: nvidia,tegra186-ahub
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-amx.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-amx.yaml
+index 021b72546ba4b..89712102cfdf6 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-amx.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-amx.yaml
+@@ -26,11 +26,13 @@ properties:
+ 
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra210-amx
++      - enum:
++          - nvidia,tegra210-amx
++          - nvidia,tegra194-amx
++          - nvidia,tegra264-amx
+       - items:
+           - const: nvidia,tegra186-amx
+           - const: nvidia,tegra210-amx
+-      - const: nvidia,tegra194-amx
+       - items:
+           - const: nvidia,tegra234-amx
+           - const: nvidia,tegra194-amx
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-dmic.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-dmic.yaml
+index bff551c35da7a..bb8088878d4bc 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-dmic.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-dmic.yaml
+@@ -28,6 +28,7 @@ properties:
+       - const: nvidia,tegra210-dmic
+       - items:
+           - enum:
++              - nvidia,tegra264-dmic
+               - nvidia,tegra234-dmic
+               - nvidia,tegra194-dmic
+               - nvidia,tegra186-dmic
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-i2s.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-i2s.yaml
+index a82f11fb6c9a8..903e815af8fd5 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-i2s.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-i2s.yaml
+@@ -25,7 +25,9 @@ properties:
+ 
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra210-i2s
++      - enum:
++          - nvidia,tegra210-i2s
++          - nvidia,tegra264-i2s
+       - items:
+           - enum:
+               - nvidia,tegra234-i2s
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-mbdrc.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-mbdrc.yaml
+index 5b9198602fc6a..4c121b9cde1e0 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-mbdrc.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-mbdrc.yaml
+@@ -23,6 +23,7 @@ properties:
+       - const: nvidia,tegra210-mbdrc
+       - items:
+           - enum:
++              - nvidia,tegra264-mbdrc
+               - nvidia,tegra234-mbdrc
+               - nvidia,tegra194-mbdrc
+               - nvidia,tegra186-mbdrc
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-mixer.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-mixer.yaml
+index 049898f02e85c..56b4c4fc123cc 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-mixer.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-mixer.yaml
+@@ -28,6 +28,7 @@ properties:
+       - const: nvidia,tegra210-amixer
+       - items:
+           - enum:
++              - nvidia,tegra264-amixer
+               - nvidia,tegra234-amixer
+               - nvidia,tegra194-amixer
+               - nvidia,tegra186-amixer
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-mvc.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-mvc.yaml
+index d0280d8aa3af8..bde4ac6319b19 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-mvc.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-mvc.yaml
+@@ -31,6 +31,7 @@ properties:
+       - const: nvidia,tegra210-mvc
+       - items:
+           - enum:
++              - nvidia,tegra264-mvc
+               - nvidia,tegra234-mvc
+               - nvidia,tegra194-mvc
+               - nvidia,tegra186-mvc
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-ope.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-ope.yaml
+index 9017fb6d575d9..756c3096a2d60 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-ope.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-ope.yaml
+@@ -25,6 +25,7 @@ properties:
+       - const: nvidia,tegra210-ope
+       - items:
+           - enum:
++              - nvidia,tegra264-ope
+               - nvidia,tegra234-ope
+               - nvidia,tegra194-ope
+               - nvidia,tegra186-ope
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-peq.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-peq.yaml
+index 1e373c49d639b..2f11a484dc2e5 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-peq.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-peq.yaml
+@@ -24,6 +24,7 @@ properties:
+       - const: nvidia,tegra210-peq
+       - items:
+           - enum:
++              - nvidia,tegra264-peq
+               - nvidia,tegra234-peq
+               - nvidia,tegra194-peq
+               - nvidia,tegra186-peq
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-sfc.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-sfc.yaml
+index 185ca0be4f026..959aa7fffdac3 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-sfc.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-sfc.yaml
+@@ -28,6 +28,7 @@ properties:
+       - const: nvidia,tegra210-sfc
+       - items:
+           - enum:
++              - nvidia,tegra264-sfc
+               - nvidia,tegra234-sfc
+               - nvidia,tegra194-sfc
+               - nvidia,tegra186-sfc

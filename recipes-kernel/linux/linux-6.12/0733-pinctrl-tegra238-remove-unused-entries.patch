@@ -1,0 +1,138 @@
+From 119de2c33d96d2b4e79f8fbe8ec0c5b5939e0a52 Mon Sep 17 00:00:00 2001
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Fri, 29 May 2026 11:41:20 +0200
+Subject: [PATCH 0733/0797] pinctrl: tegra238: remove unused entries
+
+The -Wunused-const-variable check points out a number of added
+entries that are currently not referenced:
+
+drivers/pinctrl/tegra/pinctrl-tegra238.c:1169:27: error: 'soc_gpio86_phh3_pins' defined but not used [-Werror=unused-const-variable=]
+ 1169 | static const unsigned int soc_gpio86_phh3_pins[] = {
+      |                           ^~~~~~~~~~~~~~~~~~~~
+drivers/pinctrl/tegra/pinctrl-tegra238.c:1165:27: error: 'uart5_cts_phh2_pins' defined but not used [-Werror=unused-const-variable=]
+ 1165 | static const unsigned int uart5_cts_phh2_pins[] = {
+      |                           ^~~~~~~~~~~~~~~~~~~
+drivers/pinctrl/tegra/pinctrl-tegra238.c:1161:27: error: 'uart5_rts_phh1_pins' defined but not used [-Werror=unused-const-variable=]
+ 1161 | static const unsigned int uart5_rts_phh1_pins[] = {
+      |                           ^~~~~~~~~~~~~~~~~~~
+
+Remove them for now, they can just be added back if they get
+used in the future.
+
+Fixes: 25cac7292d49 ("pinctrl: tegra: Add Tegra238 pinmux driver")
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Linus Walleij <linusw@kernel.org>
+---
+ drivers/pinctrl/tegra/pinctrl-tegra238.c | 96 --------------------------------
+ 1 file changed, 96 deletions(-)
+
+diff --git a/drivers/pinctrl/tegra/pinctrl-tegra238.c b/drivers/pinctrl/tegra/pinctrl-tegra238.c
+index 421da334151c10..c765b6b880e5dd 100644
+--- a/drivers/pinctrl/tegra/pinctrl-tegra238.c
++++ b/drivers/pinctrl/tegra/pinctrl-tegra238.c
+@@ -1074,102 +1074,6 @@ static const unsigned int pwm7_pee1_pins[] = {
+ 	TEGRA_PIN_PWM7_PEE1,
+ };
+ 
+-static const unsigned int soc_gpio49_pee2_pins[] = {
+-	TEGRA_PIN_SOC_GPIO49_PEE2,
+-};
+-
+-static const unsigned int soc_gpio82_pee3_pins[] = {
+-	TEGRA_PIN_SOC_GPIO82_PEE3,
+-};
+-
+-static const unsigned int soc_gpio50_pee4_pins[] = {
+-	TEGRA_PIN_SOC_GPIO50_PEE4,
+-};
+-
+-static const unsigned int soc_gpio83_pee5_pins[] = {
+-	TEGRA_PIN_SOC_GPIO83_PEE5,
+-};
+-
+-static const unsigned int soc_gpio69_pff0_pins[] = {
+-	TEGRA_PIN_SOC_GPIO69_PFF0,
+-};
+-
+-static const unsigned int soc_gpio70_pff1_pins[] = {
+-	TEGRA_PIN_SOC_GPIO70_PFF1,
+-};
+-
+-static const unsigned int soc_gpio71_pff2_pins[] = {
+-	TEGRA_PIN_SOC_GPIO71_PFF2,
+-};
+-
+-static const unsigned int soc_gpio72_pff3_pins[] = {
+-	TEGRA_PIN_SOC_GPIO72_PFF3,
+-};
+-
+-static const unsigned int soc_gpio73_pff4_pins[] = {
+-	TEGRA_PIN_SOC_GPIO73_PFF4,
+-};
+-
+-static const unsigned int soc_gpio74_pff5_pins[] = {
+-	TEGRA_PIN_SOC_GPIO74_PFF5,
+-};
+-
+-static const unsigned int soc_gpio80_pff6_pins[] = {
+-	TEGRA_PIN_SOC_GPIO80_PFF6,
+-};
+-
+-static const unsigned int soc_gpio76_pff7_pins[] = {
+-	TEGRA_PIN_SOC_GPIO76_PFF7,
+-};
+-
+-static const unsigned int soc_gpio77_pgg0_pins[] = {
+-	TEGRA_PIN_SOC_GPIO77_PGG0,
+-};
+-
+-static const unsigned int soc_gpio84_pgg1_pins[] = {
+-	TEGRA_PIN_SOC_GPIO84_PGG1,
+-};
+-
+-static const unsigned int uart2_tx_pgg2_pins[] = {
+-	TEGRA_PIN_UART2_TX_PGG2,
+-};
+-
+-static const unsigned int uart2_rx_pgg3_pins[] = {
+-	TEGRA_PIN_UART2_RX_PGG3,
+-};
+-
+-static const unsigned int uart2_rts_pgg4_pins[] = {
+-	TEGRA_PIN_UART2_RTS_PGG4,
+-};
+-
+-static const unsigned int uart2_cts_pgg5_pins[] = {
+-	TEGRA_PIN_UART2_CTS_PGG5,
+-};
+-
+-static const unsigned int soc_gpio85_pgg6_pins[] = {
+-	TEGRA_PIN_SOC_GPIO85_PGG6,
+-};
+-
+-static const unsigned int uart5_tx_pgg7_pins[] = {
+-	TEGRA_PIN_UART5_TX_PGG7,
+-};
+-
+-static const unsigned int uart5_rx_phh0_pins[] = {
+-	TEGRA_PIN_UART5_RX_PHH0,
+-};
+-
+-static const unsigned int uart5_rts_phh1_pins[] = {
+-	TEGRA_PIN_UART5_RTS_PHH1,
+-};
+-
+-static const unsigned int uart5_cts_phh2_pins[] = {
+-	TEGRA_PIN_UART5_CTS_PHH2,
+-};
+-
+-static const unsigned int soc_gpio86_phh3_pins[] = {
+-	TEGRA_PIN_SOC_GPIO86_PHH3,
+-};
+-
+ static const unsigned int sdmmc1_comp_pins[] = {
+ 	TEGRA_PIN_SDMMC1_COMP,
+ };
+-- 
+cgit 1.3.1-korg
+

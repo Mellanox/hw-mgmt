@@ -1,0 +1,73 @@
+From 8dc7ab65bd15e3c774f60ca073158bcb9a26ee5b Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 2 Feb 2026 10:05:25 +0200
+Subject: [PATCH 0511/0797] usb: phy: tegra: parametrize HSIC PTS value
+
+The parallel transceiver select used in HSIC mode differs on Tegra20,
+where it uses the UTMI value (0), whereas Tegra30+ uses a dedicated HSIC
+value. Reflect this in the SoC config.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://patch.msgid.link/20260202080526.23487-4-clamor95@gmail.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/phy/phy-tegra-usb.c   | 7 +++----
+ include/linux/usb/tegra_usb_phy.h | 2 ++
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/usb/phy/phy-tegra-usb.c b/drivers/usb/phy/phy-tegra-usb.c
+index 6173b240c3ea6b..812d9944318049 100644
+--- a/drivers/usb/phy/phy-tegra-usb.c
++++ b/drivers/usb/phy/phy-tegra-usb.c
+@@ -957,10 +957,7 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
+ 		writel_relaxed(val, base + USB_USBMODE);
+ 	}
+ 
+-	if (phy->soc_config->has_hostpc)
+-		set_pts(phy, TEGRA_USB_HOSTPC1_DEVLC_PTS_HSIC);
+-	else
+-		set_pts(phy, 0);
++	set_pts(phy, phy->soc_config->uhsic_pts_value);
+ 
+ 	val = readl_relaxed(base + USB_TXFILLTUNING);
+ 	if ((val & USB_FIFO_TXFILL_MASK) != USB_FIFO_TXFILL_THRES(0x10)) {
+@@ -1474,6 +1471,7 @@ static const struct tegra_phy_soc_config tegra20_soc_config = {
+ 	.requires_pmc_ao_power_up = false,
+ 	.uhsic_registers_offset = 0,
+ 	.uhsic_tx_rtune = 0, /* 40 ohm */
++	.uhsic_pts_value = 0, /* UTMI */
+ };
+ 
+ static const struct tegra_phy_soc_config tegra30_soc_config = {
+@@ -1484,6 +1482,7 @@ static const struct tegra_phy_soc_config tegra30_soc_config = {
+ 	.requires_pmc_ao_power_up = true,
+ 	.uhsic_registers_offset = 0x400,
+ 	.uhsic_tx_rtune = 8,  /* 50 ohm */
++	.uhsic_pts_value = TEGRA_USB_HOSTPC1_DEVLC_PTS_HSIC,
+ };
+ 
+ static const struct of_device_id tegra_usb_phy_id_table[] = {
+diff --git a/include/linux/usb/tegra_usb_phy.h b/include/linux/usb/tegra_usb_phy.h
+index 91420df25627c7..7209b7731c29fc 100644
+--- a/include/linux/usb/tegra_usb_phy.h
++++ b/include/linux/usb/tegra_usb_phy.h
+@@ -26,6 +26,7 @@ struct gpio_desc;
+  * uhsic_registers_offset: for Tegra30+ where HSIC registers were offset
+  *      comparing to Tegra20 by 0x400, since Tegra20 has no UTMIP on PHY2
+  * uhsic_tx_rtune: fine tuned 50 Ohm termination resistor for NMOS/PMOS driver
++ * uhsic_pts_value: parallel transceiver select enumeration value
+  */
+ 
+ struct tegra_phy_soc_config {
+@@ -36,6 +37,7 @@ struct tegra_phy_soc_config {
+ 	bool requires_pmc_ao_power_up;
+ 	u32 uhsic_registers_offset;
+ 	u32 uhsic_tx_rtune;
++	u32 uhsic_pts_value;
+ };
+ 
+ struct tegra_utmip_config {
+-- 
+cgit 1.3.1-korg
+

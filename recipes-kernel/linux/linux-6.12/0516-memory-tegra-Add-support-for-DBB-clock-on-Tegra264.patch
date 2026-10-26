@@ -1,0 +1,52 @@
+From ef4d7b9975d6d87a21574f98473945c8e499a0d2 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Fri, 16 Jan 2026 13:37:32 +0100
+Subject: [PATCH 0516/0797] memory: tegra: Add support for DBB clock on Tegra264
+
+The DBB clock is needed by many IP blocks in order to access system
+memory via the data backbone. The memory controller and external memory
+controllers are the central place where these accesses are managed, so
+make sure that the clock can be controlled from the corresponding
+driver.
+
+Note that not all drivers fully register bandwidth requests, and hence
+the EMC driver doesn't have enough information to know when it's safe to
+switch the clock off, so for now it will be kept on permanently.
+
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260116123732.140813-1-thierry.reding@gmail.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/tegra186-emc.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/memory/tegra/tegra186-emc.c b/drivers/memory/tegra/tegra186-emc.c
+index dfddceecdd1aae..03ebab6fbe68fe 100644
+--- a/drivers/memory/tegra/tegra186-emc.c
++++ b/drivers/memory/tegra/tegra186-emc.c
+@@ -22,6 +22,7 @@ struct tegra186_emc {
+ 	struct tegra_bpmp *bpmp;
+ 	struct device *dev;
+ 	struct clk *clk;
++	struct clk *clk_dbb;
+ 
+ 	struct tegra186_emc_dvfs *dvfs;
+ 	unsigned int num_dvfs;
+@@ -328,6 +329,13 @@ static int tegra186_emc_probe(struct platform_device *pdev)
+ 		goto put_bpmp;
+ 	}
+ 
++	emc->clk_dbb = devm_clk_get_optional_enabled(&pdev->dev, "dbb");
++	if (IS_ERR(emc->clk_dbb)) {
++		err = dev_err_probe(&pdev->dev, PTR_ERR(emc->clk_dbb),
++				    "failed to get DBB clock\n");
++		goto put_bpmp;
++	}
++
+ 	platform_set_drvdata(pdev, emc);
+ 	emc->dev = &pdev->dev;
+ 
+-- 
+cgit 1.3.1-korg
+

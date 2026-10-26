@@ -1,0 +1,35 @@
+From a710a71cd8ad294937e03b352cd71deb7ad08700 Mon Sep 17 00:00:00 2001
+From: Qianfeng Rong <rongqianfeng@vivo.com>
+Date: Wed, 3 Sep 2025 21:25:37 +0800
+Subject: [PATCH 0346/0797] crypto: tegra - Use int type to store negative error codes
+
+Change the 'ret' variable in tegra_sha_do_update() from unsigned int to
+int, as it needs to store either negative error codes or zero returned
+by tegra_se_host1x_submit().
+
+No effect on runtime.
+
+Signed-off-by: Qianfeng Rong <rongqianfeng@vivo.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/tegra/tegra-se-hash.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/crypto/tegra/tegra-se-hash.c b/drivers/crypto/tegra/tegra-se-hash.c
+index d09b4aaeecefec..4a298ace6e9f79 100644
+--- a/drivers/crypto/tegra/tegra-se-hash.c
++++ b/drivers/crypto/tegra/tegra-se-hash.c
+@@ -400,8 +400,9 @@ static int tegra_sha_do_update(struct ahash_request *req)
+ 	struct tegra_sha_ctx *ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(req));
+ 	struct tegra_sha_reqctx *rctx = ahash_request_ctx(req);
+ 	struct tegra_se *se = ctx->se;
+-	unsigned int nblks, nresidue, size, ret;
++	unsigned int nblks, nresidue, size;
+ 	u32 *cpuvaddr = se->cmdbuf->addr;
++	int ret;
+ 
+ 	nresidue = (req->nbytes + rctx->residue.size) % rctx->blk_size;
+ 	nblks = (req->nbytes + rctx->residue.size) / rctx->blk_size;
+-- 
+cgit 1.3.1-korg
+

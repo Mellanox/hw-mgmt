@@ -1,0 +1,38 @@
+From 8595bcb09b05a6c712c35f03ef701e7785895b51 Mon Sep 17 00:00:00 2001
+From: Liao Yuanhong <liaoyuanhong@vivo.com>
+Date: Wed, 20 Aug 2025 20:37:52 +0800
+Subject: [PATCH 0315/0797] crypto: tegra - Remove the use of dev_err_probe()
+
+Logging messages that show some type of "out of memory" error are generally
+unnecessary as there is a generic message and a stack dump done by the
+memory subsystem. These messages generally increase kernel size without
+much added value[1].
+
+The dev_err_probe() doesn't do anything when error is '-ENOMEM'. Therefore,
+remove the useless call to dev_err_probe(), and just return the value
+instead.
+
+[1]: https://lore.kernel.org/lkml/1402419340.30479.18.camel@joe-AO725/
+
+Signed-off-by: Liao Yuanhong <liaoyuanhong@vivo.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/tegra/tegra-se-main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/crypto/tegra/tegra-se-main.c b/drivers/crypto/tegra/tegra-se-main.c
+index 1c94f1de05467a..7237f14eaf5ae4 100644
+--- a/drivers/crypto/tegra/tegra-se-main.c
++++ b/drivers/crypto/tegra/tegra-se-main.c
+@@ -310,7 +310,7 @@ static int tegra_se_probe(struct platform_device *pdev)
+ 
+ 	se->engine = crypto_engine_alloc_init(dev, 0);
+ 	if (!se->engine)
+-		return dev_err_probe(dev, -ENOMEM, "failed to init crypto engine\n");
++		return -ENOMEM;
+ 
+ 	ret = crypto_engine_start(se->engine);
+ 	if (ret) {
+-- 
+cgit 1.3.1-korg
+

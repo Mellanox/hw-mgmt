@@ -1,0 +1,121 @@
+From 2ecff0cda80b9ba0e513620003d156cfef7394df Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 11 May 2026 10:48:57 +0300
+Subject: [PATCH 0729/0797] ARM: tegra: tf600t: Configure panel
+
+Configure DSI panel used in ASUS VivoTab TF600T.
+
+Tested-by: Andreas Westman Dorcsak <hedmoo@yahoo.com>
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts | 62 +++++++++++++++++++++++-
+ 1 file changed, 60 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts b/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts
+index 9296e7970ce4eb..8b68bfef8dee8a 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts
+@@ -23,6 +23,7 @@
+ 		rtc0 = &pmic;
+ 		rtc1 = "/rtc@7000e000";
+ 
++		display0 = &lcd;
+ 		display1 = &hdmi;
+ 
+ 		serial1 = &uartc; /* Bluetooth */
+@@ -55,6 +56,37 @@
+ 	};
+ 
+ 	host1x@50000000 {
++		vi@54080000 {
++			status = "okay";
++
++			csi@800 {
++				status = "okay";
++
++				avdd-dsi-csi-supply = <&avdd_dsi_csi>;
++			};
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@0 {
++					reg = <0>;
++
++					vi_ppa_input: endpoint {
++						/* Link to the rear camera */
++					};
++				};
++
++				port@1 {
++					reg = <1>;
++
++					vi_ppb_input: endpoint {
++						/* Link to the front camera */
++					};
++				};
++			};
++		};
++
+ 		hdmi: hdmi@54280000 {
+ 			status = "okay";
+ 
+@@ -68,6 +100,22 @@
+ 				};
+ 			};
+ 		};
++
++		lcd: dsi@54300000 {
++			status = "okay";
++
++			avdd-dsi-csi-supply = <&avdd_dsi_csi>;
++
++			panel@0 {
++				compatible = "hydis,hv101hd1";
++				reg = <0>;
++
++				vdd-supply = <&vdd_panel>;
++				vio-supply = <&vio_panel>;
++
++				backlight = <&backlight>;
++			};
++		};
+ 	};
+ 
+ 	vde@6001a000 {
+@@ -1123,11 +1171,10 @@
+ 			};
+ 
+ 			regulators {
+-				vdd_lcd: vdd1 {
++				vio_panel: vdd1 {
+ 					regulator-name = "vddio_ddr_1v2";
+ 					regulator-min-microvolt = <1200000>;
+ 					regulator-max-microvolt = <1200000>;
+-					regulator-always-on;
+ 					regulator-boot-on;
+ 					ti,regulator-ext-sleep-control = <8>;
+ 				};
+@@ -2386,6 +2433,17 @@
+ 		vin-supply = <&vdd_5v0_bat>;
+ 	};
+ 
++	vdd_panel: regulator-panel {
++		compatible = "regulator-fixed";
++		regulator-name = "vdd_panel";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-boot-on;
++		gpio = <&gpio TEGRA_GPIO(L, 4) GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&vdd_3v3_sys>;
++	};
++
+ 	hdmi_5v0_sys: regulator-hdmi {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "hdmi_5v0_sys";
+-- 
+cgit 1.3.1-korg
+

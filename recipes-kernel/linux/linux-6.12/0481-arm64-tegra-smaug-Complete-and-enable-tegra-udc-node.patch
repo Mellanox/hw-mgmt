@@ -1,0 +1,39 @@
+From c256740c4b1ff5f3e6cbad48d5d4081849672b76 Mon Sep 17 00:00:00 2001
+From: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Date: Thu, 4 Dec 2025 21:27:20 +0000
+Subject: [PATCH 0481/0797] arm64: tegra: smaug: Complete and enable tegra-udc node
+
+Complete the missing properties in the tegra-udc node and enable it for
+Smaug.
+
+Signed-off-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-smaug.dts | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts b/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
+index e9e925cc5774b4..d2ed704a6d3bc8 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
+@@ -1855,6 +1855,17 @@
+ 		status = "okay";
+ 	};
+ 
++	usb@700d0000 {
++		phys = <&{/padctl@7009f000/pads/usb2/lanes/usb2-0}>,
++		       <&{/padctl@7009f000/pads/pcie/lanes/pcie-6}>;
++		phy-names = "usb2-0", "usb3-0";
++
++		avddio-usb-supply = <&avddio_1v05>;
++		hvdd-usb-supply = <&pp3300>;
++
++		status = "okay";
++	};
++
+ 	clock@70110000 {
+ 		status = "okay";
+ 		nvidia,cf = <6>;
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,49 @@
+From 132926b2173360a48950a726bbdee464868f740b Mon Sep 17 00:00:00 2001
+From: Tanmay Patil <tanmayp@nvidia.com>
+Date: Thu, 14 May 2026 10:31:53 +0000
+Subject: [PATCH 0697/0797] gpu: host1x: Skip redundant HW state update
+
+When the fence list is empty, host1x_intr_update_hw_state()
+falls through to host1x_intr_disable_syncpt_intr()
+which does two MMIO writes to disable the syncpoint
+interrupt and clear its status.
+
+The ISR has already disabled and acked the interrupt
+before calling host1x_intr_handle_interrupt(), making
+these two writes redundant. Skip the update_hw_state()
+call if no fences remain.
+
+Measured Syncpoint wait latency (50000 samples):
+  Average latency:   10.6 us  -> 9.4 us
+  99.99 pct latency: 51.90 us -> 36.58 us
+
+Signed-off-by: Tanmay Patil <tanmayp@nvidia.com>
+Acked-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://patch.msgid.link/20260514103153.766343-3-tanmayp@nvidia.com
+---
+ drivers/gpu/host1x/intr.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/host1x/intr.c b/drivers/gpu/host1x/intr.c
+index f77a678949e96b..72329725076829 100644
+--- a/drivers/gpu/host1x/intr.c
++++ b/drivers/gpu/host1x/intr.c
+@@ -92,8 +92,12 @@ void host1x_intr_handle_interrupt(struct host1x *host, unsigned int id)
+ 		host1x_fence_signal(fence);
+ 	}
+ 
+-	/* Re-enable interrupt if necessary */
+-	host1x_intr_update_hw_state(host, sp);
++	/*
++	 * Re-enable interrupt if necessary. The ISR already disabled the interrupt,
++	 * so if no fences remain, no update is needed.
++	 */
++	if (!list_empty(&sp->fences.list))
++		host1x_intr_update_hw_state(host, sp);
+ 
+ 	spin_unlock(&sp->fences.lock);
+ }
+-- 
+cgit 1.3.1-korg
+

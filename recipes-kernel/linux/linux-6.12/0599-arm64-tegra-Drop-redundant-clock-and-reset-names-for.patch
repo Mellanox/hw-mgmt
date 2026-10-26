@@ -1,0 +1,30 @@
+From 8231b3dbd6c1343084cde94d38084f3b8160d1e1 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 23 Feb 2026 15:33:05 +0100
+Subject: [PATCH 0599/0797] arm64: tegra: Drop redundant clock and reset names for TSEC
+
+The DT bindings don't allow the clock and reset names to be specified
+since there is only a single entry for each.
+
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210.dtsi | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210.dtsi b/arch/arm64/boot/dts/nvidia/tegra210.dtsi
+index 137aa83752570f..5f5e5370d70966 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210.dtsi
+@@ -309,9 +309,7 @@
+ 			reg = <0x0 0x54500000 0x0 0x00040000>;
+ 			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&tegra_car TEGRA210_CLK_TSECB>;
+-			clock-names = "tsec";
+ 			resets = <&tegra_car 206>;
+-			reset-names = "tsec";
+ 			status = "disabled";
+ 		};
+ 
+-- 
+cgit 1.3.1-korg
+

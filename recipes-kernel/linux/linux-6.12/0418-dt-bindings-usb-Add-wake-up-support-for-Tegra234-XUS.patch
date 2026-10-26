@@ -1,0 +1,71 @@
+From 905f0dcc38f8078f0641c5cf855f420d78f10ea7 Mon Sep 17 00:00:00 2001
+From: Haotien Hsu <haotienh@nvidia.com>
+Date: Mon, 11 Aug 2025 15:45:55 +0800
+Subject: [PATCH 0418/0797] dt-bindings: usb: Add wake-up support for Tegra234 XUSB host controller
+
+Populate USB wake events for Tegra234 XUSB host controller.
+These wake-up events are optional to maintain backward compatibility and
+because the USB controller does not require them for normal operation.
+
+Signed-off-by: Haotien Hsu <haotienh@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../bindings/usb/nvidia,tegra234-xusb.yaml         | 31 ++++++++++++++++++++--
+ 1 file changed, 29 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/usb/nvidia,tegra234-xusb.yaml b/Documentation/devicetree/bindings/usb/nvidia,tegra234-xusb.yaml
+index db761dcbf72af2..ec0993497fbbde 100644
+--- a/Documentation/devicetree/bindings/usb/nvidia,tegra234-xusb.yaml
++++ b/Documentation/devicetree/bindings/usb/nvidia,tegra234-xusb.yaml
+@@ -32,9 +32,35 @@ properties:
+       - const: bar2
+ 
+   interrupts:
++    minItems: 2
+     items:
+       - description: xHCI host interrupt
+       - description: mailbox interrupt
++      - description: USB wake event 0
++      - description: USB wake event 1
++      - description: USB wake event 2
++      - description: USB wake event 3
++      - description: USB wake event 4
++      - description: USB wake event 5
++      - description: USB wake event 6
++    description: |
++      The first two interrupts are required for the USB host controller. The
++      remaining USB wake event interrupts are optional. Each USB wake event is
++      independent; it is not necessary to use all of these events on a
++      platform. The USB host controller can function even if no wake-up events
++      are defined. The USB wake event interrupts are handled by the Tegra PMC;
++      hence, the interrupt controller for these is the PMC and the interrupt
++      IDs correspond to the PMC wake event IDs. A complete list of wake event
++      IDs is provided below, and this information is also present in the Tegra
++      TRM document.
++
++        PMC wake-up 76 for USB3 port 0 wakeup
++        PMC wake-up 77 for USB3 port 1 wakeup
++        PMC wake-up 78 for USB3 port 2 and port 3 wakeup
++        PMC wake-up 79 for USB2 port 0 wakeup
++        PMC wake-up 80 for USB2 port 1 wakeup
++        PMC wake-up 81 for USB2 port 2 wakeup
++        PMC wake-up 82 for USB2 port 3 wakeup
+ 
+   clocks:
+     items:
+@@ -127,8 +153,9 @@ examples:
+               <0x03650000 0x10000>;
+         reg-names = "hcd", "fpci", "bar2";
+ 
+-        interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+-                     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
++        interrupts-extended = <&gic GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
++                              <&gic GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
++                              <&pmc 76 IRQ_TYPE_LEVEL_HIGH>;
+ 
+         clocks = <&bpmp TEGRA234_CLK_XUSB_CORE_HOST>,
+                  <&bpmp TEGRA234_CLK_XUSB_FALCON>,
+-- 
+cgit 1.3.1-korg
+

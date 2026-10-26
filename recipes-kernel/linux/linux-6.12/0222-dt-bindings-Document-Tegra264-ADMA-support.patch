@@ -1,0 +1,37 @@
+From b81cd165e4a5599bd96c11adf40872fcbc5fa54f Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Mon, 12 May 2025 05:00:09 +0000
+Subject: [PATCH 0222/0797] dt-bindings: Document Tegra264 ADMA support
+
+Add Tegra264 ADMA support to the device tree bindings documentation.
+The Tegra264 ADMA hardware supports 64 DMA channels and requires
+specific register configurations.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Link: https://lore.kernel.org/r/20250512050010.1025259-2-sheetal@nvidia.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml b/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml
+index d3f8c269916c7..da0235e451d68 100644
+--- a/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml
++++ b/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml
+@@ -19,6 +19,7 @@ properties:
+       - enum:
+           - nvidia,tegra210-adma
+           - nvidia,tegra186-adma
++          - nvidia,tegra264-adma
+       - items:
+           - enum:
+               - nvidia,tegra234-adma
+@@ -92,6 +93,7 @@ allOf:
+           contains:
+             enum:
+               - nvidia,tegra186-adma
++              - nvidia,tegra264-adma
+     then:
+       anyOf:
+         - properties:

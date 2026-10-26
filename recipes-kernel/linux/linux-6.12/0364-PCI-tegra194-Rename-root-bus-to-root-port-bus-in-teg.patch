@@ -1,0 +1,62 @@
+From e1bd928479fb1fa60e9034b0fdb1ab9f3fa92f33 Mon Sep 17 00:00:00 2001
+From: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Date: Mon, 22 Sep 2025 13:40:57 +0530
+Subject: [PATCH 0364/0797] PCI: tegra194: Rename 'root_bus' to 'root_port_bus' in tegra_pcie_downstream_dev_to_D0()
+
+In tegra_pcie_downstream_dev_to_D0(), PCI devices are transitioned to D0
+state. For iterating over the devices, first the downstream bus of the Root
+Port is searched from the root bus. But the name of the variable that holds
+the Root Port downstream bus is named as 'root_bus', which is wrong.
+
+Rename the variable to 'root_port_bus'. Also, move the comment on 'bringing
+the devices to D0' to where the state is set exactly.
+
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@oss.qualcomm.com>
+Signed-off-by: Manivannan Sadhasivam <mani@kernel.org>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Link: https://patch.msgid.link/20250922081057.15209-1-mani@kernel.org
+---
+ drivers/pci/controller/dwc/pcie-tegra194.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/pci/controller/dwc/pcie-tegra194.c b/drivers/pci/controller/dwc/pcie-tegra194.c
+index 0c0734aa14b680..dac069fb1a162f 100644
+--- a/drivers/pci/controller/dwc/pcie-tegra194.c
++++ b/drivers/pci/controller/dwc/pcie-tegra194.c
+@@ -1270,7 +1270,7 @@ static int tegra_pcie_bpmp_set_pll_state(struct tegra_pcie_dw *pcie,
+ static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie)
+ {
+ 	struct dw_pcie_rp *pp = &pcie->pci.pp;
+-	struct pci_bus *child, *root_bus = NULL;
++	struct pci_bus *child, *root_port_bus = NULL;
+ 	struct pci_dev *pdev;
+ 
+ 	/*
+@@ -1283,19 +1283,19 @@ static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie)
+ 	 */
+ 
+ 	list_for_each_entry(child, &pp->bridge->bus->children, node) {
+-		/* Bring downstream devices to D0 if they are not already in */
+ 		if (child->parent == pp->bridge->bus) {
+-			root_bus = child;
++			root_port_bus = child;
+ 			break;
+ 		}
+ 	}
+ 
+-	if (!root_bus) {
+-		dev_err(pcie->dev, "Failed to find downstream devices\n");
++	if (!root_port_bus) {
++		dev_err(pcie->dev, "Failed to find downstream bus of Root Port\n");
+ 		return;
+ 	}
+ 
+-	list_for_each_entry(pdev, &root_bus->devices, bus_list) {
++	/* Bring downstream devices to D0 if they are not already in */
++	list_for_each_entry(pdev, &root_port_bus->devices, bus_list) {
+ 		if (PCI_SLOT(pdev->devfn) == 0) {
+ 			if (pci_set_power_state(pdev, PCI_D0))
+ 				dev_err(pcie->dev,
+-- 
+cgit 1.3.1-korg
+

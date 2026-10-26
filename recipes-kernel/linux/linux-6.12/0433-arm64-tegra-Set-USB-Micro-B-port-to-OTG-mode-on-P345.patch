@@ -1,0 +1,31 @@
+From a72c3372ad6301705ccfdf463e32a2fc888eb173 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Mon, 26 May 2025 20:22:26 -0500
+Subject: [PATCH 0433/0797] arm64: tegra: Set USB Micro-B port to OTG mode on P3450
+
+The USB Micro-B port on p3450 is capable of OTG and doesn't need to be
+hardcoded to peripheral. No other supported Tegra device is set up like
+this, so align for consistency.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts b/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
+index 99b75a6b2dfeb4..d78b9bd45df6cc 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
+@@ -526,7 +526,7 @@
+ 		ports {
+ 			usb2-0 {
+ 				status = "okay";
+-				mode = "peripheral";
++				mode = "otg";
+ 				usb-role-switch;
+ 
+ 				vbus-supply = <&vdd_5v0_usb>;
+-- 
+cgit 1.3.1-korg
+

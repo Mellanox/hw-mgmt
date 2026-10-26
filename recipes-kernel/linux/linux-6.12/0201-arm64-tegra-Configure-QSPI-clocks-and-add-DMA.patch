@@ -1,0 +1,46 @@
+From f1e33679367300a92b76cdec482adc430e5f79f7 Mon Sep 17 00:00:00 2001
+From: Vishwaroop A <va@nvidia.com>
+Date: Tue, 6 May 2025 15:23:49 +0000
+Subject: [PATCH 0201/0797] arm64: tegra: Configure QSPI clocks and add DMA
+
+For Tegra234 devices, set QSPI0_2X_PM to 199.99 MHz and QSPI0_PM to
+99.99 MHz using PLLC as the parent clock. These frequencies enable
+Quad IO reads at up to 99.99 MHz, the maximum achievable given PLL
+and clock divider limitations. Introduce IOMMU property which is
+needed for internal DMA transfers.
+
+Signed-off-by: Vishwaroop A <va@nvidia.com>
+Link: https://lore.kernel.org/r/20250506152350.3370291-2-va@nvidia.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra234.dtsi | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra234.dtsi b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+index 2601b43b2d8ca..12fc850f9f5c3 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra234.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+@@ -2948,6 +2948,11 @@
+ 				 <&bpmp TEGRA234_CLK_QSPI0_PM>;
+ 			clock-names = "qspi", "qspi_out";
+ 			resets = <&bpmp TEGRA234_RESET_QSPI0>;
++			iommus = <&smmu_niso1 TEGRA234_SID_QSPI0>;
++			assigned-clocks = <&bpmp TEGRA234_CLK_QSPI0_2X_PM>,
++					  <&bpmp TEGRA234_CLK_QSPI0_PM>;
++			assigned-clock-rates = <199999999 99999999>;
++			assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLC>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -3031,6 +3036,11 @@
+ 				 <&bpmp TEGRA234_CLK_QSPI1_PM>;
+ 			clock-names = "qspi", "qspi_out";
+ 			resets = <&bpmp TEGRA234_RESET_QSPI1>;
++			iommus = <&smmu_niso1 TEGRA234_SID_QSPI1>;
++			assigned-clocks = <&bpmp TEGRA234_CLK_QSPI1_2X_PM>,
++					  <&bpmp TEGRA234_CLK_QSPI1_PM>;
++			assigned-clock-rates = <199999999 99999999>;
++			assigned-clock-parents = <&bpmp TEGRA234_CLK_PLLC>;
+ 			status = "disabled";
+ 		};
+ 

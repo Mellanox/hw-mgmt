@@ -1,0 +1,81 @@
+From a2ee315db42610c8bb0fa8f37b4cc8082b7c8f42 Mon Sep 17 00:00:00 2001
+From: Nicolin Chen <nicolinc@nvidia.com>
+Date: Tue, 14 Jul 2026 13:55:00 -0700
+Subject: [PATCH] iommu/tegra241-cmdqv: Harden error-map index handling
+
+Use 64 * register + bit as the LVCMDQ index and skip an out-of-range
+bit. Rate-limit the error ISR log. The 6.12 ISR still handles VINTF0
+only, so the later VINTF-map loop check does not apply.
+
+Upstream commits:
+a2ee315db426 iommu/tegra241-cmdqv: Harden error-map index handling in the error ISR
+a86c36163c97 iommu/tegra241-cmdqv: Rate-limit the error ISR's log message
+
+---
+diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+index 6ac1b0554..fd24e15aa 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
++++ b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+@@ -252,25 +252,30 @@ static inline int vcmdq_write_config(struct tegra241_vcmdq *vcmdq, u32 regval)
+ 
+ static void tegra241_vintf0_handle_error(struct tegra241_vintf *vintf)
+ {
++	struct tegra241_cmdqv *cmdqv = vintf->cmdqv;
+ 	int i;
+ 
+ 	for (i = 0; i < LVCMDQ_ERR_MAP_NUM_64; i++) {
+ 		u64 map = readq_relaxed(REG_VINTF(vintf, LVCMDQ_ERR_MAP_64(i)));
+ 
+ 		while (map) {
+-			unsigned long lidx = __ffs64(map);
++			unsigned long map_bit = __ffs64(map);
++			unsigned long lidx = 64 * i + map_bit;
+ 			struct tegra241_vcmdq *vcmdq;
+ 			u32 gerror;
+ 
+-			map &= ~BIT_ULL(lidx);
++			map &= ~BIT_ULL(map_bit);
+ 
++			/* A bit beyond the count means a HW error; skip it */
++			if (WARN_ON_ONCE(lidx >= cmdqv->num_lvcmdqs_per_vintf))
++				continue;
+ 			/* Pairs with smp_store_release() publishing it */
+ 			vcmdq = smp_load_acquire(&vintf->lvcmdqs[lidx]);
+ 			if (!vcmdq)
+ 				continue;
+ 
+ 			gerror = readl_relaxed(REG_VCMDQ_PAGE0(vcmdq, GERROR));
+-			__arm_smmu_cmdq_skip_err(&vintf->cmdqv->smmu, &vcmdq->cmdq);
++			__arm_smmu_cmdq_skip_err(&cmdqv->smmu, &vcmdq->cmdq);
+ 			writel(gerror, REG_VCMDQ_PAGE0(vcmdq, GERRORN));
+ 		}
+ 	}
+@@ -287,21 +292,19 @@ static irqreturn_t tegra241_cmdqv_isr(int irq, void *devid)
+ {
+ 	struct tegra241_cmdqv *cmdqv = (struct tegra241_cmdqv *)devid;
+ 	void __iomem *reg_vintf_map = REG_CMDQV(cmdqv, VINTF_ERR_MAP);
+-	char err_str[256];
+ 	u64 vintf_map;
+ 
+ 	/* Use readl_relaxed() as register addresses are not 64-bit aligned */
+ 	vintf_map = (u64)readl_relaxed(reg_vintf_map + 0x4) << 32 |
+ 		    (u64)readl_relaxed(reg_vintf_map);
+ 
+-	snprintf(err_str, sizeof(err_str),
+-		 "vintf_map: %016llx, vcmdq_map %08x:%08x:%08x:%08x", vintf_map,
+-		 readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(3))),
+-		 readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(2))),
+-		 readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(1))),
+-		 readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(0))));
+-
+-	dev_warn(cmdqv->dev, "unexpected error reported. %s\n", err_str);
++	dev_warn_ratelimited(
++		cmdqv->dev,
++		"unexpected error reported. vintf_map: %016llx, vcmdq_map %08x:%08x:%08x:%08x\n",
++		vintf_map, readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(3))),
++		readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(2))),
++		readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(1))),
++		readl_relaxed(REG_CMDQV(cmdqv, CMDQ_ERR_MAP(0))));
+ 
+ 	/* Handle VINTF0 and its LVCMDQs */
+ 	if (vintf_map & BIT_ULL(0)) {
