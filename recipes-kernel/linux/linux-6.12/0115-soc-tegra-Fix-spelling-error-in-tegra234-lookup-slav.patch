@@ -1,0 +1,30 @@
+From c475b68155942cc2142aca02f3fc19f6e730f17e Mon Sep 17 00:00:00 2001
+From: liujing <liujing@cmss.chinamobile.com>
+Date: Mon, 9 Dec 2024 13:51:48 +0800
+Subject: [PATCH 0115/0797] soc/tegra: Fix spelling error in tegra234_lookup_slave_timeout()
+
+Fix spelling error in tegra234_lookup_slave_timeout().
+
+Signed-off-by: liujing <liujing@cmss.chinamobile.com>
+Link: https://lore.kernel.org/r/20241209055148.3749-1-liujing@cmss.chinamobile.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/soc/tegra/cbb/tegra234-cbb.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/soc/tegra/cbb/tegra234-cbb.c b/drivers/soc/tegra/cbb/tegra234-cbb.c
+index 5cf0e8c341644c..c74629af9bb5d0 100644
+--- a/drivers/soc/tegra/cbb/tegra234-cbb.c
++++ b/drivers/soc/tegra/cbb/tegra234-cbb.c
+@@ -277,7 +277,7 @@ static void tegra234_lookup_slave_timeout(struct seq_file *file, struct tegra234
+ 	 *    which timed out.
+ 	 *	a) Get block number from the index of set bit in
+ 	 *	   <FABRIC>_SN_AXI2APB_<>_BLOCK_TMO_STATUS_0 register.
+-	 *	b) Get address of register repective to block number i.e.
++	 *	b) Get address of register respective to block number i.e.
+ 	 *	   <FABRIC>_SN_AXI2APB_<>_BLOCK<index-set-bit>_TMO_0.
+ 	 *	c) Read the register in above step to get client_id which
+ 	 *	   timed out as per the set bits.
+-- 
+cgit 1.3.1-korg
+

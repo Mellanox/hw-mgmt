@@ -1,0 +1,53 @@
+From a52ddb98a674b01b6b5f2da1ed70a9f30d539f6b Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Thu, 11 Sep 2025 11:43:19 +0200
+Subject: [PATCH 0374/0797] memory: tegra186-emc: Simplify and handle deferred probe with dev_err_probe()
+
+Certain calls, like clk_get, can cause probe deferral and driver should
+handle it.  Use dev_err_probe() to fix that and also change other
+non-deferred errors cases to make the code simpler.
+
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+---
+ drivers/memory/tegra/tegra186-emc.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/memory/tegra/tegra186-emc.c b/drivers/memory/tegra/tegra186-emc.c
+index 00baa7ab89214b..a0de80afe3e905 100644
+--- a/drivers/memory/tegra/tegra186-emc.c
++++ b/drivers/memory/tegra/tegra186-emc.c
+@@ -302,9 +302,8 @@ static int tegra_emc_interconnect_init(struct tegra186_emc *emc)
+ 
+ remove_nodes:
+ 	icc_nodes_remove(&emc->provider);
+-	dev_err(emc->dev, "failed to initialize ICC: %d\n", err);
+ 
+-	return err;
++	return dev_err_probe(emc->dev, err, "failed to initialize ICC\n");
+ }
+ 
+ static int tegra186_emc_probe(struct platform_device *pdev)
+@@ -319,14 +318,13 @@ static int tegra186_emc_probe(struct platform_device *pdev)
+ 
+ 	emc->bpmp = tegra_bpmp_get(&pdev->dev);
+ 	if (IS_ERR(emc->bpmp))
+-		return dev_err_probe(&pdev->dev, PTR_ERR(emc->bpmp), "failed to get BPMP\n");
++		return dev_err_probe(&pdev->dev, PTR_ERR(emc->bpmp),
++				     "failed to get BPMP\n");
+ 
+ 	emc->clk = devm_clk_get(&pdev->dev, "emc");
+-	if (IS_ERR(emc->clk)) {
+-		err = PTR_ERR(emc->clk);
+-		dev_err(&pdev->dev, "failed to get EMC clock: %d\n", err);
+-		goto put_bpmp;
+-	}
++	if (IS_ERR(emc->clk))
++		return dev_err_probe(&pdev->dev, PTR_ERR(emc->clk),
++				     "failed to get EMC clock\n");
+ 
+ 	platform_set_drvdata(pdev, emc);
+ 	emc->dev = &pdev->dev;
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,54 @@
+From d6d7ffb994c676e6414a725d7eb8f208d901b63a Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Tue, 31 Mar 2026 15:52:56 +0530
+Subject: [PATCH 0736/0797] dt-bindings: dma: nvidia,tegra186-gpc-dma: Add iommu-map property
+
+Add iommu-map property to specify separate stream IDs for each DMA
+channel. This enables each channel to be in its own IOMMU domain,
+keeping memory isolated from other devices sharing the same DMA
+controller.
+
+Define the constraints such that if the channel and stream IDs are
+contiguous, a single entry can map all the channels, but if the
+channels or stream IDs are non-contiguous support multiple entries.
+
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260331102303.33181-4-akhilrajeev@nvidia.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ .../devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml         | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml b/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml
+index 64f1e9d9896df3..bc093c783d9866 100644
+--- a/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml
++++ b/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml
+@@ -14,6 +14,7 @@ description: |
+ maintainers:
+   - Jon Hunter <jonathanh@nvidia.com>
+   - Rajesh Gumasta <rgumasta@nvidia.com>
++  - Akhil R <akhilrajeev@nvidia.com>
+ 
+ properties:
+   compatible:
+@@ -49,6 +50,14 @@ properties:
+   iommus:
+     maxItems: 1
+ 
++  iommu-map:
++    description:
++      Maps DMA channel numbers to IOMMU stream IDs. A single entry can map all
++      channels when stream IDs are contiguous. In systems where the channels or
++      stream IDs are not contiguous, multiple entries may be needed.
++    minItems: 1
++    maxItems: 32
++
+   dma-coherent: true
+ 
+   dma-channel-mask:
+-- 
+cgit 1.3.1-korg
+

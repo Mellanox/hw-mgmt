@@ -1,0 +1,27 @@
+From 320b762893e73b44f02e8cf60ebc9bd4fec1c7cd Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Tue, 6 May 2025 15:31:12 +0200
+Subject: [PATCH 0276/0797] dt-bindings: misc: Document Tegra264 APBMISC compatible
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250506133118.1011777-6-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/misc/nvidia,tegra186-misc.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/misc/nvidia,tegra186-misc.yaml b/Documentation/devicetree/bindings/misc/nvidia,tegra186-misc.yaml
+index cacb845868f446..87fcce7cbb40f4 100644
+--- a/Documentation/devicetree/bindings/misc/nvidia,tegra186-misc.yaml
++++ b/Documentation/devicetree/bindings/misc/nvidia,tegra186-misc.yaml
+@@ -20,6 +20,7 @@ properties:
+       - nvidia,tegra186-misc
+       - nvidia,tegra194-misc
+       - nvidia,tegra234-misc
++      - nvidia,tegra264-misc
+ 
+   reg:
+     items:
+-- 
+cgit 1.3.1-korg
+

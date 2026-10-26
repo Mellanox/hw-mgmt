@@ -1,0 +1,59 @@
+From be9dd97060e704e702d508f4a295d06e1197ae08 Mon Sep 17 00:00:00 2001
+From: Takashi Iwai <tiwai@suse.de>
+Date: Tue, 16 Dec 2025 15:11:49 +0100
+Subject: [PATCH 0450/0797] ALSA: hda/tegra: Clean up runtime PM with guard()
+
+Use guard(pm_runtime_active) for replacing the manual calls of
+pm_runtime_get_sync() and pm_runtime_put().
+
+Merely code cleanups and no functional changes.
+
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+Link: https://patch.msgid.link/20251216141154.172218-5-tiwai@suse.de
+---
+ sound/hda/controllers/tegra.c | 14 +++++---------
+ 1 file changed, 5 insertions(+), 9 deletions(-)
+
+diff --git a/sound/hda/controllers/tegra.c b/sound/hda/controllers/tegra.c
+index 6ab338f37db5d8..31c14c4bbe683b 100644
+--- a/sound/hda/controllers/tegra.c
++++ b/sound/hda/controllers/tegra.c
+@@ -592,30 +592,26 @@ static void hda_tegra_probe_work(struct work_struct *work)
+ 	struct platform_device *pdev = to_platform_device(hda->dev);
+ 	int err;
+ 
+-	pm_runtime_get_sync(hda->dev);
++	guard(pm_runtime_active)(hda->dev);
+ 	err = hda_tegra_first_init(chip, pdev);
+ 	if (err < 0)
+-		goto out_free;
++		return;
+ 
+ 	/* create codec instances */
+ 	err = azx_probe_codecs(chip, 8);
+ 	if (err < 0)
+-		goto out_free;
++		return;
+ 
+ 	err = azx_codec_configure(chip);
+ 	if (err < 0)
+-		goto out_free;
++		return;
+ 
+ 	err = snd_card_register(chip->card);
+ 	if (err < 0)
+-		goto out_free;
++		return;
+ 
+ 	chip->running = 1;
+ 	snd_hda_set_power_save(&chip->bus, power_save * 1000);
+-
+- out_free:
+-	pm_runtime_put(hda->dev);
+-	return; /* no error return from async probe */
+ }
+ 
+ static void hda_tegra_remove(struct platform_device *pdev)
+-- 
+cgit 1.3.1-korg
+

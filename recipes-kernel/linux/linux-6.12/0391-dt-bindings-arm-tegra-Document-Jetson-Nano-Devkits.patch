@@ -1,0 +1,33 @@
+From ccec1069246ad121c1cbb6494d75140d512a9b5b Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Wed, 11 Jun 2025 13:53:37 -0500
+Subject: [PATCH 0391/0797] dt-bindings: arm: tegra: Document Jetson Nano Devkits
+
+Add compatibles for the Tegra210 Jetson Nano Developer Kits
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra.yaml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 6139407c2cbf7a..50a31dba7becde 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -189,6 +189,11 @@ properties:
+               - nvidia,p2371-2180
+               - nvidia,p2571
+               - nvidia,p2894-0050-a08
++              - nvidia,p3450-0000
++          - const: nvidia,tegra210
++      - items:
++          - const: nvidia,p3541-0000
++          - const: nvidia,p3450-0000
+           - const: nvidia,tegra210
+       - description: Jetson TX2 Developer Kit
+         items:
+-- 
+cgit 1.3.1-korg
+

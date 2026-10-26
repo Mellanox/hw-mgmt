@@ -1,0 +1,177 @@
+From 48fc33b95159badfca03d0c48aced60bf9f9325a Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Thu, 28 Aug 2025 08:51:01 +0300
+Subject: [PATCH 0360/0797] thermal/drivers/tegra/soctherm-fuse: Prepare calibration for Tegra114 support
+
+The Tegra114 has a different fuse calibration register layout and address
+compared to other Tegra SoCs, requiring SOCTHERM shift, mask, register
+address, and nominal tf calibration value to be configurable.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://lore.kernel.org/r/20250828055104.8073-4-clamor95@gmail.com
+Signed-off-by: Daniel Lezcano <daniel.lezcano@linaro.org>
+---
+ drivers/thermal/tegra/soctherm-fuse.c     | 18 ++++++++++++------
+ drivers/thermal/tegra/soctherm.h          |  7 ++++++-
+ drivers/thermal/tegra/tegra124-soctherm.c |  4 ++++
+ drivers/thermal/tegra/tegra132-soctherm.c |  4 ++++
+ drivers/thermal/tegra/tegra210-soctherm.c |  4 ++++
+ 5 files changed, 30 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/thermal/tegra/soctherm-fuse.c b/drivers/thermal/tegra/soctherm-fuse.c
+index 190f95280e0b82..8d37cd8c9122b3 100644
+--- a/drivers/thermal/tegra/soctherm-fuse.c
++++ b/drivers/thermal/tegra/soctherm-fuse.c
+@@ -9,15 +9,12 @@
+ 
+ #include "soctherm.h"
+ 
+-#define NOMINAL_CALIB_FT			105
+ #define NOMINAL_CALIB_CP			25
+ 
+ #define FUSE_TSENSOR_CALIB_CP_TS_BASE_MASK	0x1fff
+ #define FUSE_TSENSOR_CALIB_FT_TS_BASE_MASK	(0x1fff << 13)
+ #define FUSE_TSENSOR_CALIB_FT_TS_BASE_SHIFT	13
+ 
+-#define FUSE_TSENSOR_COMMON			0x180
+-
+ /*
+  * Tegra210: Layout of bits in FUSE_TSENSOR_COMMON:
+  *    3                   2                   1                   0
+@@ -26,7 +23,7 @@
+  * |       BASE_FT       |      BASE_CP      | SHFT_FT | SHIFT_CP  |
+  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  *
+- * Tegra12x, etc:
++ * Tegra124:
+  * In chips prior to Tegra210, this fuse was incorrectly sized as 26 bits,
+  * and didn't hold SHIFT_CP in [31:26]. Therefore these missing six bits
+  * were obtained via the FUSE_SPARE_REALIGNMENT_REG register [5:0].
+@@ -44,6 +41,13 @@
+  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  * |---------------------------------------------------| SHIFT_CP  |
+  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++ *
++ * Tegra114: Layout of bits in FUSE_TSENSOR_COMMON aka FUSE_VSENSOR_CALIB:
++ *    3                   2                   1                   0
++ *  1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
++ * | SHFT_FT |       BASE_FT       | SHIFT_CP  |      BASE_CP      |
++ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  */
+ 
+ #define CALIB_COEFFICIENT 1000000LL
+@@ -77,7 +81,7 @@ int tegra_calc_shared_calib(const struct tegra_soctherm_fuse *tfuse,
+ 	s32 shifted_cp, shifted_ft;
+ 	int err;
+ 
+-	err = tegra_fuse_readl(FUSE_TSENSOR_COMMON, &val);
++	err = tegra_fuse_readl(tfuse->fuse_common_reg, &val);
+ 	if (err)
+ 		return err;
+ 
+@@ -96,10 +100,12 @@ int tegra_calc_shared_calib(const struct tegra_soctherm_fuse *tfuse,
+ 			return err;
+ 	}
+ 
++	shifted_cp = (val & tfuse->fuse_shift_cp_mask) >>
++		     tfuse->fuse_shift_cp_shift;
+ 	shifted_cp = sign_extend32(val, 5);
+ 
+ 	shared->actual_temp_cp = 2 * NOMINAL_CALIB_CP + shifted_cp;
+-	shared->actual_temp_ft = 2 * NOMINAL_CALIB_FT + shifted_ft;
++	shared->actual_temp_ft = 2 * tfuse->nominal_calib_ft + shifted_ft;
+ 
+ 	return 0;
+ }
+diff --git a/drivers/thermal/tegra/soctherm.h b/drivers/thermal/tegra/soctherm.h
+index 70501e73d58623..083388094fd4ce 100644
+--- a/drivers/thermal/tegra/soctherm.h
++++ b/drivers/thermal/tegra/soctherm.h
+@@ -56,6 +56,9 @@
+ #define SENSOR_TEMP2_MEM_TEMP_MASK		(0xffff << 16)
+ #define SENSOR_TEMP2_PLLX_TEMP_MASK		0xffff
+ 
++#define FUSE_VSENSOR_CALIB			0x08c
++#define FUSE_TSENSOR_COMMON			0x180
++
+ /**
+  * struct tegra_tsensor_group - SOC_THERM sensor group data
+  * @name: short name of the temperature sensor group
+@@ -109,9 +112,11 @@ struct tsensor_group_thermtrips {
+ 
+ struct tegra_soctherm_fuse {
+ 	u32 fuse_base_cp_mask, fuse_base_cp_shift;
++	u32 fuse_shift_cp_mask, fuse_shift_cp_shift;
+ 	u32 fuse_base_ft_mask, fuse_base_ft_shift;
+ 	u32 fuse_shift_ft_mask, fuse_shift_ft_shift;
+-	u32 fuse_spare_realignment;
++	u32 fuse_common_reg, fuse_spare_realignment;
++	u32 nominal_calib_ft;
+ };
+ 
+ struct tsensor_shared_calib {
+diff --git a/drivers/thermal/tegra/tegra124-soctherm.c b/drivers/thermal/tegra/tegra124-soctherm.c
+index 20ad27f4d1a161..d86acff1b234de 100644
+--- a/drivers/thermal/tegra/tegra124-soctherm.c
++++ b/drivers/thermal/tegra/tegra124-soctherm.c
+@@ -200,11 +200,15 @@ static const struct tegra_tsensor tegra124_tsensors[] = {
+ static const struct tegra_soctherm_fuse tegra124_soctherm_fuse = {
+ 	.fuse_base_cp_mask = 0x3ff,
+ 	.fuse_base_cp_shift = 0,
++	.fuse_shift_cp_mask = 0x3f,
++	.fuse_shift_cp_shift = 0,
+ 	.fuse_base_ft_mask = 0x7ff << 10,
+ 	.fuse_base_ft_shift = 10,
+ 	.fuse_shift_ft_mask = 0x1f << 21,
+ 	.fuse_shift_ft_shift = 21,
++	.fuse_common_reg = FUSE_TSENSOR_COMMON,
+ 	.fuse_spare_realignment = 0x1fc,
++	.nominal_calib_ft = 105,
+ };
+ 
+ const struct tegra_soctherm_soc tegra124_soctherm = {
+diff --git a/drivers/thermal/tegra/tegra132-soctherm.c b/drivers/thermal/tegra/tegra132-soctherm.c
+index b76308fdad9e26..64c0363b97171f 100644
+--- a/drivers/thermal/tegra/tegra132-soctherm.c
++++ b/drivers/thermal/tegra/tegra132-soctherm.c
+@@ -200,11 +200,15 @@ static struct tegra_tsensor tegra132_tsensors[] = {
+ static const struct tegra_soctherm_fuse tegra132_soctherm_fuse = {
+ 	.fuse_base_cp_mask = 0x3ff,
+ 	.fuse_base_cp_shift = 0,
++	.fuse_shift_cp_mask = 0x3f,
++	.fuse_shift_cp_shift = 0,
+ 	.fuse_base_ft_mask = 0x7ff << 10,
+ 	.fuse_base_ft_shift = 10,
+ 	.fuse_shift_ft_mask = 0x1f << 21,
+ 	.fuse_shift_ft_shift = 21,
++	.fuse_common_reg = FUSE_TSENSOR_COMMON,
+ 	.fuse_spare_realignment = 0x1fc,
++	.nominal_calib_ft = 105,
+ };
+ 
+ const struct tegra_soctherm_soc tegra132_soctherm = {
+diff --git a/drivers/thermal/tegra/tegra210-soctherm.c b/drivers/thermal/tegra/tegra210-soctherm.c
+index d0ff793f18c561..f6e1493f0202ff 100644
+--- a/drivers/thermal/tegra/tegra210-soctherm.c
++++ b/drivers/thermal/tegra/tegra210-soctherm.c
+@@ -201,11 +201,15 @@ static const struct tegra_tsensor tegra210_tsensors[] = {
+ static const struct tegra_soctherm_fuse tegra210_soctherm_fuse = {
+ 	.fuse_base_cp_mask = 0x3ff << 11,
+ 	.fuse_base_cp_shift = 11,
++	.fuse_shift_cp_mask = 0x3f,
++	.fuse_shift_cp_shift = 0,
+ 	.fuse_base_ft_mask = 0x7ff << 21,
+ 	.fuse_base_ft_shift = 21,
+ 	.fuse_shift_ft_mask = 0x1f << 6,
+ 	.fuse_shift_ft_shift = 6,
++	.fuse_common_reg = FUSE_TSENSOR_COMMON,
+ 	.fuse_spare_realignment = 0,
++	.nominal_calib_ft = 105,
+ };
+ 
+ static struct tsensor_group_thermtrips tegra210_tsensor_thermtrips[] = {
+-- 
+cgit 1.3.1-korg
+

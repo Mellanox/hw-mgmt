@@ -1,0 +1,33 @@
+From 0a783a6686c96847d74874dbea38fa0e6b1f6c12 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Mon, 4 May 2026 21:00:06 +0200
+Subject: [PATCH 0676/0797] memory: tegra114-emc: Simplify tegra114_emc_interconnect_init() error message
+
+Use dev_err_probe() in tegra114_emc_interconnect_init() to make code a
+bit simpler.  It's preferred form of printing error messages during
+probe, even if actual call cannot return EPROBE_DEFER.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Link: https://patch.msgid.link/20260504190004.747509-4-krzysztof.kozlowski@oss.qualcomm.com
+---
+ drivers/memory/tegra/tegra114-emc.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/memory/tegra/tegra114-emc.c b/drivers/memory/tegra/tegra114-emc.c
+index 559ce47694a5de..e50d71842d3aae 100644
+--- a/drivers/memory/tegra/tegra114-emc.c
++++ b/drivers/memory/tegra/tegra114-emc.c
+@@ -1233,9 +1233,8 @@ static int tegra114_emc_interconnect_init(struct tegra_emc *emc)
+ 
+ remove_nodes:
+ 	icc_nodes_remove(&emc->provider);
+-	dev_err(emc->dev, "failed to initialize ICC: %d\n", err);
+ 
+-	return err;
++	return dev_err_probe(emc->dev, err, "failed to initialize ICC");
+ }
+ 
+ static void devm_tegra114_emc_unset_callback(void *data)
+-- 
+cgit 1.3.1-korg
+

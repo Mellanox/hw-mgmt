@@ -1,0 +1,88 @@
+From b42d781e0350c969ef8155b800e33400f5f8b8a6 Mon Sep 17 00:00:00 2001
+From: Pohsun Su <pohsuns@nvidia.com>
+Date: Wed, 7 May 2025 12:43:10 +0800
+Subject: [PATCH 0231/0797] clocksource/drivers/timer-tegra186: Fix watchdog self-pinging
+
+This change removes watchdog self-pinging behavior.
+
+The timer irq handler is triggered due to the 1st expiration,
+the handler disables and enables watchdog but also implicitly
+clears the expiration count so the count can only be 0 or 1.
+
+Since this watchdog supports opened, configured, or pinged by
+systemd, We remove this behavior or the watchdog may not bark
+when systemd crashes since the 5th expiration never comes.
+
+Signed-off-by: Pohsun Su <pohsuns@nvidia.com>
+Signed-off-by: Robert Lin <robelin@nvidia.com>
+Link: https://lore.kernel.org/r/20250507044311.3751033-3-robelin@nvidia.com
+Signed-off-by: Daniel Lezcano <daniel.lezcano@linaro.org>
+---
+ drivers/clocksource/timer-tegra186.c | 27 ---------------------------
+ 1 file changed, 27 deletions(-)
+
+diff --git a/drivers/clocksource/timer-tegra186.c b/drivers/clocksource/timer-tegra186.c
+index 5eb6b7e3fe2fc..fb8a51a5bb24d 100644
+--- a/drivers/clocksource/timer-tegra186.c
++++ b/drivers/clocksource/timer-tegra186.c
+@@ -174,9 +174,6 @@ static void tegra186_wdt_enable(struct tegra186_wdt *wdt)
+ 		value &= ~WDTCR_PERIOD_MASK;
+ 		value |= WDTCR_PERIOD(1);
+ 
+-		/* enable local interrupt for WDT petting */
+-		value |= WDTCR_LOCAL_INT_ENABLE;
+-
+ 		/* enable local FIQ and remote interrupt for debug dump */
+ 		if (0)
+ 			value |= WDTCR_REMOTE_INT_ENABLE |
+@@ -427,23 +424,10 @@ static int tegra186_timer_usec_init(struct tegra186_timer *tegra)
+ 	return clocksource_register_hz(&tegra->usec, USEC_PER_SEC);
+ }
+ 
+-static irqreturn_t tegra186_timer_irq(int irq, void *data)
+-{
+-	struct tegra186_timer *tegra = data;
+-
+-	if (watchdog_active(&tegra->wdt->base)) {
+-		tegra186_wdt_disable(tegra->wdt);
+-		tegra186_wdt_enable(tegra->wdt);
+-	}
+-
+-	return IRQ_HANDLED;
+-}
+-
+ static int tegra186_timer_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct tegra186_timer *tegra;
+-	unsigned int irq;
+ 	int err;
+ 
+ 	tegra = devm_kzalloc(dev, sizeof(*tegra), GFP_KERNEL);
+@@ -462,8 +446,6 @@ static int tegra186_timer_probe(struct platform_device *pdev)
+ 	if (err < 0)
+ 		return err;
+ 
+-	irq = err;
+-
+ 	/* create a watchdog using a preconfigured timer */
+ 	tegra->wdt = tegra186_wdt_create(tegra, 0);
+ 	if (IS_ERR(tegra->wdt)) {
+@@ -490,17 +472,8 @@ static int tegra186_timer_probe(struct platform_device *pdev)
+ 		goto unregister_osc;
+ 	}
+ 
+-	err = devm_request_irq(dev, irq, tegra186_timer_irq, 0,
+-			       "tegra186-timer", tegra);
+-	if (err < 0) {
+-		dev_err(dev, "failed to request IRQ#%u: %d\n", irq, err);
+-		goto unregister_usec;
+-	}
+-
+ 	return 0;
+ 
+-unregister_usec:
+-	clocksource_unregister(&tegra->usec);
+ unregister_osc:
+ 	clocksource_unregister(&tegra->osc);
+ unregister_tsc:

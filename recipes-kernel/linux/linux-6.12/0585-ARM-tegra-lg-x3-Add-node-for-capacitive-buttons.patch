@@ -1,0 +1,35 @@
+From f22416f4f139d1d61613b0a305534a8c1a7273d1 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 26 Jan 2026 12:10:17 +0200
+Subject: [PATCH 0585/0797] ARM: tegra: lg-x3: Add node for capacitive buttons
+
+Both smartphones have capacitive buttons but only P895 supports RMI4
+function 1A (0D touch), while P880 exposes buttons area as a region of the
+touchscreen.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts b/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts
+index ab8f5cf317bfc0..414117fd43824d 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts
+@@ -109,6 +109,12 @@
+ 				syna,clip-x-high = <1535>;
+ 				syna,clip-y-high = <2047>;
+ 			};
++
++			rmi4-f1a@1a {
++				reg = <0x1a>;
++
++				linux,keycodes = <KEY_BACK KEY_HOME KEY_MENU KEY_SEARCH>;
++			};
+ 		};
+ 	};
+ 
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,40 @@
+From ece4229e457de4ceeec80890c5c760f0c858eeea Mon Sep 17 00:00:00 2001
+From: Ion Agorria <ion@agorria.com>
+Date: Mon, 11 May 2026 10:48:53 +0300
+Subject: [PATCH 0725/0797] ARM: tegra: p880: Lower CPU thermal limit
+
+Lower the CPU thermal limit for the LG P880, since its chassis has less
+thermal dissipation capability than the P895.
+
+Signed-off-by: Ion Agorria <ion@agorria.com>
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts b/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts
+index 1b21d7628c8c0d..6b30e17459ac9f 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts
+@@ -537,4 +537,17 @@
+ 
+ 		nvidia,int-mic-en-gpios = <&gpio TEGRA_GPIO(I, 6) GPIO_ACTIVE_HIGH>;
+ 	};
++
++	thermal-zones {
++		cpu-thermal {
++			trips {
++				cpu-alert {
++					/* throttle at 60C until temperature drops to 59.8C */
++					temperature = <60000>;
++					hysteresis = <200>;
++					type = "passive";
++				};
++			};
++		};
++	};
+ };
+-- 
+cgit 1.3.1-korg
+

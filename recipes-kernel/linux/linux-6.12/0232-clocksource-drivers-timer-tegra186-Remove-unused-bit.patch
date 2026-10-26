@@ -1,0 +1,36 @@
+From 39b27ddf4d680fc908b2fc788039406e2e1c4601 Mon Sep 17 00:00:00 2001
+From: robelin <robelin@nvidia.com>
+Date: Wed, 7 May 2025 12:43:11 +0800
+Subject: [PATCH 0232/0797] clocksource/drivers/timer-tegra186: Remove unused bits
+
+The intention to keep the unsed if(0) block is gone now. Remove
+them for clean codes.
+
+Signed-off-by: robelin <robelin@nvidia.com>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Link: https://lore.kernel.org/r/20250507044311.3751033-4-robelin@nvidia.com
+Signed-off-by: Daniel Lezcano <daniel.lezcano@linaro.org>
+---
+ drivers/clocksource/timer-tegra186.c | 9 ---------
+ 1 file changed, 9 deletions(-)
+
+diff --git a/drivers/clocksource/timer-tegra186.c b/drivers/clocksource/timer-tegra186.c
+index fb8a51a5bb24d..e5394f98a02e6 100644
+--- a/drivers/clocksource/timer-tegra186.c
++++ b/drivers/clocksource/timer-tegra186.c
+@@ -174,15 +174,6 @@ static void tegra186_wdt_enable(struct tegra186_wdt *wdt)
+ 		value &= ~WDTCR_PERIOD_MASK;
+ 		value |= WDTCR_PERIOD(1);
+ 
+-		/* enable local FIQ and remote interrupt for debug dump */
+-		if (0)
+-			value |= WDTCR_REMOTE_INT_ENABLE |
+-				 WDTCR_LOCAL_FIQ_ENABLE;
+-
+-		/* enable system debug reset (doesn't properly reboot) */
+-		if (0)
+-			value |= WDTCR_SYSTEM_DEBUG_RESET_ENABLE;
+-
+ 		/* enable system POR reset */
+ 		value |= WDTCR_SYSTEM_POR_RESET_ENABLE;
+ 

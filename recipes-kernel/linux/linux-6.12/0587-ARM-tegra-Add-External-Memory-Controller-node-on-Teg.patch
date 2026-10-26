@@ -1,0 +1,47 @@
+From 48170e7e39f8b165c2ef2e5056994623a78e3ee8 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 26 Jan 2026 21:15:33 +0200
+Subject: [PATCH 0587/0797] ARM: tegra: Add External Memory Controller node on Tegra114
+
+Add External Memory Controller node to the device-tree.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra114.dtsi | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra114.dtsi b/arch/arm/boot/dts/nvidia/tegra114.dtsi
+index 6ba69df8bce8db..7e8f90d339359a 100644
+--- a/arch/arm/boot/dts/nvidia/tegra114.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra114.dtsi
+@@ -259,6 +259,8 @@
+ 		reg = <0x60006000 0x1000>;
+ 		#clock-cells = <1>;
+ 		#reset-cells = <1>;
++
++		nvidia,external-memory-controller = <&emc>;
+ 	};
+ 
+ 	flow-controller@60007000 {
+@@ -655,6 +657,16 @@
+ 		#iommu-cells = <1>;
+ 	};
+ 
++	emc: external-memory-controller@7001b000 {
++		compatible = "nvidia,tegra114-emc";
++		reg = <0x7001b000 0x800>;
++		interrupts = <GIC_SPI 78 IRQ_TYPE_LEVEL_HIGH>;
++		clocks = <&tegra_car TEGRA114_CLK_EMC>;
++		clock-names = "emc";
++
++		nvidia,memory-controller = <&mc>;
++	};
++
+ 	hda@70030000 {
+ 		compatible = "nvidia,tegra114-hda", "nvidia,tegra30-hda";
+ 		reg = <0x70030000 0x10000>;
+-- 
+cgit 1.3.1-korg
+

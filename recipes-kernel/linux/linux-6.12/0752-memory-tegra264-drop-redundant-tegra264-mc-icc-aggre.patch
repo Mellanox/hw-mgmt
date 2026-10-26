@@ -1,0 +1,61 @@
+From e23d87a69e827b60fb985236a0984bacb3b68a19 Mon Sep 17 00:00:00 2001
+From: Sumit Gupta <sumitg@nvidia.com>
+Date: Wed, 27 May 2026 19:31:26 +0530
+Subject: [PATCH 0752/0797] memory: tegra264: drop redundant tegra264_mc_icc_aggregate()
+
+tegra264_mc_icc_aggregate() does nothing on top of icc_std_aggregate
+except an early return on !mc->bwmgr_mrq_supported.
+tegra264_mc_icc_set() already returns early on the same condition,
+before reading any of the aggregated avg_bw / peak_bw values.  This
+makes the early return in aggregate() redundant.  So, set
+tegra264_mc_icc_ops.aggregate to icc_std_aggregate and drop the
+helper.
+
+Reported-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Sumit Gupta <sumitg@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Tested-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260527140127.49172-3-sumitg@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/tegra264.c | 17 +----------------
+ 1 file changed, 1 insertion(+), 16 deletions(-)
+
+diff --git a/drivers/memory/tegra/tegra264.c b/drivers/memory/tegra/tegra264.c
+index b8d6c4ce483697..790349295dcc10 100644
+--- a/drivers/memory/tegra/tegra264.c
++++ b/drivers/memory/tegra/tegra264.c
+@@ -799,21 +799,6 @@ error:
+ 	return ret;
+ }
+ 
+-static int tegra264_mc_icc_aggregate(struct icc_node *node, u32 tag, u32 avg_bw,
+-				     u32 peak_bw, u32 *agg_avg, u32 *agg_peak)
+-{
+-	struct icc_provider *p = node->provider;
+-	struct tegra_mc *mc = icc_provider_to_tegra_mc(p);
+-
+-	if (!mc->bwmgr_mrq_supported)
+-		return 0;
+-
+-	*agg_avg += avg_bw;
+-	*agg_peak = max(*agg_peak, peak_bw);
+-
+-	return 0;
+-}
+-
+ static int tegra264_mc_icc_get_init_bw(struct icc_node *node, u32 *avg, u32 *peak)
+ {
+ 	*avg = 0;
+@@ -1130,7 +1115,7 @@ static const irq_handler_t tegra264_mc_irq_handlers[8] = {
+ 
+ static const struct tegra_mc_icc_ops tegra264_mc_icc_ops = {
+ 	.xlate = tegra_mc_icc_xlate,
+-	.aggregate = tegra264_mc_icc_aggregate,
++	.aggregate = icc_std_aggregate,
+ 	.get_bw = tegra264_mc_icc_get_init_bw,
+ 	.set = tegra264_mc_icc_set,
+ };
+-- 
+cgit 1.3.1-korg
+

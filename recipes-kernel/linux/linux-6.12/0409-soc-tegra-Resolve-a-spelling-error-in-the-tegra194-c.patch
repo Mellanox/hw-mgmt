@@ -1,0 +1,35 @@
+From e13c1f34aa8675363f45593e85c125e15b9a4410 Mon Sep 17 00:00:00 2001
+From: Bruno Sobreira França <brunofrancadevsec@gmail.com>
+Date: Fri, 24 Oct 2025 01:35:14 +0000
+Subject: [PATCH 0409/0797] soc/tegra: Resolve a spelling error in the tegra194-cbb.c
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Fix a typo spotted during code reading.
+
+Signed-off-by: Bruno Sobreira França <brunofrancadevsec@gmail.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Acked-by: Uwe Kleine-König <u.kleine-koenig@baylibre.com>
+Reviewed-by: Herve Codina <herve.codina@bootlin.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/soc/tegra/cbb/tegra194-cbb.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/soc/tegra/cbb/tegra194-cbb.c b/drivers/soc/tegra/cbb/tegra194-cbb.c
+index c1bdea8c853fe1..ab75d50cc85c46 100644
+--- a/drivers/soc/tegra/cbb/tegra194-cbb.c
++++ b/drivers/soc/tegra/cbb/tegra194-cbb.c
+@@ -1836,7 +1836,7 @@ print_errlog1_2(struct seq_file *file, struct tegra194_cbb *cbb,
+ }
+ 
+ /*
+- * Print transcation type, error code and description from ErrLog0 for all
++ * Print transaction type, error code and description from ErrLog0 for all
+  * errors. For NOC target errors, all relevant error info is printed using
+  * ErrLog0 only. But additional information is printed for errors from
+  * APB targets because for them:
+-- 
+cgit 1.3.1-korg
+

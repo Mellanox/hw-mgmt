@@ -1,0 +1,62 @@
+From 4614fd6342ab69feebb067d5db84a9bfb9aada9f Mon Sep 17 00:00:00 2001
+From: Vishwaroop A <va@nvidia.com>
+Date: Tue, 13 May 2025 20:00:42 +0000
+Subject: [PATCH 0226/0797] spi: dt-bindings: tegra: Document IOMMU property for Tegra234 QSPI
+
+Add the 'iommus' property to the Tegra QSPI device tree binding.
+The property is needed for Tegra234 when using the internal DMA
+controller, and is not supported on other Tegra chips, as DMA is
+handled by an external controller.
+
+Signed-off-by: Vishwaroop A <va@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20250513200043.608292-1-va@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../bindings/spi/nvidia,tegra210-quad.yaml     | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/spi/nvidia,tegra210-quad.yaml b/Documentation/devicetree/bindings/spi/nvidia,tegra210-quad.yaml
+index 48e97e2402656..8b3640280559d 100644
+--- a/Documentation/devicetree/bindings/spi/nvidia,tegra210-quad.yaml
++++ b/Documentation/devicetree/bindings/spi/nvidia,tegra210-quad.yaml
+@@ -10,9 +10,6 @@ maintainers:
+   - Thierry Reding <thierry.reding@gmail.com>
+   - Jonathan Hunter <jonathanh@nvidia.com>
+ 
+-allOf:
+-  - $ref: spi-controller.yaml#
+-
+ properties:
+   compatible:
+     enum:
+@@ -47,6 +44,9 @@ properties:
+       - const: rx
+       - const: tx
+ 
++  iommus:
++    maxItems: 1
++
+ patternProperties:
+   "@[0-9a-f]+$":
+     type: object
+@@ -69,6 +69,18 @@ required:
+ 
+ unevaluatedProperties: false
+ 
++allOf:
++  - $ref: spi-controller.yaml#
++  - if:
++      properties:
++        compatible:
++          not:
++            contains:
++              const: nvidia,tegra234-qspi
++    then:
++      properties:
++        iommus: false
++
+ examples:
+   - |
+     #include <dt-bindings/clock/tegra210-car.h>

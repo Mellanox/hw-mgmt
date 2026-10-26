@@ -1,0 +1,31 @@
+From a3e93d8733490a72abb4e27e01d88f5bdc741271 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Thu, 26 Feb 2026 16:12:11 +0100
+Subject: [PATCH 0527/0797] dt-bindings: arm: nvidia: Document the Tegra238 CCPLEX cluster
+
+Tegra238 is derived from Tegra234 and uses a similar CCPLEX cluster,
+with slight variations but the same programming model. Add a compatible
+string to specify this particular implementation.
+
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Viresh Kumar <viresh.kumar@linaro.org>
+---
+ .../devicetree/bindings/arm/tegra/nvidia,tegra-ccplex-cluster.yaml       | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra-ccplex-cluster.yaml b/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra-ccplex-cluster.yaml
+index 36dbd0838f2dee..fe9c8791f2271c 100644
+--- a/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra-ccplex-cluster.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra-ccplex-cluster.yaml
+@@ -24,6 +24,7 @@ properties:
+     enum:
+       - nvidia,tegra186-ccplex-cluster
+       - nvidia,tegra234-ccplex-cluster
++      - nvidia,tegra238-ccplex-cluster
+ 
+   reg:
+     maxItems: 1
+-- 
+cgit 1.3.1-korg
+

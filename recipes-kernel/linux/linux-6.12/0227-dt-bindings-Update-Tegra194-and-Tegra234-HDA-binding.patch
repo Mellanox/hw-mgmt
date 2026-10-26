@@ -1,0 +1,145 @@
+From 494475e5e1c11efa77979e421ee7a3d8e5e8f304 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Mon, 12 May 2025 06:42:56 +0000
+Subject: [PATCH 0227/0797] dt-bindings: Update Tegra194 and Tegra234 HDA bindings
+
+- Tegra194 and Tegra234 HDA is not compatible with Tegra30, hence update
+  them as standalone compatibles. Also, add necessary logic to the binding
+  doc as HDA clocks and resets for Tegra194 and Tegra234 are different from
+  Tegra30. This fixes below dtbs_check errors:
+   - compatible: 'oneOf' conditional failed, one must be fixed:
+        ['nvidia,tegra194-hda'] is too short
+        'nvidia,tegra30-hda' was expected
+        'nvidia,tegra132-hda' was expected
+   - compatible: 'oneOf' conditional failed, one must be fixed:
+	['nvidia,tegra234-hda'] is too short
+	'nvidia,tegra30-hda' was expected
+        'nvidia,tegra132-hda' was expected
+   - hda@3510000: clock-names:1: 'hda2hdmi' was expected
+   - hda@3510000: reset-names:1: 'hda2hdmi' was expected
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+Link: https://patch.msgid.link/20250512064258.1028331-2-sheetal@nvidia.com
+---
+ .../bindings/sound/nvidia,tegra30-hda.yaml    | 83 ++++++++++++++++---
+ 1 file changed, 72 insertions(+), 11 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml
+index 3ca9affb79a20..703f009862a48 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml
+@@ -20,11 +20,12 @@ properties:
+ 
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra30-hda
++      - enum:
++          - nvidia,tegra30-hda
++          - nvidia,tegra194-hda
++          - nvidia,tegra234-hda
+       - items:
+           - enum:
+-              - nvidia,tegra234-hda
+-              - nvidia,tegra194-hda
+               - nvidia,tegra186-hda
+               - nvidia,tegra210-hda
+               - nvidia,tegra124-hda
+@@ -48,10 +49,7 @@ properties:
+ 
+   clock-names:
+     minItems: 2
+-    items:
+-      - const: hda
+-      - const: hda2hdmi
+-      - const: hda2codec_2x
++    maxItems: 3
+ 
+   resets:
+     minItems: 2
+@@ -59,10 +57,7 @@ properties:
+ 
+   reset-names:
+     minItems: 2
+-    items:
+-      - const: hda
+-      - const: hda2hdmi
+-      - const: hda2codec_2x
++    maxItems: 3
+ 
+   power-domains:
+     maxItems: 1
+@@ -93,6 +88,72 @@ required:
+ 
+ additionalProperties: false
+ 
++allOf:
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra30-hda
++    then:
++      properties:
++        clocks:
++          minItems: 3
++        clock-names:
++          items:
++            - const: hda
++            - const: hda2hdmi
++            - const: hda2codec_2x
++        resets:
++          minItems: 3
++        reset-names:
++          items:
++            - const: hda
++            - const: hda2hdmi
++            - const: hda2codec_2x
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra194-hda
++    then:
++      properties:
++        clocks:
++          minItems: 3
++        clock-names:
++          items:
++            - const: hda
++            - const: hda2hdmi
++            - const: hda2codec_2x
++        resets:
++          maxItems: 2
++        reset-names:
++          items:
++            - const: hda
++            - const: hda2hdmi
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra234-hda
++    then:
++      properties:
++        clocks:
++          minItems: 2
++          maxItems: 2
++        clock-names:
++          items:
++            - const: hda
++            - const: hda2codec_2x
++        resets:
++          maxItems: 2
++        reset-names:
++          items:
++            - const: hda
++            - const: hda2codec_2x
++
+ examples:
+   - |
+     #include<dt-bindings/clock/tegra124-car-common.h>

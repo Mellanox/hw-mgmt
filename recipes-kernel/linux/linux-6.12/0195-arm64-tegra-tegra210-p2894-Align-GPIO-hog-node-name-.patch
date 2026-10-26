@@ -1,0 +1,28 @@
+From 04e7638dd64af20e4e81b7569abea9673e337098 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Wed, 15 Jan 2025 21:46:03 +0100
+Subject: [PATCH 0195/0797] arm64: tegra: tegra210-p2894: Align GPIO hog node name with preferred style
+
+GPIO hogs device node names can use 'hog' prefix or suffix, but the
+suffix is preferred.  The pattern in DT schema might narrow in the
+future, so adjust the DTS now.
+
+Link: https://lore.kernel.org/r/20250115204603.136997-1-krzysztof.kozlowski@linaro.org
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-p2894.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p2894.dtsi b/arch/arm64/boot/dts/nvidia/tegra210-p2894.dtsi
+index bbd6ff0564da9..b84a8e39b404a 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p2894.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p2894.dtsi
+@@ -1365,7 +1365,7 @@
+ 				};
+ 			};
+ 
+-			hog-0 {
++			max77620-hog {
+ 				gpio-hog;
+ 				output-high;
+ 				gpios = <2 GPIO_ACTIVE_HIGH>,

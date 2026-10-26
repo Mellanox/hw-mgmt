@@ -1,0 +1,32 @@
+From 1c208fd306f296a663d1edcced57bd8ef113eb74 Mon Sep 17 00:00:00 2001
+From: Liao Yuanhong <liaoyuanhong@vivo.com>
+Date: Tue, 2 Sep 2025 21:27:19 +0800
+Subject: [PATCH 0319/0797] usb: host: xhci-tegra: Remove redundant ternary operators
+
+For ternary operators in the form of "a ? true : false", if 'a' itself
+returns a boolean result, the ternary operator can be omitted. Remove
+redundant ternary operators to clean up the code.
+
+Signed-off-by: Liao Yuanhong <liaoyuanhong@vivo.com>
+Link: https://lore.kernel.org/r/20250902132720.85504-1-liaoyuanhong@vivo.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/host/xhci-tegra.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/usb/host/xhci-tegra.c b/drivers/usb/host/xhci-tegra.c
+index 0c7af44d4dae50..460effa0e11edc 100644
+--- a/drivers/usb/host/xhci-tegra.c
++++ b/drivers/usb/host/xhci-tegra.c
+@@ -1482,7 +1482,7 @@ static int tegra_xhci_id_notify(struct notifier_block *nb,
+ 
+ 	tegra->otg_usb2_port = tegra_xusb_get_usb2_port(tegra, usbphy);
+ 
+-	tegra->host_mode = (usbphy->last_event == USB_EVENT_ID) ? true : false;
++	tegra->host_mode = usbphy->last_event == USB_EVENT_ID;
+ 
+ 	schedule_work(&tegra->id_work);
+ 
+-- 
+cgit 1.3.1-korg
+

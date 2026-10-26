@@ -1,0 +1,39 @@
+From b53232fd220ad5ecc29b1cb4d4e1355365bc5026 Mon Sep 17 00:00:00 2001
+From: Kartik Rajput <kkartik@nvidia.com>
+Date: Tue, 18 Nov 2025 19:36:15 +0530
+Subject: [PATCH 0457/0797] i2c: tegra: Do not configure DMA if not supported
+
+On Tegra264, not all I2C controllers have the necessary interface to
+GPC DMA, this causes failures when function tegra_i2c_init_dma()
+is called.
+
+Ensure that "dmas" device-tree property is present before initializing
+DMA in function tegra_i2c_init_dma().
+
+Signed-off-by: Kartik Rajput <kkartik@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Signed-off-by: Wolfram Sang <wsa+renesas@sang-engineering.com>
+---
+ drivers/i2c/busses/i2c-tegra.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-tegra.c b/drivers/i2c/busses/i2c-tegra.c
+index e533460bccc39e..bd26b232ffb33a 100644
+--- a/drivers/i2c/busses/i2c-tegra.c
++++ b/drivers/i2c/busses/i2c-tegra.c
+@@ -449,6 +449,11 @@ static int tegra_i2c_init_dma(struct tegra_i2c_dev *i2c_dev)
+ 	if (IS_VI(i2c_dev))
+ 		return 0;
+ 
++	if (!of_property_present(i2c_dev->dev->of_node, "dmas")) {
++		dev_dbg(i2c_dev->dev, "DMA not available, falling back to PIO\n");
++		return 0;
++	}
++
+ 	if (i2c_dev->hw->has_apb_dma) {
+ 		if (!IS_ENABLED(CONFIG_TEGRA20_APB_DMA)) {
+ 			dev_dbg(i2c_dev->dev, "APB DMA support not enabled\n");
+-- 
+cgit 1.3.1-korg
+

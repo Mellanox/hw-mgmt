@@ -1,0 +1,40 @@
+From 00899135240c81b3cf8fbc2a4aee2e92234ee0c6 Mon Sep 17 00:00:00 2001
+From: "A.T. Jefferies" <alextjefferies@gmail.com>
+Date: Wed, 23 Jul 2025 23:17:57 +0000
+Subject: [PATCH 0314/0797] staging: media: tegra-video: use BIT() macro instead of shift
+
+Replace two instances of (1 << X) with BIT(X) in tegra20.c to follow
+kernel coding style guidelines and improve clarity. The BIT() macro
+also ensures proper type handling for larger shifts.
+
+Signed-off-by: A.T. Jefferies <alextjefferies@gmail.com>
+Signed-off-by: Hans Verkuil <hverkuil+cisco@kernel.org>
+---
+ drivers/staging/media/tegra-video/tegra20.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/staging/media/tegra-video/tegra20.c b/drivers/staging/media/tegra-video/tegra20.c
+index 7b8f8f810b3564..1473f1b1f20343 100644
+--- a/drivers/staging/media/tegra-video/tegra20.c
++++ b/drivers/staging/media/tegra-video/tegra20.c
+@@ -42,7 +42,7 @@
+ #define       VI_INPUT_BT656				BIT(25)
+ #define       VI_INPUT_YUV_INPUT_FORMAT_SFT		8  /* bits [9:8] */
+ #define       VI_INPUT_YUV_INPUT_FORMAT_UYVY		(0 << VI_INPUT_YUV_INPUT_FORMAT_SFT)
+-#define       VI_INPUT_YUV_INPUT_FORMAT_VYUY		(1 << VI_INPUT_YUV_INPUT_FORMAT_SFT)
++#define       VI_INPUT_YUV_INPUT_FORMAT_VYUY		BIT(VI_INPUT_YUV_INPUT_FORMAT_SFT)
+ #define       VI_INPUT_YUV_INPUT_FORMAT_YUYV		(2 << VI_INPUT_YUV_INPUT_FORMAT_SFT)
+ #define       VI_INPUT_YUV_INPUT_FORMAT_YVYU		(3 << VI_INPUT_YUV_INPUT_FORMAT_SFT)
+ #define       VI_INPUT_INPUT_FORMAT_SFT			2  /* bits [5:2] */
+@@ -73,7 +73,7 @@
+ #define       VI_OUTPUT_H_DIRECTION			BIT(19)
+ #define       VI_OUTPUT_YUV_OUTPUT_FORMAT_SFT		17
+ #define       VI_OUTPUT_YUV_OUTPUT_FORMAT_UYVY		(0 << VI_OUTPUT_YUV_OUTPUT_FORMAT_SFT)
+-#define       VI_OUTPUT_YUV_OUTPUT_FORMAT_VYUY		(1 << VI_OUTPUT_YUV_OUTPUT_FORMAT_SFT)
++#define       VI_OUTPUT_YUV_OUTPUT_FORMAT_VYUY		BIT(VI_OUTPUT_YUV_OUTPUT_FORMAT_SFT)
+ #define       VI_OUTPUT_YUV_OUTPUT_FORMAT_YUYV		(2 << VI_OUTPUT_YUV_OUTPUT_FORMAT_SFT)
+ #define       VI_OUTPUT_YUV_OUTPUT_FORMAT_YVYU		(3 << VI_OUTPUT_YUV_OUTPUT_FORMAT_SFT)
+ #define       VI_OUTPUT_OUTPUT_BYTE_SWAP		BIT(16)
+-- 
+cgit 1.3.1-korg
+

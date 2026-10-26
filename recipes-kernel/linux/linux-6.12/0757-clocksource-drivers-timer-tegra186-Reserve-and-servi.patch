@@ -1,0 +1,175 @@
+From 46fb093b87a0d92e391b6f6cadd63c3ef50a59b2 Mon Sep 17 00:00:00 2001
+From: Kartik Rajput <kkartik@nvidia.com>
+Date: Thu, 7 May 2026 21:15:57 +0530
+Subject: [PATCH 0757/0797] clocksource/drivers/timer-tegra186: Reserve and service a kernel watchdog
+
+Tegra SoCs supports multiple watchdog timers. If the kernel crashes or
+hangs before userspace enables a watchdog, the system cannot recover and
+may remain bricked, e.g. after a failed OTA update. The driver currently
+leaves all watchdogs disabled until userspace configures them.
+
+Reserve first available watchdog as a kernel-only watchdog for Tegra186
+and Tegra234. Arm it during probe (120s timeout) and keep it alive in
+the driver IRQ handler. Do not register it to userspace. Other available
+watchdogs remain exposed to userspace. This guarantees the system can
+reset itself in case of a hang or crash even when userspace never starts.
+
+Signed-off-by: Kartik Rajput <kkartik@nvidia.com>
+Signed-off-by: Daniel Lezcano <daniel.lezcano@kernel.org>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260507154557.2082697-5-kkartik@nvidia.com
+---
+ drivers/clocksource/timer-tegra186.c | 62 +++++++++++++++++++++++++++++++-----
+ 1 file changed, 54 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/clocksource/timer-tegra186.c b/drivers/clocksource/timer-tegra186.c
+index dd1d1a0dd63eb4..78600ddeb1c61d 100644
+--- a/drivers/clocksource/timer-tegra186.c
++++ b/drivers/clocksource/timer-tegra186.c
+@@ -57,6 +57,8 @@
+ #define WDTUR 0x00c
+ #define  WDTUR_UNLOCK_PATTERN 0x0000c45a
+ 
++#define TEGRA186_KERNEL_WDT_TIMEOUT 120
++
+ /* WDT security configuration registers */
+ #define WDTSCR(x)		(0xf02c + (x) * 4)
+ #define  WDTSCR_SEC_WEN		BIT(28)
+@@ -82,6 +84,7 @@ struct tegra186_wdt {
+ 	void __iomem *regs;
+ 	unsigned int index;
+ 	bool locked;
++	bool is_kernel_wdt;
+ 
+ 	struct tegra186_tmr *tmr;
+ };
+@@ -182,6 +185,10 @@ static void tegra186_wdt_enable(struct tegra186_wdt *wdt)
+ 		value &= ~WDTCR_PERIOD_MASK;
+ 		value |= WDTCR_PERIOD(1);
+ 
++		/* enable local interrupt for kernel watchdog */
++		if (wdt->is_kernel_wdt)
++			value |= WDTCR_LOCAL_INT_ENABLE;
++
+ 		/* enable system POR reset */
+ 		value |= WDTCR_SYSTEM_POR_RESET_ENABLE;
+ 
+@@ -219,6 +226,16 @@ static int tegra186_wdt_ping(struct watchdog_device *wdd)
+ 	return 0;
+ }
+ 
++static irqreturn_t tegra186_wdt_irq(int irq, void *data)
++{
++	struct tegra186_wdt *wdt = data;
++
++	tegra186_wdt_disable(wdt);
++	tegra186_wdt_enable(wdt);
++
++	return IRQ_HANDLED;
++}
++
+ static int tegra186_wdt_set_timeout(struct watchdog_device *wdd,
+ 				    unsigned int timeout)
+ {
+@@ -361,10 +378,6 @@ static struct tegra186_wdt *tegra186_wdt_create(struct tegra186_timer *tegra,
+ 	if (err < 0)
+ 		return ERR_PTR(err);
+ 
+-	err = devm_watchdog_register_device(tegra->dev, &wdt->base);
+-	if (err < 0)
+-		return ERR_PTR(err);
+-
+ 	return wdt;
+ }
+ 
+@@ -446,9 +459,11 @@ static int tegra186_timer_usec_init(struct tegra186_timer *tegra)
+ 
+ static int tegra186_timer_probe(struct platform_device *pdev)
+ {
++	struct tegra186_wdt *kernel_wdt = NULL;
+ 	struct device *dev = &pdev->dev;
+ 	struct tegra186_timer *tegra;
+ 	unsigned int i;
++	int irq;
+ 	int err;
+ 
+ 	tegra = devm_kzalloc(dev, sizeof(*tegra), GFP_KERNEL);
+@@ -467,6 +482,8 @@ static int tegra186_timer_probe(struct platform_device *pdev)
+ 	if (err < 0)
+ 		return err;
+ 
++	irq = err;
++
+ 	tegra->wdts = devm_kcalloc(dev, tegra->soc->num_wdts, sizeof(*tegra->wdts), GFP_KERNEL);
+ 	if (!tegra->wdts)
+ 		return -ENOMEM;
+@@ -481,6 +498,17 @@ static int tegra186_timer_probe(struct platform_device *pdev)
+ 		if (IS_ERR(tegra->wdts[i]))
+ 			return dev_err_probe(dev, PTR_ERR(tegra->wdts[i]),
+ 					     "failed to create WDT%u\n", i);
++
++		/* Reserve the first accessible WDT for the Kernel. */
++		if (!kernel_wdt) {
++			kernel_wdt = tegra->wdts[i];
++			kernel_wdt->is_kernel_wdt = true;
++		} else {
++			err = devm_watchdog_register_device(dev, &tegra->wdts[i]->base);
++			if (err < 0)
++				return dev_err_probe(dev, err,
++						     "failed to register WDT%u\n", i);
++		}
+ 	}
+ 
+ 	err = tegra186_timer_tsc_init(tegra);
+@@ -501,8 +529,22 @@ static int tegra186_timer_probe(struct platform_device *pdev)
+ 		goto unregister_osc;
+ 	}
+ 
++	if (kernel_wdt) {
++		err = devm_request_irq(dev, irq, tegra186_wdt_irq, 0,
++				       dev_name(dev), kernel_wdt);
++		if (err < 0) {
++			dev_err(dev, "failed to request kernel WDT IRQ: %d\n", err);
++			goto unregister_usec;
++		}
++
++		tegra186_wdt_set_timeout(&kernel_wdt->base, TEGRA186_KERNEL_WDT_TIMEOUT);
++		tegra186_wdt_enable(kernel_wdt);
++	}
++
+ 	return 0;
+ 
++unregister_usec:
++	clocksource_unregister(&tegra->usec);
+ unregister_osc:
+ 	clocksource_unregister(&tegra->osc);
+ unregister_tsc:
+@@ -525,8 +567,10 @@ static int __maybe_unused tegra186_timer_suspend(struct device *dev)
+ 	unsigned int i;
+ 
+ 	for (i = 0; i < tegra->soc->num_wdts; i++) {
+-		if (tegra->wdts[i] && watchdog_active(&tegra->wdts[i]->base))
+-			tegra186_wdt_disable(tegra->wdts[i]);
++		struct tegra186_wdt *wdt = tegra->wdts[i];
++
++		if (wdt && (wdt->is_kernel_wdt || watchdog_active(&wdt->base)))
++			tegra186_wdt_disable(wdt);
+ 	}
+ 
+ 	return 0;
+@@ -538,8 +582,10 @@ static int __maybe_unused tegra186_timer_resume(struct device *dev)
+ 	unsigned int i;
+ 
+ 	for (i = 0; i < tegra->soc->num_wdts; i++) {
+-		if (tegra->wdts[i] && watchdog_active(&tegra->wdts[i]->base))
+-			tegra186_wdt_enable(tegra->wdts[i]);
++		struct tegra186_wdt *wdt = tegra->wdts[i];
++
++		if (wdt && (wdt->is_kernel_wdt || watchdog_active(&wdt->base)))
++			tegra186_wdt_enable(wdt);
+ 	}
+ 
+ 	return 0;
+-- 
+cgit 1.3.1-korg
+

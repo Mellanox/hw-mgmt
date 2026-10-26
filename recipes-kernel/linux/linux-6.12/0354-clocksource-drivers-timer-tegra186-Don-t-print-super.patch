@@ -1,0 +1,41 @@
+From 764d0654114b5ce52aafabdb2bf9ccee0e998651 Mon Sep 17 00:00:00 2001
+From: Wolfram Sang <wsa+renesas@sang-engineering.com>
+Date: Wed, 13 Aug 2025 21:06:58 +0200
+Subject: [PATCH 0354/0797] clocksource/drivers/timer-tegra186: Don't print superfluous errors
+
+The watchdog core will handle error messages already.
+
+Signed-off-by: Wolfram Sang <wsa+renesas@sang-engineering.com>
+Signed-off-by: Daniel Lezcano <daniel.lezcano@linaro.org>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://lore.kernel.org/r/20250813190657.3628-2-wsa+renesas@sang-engineering.com
+---
+ drivers/clocksource/timer-tegra186.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/clocksource/timer-tegra186.c b/drivers/clocksource/timer-tegra186.c
+index 1ec7b38ff8c6f2..355558893e5f3c 100644
+--- a/drivers/clocksource/timer-tegra186.c
++++ b/drivers/clocksource/timer-tegra186.c
+@@ -333,16 +333,12 @@ static struct tegra186_wdt *tegra186_wdt_create(struct tegra186_timer *tegra,
+ 	wdt->base.parent = tegra->dev;
+ 
+ 	err = watchdog_init_timeout(&wdt->base, 5, tegra->dev);
+-	if (err < 0) {
+-		dev_err(tegra->dev, "failed to initialize timeout: %d\n", err);
++	if (err < 0)
+ 		return ERR_PTR(err);
+-	}
+ 
+ 	err = devm_watchdog_register_device(tegra->dev, &wdt->base);
+-	if (err < 0) {
+-		dev_err(tegra->dev, "failed to register WDT: %d\n", err);
++	if (err < 0)
+ 		return ERR_PTR(err);
+-	}
+ 
+ 	return wdt;
+ }
+-- 
+cgit 1.3.1-korg
+

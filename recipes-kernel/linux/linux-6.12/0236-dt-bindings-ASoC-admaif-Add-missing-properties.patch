@@ -1,0 +1,53 @@
+From 37240f703041439cd8a39abd670dbfc0e75b725c Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Mon, 12 May 2025 05:17:37 +0000
+Subject: [PATCH 0236/0797] dt-bindings: ASoC: admaif: Add missing properties
+
+Add optional interconnect and iommu properties to admaif yaml. These
+properties are supported from Tegra186 SoC onwards.
+
+This fixes below dtbs_check error for Tegra194 and Tegra234:
+ 'interconnect-names', 'interconnects', 'iommus' do not match any of the regexes: 'pinctrl-[0-9]+'
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Acked-by: "Rob Herring (Arm)" <robh@kernel.org>
+Link: https://patch.msgid.link/20250512051747.1026770-2-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../bindings/sound/nvidia,tegra210-admaif.yaml   | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
+index 15ab40aeab1e0..bcecac5d9018c 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
+@@ -39,6 +39,19 @@ properties:
+ 
+   dma-names: true
+ 
++  interconnects:
++    items:
++      - description: APE read memory client
++      - description: APE write memory client
++
++  interconnect-names:
++    items:
++      - const: dma-mem # read
++      - const: write
++
++  iommus:
++    maxItems: 1
++
+   ports:
+     $ref: /schemas/graph.yaml#/properties/ports
+     description: |
+@@ -74,6 +87,9 @@ then:
+         Should be "tx1", "tx2" ... "tx10" for DMA Tx channel
+       minItems: 1
+       maxItems: 20
++    interconnects: false
++    interconnect-names: false
++    iommus: false
+ 
+ else:
+   properties:

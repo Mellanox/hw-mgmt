@@ -1,0 +1,261 @@
+From bba8eefb56480c7b06a25e99632b1b6510a25473 Mon Sep 17 00:00:00 2001
+From: Manikanta Maddireddy <mmaddireddy@nvidia.com>
+Date: Fri, 15 May 2026 12:37:53 +0530
+Subject: [PATCH 0712/0797] arm64: tegra: Fix aspm-l1-entry-delay-ns L1 latency cells
+
+The Tegra194 PCIe driver converts aspm-l1-entry-delay-ns to whole ms
+with ceiling division, then derives the Synopsys DesignWare PORT_AFR L1
+entrance latency encoding as min(order_base_2(us), 7).
+
+The nanosecond values from the Fixes tag below round up to 4, 8, and 16 us,
+selecting PORT_AFR L1 entrance latency codes 2, 3, and 4 respectively.
+Raise the programmed latency so the PORT_AFR codes are 3 / 4 / 5
+(8 / 16 / 32 us buckets) instead of 2 / 3 / 4 (4 / 8 / 16 us).
+
+- tegra194.dtsi: 4000 -> 8000 ns (all listed controllers)
+- tegra234.dtsi: 8000 -> 16000 ns (Root Port), 16000 -> 32000 ns (Endpoint)
+
+Fixes: d60ed99f1c9e ("arm64: tegra: Add aspm-l1-entry-delay-ns to PCIe nodes")
+Signed-off-by: Manikanta Maddireddy <mmaddireddy@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra194.dtsi | 18 +++++++++---------
+ arch/arm64/boot/dts/nvidia/tegra234.dtsi | 32 ++++++++++++++++----------------
+ 2 files changed, 25 insertions(+), 25 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra194.dtsi b/arch/arm64/boot/dts/nvidia/tegra194.dtsi
+index 1d659454a6f9fe..7bbf0e892724d4 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra194.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra194.dtsi
+@@ -2382,7 +2382,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -2435,7 +2435,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -2488,7 +2488,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -2541,7 +2541,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -2587,7 +2587,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			interconnects = <&mc TEGRA194_MEMORY_CLIENT_PCIE4R &emc>,
+ 					<&mc TEGRA194_MEMORY_CLIENT_PCIE4W &emc>;
+@@ -2634,7 +2634,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -2680,7 +2680,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			interconnects = <&mc TEGRA194_MEMORY_CLIENT_PCIE0R &emc>,
+ 					<&mc TEGRA194_MEMORY_CLIENT_PCIE0W &emc>;
+@@ -2730,7 +2730,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -2779,7 +2779,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <4000>;
++			aspm-l1-entry-delay-ns = <8000>;
+ 
+ 			interconnects = <&mc TEGRA194_MEMORY_CLIENT_PCIE5R &emc>,
+ 					<&mc TEGRA194_MEMORY_CLIENT_PCIE5W &emc>;
+diff --git a/arch/arm64/boot/dts/nvidia/tegra234.dtsi b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+index 75bb9a0ad0279c..8e0c51e496e20d 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra234.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+@@ -4532,7 +4532,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4587,7 +4587,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4642,7 +4642,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4689,7 +4689,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <16000>;
++			aspm-l1-entry-delay-ns = <32000>;
+ 
+ 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_PCIE10AR &emc>,
+ 					<&mc TEGRA234_MEMORY_CLIENT_PCIE10AW &emc>;
+@@ -4738,7 +4738,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4793,7 +4793,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4848,7 +4848,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4903,7 +4903,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -4945,7 +4945,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <16000>;
++			aspm-l1-entry-delay-ns = <32000>;
+ 
+ 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_PCIE4R &emc>,
+ 				      <&mc TEGRA234_MEMORY_CLIENT_PCIE4W &emc>;
+@@ -4992,7 +4992,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -5047,7 +5047,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -5094,7 +5094,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <16000>;
++			aspm-l1-entry-delay-ns = <32000>;
+ 
+ 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_PCIE5R &emc>,
+ 					<&mc TEGRA234_MEMORY_CLIENT_PCIE5W &emc>;
+@@ -5143,7 +5143,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -5190,7 +5190,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <16000>;
++			aspm-l1-entry-delay-ns = <32000>;
+ 
+ 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_PCIE6AR &emc>,
+ 					<&mc TEGRA234_MEMORY_CLIENT_PCIE6AW &emc>;
+@@ -5239,7 +5239,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <8000>;
++			aspm-l1-entry-delay-ns = <16000>;
+ 
+ 			bus-range = <0x0 0xff>;
+ 
+@@ -5286,7 +5286,7 @@
+ 			nvidia,aspm-cmrt-us = <60>;
+ 			nvidia,aspm-pwr-on-t-us = <20>;
+ 			nvidia,aspm-l0s-entrance-latency-us = <3>;
+-			aspm-l1-entry-delay-ns = <16000>;
++			aspm-l1-entry-delay-ns = <32000>;
+ 
+ 			interconnects = <&mc TEGRA234_MEMORY_CLIENT_PCIE7AR &emc>,
+ 					<&mc TEGRA234_MEMORY_CLIENT_PCIE7AW &emc>;
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,374 @@
+From 9409d18bf7d58ab716337749e28e2caba0d64cb0 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Fri, 23 Jan 2026 15:23:45 +0530
+Subject: [PATCH 0498/0797] ASoC: tegra: set reg_default_cb callback
+
+Set reg_default_cb so REGCACHE_FLAT can supply zero defaults without
+large reg_defaults tables, simplifying cache initialization for
+zero-reset registers.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Tested-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260123095346.1258556-4-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ include/linux/regmap.h                | 14 ++++++++++++++
+ drivers/base/regmap/internal.h        |  3 +++
+ drivers/base/regmap/regmap.c          |  2 ++
+ drivers/base/regmap/regcache-flat.c   | 20 ++++++++++++++++++
+ sound/soc/tegra/tegra186_asrc.c   | 1 +
+ sound/soc/tegra/tegra186_dspk.c   | 1 +
+ sound/soc/tegra/tegra210_admaif.c | 3 +++
+ sound/soc/tegra/tegra210_adx.c    | 2 ++
+ sound/soc/tegra/tegra210_ahub.c   | 3 +++
+ sound/soc/tegra/tegra210_amx.c    | 3 +++
+ sound/soc/tegra/tegra210_dmic.c   | 1 +
+ sound/soc/tegra/tegra210_i2s.c    | 2 ++
+ sound/soc/tegra/tegra210_mbdrc.c  | 1 +
+ sound/soc/tegra/tegra210_mixer.c  | 1 +
+ sound/soc/tegra/tegra210_mvc.c    | 1 +
+ sound/soc/tegra/tegra210_ope.c    | 1 +
+ sound/soc/tegra/tegra210_peq.c    | 1 +
+ sound/soc/tegra/tegra210_sfc.c    | 1 +
+ 18 files changed, 61 insertions(+)
+
+diff --git a/include/linux/regmap.h b/include/linux/regmap.h
+index 00000000000000..11111111111111 100644
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -347,6 +347,10 @@
+  * @reg_defaults: Power on reset values for registers (for use with
+  *                register cache support).
+  * @num_reg_defaults: Number of elements in reg_defaults.
++ * @reg_default_cb: Optional callback to return default values for registers
++ *                  not listed in reg_defaults. This is only used for
++ *                  REGCACHE_FLAT population; drivers must ensure the readable_reg/
++ *                  writeable_reg callbacks are defined to handle holes.
+  *
+  * @read_flag_mask: Mask to be set in the top bytes of the register when doing
+  *                  a read.
+@@ -437,6 +441,8 @@
+ 	const struct regmap_access_table *rd_noinc_table;
+ 	const struct reg_default *reg_defaults;
+ 	unsigned int num_reg_defaults;
++	int (*reg_default_cb)(struct device *dev, unsigned int reg,
++			      unsigned int *def);
+ 	enum regcache_type cache_type;
+ 	const void *reg_defaults_raw;
+ 	unsigned int num_reg_defaults_raw;
+@@ -1278,6 +1284,14 @@
+ 	return regmap_update_bits_base(map, reg, mask, val, NULL, false, true);
+ }
+ 
++static inline int regmap_default_zero_cb(struct device *dev,
++					 unsigned int reg,
++					 unsigned int *def)
++{
++	*def = 0;
++	return 0;
++}
++
+ int regmap_get_val_bytes(struct regmap *map);
+ int regmap_get_max_register(struct regmap *map);
+ int regmap_get_reg_stride(struct regmap *map);
+diff --git a/drivers/base/regmap/internal.h b/drivers/base/regmap/internal.h
+index 00000000000000..11111111111111 100644
+--- a/drivers/base/regmap/internal.h
++++ b/drivers/base/regmap/internal.h
+@@ -117,6 +117,9 @@
+ 		    void *val_buf, size_t val_size);
+ 	int (*write)(void *context, const void *data, size_t count);
+ 
++	int (*reg_default_cb)(struct device *dev, unsigned int reg,
++			      unsigned int *val);
++
+ 	bool defer_caching;
+ 
+ 	unsigned long read_flag_mask;
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index 00000000000000..11111111111111 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -814,6 +814,7 @@
+ 	map->precious_reg = config->precious_reg;
+ 	map->writeable_noinc_reg = config->writeable_noinc_reg;
+ 	map->readable_noinc_reg = config->readable_noinc_reg;
++	map->reg_default_cb = config->reg_default_cb;
+ 	map->cache_type = config->cache_type;
+ 
+ 	spin_lock_init(&map->async_lock);
+@@ -1436,6 +1437,7 @@
+ 	map->precious_reg = config->precious_reg;
+ 	map->writeable_noinc_reg = config->writeable_noinc_reg;
+ 	map->readable_noinc_reg = config->readable_noinc_reg;
++	map->reg_default_cb = config->reg_default_cb;
+ 	map->cache_type = config->cache_type;
+ 
+ 	ret = regmap_set_name(map, config);
+diff --git a/drivers/base/regmap/regcache-flat.c b/drivers/base/regmap/regcache-flat.c
+index 00000000000000..11111111111111 100644
+--- a/drivers/base/regmap/regcache-flat.c
++++ b/drivers/base/regmap/regcache-flat.c
+@@ -40,6 +40,26 @@
+ 		cache[index] = map->reg_defaults[i].def;
+ 	}
+ 
++	if (map->reg_default_cb) {
++		unsigned int reg, value;
++		unsigned int stride = map->reg_stride ?: 1;
++
++		for (reg = 0; reg <= map->max_register; reg += stride) {
++			unsigned int index = regcache_flat_get_index(map, reg);
++
++			if (map->reg_default_cb(map->dev, reg, &value))
++				continue;
++			cache[index] = value;
++		}
++
++		for (i = 0; i < map->num_reg_defaults; i++) {
++			unsigned int reg = map->reg_defaults[i].reg;
++			unsigned int index = regcache_flat_get_index(map, reg);
++
++			cache[index] = map->reg_defaults[i].def;
++		}
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/sound/soc/tegra/tegra186_asrc.c b/sound/soc/tegra/tegra186_asrc.c
+index 2c0220e14a570d..d2a5ec7c54cc7d 100644
+--- a/sound/soc/tegra/tegra186_asrc.c
++++ b/sound/soc/tegra/tegra186_asrc.c
+@@ -950,6 +950,7 @@ static const struct regmap_config tegra186_asrc_regmap_config = {
+ 	.volatile_reg		= tegra186_asrc_volatile_reg,
+ 	.reg_defaults		= tegra186_asrc_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra186_asrc_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra186_dspk.c b/sound/soc/tegra/tegra186_dspk.c
+index a762150db802ab..8816e49673315f 100644
+--- a/sound/soc/tegra/tegra186_dspk.c
++++ b/sound/soc/tegra/tegra186_dspk.c
+@@ -467,6 +467,7 @@ static const struct regmap_config tegra186_dspk_regmap = {
+ 	.volatile_reg		= tegra186_dspk_volatile_reg,
+ 	.reg_defaults		= tegra186_dspk_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra186_dspk_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_admaif.c b/sound/soc/tegra/tegra210_admaif.c
+index f9f6040c4e3465..0976779d29f286 100644
+--- a/sound/soc/tegra/tegra210_admaif.c
++++ b/sound/soc/tegra/tegra210_admaif.c
+@@ -241,6 +241,7 @@ static const struct regmap_config tegra210_admaif_regmap_config = {
+ 	.volatile_reg		= tegra_admaif_volatile_reg,
+ 	.reg_defaults		= tegra210_admaif_reg_defaults,
+ 	.num_reg_defaults	= TEGRA210_ADMAIF_CHANNEL_COUNT * 6 + 1,
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -254,6 +255,7 @@ static const struct regmap_config tegra186_admaif_regmap_config = {
+ 	.volatile_reg		= tegra_admaif_volatile_reg,
+ 	.reg_defaults		= tegra186_admaif_reg_defaults,
+ 	.num_reg_defaults	= TEGRA186_ADMAIF_CHANNEL_COUNT * 6 + 1,
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -267,6 +269,7 @@ static const struct regmap_config tegra264_admaif_regmap_config = {
+ 	.volatile_reg		= tegra_admaif_volatile_reg,
+ 	.reg_defaults		= tegra264_admaif_reg_defaults,
+ 	.num_reg_defaults	= TEGRA264_ADMAIF_CHANNEL_COUNT * 6 + 1,
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_adx.c b/sound/soc/tegra/tegra210_adx.c
+index 6c9a410085bc55..95875c75ddf87d 100644
+--- a/sound/soc/tegra/tegra210_adx.c
++++ b/sound/soc/tegra/tegra210_adx.c
+@@ -625,6 +625,7 @@ static const struct regmap_config tegra210_adx_regmap_config = {
+ 	.volatile_reg		= tegra210_adx_volatile_reg,
+ 	.reg_defaults		= tegra210_adx_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_adx_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -638,6 +639,7 @@ static const struct regmap_config tegra264_adx_regmap_config = {
+ 	.volatile_reg		= tegra264_adx_volatile_reg,
+ 	.reg_defaults		= tegra264_adx_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra264_adx_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_ahub.c b/sound/soc/tegra/tegra210_ahub.c
+index fc5892056f832f..43a45f785d5bd1 100644
+--- a/sound/soc/tegra/tegra210_ahub.c
++++ b/sound/soc/tegra/tegra210_ahub.c
+@@ -2133,6 +2133,7 @@ static const struct regmap_config tegra210_ahub_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.writeable_reg		= tegra210_ahub_wr_reg,
+ 	.max_register		= TEGRA210_MAX_REGISTER_ADDR,
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -2142,6 +2143,7 @@ static const struct regmap_config tegra186_ahub_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.writeable_reg		= tegra186_ahub_wr_reg,
+ 	.max_register		= TEGRA186_MAX_REGISTER_ADDR,
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -2151,6 +2153,7 @@ static const struct regmap_config tegra264_ahub_regmap_config = {
+ 	.reg_stride		= 4,
+ 	.writeable_reg		= tegra264_ahub_wr_reg,
+ 	.max_register		= TEGRA264_MAX_REGISTER_ADDR,
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_amx.c b/sound/soc/tegra/tegra210_amx.c
+index c94f8c84e04f45..bfda825052980a 100644
+--- a/sound/soc/tegra/tegra210_amx.c
++++ b/sound/soc/tegra/tegra210_amx.c
+@@ -654,6 +654,7 @@ static const struct regmap_config tegra210_amx_regmap_config = {
+ 	.volatile_reg		= tegra210_amx_volatile_reg,
+ 	.reg_defaults		= tegra210_amx_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_amx_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -667,6 +668,7 @@ static const struct regmap_config tegra194_amx_regmap_config = {
+ 	.volatile_reg		= tegra210_amx_volatile_reg,
+ 	.reg_defaults		= tegra210_amx_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_amx_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -680,6 +682,7 @@ static const struct regmap_config tegra264_amx_regmap_config = {
+ 	.volatile_reg		= tegra264_amx_volatile_reg,
+ 	.reg_defaults		= tegra264_amx_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra264_amx_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_dmic.c b/sound/soc/tegra/tegra210_dmic.c
+index 66fff53aeaa698..93def7ac4fdebf 100644
+--- a/sound/soc/tegra/tegra210_dmic.c
++++ b/sound/soc/tegra/tegra210_dmic.c
+@@ -483,6 +483,7 @@ static const struct regmap_config tegra210_dmic_regmap_config = {
+ 	.volatile_reg = tegra210_dmic_volatile_reg,
+ 	.reg_defaults = tegra210_dmic_reg_defaults,
+ 	.num_reg_defaults = ARRAY_SIZE(tegra210_dmic_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type = REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_i2s.c b/sound/soc/tegra/tegra210_i2s.c
+index b91e0e6cd7fe2d..d8e02f0a3025ae 100644
+--- a/sound/soc/tegra/tegra210_i2s.c
++++ b/sound/soc/tegra/tegra210_i2s.c
+@@ -997,6 +997,7 @@ static const struct regmap_config tegra210_regmap_conf = {
+ 	.volatile_reg		= tegra210_i2s_volatile_reg,
+ 	.reg_defaults		= tegra210_i2s_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_i2s_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+@@ -1044,6 +1045,7 @@ static const struct regmap_config tegra264_regmap_conf = {
+ 	.volatile_reg		= tegra264_i2s_volatile_reg,
+ 	.reg_defaults		= tegra264_i2s_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra264_i2s_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_mbdrc.c b/sound/soc/tegra/tegra210_mbdrc.c
+index 09fe3c5cf540d8..6a268dbb71978c 100644
+--- a/sound/soc/tegra/tegra210_mbdrc.c
++++ b/sound/soc/tegra/tegra210_mbdrc.c
+@@ -763,6 +763,7 @@ static const struct regmap_config tegra210_mbdrc_regmap_cfg = {
+ 	.precious_reg		= tegra210_mbdrc_precious_reg,
+ 	.reg_defaults		= tegra210_mbdrc_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_mbdrc_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_mixer.c b/sound/soc/tegra/tegra210_mixer.c
+index ff8e9f2d7abfd0..6d3a2b76fd6174 100644
+--- a/sound/soc/tegra/tegra210_mixer.c
++++ b/sound/soc/tegra/tegra210_mixer.c
+@@ -608,6 +608,7 @@ static const struct regmap_config tegra210_mixer_regmap_config = {
+ 	.precious_reg		= tegra210_mixer_precious_reg,
+ 	.reg_defaults		= tegra210_mixer_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_mixer_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_mvc.c b/sound/soc/tegra/tegra210_mvc.c
+index 779d4c199da939..6cdc5e1f550738 100644
+--- a/sound/soc/tegra/tegra210_mvc.c
++++ b/sound/soc/tegra/tegra210_mvc.c
+@@ -699,6 +699,7 @@ static const struct regmap_config tegra210_mvc_regmap_config = {
+ 	.volatile_reg		= tegra210_mvc_volatile_reg,
+ 	.reg_defaults		= tegra210_mvc_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_mvc_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_ope.c b/sound/soc/tegra/tegra210_ope.c
+index 27db70af274699..a440888dcdbdf7 100644
+--- a/sound/soc/tegra/tegra210_ope.c
++++ b/sound/soc/tegra/tegra210_ope.c
+@@ -297,6 +297,7 @@ static const struct regmap_config tegra210_ope_regmap_config = {
+ 	.volatile_reg		= tegra210_ope_volatile_reg,
+ 	.reg_defaults		= tegra210_ope_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_ope_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_peq.c b/sound/soc/tegra/tegra210_peq.c
+index 9a05e6913276c7..2f72e9d541dca7 100644
+--- a/sound/soc/tegra/tegra210_peq.c
++++ b/sound/soc/tegra/tegra210_peq.c
+@@ -306,6 +306,7 @@ static const struct regmap_config tegra210_peq_regmap_config = {
+ 	.precious_reg		= tegra210_peq_precious_reg,
+ 	.reg_defaults		= tegra210_peq_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_peq_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+diff --git a/sound/soc/tegra/tegra210_sfc.c b/sound/soc/tegra/tegra210_sfc.c
+index d6341968bebeeb..b298bf0421b122 100644
+--- a/sound/soc/tegra/tegra210_sfc.c
++++ b/sound/soc/tegra/tegra210_sfc.c
+@@ -3569,6 +3569,7 @@ static const struct regmap_config tegra210_sfc_regmap_config = {
+ 	.precious_reg		= tegra210_sfc_precious_reg,
+ 	.reg_defaults		= tegra210_sfc_reg_defaults,
+ 	.num_reg_defaults	= ARRAY_SIZE(tegra210_sfc_reg_defaults),
++	.reg_default_cb		= regmap_default_zero_cb,
+ 	.cache_type		= REGCACHE_FLAT,
+ };
+ 
+-- 
+cgit 1.3.1-korg
+

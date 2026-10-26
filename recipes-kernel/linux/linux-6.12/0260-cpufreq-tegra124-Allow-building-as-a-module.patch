@@ -1,0 +1,113 @@
+From 0ae93389b6c84fbbc6414a5c78f50d65eea8cf35 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Mon, 7 Jul 2025 16:17:15 -0500
+Subject: [PATCH 0260/0797] cpufreq: tegra124: Allow building as a module
+
+This requires four changes:
+* Using the cpufreq-dt register helper to establish a hard dependency
+  for depmod to track
+* Adding a remove routine to remove the cpufreq-dt device
+* Adding a exit routine to handle cleaning up the driver
+* Populating module license
+
+On Linux 6.12, cpufreq_dt_pdev_register() is not present, so keep
+platform_device_register_full() for the cpufreq-dt child device.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Signed-off-by: Viresh Kumar <viresh.kumar@linaro.org>
+---
+ drivers/cpufreq/Kconfig.arm        |  2 +-
+ drivers/cpufreq/tegra124-cpufreq.c | 37 ++++++++++++++++++++++++------
+ 2 files changed, 31 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/cpufreq/Kconfig.arm b/drivers/cpufreq/Kconfig.arm
+index 4346629d3bc09..9be0503df55a0 100644
+--- a/drivers/cpufreq/Kconfig.arm
++++ b/drivers/cpufreq/Kconfig.arm
+@@ -231,7 +231,7 @@ config ARM_TEGRA20_CPUFREQ
+ 	  This adds the CPUFreq driver support for Tegra20/30 SOCs.
+ 
+ config ARM_TEGRA124_CPUFREQ
+-	bool "Tegra124 CPUFreq support"
++	tristate "Tegra124 CPUFreq support"
+ 	depends on ARCH_TEGRA || COMPILE_TEST
+ 	depends on CPUFREQ_DT
+ 	default ARCH_TEGRA
+diff --git a/drivers/cpufreq/tegra124-cpufreq.c b/drivers/cpufreq/tegra124-cpufreq.c
+index 514146d98bca2..b8bccde8b298a 100644
+--- a/drivers/cpufreq/tegra124-cpufreq.c
++++ b/drivers/cpufreq/tegra124-cpufreq.c
+@@ -16,6 +16,8 @@
+ #include <linux/pm_opp.h>
+ #include <linux/types.h>
+ 
++static struct platform_device *tegra124_cpufreq_pdev;
++
+ struct tegra124_cpufreq_priv {
+ 	struct clk *cpu_clk;
+ 	struct clk *pllp_clk;
+@@ -173,6 +175,21 @@ static int __maybe_unused tegra124_cpufreq_resume(struct device *dev)
+ 	return err;
+ }
+ 
++static void tegra124_cpufreq_remove(struct platform_device *pdev)
++{
++	struct tegra124_cpufreq_priv *priv = dev_get_drvdata(&pdev->dev);
++
++	if (!IS_ERR(priv->cpufreq_dt_pdev)) {
++		platform_device_unregister(priv->cpufreq_dt_pdev);
++		priv->cpufreq_dt_pdev = ERR_PTR(-ENODEV);
++	}
++
++	clk_put(priv->pllp_clk);
++	clk_put(priv->pllx_clk);
++	clk_put(priv->dfll_clk);
++	clk_put(priv->cpu_clk);
++}
++
+ static const struct dev_pm_ops tegra124_cpufreq_pm_ops = {
+ 	SET_SYSTEM_SLEEP_PM_OPS(tegra124_cpufreq_suspend,
+ 				tegra124_cpufreq_resume)
+@@ -182,12 +199,12 @@ static struct platform_driver tegra124_cpufreq_platdrv = {
+ 	.driver.name	= "cpufreq-tegra124",
+ 	.driver.pm	= &tegra124_cpufreq_pm_ops,
+ 	.probe		= tegra124_cpufreq_probe,
++	.remove		= tegra124_cpufreq_remove,
+ };
+ 
+ static int __init tegra_cpufreq_init(void)
+ {
+ 	int ret;
+-	struct platform_device *pdev;
+ 
+ 	if (!(of_machine_is_compatible("nvidia,tegra124") ||
+ 		of_machine_is_compatible("nvidia,tegra210")))
+@@ -201,15 +218,25 @@ static int __init tegra_cpufreq_init(void)
+ 	if (ret)
+ 		return ret;
+ 
+-	pdev = platform_device_register_simple("cpufreq-tegra124", -1, NULL, 0);
+-	if (IS_ERR(pdev)) {
++	tegra124_cpufreq_pdev = platform_device_register_simple("cpufreq-tegra124", -1, NULL, 0);
++	if (IS_ERR(tegra124_cpufreq_pdev)) {
+ 		platform_driver_unregister(&tegra124_cpufreq_platdrv);
+-		return PTR_ERR(pdev);
++		return PTR_ERR(tegra124_cpufreq_pdev);
+ 	}
+ 
+ 	return 0;
+ }
+ module_init(tegra_cpufreq_init);
+ 
++static void __exit tegra_cpufreq_module_exit(void)
++{
++	if (!IS_ERR_OR_NULL(tegra124_cpufreq_pdev))
++		platform_device_unregister(tegra124_cpufreq_pdev);
++
++	platform_driver_unregister(&tegra124_cpufreq_platdrv);
++}
++module_exit(tegra_cpufreq_module_exit);
++
+ MODULE_AUTHOR("Tuomas Tynkkynen <ttynkkynen@nvidia.com>");
+ MODULE_DESCRIPTION("cpufreq driver for NVIDIA Tegra124");
++MODULE_LICENSE("GPL");
