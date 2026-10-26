@@ -7,15 +7,14 @@ try:
     import os
     import json
     import re
+    import time
     import argparse
     import traceback
-    import signal
     import threading
     import shlex
     import psutil
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
-        exit_wait,
         current_milli_time,
         run_shell_cmd
     )
@@ -67,9 +66,6 @@ class CONST(object):
     # *************************
     # default hw-management folder
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
-    # File which defined current level filename.
-    # User can dynamically change loglevel without svc restarting.
-    LOG_LEVEL_FILENAME = "config/log_level"
     LOG_FILE = "/var/log/hw-management-peripheral-updater.log"
 
     # Log rotation size
@@ -81,20 +77,6 @@ class CONST(object):
     DBG_MEMORY_USAGE_ALERT = 30000    # KB
     DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
     PERIODIC_MEMORY_REPORT_TIME = 5 * 60  # 5 min
-
-
-EXIT = threading.Event()
-_sig_condition_name = ""
-
-
-class ShutdownRequested(BaseException):
-    """
-    @summary: Abort the daemon on SIGTERM/SIGINT/SIGHUP.
-
-    Must not subclass Exception: the main-loop safety net would swallow it.
-    Raising from the signal handler prevents CPython PEP 475 from restarting
-    a blocking sysfs read, which can exceed systemd TimeoutStopSec.
-    """
 
 
 def _build_attrib_list():
@@ -439,32 +421,60 @@ def redfish_get_sensor(argv, _dummy):
 # ----------------------------------------------------------------------
 
 
+def _run_allowed_cmd(cmd, args=None, timeout=3.0):
+    """
+    @summary: Run an allowlisted command via hw_management_lib.run_shell_cmd
+    @param cmd: Executable path or name
+    @param args: Argument list
+    @param timeout: Timeout in seconds
+    @return: (return code, combined output)
+    """
+    retcode, ret_str = run_shell_cmd(cmd, args, timeout=timeout)
+    if retcode != 0 and LOGGER:
+        LOGGER.error("failed to execute command: {} {}, retcode: {}, ret_str: {}".format(
+            cmd, [] if args is None else args, int(retcode), ret_str))
+    return retcode, ret_str
+
+
 def run_power_button_event(argv, val):
     """
     @summary: Handle power button and graceful power-off events
     @param argv: Unused argument list (for interface compatibility)
     @param val: Event value (1=pressed/triggered, 0=released/cleared)
     """
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
-    os.system(cmd)
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event GRACEFUL_PWR_OFF {}".format(val)
-    os.system(cmd)
+    event_args = ["hotplug-event"]
+    _run_allowed_cmd("/usr/bin/hw-management-chassis-events.sh", event_args + ["POWER_BUTTON", val])
+    _run_allowed_cmd("/usr/bin/hw-management-chassis-events.sh", event_args + ["GRACEFUL_PWR_OFF", val])
     if str(val) == "1":
-        cmd = """logger -t hw-management-peripheral-updater -p daemon.info "Graceful CPU power off request " """
-        os.system(cmd)
+        _run_allowed_cmd("logger", [
+            "-t", "hw-management-peripheral-updater",
+            "-p", "daemon.info",
+            "Graceful CPU power off request ",
+        ])
 
 # ----------------------------------------------------------------------
 
 
 def run_cmd(cmd_list, arg):
     """
-    @summary: Execute list of shell commands with argument substitution
+    @summary: Execute a list of allowlisted commands with argument substitution
+
+    Commands are not passed to a shell. {arg1} is replaced with the trigger
+    value. /usr/bin/hw-management-user-dump runs only when that value is 1,
+    matching the old thermal_enforced_full_spped shell condition.
+
     @param cmd_list: List of command strings (supports {arg1} placeholder)
     @param arg: Argument value to substitute into commands
     """
     for cmd in cmd_list:
-        cmd = cmd + " 2> /dev/null 1> /dev/null"
-        os.system(cmd.format(arg1=arg))
+        formatted = cmd.format(arg1=arg)
+        if formatted == "/usr/bin/hw-management-user-dump" and str(arg).strip() != "1":
+            continue
+        cmd_args = shlex.split(formatted)
+        if not cmd_args:
+            continue
+        timeout = 30.0 if cmd_args[0] == "/usr/bin/hw-management-user-dump" else 3.0
+        _run_allowed_cmd(cmd_args[0], cmd_args[1:], timeout=timeout)
 
 # ----------------------------------------------------------------------
 
@@ -736,11 +746,18 @@ def sync_fan(fan_id, val):
     else:
         status = 0
 
-    cmd = "echo {} > /var/run/hw-management/thermal/fan{}_status".format(status, fan_id)
-    os.system(cmd)
+    status_path = "/var/run/hw-management/thermal/fan{}_status".format(fan_id)
+    try:
+        with open(status_path, "w") as status_file:
+            status_file.write("{}\n".format(status))
+    except OSError as e:
+        if LOGGER:
+            LOGGER.error("Failed to write {}: {}".format(status_path, e))
 
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event FAN{} {} 2> /dev/null 1> /dev/null".format(fan_id, status)
-    os.system(cmd)
+    _run_allowed_cmd(
+        "/usr/bin/hw-management-chassis-events.sh",
+        ["hotplug-event", "FAN{}".format(fan_id), status],
+    )
 
 # ----------------------------------------------------------------------
 
@@ -771,11 +788,6 @@ def update_peripheral_attr(attr_prop):
                     if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
                         globals()[fn_name](argv, val)
                         attr_prop["oldval"] = val
-                except ShutdownRequested:
-                    raise
-                except InterruptedError:
-                    # SIGTERM during sysfs I/O: do not treat as a normal read error
-                    raise ShutdownRequested()
                 except (OSError, ValueError):
                     # File exists but read error
                     globals()[fn_name](argv, "")
@@ -785,11 +797,6 @@ def update_peripheral_attr(attr_prop):
         else:
             try:
                 globals()[fn_name](argv, None)
-            except ShutdownRequested:
-                raise
-            except InterruptedError:
-                # SIGTERM during sysfs I/O: do not treat as a normal read error
-                raise ShutdownRequested()
             except (OSError, ValueError, KeyError, TypeError):
                 # Catch common errors from dynamically called functions
                 # to prevent daemon crash
@@ -920,26 +927,6 @@ def print_periodic_info(_argv, _val):
     LOGGER.info("=" * 40)
 
 
-def handle_shutdown(sig, _frame):
-    """
-    @summary: Handle application signal
-    @param sig: Signal number
-    @param _frame: Unused frame
-
-    Raise ShutdownRequested so a blocking sysfs read is not restarted
-    (PEP 475) and the process can exit before systemd TimeoutStopSec.
-    """
-    global _sig_condition_name
-    try:
-        _sig_condition_name = signal.Signals(sig).name
-    except (ValueError, AttributeError):
-        _sig_condition_name = str(sig)
-    EXIT.set()
-    raise ShutdownRequested()
-
-# ----------------------------------------------------------------------
-
-
 def main():
     """
     @summary: Update attributes
@@ -1008,66 +995,22 @@ def main():
     for attr in sys_attr:
         init_attr(attr)
 
-    EXIT.clear()
-
     PROCESS = psutil.Process(os.getpid())
     LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
     if CONST.DBG_MEMORY_INFO:
         sys_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
 
-    try:
-        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-            signal.signal(sig, handle_shutdown)
-            # Disable SA_RESTART so EINTR is not retried on blocking sysfs reads
-            signal.siginterrupt(sig, True)
-
-        LOGGER.notice("hw-management-peripheral-updater: start main loop")
-        while not EXIT.is_set():
-            try:
-                for attr in sys_attr:
-                    if EXIT.is_set():
-                        break
-                    update_peripheral_attr(attr)
-                try:
-                    log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
-                    if os.path.isfile(log_level_filename):
-                        with open(log_level_filename, 'r', encoding="utf-8") as f:
-                            log_level = f.read().rstrip('\n')
-                            log_level = int(log_level)
-                            LOGGER.set_loglevel(log_level)
-                except InterruptedError:
-                    raise ShutdownRequested()
-                except (OSError, ValueError):
-                    # Expected errors when reading/parsing log level file
-                    # These are non-critical, just skip and continue
-                    pass
-            except ShutdownRequested:
-                raise
-            except Exception as e:
-                # Safety net: catch any unexpected exceptions to keep daemon alive
-                LOGGER.error("Unexpected error in main loop: {}".format(e))
-                LOGGER.notice(traceback.format_exc())
-                # Continue running despite error
-
-            exit_wait(EXIT, 1)
-    except ShutdownRequested:
-        pass
-
-    try:
-        LOGGER.notice("hw-management-peripheral-updater: stopped main loop ({})".format(_sig_condition_name))
-    except ShutdownRequested:
-        pass
-    finally:
+    LOGGER.notice("hw-management-peripheral-updater: start main loop")
+    while True:
         try:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-                signal.signal(sig, signal.SIG_DFL)
-        except ShutdownRequested:
-            pass
-    return
+            for attr in sys_attr:
+                update_peripheral_attr(attr)
+        except Exception as e:
+            # Safety net: catch any unexpected exceptions to keep daemon alive
+            LOGGER.error("Unexpected error in main loop: {}".format(e))
+            LOGGER.notice(traceback.format_exc())
+        time.sleep(1)
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except ShutdownRequested:
-        pass
+    main()

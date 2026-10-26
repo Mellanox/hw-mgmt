@@ -663,6 +663,115 @@ class TestModuleTempPopulate(unittest.TestCase):
             self.assertEqual(writes[path], "0\n")
 
 
+class TestThermalMainLoop(unittest.TestCase):
+    """
+    Main loop after the exit-flow cleanup.
+
+    The daemon no longer installs signal handlers, polls a log-level file,
+    or waits on a threading.Event. It sleeps one second between passes and
+    keeps running when a pass raises.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Load a private copy of the thermal updater."""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hw_mgmt_dir = os.path.abspath(
+            os.path.join(script_dir, '..', '..', 'usr', 'usr', 'bin')
+        )
+        if hw_mgmt_dir not in sys.path:
+            sys.path.insert(0, hw_mgmt_dir)
+
+        thermal_path = os.path.join(hw_mgmt_dir, 'hw_management_thermal_updater.py')
+        spec = importlib.util.spec_from_file_location(
+            "hw_management_thermal_updater_mainloop", thermal_path
+        )
+        cls.thermal_module = importlib.util.module_from_spec(spec)
+        sys.modules["hw_management_lib"] = MagicMock()
+        if "psutil" not in sys.modules:
+            sys.modules["psutil"] = MagicMock()
+        spec.loader.exec_module(cls.thermal_module)
+
+    def _run_main(self, sleep_side_effect, update_side_effect=None):
+        """Run main() for an unknown SKU and stop it from the sleep hook."""
+        module = self.thermal_module
+        saved_def = module.thermal_config["def"]
+        module.thermal_config["def"] = []
+        logger = MagicMock()
+        opened = MagicMock()
+        caught = None
+        try:
+            with patch.object(sys, "argv", ["hw_management_thermal_updater.py", "-s", "NO_SUCH_SKU"]), \
+                    patch.object(module, "Logger", return_value=logger), \
+                    patch.object(module.psutil, "Process", return_value=MagicMock()), \
+                    patch.object(module, "update_thermal_attr", side_effect=update_side_effect) as update, \
+                    patch.object(module.time, "sleep", side_effect=sleep_side_effect) as sleep, \
+                    patch("builtins.open", opened):
+                try:
+                    module.main()
+                except SystemExit as exc:
+                    caught = exc
+        finally:
+            module.thermal_config["def"] = saved_def
+        return logger, update, sleep, opened, caught
+
+    def test_removed_exit_flow_symbols_stay_gone(self):
+        """Signal wait, shutdown type, and dynamic log level are not part of this daemon."""
+        module = self.thermal_module
+        for name in ("EXIT", "ShutdownRequested", "handle_shutdown", "exit_wait", "signal"):
+            self.assertFalse(hasattr(module, name), name)
+        self.assertFalse(hasattr(module.CONST, "HW_MGMT_FOLDER_DEF"))
+        self.assertFalse(hasattr(module.CONST, "LOG_LEVEL_FILENAME"))
+
+    def test_main_sleeps_one_second_and_does_not_read_log_level(self):
+        """Each pass is followed by time.sleep(1); no log-level file is opened."""
+        sleeps = []
+
+        def fake_sleep(seconds):
+            sleeps.append(seconds)
+            if len(sleeps) == 2:
+                raise SystemExit(0)
+
+        logger, update, _sleep, opened, caught = self._run_main(fake_sleep)
+
+        self.assertIsInstance(caught, SystemExit)
+        self.assertEqual(caught.code, 0)
+        self.assertEqual(sleeps, [1, 1])
+        self.assertGreaterEqual(update.call_count, 2)
+        self.assertFalse(opened.called)
+        logger.error.assert_not_called()
+
+    def test_main_logs_pass_error_and_keeps_looping(self):
+        """An unexpected pass error is logged, then the next pass still runs."""
+        passes = {"n": 0}
+
+        def fake_update(_attr):
+            passes["n"] += 1
+            if passes["n"] == 1:
+                raise RuntimeError("boom")
+
+        def fake_sleep(_seconds):
+            if passes["n"] >= 2:
+                raise SystemExit(0)
+
+        logger, _update, _sleep, _opened, caught = self._run_main(fake_sleep, fake_update)
+
+        self.assertIsInstance(caught, SystemExit)
+        self.assertGreaterEqual(passes["n"], 2)
+        logger.warning.assert_called()
+        self.assertIn("boom", logger.warning.call_args[0][0])
+
+    def test_logger_init_failure_exits_1(self):
+        """A logger that cannot be created stops the service with status 1."""
+        module = self.thermal_module
+        with patch.object(sys, "argv", ["hw_management_thermal_updater.py", "-s", "NO_SUCH_SKU"]), \
+                patch.object(module, "Logger", side_effect=OSError("no log")), \
+                patch.object(module.time, "sleep", side_effect=AssertionError("sleep after failed init")):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+        self.assertEqual(ctx.exception.code, 1)
+
+
 def main():
     """Main test runner"""
     print("=" * 80)
