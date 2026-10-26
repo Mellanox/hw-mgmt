@@ -638,6 +638,16 @@ class TestModuleTempPopulate(unittest.TestCase):
         self.assertEqual(afw.call_count, 0)
         host_mock.assert_not_called()
 
+    def test_asic_temp_reset_write_error_stays_in_poll(self):
+        """A failed reset write is logged and does not escape the poll loop."""
+        m = self.thermal_module
+        with patch.object(m, 'atomic_file_write', side_effect=Exception("disk full")):
+            m.asic_temp_reset("asic1", "/sys/module/sx_core/asic0/")
+
+        self.assertEqual(m.LOGGER.error.call_count, 5)
+        for call in m.LOGGER.error.call_args_list:
+            self.assertIn("disk full", call[0][0])
+
     def test_read_error_on_present_uses_zero_default(self):
         """OSError reading present file -> fail-safe to absent-module behavior."""
         m = self.thermal_module
@@ -661,6 +671,100 @@ class TestModuleTempPopulate(unittest.TestCase):
             path = "/var/run/hw-management/thermal/module1{}".format(suffix)
             self.assertIn(path, writes)
             self.assertEqual(writes[path], "0\n")
+
+
+class TestThermalExitCode(unittest.TestCase):
+    """Stop signals use 128 + signum and main() exits 0 for them."""
+
+    @classmethod
+    def setUpClass(cls):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hw_mgmt_dir = os.path.abspath(
+            os.path.join(script_dir, '..', '..', 'usr', 'usr', 'bin')
+        )
+        if hw_mgmt_dir not in sys.path:
+            sys.path.insert(0, hw_mgmt_dir)
+        thermal_path = os.path.join(hw_mgmt_dir, 'hw_management_thermal_updater.py')
+        spec = importlib.util.spec_from_file_location(
+            "hw_management_thermal_updater_exit", thermal_path
+        )
+        cls.module = importlib.util.module_from_spec(spec)
+        sys.modules["hw_management_lib"] = MagicMock()
+        if "psutil" not in sys.modules:
+            sys.modules["psutil"] = MagicMock()
+        spec.loader.exec_module(cls.module)
+
+    def test_sigterm_exits_with_conventional_signal_status(self):
+        module = self.module
+        with self.assertRaises(SystemExit) as ctx:
+            module.handle_signal(module.signal.SIGTERM, None)
+        expected_exit_code = 128 + module.signal.SIGTERM
+        self.assertEqual(ctx.exception.code, expected_exit_code)
+        self.assertEqual(module.EXIT_CODE, expected_exit_code)
+
+    def test_main_maps_stop_signal_to_exit_0(self):
+        """SIGINT, SIGTERM, and SIGHUP preserve 128 + signum and exit 0."""
+        module = self.module
+        bound = {}
+        restart_disabled = set()
+
+        def fake_signal(signum, handler):
+            bound[signum] = handler
+
+        def fake_siginterrupt(signum, flag):
+            if flag:
+                restart_disabled.add(signum)
+
+        argv = ["hw_management_thermal_updater.py", "-s", "HI162"]
+        stop_signals = (module.signal.SIGINT, module.signal.SIGTERM, module.signal.SIGHUP)
+        for signum in stop_signals:
+            with patch.object(sys, "argv", argv), \
+                    patch.object(module, "update_thermal_attr"), \
+                    patch.object(module.signal, "signal", side_effect=fake_signal), \
+                    patch.object(module.signal, "siginterrupt", side_effect=fake_siginterrupt), \
+                    patch.object(module.time, "sleep", side_effect=SystemExit(128 + signum)):
+                with self.assertRaises(SystemExit) as ctx:
+                    module.main()
+
+            self.assertEqual(ctx.exception.code, 0)
+            self.assertEqual(module.EXIT_CODE, 128 + signum)
+
+        expected = set(stop_signals)
+        for signum in expected:
+            self.assertEqual(bound.get(signum), module.handle_signal)
+        self.assertEqual(restart_disabled, expected)
+
+    def test_unexpected_exception_exits_1(self):
+        module = self.module
+        argv = ["hw_management_thermal_updater.py", "-s", "HI162"]
+        with patch.object(sys, "argv", argv), \
+                patch.object(module, "update_thermal_attr", side_effect=RuntimeError("boom")), \
+                patch.object(module.signal, "signal"), \
+                patch.object(module.signal, "siginterrupt"), \
+                patch.object(module.time, "sleep"):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+
+        self.assertEqual(ctx.exception.code, 1)
+        self.assertEqual(module.EXIT_CODE, 1)
+        module.LOGGER.warning.assert_called_with("Unexpected error in main loop")
+
+    def test_log_exit_uses_logger(self):
+        module = self.module
+        module.LOGGER = MagicMock()
+        module.EXIT_CODE = 128 + module.signal.SIGTERM
+        module.log_exit()
+        module.LOGGER.notice.assert_called_with(
+            "hw-management-thermal-updater: exit reason={}".format(
+                128 + int(module.signal.SIGTERM)))
+
+    def test_log_exit_skips_help_exit(self):
+        module = self.module
+        module.LOGGER = None
+        module.EXIT_CODE = 0
+        with patch.object(module.sys.stderr, "write") as mock_write:
+            module.log_exit()
+        mock_write.assert_not_called()
 
 
 def main():

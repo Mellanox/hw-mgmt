@@ -6,7 +6,7 @@
 # Comprehensive Test Suite for hw_management_lib.py
 # Tests all functions with simple, medium, and complex scenarios
 
-from hw_management_lib import HW_Mgmt_Logger, current_milli_time
+from hw_management_lib import HW_Mgmt_Logger, current_milli_time, run_shell_cmd, atomic_file_write
 import sys
 import os
 import pytest
@@ -14,6 +14,7 @@ import tempfile
 import shutil
 import threading
 import time
+import subprocess
 import syslog
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call, mock_open
@@ -119,6 +120,120 @@ class TestCurrentMilliTime:
         assert len(results) == 50
         assert all(isinstance(t, int) for t in results)
         assert all(t > 0 for t in results)
+
+
+class TestAtomicFileWrite:
+    """Tests for atomic_file_write()'s success path and its two distinct
+    exception paths: SystemExit (signal) must propagate with its original
+    code after best-effort cleanup, while regular errors are wrapped."""
+
+    def test_writes_value_atomically(self, temp_dir):
+        target = os.path.join(temp_dir, "out.txt")
+
+        atomic_file_write(target, "42")
+
+        with open(target) as f:
+            assert f.read() == "42"
+        # No leftover temp files from mkstemp.
+        assert os.listdir(temp_dir) == ["out.txt"]
+
+    def test_system_exit_propagates_with_original_code_and_cleans_up(self, temp_dir):
+        """A signal handler's sys.exit(143) must survive the write unchanged:
+        wrapping it as a generic error would turn a SIGTERM exit into exit 1."""
+        target = os.path.join(temp_dir, "out.txt")
+
+        with patch("hw_management_lib.os.replace", side_effect=SystemExit(143)):
+            with pytest.raises(SystemExit) as excinfo:
+                atomic_file_write(target, "42")
+
+        assert excinfo.value.code == 143
+        # The temp file created by mkstemp must not be left behind.
+        assert os.listdir(temp_dir) == []
+        assert not os.path.exists(target)
+
+    def test_system_exit_cleanup_ignores_missing_temp_file(self, temp_dir):
+        """os.replace() can succeed and still raise afterwards in theory;
+        unlink() racing with an already-moved temp file must not mask the
+        original SystemExit with FileNotFoundError."""
+        target = os.path.join(temp_dir, "out.txt")
+        real_replace = os.replace
+
+        def replace_then_raise(src, dst):
+            real_replace(src, dst)
+            raise SystemExit(143)
+
+        with patch("hw_management_lib.os.replace", side_effect=replace_then_raise):
+            with pytest.raises(SystemExit) as excinfo:
+                atomic_file_write(target, "42")
+
+        assert excinfo.value.code == 143
+        with open(target) as f:
+            assert f.read() == "42"
+
+    def test_regular_error_is_wrapped_and_temp_file_removed(self, temp_dir):
+        target = os.path.join(temp_dir, "out.txt")
+
+        with patch("hw_management_lib.os.replace", side_effect=OSError("disk full")):
+            with pytest.raises(Exception) as excinfo:
+                atomic_file_write(target, "42")
+
+        assert "disk full" in str(excinfo.value)
+        assert os.listdir(temp_dir) == []
+
+
+class TestRunShellCmd:
+    """Tests for child output handling and cleanup."""
+
+    def test_captures_output_by_default(self):
+        """Callers that consume command output retain the PIPE behavior."""
+        proc = MagicMock()
+        proc.communicate.return_value = ("stdout\n", "stderr\n")
+        proc.returncode = 0
+
+        with patch("hw_management_lib.subprocess.Popen", return_value=proc) as popen:
+            rc, output = run_shell_cmd("echo test", shell=True)
+
+        assert (rc, output) == (0, "stdoutstderr")
+        popen.assert_called_once_with(
+            "echo test",
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            start_new_session=True,
+        )
+
+    def test_discards_output_when_requested(self):
+        """Fire-and-forget callers must not buffer arbitrary child output."""
+        proc = MagicMock()
+        proc.communicate.return_value = (None, None)
+        proc.returncode = 0
+
+        with patch("hw_management_lib.subprocess.Popen", return_value=proc) as popen:
+            rc, output = run_shell_cmd("echo test", shell=True, capture_output=False)
+
+        assert (rc, output) == (0, "")
+        popen.assert_called_once_with(
+            "echo test",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            universal_newlines=True,
+            start_new_session=True,
+        )
+
+    def test_timeout_stops_child_process_group(self):
+        """A timeout requests process-group cleanup before reporting failure."""
+        proc = MagicMock()
+        proc.communicate.side_effect = subprocess.TimeoutExpired("echo test", 0.1)
+
+        with patch("hw_management_lib.subprocess.Popen", return_value=proc), \
+                patch("hw_management_lib._stop_process_group") as stop_process_group:
+            rc, output = run_shell_cmd("echo test", shell=True, timeout=0.1)
+
+        assert rc == -1
+        assert "timed out" in output
+        stop_process_group.assert_called_once_with(proc)
 
 
 class TestLoggerInitialization:

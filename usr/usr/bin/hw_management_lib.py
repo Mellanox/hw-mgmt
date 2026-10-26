@@ -12,6 +12,7 @@ import time
 import json
 import tempfile
 import subprocess
+import signal
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
@@ -66,6 +67,13 @@ def atomic_file_write(file_name, value):
         with os.fdopen(fd, 'w', encoding="utf-8") as f:
             f.write("{}".format(value))
         os.replace(f_path_tmp, file_name)  # Atomic on POSIX
+    except SystemExit:
+        # remove the temporary file
+        try:
+            os.unlink(f_path_tmp)
+        except OSError:
+            pass
+        raise
     except BaseException as e:
         try:
             os.unlink(f_path_tmp)
@@ -104,30 +112,100 @@ def exit_wait(exit_event, timeout, chunk_sec=0.2):
 # ----------------------------------------------------------------------
 
 
-def run_shell_cmd(cmd, args=None, timeout=2.0):
+def _stop_process_group(proc):
     """
     @summary:
-        Run a shell command
-    @param cmd: command to run
-    @param args: arguments to pass to the command
-    @param timeout: timeout in seconds
+        Stop a command started in its own session.
+        SIGKILL follows SIGTERM when the child ignores the first signal.
+    """
+    if proc.poll() is not None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except OSError:
+        try:
+            proc.terminate()
+        except OSError:
+            return
+    try:
+        proc.communicate(timeout=1)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except OSError:
+            try:
+                proc.kill()
+            except OSError:
+                return
+        proc.communicate()
+
+
+def run_shell_cmd(cmd, args=None, timeout=2.0, shell=False, capture_output=True):
+    """
+    @summary:
+        Run a command and wait in Python so SIGTERM/SIGINT can interrupt it.
+        The child session is stopped before SystemExit or KeyboardInterrupt
+        leaves this function, and again when timeout expires.
+    @param cmd: executable to run, or a shell command string when shell=True
+    @param args: arguments to pass to the executable. Ignored when shell=True
+    @param timeout: seconds to wait, or None to wait until the command exits
+    @param shell: True runs cmd through the shell. For trusted command strings
+        only; the allowlist is not applied. Platform entries use bash syntax.
+    @param capture_output: False discards stdout/stderr. Use that for
+        fire-and-forget helpers whose output is not consumed.
     @return: return code of the command and all stdout/stderr output as combined string
     """
-    if cmd not in ALLOWED_SHELL_CMDS:
-        return -1, f"Not allowed command: {cmd}"
-
-    if args is None:
-        args = []
+    if shell:
+        if not isinstance(cmd, str) or not cmd:
+            return -1, f"Not allowed command: {cmd}"
+        cmd_args = cmd
+        display = cmd
     else:
-        args = [str(arg) for arg in args]
+        if cmd not in ALLOWED_SHELL_CMDS:
+            return -1, f"Not allowed command: {cmd}"
 
-    cmd_args = [cmd] + args
+        if args is None:
+            args = []
+        else:
+            args = [str(arg) for arg in args]
+
+        cmd_args = [cmd] + args
+        display = " ".join(cmd_args)
+
+    if capture_output:
+        stdout_target = subprocess.PIPE
+        stderr_target = subprocess.PIPE
+    else:
+        stdout_target = subprocess.DEVNULL
+        stderr_target = subprocess.DEVNULL
 
     try:
-        result = subprocess.run(cmd_args, timeout=timeout, capture_output=True, text=True, check=False)
-        return result.returncode, result.stdout.strip() + result.stderr.strip()
+        proc = subprocess.Popen(
+            cmd_args,
+            shell=shell,
+            stdout=stdout_target,
+            stderr=stderr_target,
+            universal_newlines=True,
+            start_new_session=True,
+        )
     except Exception as e:
-        return -1, f"Command failed: {' '.join(cmd_args)}. Error: {e}"
+        return -1, f"Command failed: {display}. Error: {e}"
+
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        _stop_process_group(proc)
+        return -1, f"Command failed: {display}. Error: {e}"
+    except Exception as e:
+        _stop_process_group(proc)
+        return -1, f"Command failed: {display}. Error: {e}"
+    except BaseException:
+        _stop_process_group(proc)
+        raise
+
+    if not capture_output:
+        return proc.returncode, ""
+    return proc.returncode, (stdout or "").strip() + (stderr or "").strip()
 
 
 def current_milli_time():

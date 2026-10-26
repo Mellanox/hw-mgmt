@@ -15,6 +15,7 @@ Focus on testing the critical business logic:
 - Configuration loading
 """
 
+import contextlib
 import unittest
 import sys
 import os
@@ -34,11 +35,27 @@ def _peripheral_updater_script_path():
     return os.path.join(repo_root, 'usr', 'usr', 'bin', 'hw_management_peripheral_updater.py')
 
 
+def _real_to_int():
+    """Load hw_management_lib.to_int from source.
+
+    The peripheral updater tests install a MagicMock as hw_management_lib, so
+    the name bound in the updater is not the real converter. int() of that
+    mock is 1, which sends fan status down the present-fan path.
+    """
+    lib_path = os.path.join(
+        os.path.dirname(_peripheral_updater_script_path()),
+        'hw_management_lib.py',
+    )
+    spec = importlib.util.spec_from_file_location('hw_management_lib_real_to_int', lib_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.to_int
+
+
 def _ensure_peripheral_dependency_mocks():
     """Mock hard-required imports used at peripheral_updater module load time."""
     lib_mock = MagicMock()
     lib_mock.HW_Mgmt_Logger = MagicMock()
-    lib_mock.exit_wait = MagicMock()
     lib_mock.current_milli_time = MagicMock(return_value=0)
     lib_mock.RepeatedTimer = MagicMock()
     sys.modules["hw_management_lib"] = lib_mock
@@ -112,7 +129,9 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
 
         HI162 carries a redfish_get_sensor entry. init_attr, the module-counter
         write, and the poll loop are stubbed so only the Redfish gate in main()
-        decides whether that entry is kept.
+        decides whether that entry is kept. main() now waits with time.sleep(1)
+        between passes; raising SystemExit from that stub ends the loop after
+        one pass without actually sleeping or installing real signal handlers.
         """
         seen = []
         module.feature_request = MagicMock(return_value=redfish_disabled)
@@ -121,10 +140,15 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
                 patch.object(module, "init_attr", side_effect=lambda attr: seen.append(attr.get("fn"))), \
                 patch.object(module, "write_module_counter"), \
                 patch.object(module, "update_peripheral_attr"), \
-                patch.object(module, "exit_wait", side_effect=lambda *_a, **_k: module.EXIT.set()), \
-                patch.object(module.signal, "signal"):
-            module.main()
+                patch.object(module.signal, "signal"), \
+                patch.object(module.signal, "siginterrupt"), \
+                patch.object(module.time, "sleep", side_effect=SystemExit(143)):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
         module.feature_request.assert_called_with("get", "is_redfish_disabled")
+        # A stop signal keeps 128+signum in EXIT_CODE and exits 0.
+        self.assertEqual(ctx.exception.code, 0)
+        self.assertEqual(module.EXIT_CODE, 143)
         return seen
 
     def test_redfish_disabled_host_strips_redfish_monitor_entries(self):
@@ -144,6 +168,180 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
 
         self.assertIn("monitor_asic_chipup_status", seen)
         self.assertIn("redfish_get_sensor", seen)
+
+
+class TestExitCodeOnSignal(unittest.TestCase):
+    """handle_signal() records 128+signum. main() exits 0 for those stops."""
+
+    def test_sigterm_sets_143_and_raises(self):
+        module = _load_peripheral_updater_module("sig_term", feature_request_available=True)
+
+        with self.assertRaises(SystemExit) as ctx:
+            module.handle_signal(module.signal.SIGTERM, None)
+
+        self.assertEqual(ctx.exception.code, 143)
+        self.assertEqual(module.EXIT_CODE, 143)
+
+    def test_sigint_sets_130_and_raises(self):
+        module = _load_peripheral_updater_module("sig_int", feature_request_available=True)
+
+        with self.assertRaises(SystemExit) as ctx:
+            module.handle_signal(module.signal.SIGINT, None)
+
+        self.assertEqual(ctx.exception.code, 130)
+        self.assertEqual(module.EXIT_CODE, 130)
+
+    def test_sighup_sets_129_and_raises(self):
+        """SIGHUP is bound to the same handler as SIGTERM/SIGINT in main(),
+        so a hangup also logs an exit code instead of killing the process
+        before log_exit() runs."""
+        module = _load_peripheral_updater_module("sig_hup", feature_request_available=True)
+
+        with self.assertRaises(SystemExit) as ctx:
+            module.handle_signal(module.signal.SIGHUP, None)
+
+        self.assertEqual(ctx.exception.code, 129)
+        self.assertEqual(module.EXIT_CODE, 129)
+
+    def test_main_binds_sighup_to_handle_signal(self):
+        """main() must register SIGHUP, SIGINT, and SIGTERM and disable SA_RESTART."""
+        module = _load_peripheral_updater_module("sig_hup_bound", feature_request_available=True)
+        bound = {}
+        restart_disabled = set()
+
+        def fake_signal(signum, handler):
+            bound[signum] = handler
+
+        def fake_siginterrupt(signum, flag):
+            if flag:
+                restart_disabled.add(signum)
+
+        argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
+        with patch.object(sys, "argv", argv), \
+                patch.object(module, "init_attr"), \
+                patch.object(module, "write_module_counter"), \
+                patch.object(module, "update_peripheral_attr"), \
+                patch.object(module.signal, "signal", side_effect=fake_signal), \
+                patch.object(module.signal, "siginterrupt", side_effect=fake_siginterrupt), \
+                patch.object(module.time, "sleep", side_effect=SystemExit(0)):
+            with self.assertRaises(SystemExit):
+                module.main()
+
+        expected = {module.signal.SIGHUP, module.signal.SIGTERM, module.signal.SIGINT}
+        for signum in expected:
+            self.assertEqual(bound.get(signum), module.handle_signal)
+        self.assertEqual(restart_disabled, expected)
+
+
+class TestMainLoopExitCode(unittest.TestCase):
+    """main() keeps 128+signum in EXIT_CODE and exits 0 for stop signals."""
+
+    def _run_main(self, module, extra_patches):
+        argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
+        patches = [
+            patch.object(sys, "argv", argv),
+            patch.object(module, "init_attr"),
+            patch.object(module, "write_module_counter"),
+            patch.object(module.signal, "signal"),
+            patch.object(module.signal, "siginterrupt"),
+        ]
+        patches.extend(extra_patches)
+        with contextlib.ExitStack() as stack:
+            for item in patches:
+                stack.enter_context(item)
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+        return ctx.exception
+
+    def test_signal_during_loop_exits_0(self):
+        """Simulates handle_signal raising SystemExit(143) for SIGTERM from
+        inside time.sleep(); main() exits 0 and keeps 143 as the exit reason."""
+        module = _load_peripheral_updater_module("main_sigterm", feature_request_available=True)
+
+        exc = self._run_main(module, [
+            patch.object(module, "update_peripheral_attr"),
+            patch.object(module.time, "sleep", side_effect=SystemExit(143)),
+        ])
+
+        self.assertEqual(exc.code, 0)
+        self.assertEqual(module.EXIT_CODE, 143)
+
+    def test_unexpected_exception_exits_1_and_logs(self):
+        """An unhandled exception from a peripheral callback must not be
+        silently swallowed: it exits 1 and logs the same code."""
+        module = _load_peripheral_updater_module("main_crash", feature_request_available=True)
+
+        exc = self._run_main(module, [
+            patch.object(module, "update_peripheral_attr", side_effect=RuntimeError("boom")),
+            patch.object(module.time, "sleep"),
+        ])
+
+        self.assertEqual(exc.code, 1)
+        self.assertEqual(module.EXIT_CODE, 1)
+        module.LOGGER.warning.assert_called_with("Unexpected error in main loop")
+
+    def test_init_failure_exits_1(self):
+        """A failure while loading config or attributes is inside main()'s
+        try, so it exits 1 and log_exit() records that code."""
+        module = _load_peripheral_updater_module("main_init_fail", feature_request_available=True)
+
+        exc = self._run_main(module, [
+            patch.object(module, "init_attr", side_effect=RuntimeError("init failed")),
+            patch.object(module.time, "sleep"),
+        ])
+
+        self.assertEqual(exc.code, 1)
+        self.assertEqual(module.EXIT_CODE, 1)
+        module.LOGGER.warning.assert_called_with("Unexpected error in main loop")
+
+
+class TestLogExit(unittest.TestCase):
+    """log_exit() is registered with atexit and must record whatever
+    EXIT_CODE main()/handle_signal() last set, even if LOGGER is unset."""
+
+    def test_logs_current_exit_code_via_logger(self):
+        module = _load_peripheral_updater_module("log_exit_logger", feature_request_available=True)
+        module.LOGGER = MagicMock()
+        module.EXIT_CODE = 143
+
+        module.log_exit()
+
+        module.LOGGER.notice.assert_called_with("hw-management-peripheral-updater: exit reason=143")
+
+    def test_falls_back_to_stderr_when_logger_unset(self):
+        """A nonzero exit before Logger() exists still reaches stderr."""
+        module = _load_peripheral_updater_module("log_exit_no_logger", feature_request_available=True)
+        module.LOGGER = None
+        module.EXIT_CODE = 1
+
+        with patch.object(module.sys.stderr, "write") as mock_write:
+            module.log_exit()
+
+        mock_write.assert_called_with("hw-management-peripheral-updater: exit reason=1\n")
+
+    def test_skips_line_for_help_or_version(self):
+        """--help and --version exit 0 before Logger() exists. That is a
+        successful argparse exit, so log_exit() writes nothing."""
+        module = _load_peripheral_updater_module("log_exit_help", feature_request_available=True)
+        module.LOGGER = None
+        module.EXIT_CODE = 0
+
+        with patch.object(module.sys.stderr, "write") as mock_write:
+            module.log_exit()
+
+        mock_write.assert_not_called()
+
+    def test_falls_back_to_stderr_when_logger_raises(self):
+        """A broken logger must not hide the exit line or raise out of atexit."""
+        module = _load_peripheral_updater_module("log_exit_logger_raises", feature_request_available=True)
+        module.LOGGER = MagicMock()
+        module.LOGGER.notice.side_effect = OSError("disk full")
+        module.EXIT_CODE = 143
+
+        with patch.object(module.sys.stderr, "write") as mock_write:
+            module.log_exit()
+
+        mock_write.assert_called_with("hw-management-peripheral-updater: exit reason=143\n")
 
 
 class TestMonitorAsicChipupStatusLogic(unittest.TestCase):
@@ -638,21 +836,25 @@ class TestUtilityFunctions(unittest.TestCase):
         """Test run_power_button_event executes commands"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch.object(peripheral_module, "run_shell_cmd") as mock_run:
             peripheral_module.run_power_button_event(None, "1")
 
-            # Should call os.system 3 times (2 hotplug events + logger)
-            self.assertEqual(mock_system.call_count, 3)
+            # Two hotplug events plus the graceful-power-off logger line
+            self.assertEqual(mock_run.call_count, 3)
+            for call in mock_run.call_args_list:
+                self.assertTrue(call[1].get("shell"))
+                self.assertIsNone(call[1].get("timeout"))
+                self.assertFalse(call[1].get("capture_output"))
 
     def test_run_power_button_event_released(self):
         """Test run_power_button_event when released (value=0)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch.object(peripheral_module, "run_shell_cmd") as mock_run:
             peripheral_module.run_power_button_event(None, "0")
 
-            # Should call os.system 2 times (no logger for release)
-            self.assertEqual(mock_system.call_count, 2)
+            # Release path has the two hotplug events and no logger line
+            self.assertEqual(mock_run.call_count, 2)
 
     def test_run_cmd_with_command_list(self):
         """Test run_cmd executes list of commands"""
@@ -660,34 +862,63 @@ class TestUtilityFunctions(unittest.TestCase):
 
         cmd_list = ["echo test_{arg1}", "echo another_{arg1}"]
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch.object(peripheral_module, "run_shell_cmd") as mock_run:
             peripheral_module.run_cmd(cmd_list, "arg_value")
 
-            # Should call os.system for each command
-            self.assertEqual(mock_system.call_count, 2)
+            self.assertEqual(mock_run.call_count, 2)
+            self.assertEqual(
+                [call[0][0] for call in mock_run.call_args_list],
+                ["echo test_arg_value", "echo another_arg_value"],
+            )
+            for call in mock_run.call_args_list:
+                self.assertTrue(call[1].get("shell"))
+                self.assertIsNone(call[1].get("timeout"))
+                self.assertFalse(call[1].get("capture_output"))
+
+    def _assert_sync_fan_commands(self, mock_run, fan_id, status):
+        """Absent fans are status 1; present fans are status 0, in both commands."""
+        self.assertEqual(
+            [call[0][0] for call in mock_run.call_args_list],
+            [
+                "echo {} > /var/run/hw-management/thermal/fan{}_status".format(status, fan_id),
+                "/usr/bin/hw-management-chassis-events.sh hotplug-event FAN{} {}".format(
+                    fan_id, status),
+            ],
+        )
+        for call in mock_run.call_args_list:
+            self.assertTrue(call[1].get("shell"))
+            self.assertIsNone(call[1].get("timeout"))
+            self.assertFalse(call[1].get("capture_output"))
 
     def test_sync_fan_absent(self):
-        """Test sync_fan with fan absent (val=0)"""
+        """Test sync_fan with fan absent (val=0) writes status 1."""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch.object(peripheral_module, "run_shell_cmd") as mock_run, \
+                patch.object(peripheral_module, "to_int", _real_to_int()):
             peripheral_module.sync_fan(1, "0")
 
-            # Should call os.system twice (echo + hotplug event)
-            self.assertEqual(mock_system.call_count, 2)
-            # Check that status=1 for absent fan
-            calls = [str(call) for call in mock_system.call_args_list]
-            self.assertTrue(any("fan1_status" in str(call) for call in calls))
+            self._assert_sync_fan_commands(mock_run, 1, 1)
 
     def test_sync_fan_present(self):
-        """Test sync_fan with fan present (val=1)"""
+        """Test sync_fan with fan present (val=1) writes status 0."""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch.object(peripheral_module, "run_shell_cmd") as mock_run, \
+                patch.object(peripheral_module, "to_int", _real_to_int()):
             peripheral_module.sync_fan(2, "1")
 
-            # Should call os.system twice
-            self.assertEqual(mock_system.call_count, 2)
+            self._assert_sync_fan_commands(mock_run, 2, 0)
+
+    def test_sync_fan_invalid(self):
+        """Non-numeric fan presence runs neither the status write nor the hotplug event."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch.object(peripheral_module, "run_shell_cmd") as mock_run, \
+                patch.object(peripheral_module, "to_int", _real_to_int()):
+            peripheral_module.sync_fan(1, "not-a-number")
+
+            mock_run.assert_not_called()
 
 
 class TestRedfishSensorFunctions(unittest.TestCase):
