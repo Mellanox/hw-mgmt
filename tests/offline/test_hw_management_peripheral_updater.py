@@ -22,7 +22,7 @@ import builtins
 import tempfile
 import shutil
 import importlib.util
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 
 # Add parent directory to path to import the module under test
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../usr/usr/bin'))
@@ -38,7 +38,6 @@ def _ensure_peripheral_dependency_mocks():
     """Mock hard-required imports used at peripheral_updater module load time."""
     lib_mock = MagicMock()
     lib_mock.HW_Mgmt_Logger = MagicMock()
-    lib_mock.exit_wait = MagicMock()
     lib_mock.current_milli_time = MagicMock(return_value=0)
     lib_mock.RepeatedTimer = MagicMock()
     sys.modules["hw_management_lib"] = lib_mock
@@ -121,9 +120,10 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
                 patch.object(module, "init_attr", side_effect=lambda attr: seen.append(attr.get("fn"))), \
                 patch.object(module, "write_module_counter"), \
                 patch.object(module, "update_peripheral_attr"), \
-                patch.object(module, "exit_wait", side_effect=lambda *_a, **_k: module.EXIT.set()), \
-                patch.object(module.signal, "signal"):
-            module.main()
+                patch.object(module.time, "sleep", side_effect=SystemExit(0)):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+        self.assertEqual(ctx.exception.code, 0)
         module.feature_request.assert_called_with("get", "is_redfish_disabled")
         return seen
 
@@ -638,21 +638,32 @@ class TestUtilityFunctions(unittest.TestCase):
         """Test run_power_button_event executes commands"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
             peripheral_module.run_power_button_event(None, "1")
 
-            # Should call os.system 3 times (2 hotplug events + logger)
-            self.assertEqual(mock_system.call_count, 3)
+        self.assertEqual(mock_cmd.call_count, 3)
+        mock_cmd.assert_any_call(
+            "/usr/bin/hw-management-chassis-events.sh",
+            ["hotplug-event", "POWER_BUTTON", "1"],
+            timeout=3.0,
+        )
+        mock_cmd.assert_any_call(
+            "logger",
+            ["-t", "hw-management-peripheral-updater", "-p", "daemon.info",
+             "Graceful CPU power off request "],
+            timeout=3.0,
+        )
 
     def test_run_power_button_event_released(self):
         """Test run_power_button_event when released (value=0)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
             peripheral_module.run_power_button_event(None, "0")
 
-            # Should call os.system 2 times (no logger for release)
-            self.assertEqual(mock_system.call_count, 2)
+        self.assertEqual(mock_cmd.call_count, 2)
+        commands = [call[0][0] for call in mock_cmd.call_args_list]
+        self.assertNotIn("logger", commands)
 
     def test_run_cmd_with_command_list(self):
         """Test run_cmd executes list of commands"""
@@ -660,34 +671,54 @@ class TestUtilityFunctions(unittest.TestCase):
 
         cmd_list = ["echo test_{arg1}", "echo another_{arg1}"]
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
             peripheral_module.run_cmd(cmd_list, "arg_value")
 
-            # Should call os.system for each command
-            self.assertEqual(mock_system.call_count, 2)
+        self.assertEqual(mock_cmd.call_count, 2)
+        mock_cmd.assert_any_call("echo", ["test_arg_value"], timeout=3.0)
+        mock_cmd.assert_any_call("echo", ["another_arg_value"], timeout=3.0)
+
+    def test_run_cmd_user_dump_only_when_trigger_is_one(self):
+        """User dump runs only when the thermal full-speed trigger value is 1."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
+            peripheral_module.run_cmd(["/usr/bin/hw-management-user-dump"], "0")
+            peripheral_module.run_cmd(["/usr/bin/hw-management-user-dump"], "1")
+
+        mock_cmd.assert_called_once_with("/usr/bin/hw-management-user-dump", [], timeout=30.0)
 
     def test_sync_fan_absent(self):
         """Test sync_fan with fan absent (val=0)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd, \
+                patch('builtins.open', mock_open()) as mocked_open:
             peripheral_module.sync_fan(1, "0")
 
-            # Should call os.system twice (echo + hotplug event)
-            self.assertEqual(mock_system.call_count, 2)
-            # Check that status=1 for absent fan
-            calls = [str(call) for call in mock_system.call_args_list]
-            self.assertTrue(any("fan1_status" in str(call) for call in calls))
+        mocked_open.assert_called_with("/var/run/hw-management/thermal/fan1_status", "w")
+        mocked_open().write.assert_called_with("1\n")
+        mock_cmd.assert_called_once_with(
+            "/usr/bin/hw-management-chassis-events.sh",
+            ["hotplug-event", "FAN1", 1],
+            timeout=3.0,
+        )
 
     def test_sync_fan_present(self):
         """Test sync_fan with fan present (val=1)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd, \
+                patch('builtins.open', mock_open()) as mocked_open:
             peripheral_module.sync_fan(2, "1")
 
-            # Should call os.system twice
-            self.assertEqual(mock_system.call_count, 2)
+        mocked_open.assert_called_with("/var/run/hw-management/thermal/fan2_status", "w")
+        mocked_open().write.assert_called_with("0\n")
+        mock_cmd.assert_called_once_with(
+            "/usr/bin/hw-management-chassis-events.sh",
+            ["hotplug-event", "FAN2", 0],
+            timeout=3.0,
+        )
 
 
 class TestRedfishSensorFunctions(unittest.TestCase):
