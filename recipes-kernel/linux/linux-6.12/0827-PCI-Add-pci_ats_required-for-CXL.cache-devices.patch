@@ -1,0 +1,103 @@
+From chen@backport Mon Sep 17 00:00:00 2001
+From: Nicolin Chen <nicolinc@nvidia.com>
+Date: Thu, 21 May 2026 13:34:20 -0700
+Subject: [PATCH] PCI: Add pci_ats_required() for CXL.cache capable devices
+
+Backport of upstream 91561e1dc94b onto Linux 6.12.94.
+6.12 only has the CXL port DVSEC defines, so the three CXL device DVSEC
+symbols this helper reads are added beside them.
+
+Upstream-commit: 91561e1dc94b
+
+diff --git a/drivers/pci/ats.c b/drivers/pci/ats.c
+index c331b10..b9345f0 100644
+--- a/drivers/pci/ats.c
++++ b/drivers/pci/ats.c
+@@ -205,6 +205,52 @@ int pci_ats_page_aligned(struct pci_dev *pdev)
+ 	return 0;
+ }
+ 
++/*
++ * CXL r4.0, sec 3.2.5.13 Memory Type on CXL.cache notes: to source requests on
++ * CXL.cache, devices need to get the Host Physical Address (HPA) from the Host
++ * by means of an ATS request on CXL.io.
++ *
++ * In other words, CXL.cache devices cannot access host physical memory without
++ * ATS.
++ *
++ * Check Cache_Capable instead of Cache_Enable because CXL.cache may be enabled
++ * after the caller uses this to make its ATS decision.
++ */
++static bool pci_cxl_ats_required(struct pci_dev *pdev)
++{
++	int offset;
++	u16 cap;
++
++	offset = pci_find_dvsec_capability(pdev, PCI_VENDOR_ID_CXL,
++					   PCI_DVSEC_CXL_DEVICE);
++	if (!offset)
++		return false;
++
++	if (pci_read_config_word(pdev, offset + PCI_DVSEC_CXL_CAP, &cap))
++		return false;
++
++	return cap & PCI_DVSEC_CXL_CACHE_CAPABLE;
++}
++
++/**
++ * pci_ats_required - Whether the PCI device requires ATS
++ * @pdev: the PCI device
++ *
++ * Returns true, if the PCI device requires ATS for basic functional operation.
++ */
++bool pci_ats_required(struct pci_dev *pdev)
++{
++	if (!pci_ats_supported(pdev))
++		return false;
++
++	/* A VF inherits its PF's requirement for ATS function */
++	if (pdev->is_virtfn)
++		pdev = pci_physfn(pdev);
++
++	return pci_cxl_ats_required(pdev);
++}
++EXPORT_SYMBOL_GPL(pci_ats_required);
++
+ #ifdef CONFIG_PCI_PRI
+ void pci_pri_init(struct pci_dev *pdev)
+ {
+diff --git a/include/linux/pci-ats.h b/include/linux/pci-ats.h
+index 75c6c86..f3723b6 100644
+--- a/include/linux/pci-ats.h
++++ b/include/linux/pci-ats.h
+@@ -12,6 +12,7 @@ int pci_prepare_ats(struct pci_dev *dev, int ps);
+ void pci_disable_ats(struct pci_dev *dev);
+ int pci_ats_queue_depth(struct pci_dev *dev);
+ int pci_ats_page_aligned(struct pci_dev *dev);
++bool pci_ats_required(struct pci_dev *dev);
+ #else /* CONFIG_PCI_ATS */
+ static inline bool pci_ats_supported(struct pci_dev *d)
+ { return false; }
+@@ -24,6 +25,8 @@ static inline int pci_ats_queue_depth(struct pci_dev *d)
+ { return -ENODEV; }
+ static inline int pci_ats_page_aligned(struct pci_dev *dev)
+ { return 0; }
++static inline bool pci_ats_required(struct pci_dev *dev)
++{ return false; }
+ #endif /* CONFIG_PCI_ATS */
+ 
+ #ifdef CONFIG_PCI_PRI
+diff --git a/include/uapi/linux/pci_regs.h b/include/uapi/linux/pci_regs.h
+index bf6c143..f8cccb6 100644
+--- a/include/uapi/linux/pci_regs.h
++++ b/include/uapi/linux/pci_regs.h
+@@ -1192,4 +1192,9 @@
+ #define PCI_DVSEC_CXL_PORT_CTL				0x0c
+ #define PCI_DVSEC_CXL_PORT_CTL_UNMASK_SBR		0x00000001
+ 
++/* CXL r4.0, 8.1.3: PCIe DVSEC for CXL Device */
++#define PCI_DVSEC_CXL_DEVICE				0
++#define PCI_DVSEC_CXL_CAP				0xA
++#define PCI_DVSEC_CXL_CACHE_CAPABLE			0x1
++
+ #endif /* LINUX_PCI_REGS_H */

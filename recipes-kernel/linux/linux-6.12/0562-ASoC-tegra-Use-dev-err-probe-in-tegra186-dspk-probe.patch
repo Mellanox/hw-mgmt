@@ -1,0 +1,50 @@
+From 6205ca05227f26721b8d5920d976ecae6f8ce83e Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 25 Mar 2026 10:14:25 +0000
+Subject: [PATCH 0562/0797] ASoC: tegra: Use dev_err_probe() in tegra186_dspk probe
+
+Log errors in the Tegra186 DSPK probe path using dev_err_probe().
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260325101437.3059693-3-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra186_dspk.c | 15 ++++++---------
+ 1 file changed, 6 insertions(+), 9 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra186_dspk.c b/sound/soc/tegra/tegra186_dspk.c
+index 8816e49673315f..3ec99b946dffea 100644
+--- a/sound/soc/tegra/tegra186_dspk.c
++++ b/sound/soc/tegra/tegra186_dspk.c
+@@ -496,10 +496,9 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
+ 	dev_set_drvdata(dev, dspk);
+ 
+ 	dspk->clk_dspk = devm_clk_get(dev, "dspk");
+-	if (IS_ERR(dspk->clk_dspk)) {
+-		dev_err(dev, "can't retrieve DSPK clock\n");
+-		return PTR_ERR(dspk->clk_dspk);
+-	}
++	if (IS_ERR(dspk->clk_dspk))
++		return dev_err_probe(dev, PTR_ERR(dspk->clk_dspk),
++				     "can't retrieve DSPK clock\n");
+ 
+ 	regs = devm_platform_ioremap_resource(pdev, 0);
+ 	if (IS_ERR(regs))
+@@ -516,11 +515,9 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
+ 	err = devm_snd_soc_register_component(dev, &tegra186_dspk_cmpnt,
+ 					      tegra186_dspk_dais,
+ 					      ARRAY_SIZE(tegra186_dspk_dais));
+-	if (err) {
+-		dev_err(dev, "can't register DSPK component, err: %d\n",
+-			err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't register DSPK component\n");
+ 
+ 	pm_runtime_enable(dev);
+ 
+-- 
+cgit 1.3.1-korg
+

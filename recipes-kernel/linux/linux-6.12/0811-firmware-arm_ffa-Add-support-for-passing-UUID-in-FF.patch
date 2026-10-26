@@ -1,0 +1,58 @@
+From af674906001e7490841e37721ad462c16f4e09bd Mon Sep 17 00:00:00 2001
+From: Sudeep Holla <sudeep.holla@arm.com>
+Date: Mon, 17 Feb 2025 15:38:51 +0000
+Subject: [PATCH 3/9] firmware: arm_ffa: Add support for passing UUID in
+ FFA_MSG_SEND2
+
+Backport of upstream 910cc1acc9b4 onto Linux 6.12.94.
+
+Upstream-commit: 910cc1acc9b4
+
+diff --git a/drivers/firmware/arm_ffa/driver.c b/drivers/firmware/arm_ffa/driver.c
+index 3b221ba99..d4b762b54 100644
+--- a/drivers/firmware/arm_ffa/driver.c
++++ b/drivers/firmware/arm_ffa/driver.c
+@@ -454,9 +454,9 @@ static int ffa_msg_send_direct_req(u16 src_id, u16 dst_id, bool mode_32bit,
+ 	return -EINVAL;
+ }
+ 
+-static int ffa_msg_send2(u16 src_id, u16 dst_id, void *buf, size_t sz)
++static int ffa_msg_send2(struct ffa_device *dev, u16 src_id, void *buf, size_t sz)
+ {
+-	u32 src_dst_ids = PACK_TARGET_INFO(src_id, dst_id);
++	u32 src_dst_ids = PACK_TARGET_INFO(src_id, dev->vm_id);
+ 	struct ffa_indirect_msg_hdr *msg;
+ 	ffa_value_t ret;
+ 	int retval = 0;
+@@ -472,6 +472,7 @@ static int ffa_msg_send2(u16 src_id, u16 dst_id, void *buf, size_t sz)
+ 	msg->offset = sizeof(*msg);
+ 	msg->send_recv_id = src_dst_ids;
+ 	msg->size = sz;
++	uuid_copy(&msg->uuid, &dev->uuid);
+ 	memcpy((u8 *)msg + msg->offset, buf, sz);
+ 
+ 	/* flags = 0, sender VMID = 0 works for both physical/virtual NS */
+@@ -1054,7 +1055,7 @@ static int ffa_sync_send_receive(struct ffa_device *dev,
+ 
+ static int ffa_indirect_msg_send(struct ffa_device *dev, void *buf, size_t sz)
+ {
+-	return ffa_msg_send2(drv_info->vm_id, dev->vm_id, buf, sz);
++	return ffa_msg_send2(dev, drv_info->vm_id, buf, sz);
+ }
+ 
+ static int ffa_sync_send_receive2(struct ffa_device *dev, const uuid_t *uuid,
+diff --git a/include/linux/arm_ffa.h b/include/linux/arm_ffa.h
+index 167c6da00..f51a93533 100644
+--- a/include/linux/arm_ffa.h
++++ b/include/linux/arm_ffa.h
+@@ -282,6 +282,7 @@ struct ffa_indirect_msg_hdr {
+ 	u32 offset;
+ 	u32 send_recv_id;
+ 	u32 size;
++	uuid_t uuid;
+ };
+ 
+ /* For use with FFA_MSG_SEND_DIRECT_{REQ,RESP}2 which pass data via registers */
+-- 
+2.34.1
+

@@ -1,0 +1,88 @@
+From sdonthineni@nvidia.com Mon, 12 Aug 2024 22:39:25 -0500
+From: Shanker Donthineni <sdonthineni@nvidia.com>
+Date: Mon, 12 Aug 2024 22:39:25 -0500
+Subject: [PATCH] irqchip/gic-v3: Allow unused SGIs for drivers
+
+Backport of NVIDIA SAUCE 79ee8302030c from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94. The SAUCE change compares the GSI with MAX_IPI.
+6.12 keeps enum ipi_msg_type private to arch/arm64/kernel/smp.c, so the
+enum moves to asm/smp.h. asm/smp_plat.h already includes that header,
+and the GICv3 driver includes asm/smp_plat.h.
+
+Upstream-commit: 79ee8302030c
+
+diff --git a/arch/arm64/include/asm/smp.h b/arch/arm64/include/asm/smp.h
+index 2510eec02..a16339783 100644
+--- a/arch/arm64/include/asm/smp.h
++++ b/arch/arm64/include/asm/smp.h
+@@ -50,6 +50,23 @@ struct seq_file;
+  */
+ extern void smp_init_cpus(void);
+ 
++enum ipi_msg_type {
++	IPI_RESCHEDULE,
++	IPI_CALL_FUNC,
++	IPI_CPU_STOP,
++	IPI_CPU_STOP_NMI,
++	IPI_TIMER,
++	IPI_IRQ_WORK,
++	NR_IPI,
++	/*
++	 * Any enum >= NR_IPI and < MAX_IPI is special and not tracable
++	 * with trace_ipi_*
++	 */
++	IPI_CPU_BACKTRACE = NR_IPI,
++	IPI_KGDB_ROUNDUP,
++	MAX_IPI
++};
++
+ /*
+  * Register IPI interrupts with the arch SMP code
+  */
+diff --git a/arch/arm64/kernel/smp.c b/arch/arm64/kernel/smp.c
+index 3b3f6b56e..74ac89914 100644
+--- a/arch/arm64/kernel/smp.c
++++ b/arch/arm64/kernel/smp.c
+@@ -64,23 +64,6 @@ struct secondary_data secondary_data;
+ /* Number of CPUs which aren't online, but looping in kernel text. */
+ static int cpus_stuck_in_kernel;
+ 
+-enum ipi_msg_type {
+-	IPI_RESCHEDULE,
+-	IPI_CALL_FUNC,
+-	IPI_CPU_STOP,
+-	IPI_CPU_STOP_NMI,
+-	IPI_TIMER,
+-	IPI_IRQ_WORK,
+-	NR_IPI,
+-	/*
+-	 * Any enum >= NR_IPI and < MAX_IPI is special and not tracable
+-	 * with trace_ipi_*
+-	 */
+-	IPI_CPU_BACKTRACE = NR_IPI,
+-	IPI_KGDB_ROUNDUP,
+-	MAX_IPI
+-};
+-
+ static int ipi_irq_base __ro_after_init;
+ static int nr_ipi __ro_after_init = NR_IPI;
+ static struct irq_desc *ipi_desc[MAX_IPI] __ro_after_init;
+diff --git a/drivers/irqchip/irq-gic-v3.c b/drivers/irqchip/irq-gic-v3.c
+index cf469a672..eff1ce4f6 100644
+--- a/drivers/irqchip/irq-gic-v3.c
++++ b/drivers/irqchip/irq-gic-v3.c
+@@ -1692,7 +1692,13 @@ static int gic_irq_domain_translate(struct irq_domain *d,
+ 		if(fwspec->param_count != 2)
+ 			return -EINVAL;
+ 
+-		if (fwspec->param[0] < 16) {
++		/*
++		 * Below check was added on assumption that MAX_IPI
++		 * value will not be greater than 8.
++		 */
++		BUILD_BUG_ON(MAX_IPI > 8);
++
++		if (fwspec->param[0] < MAX_IPI) {
+ 			pr_err(FW_BUG "Illegal GSI%d translation request\n",
+ 			       fwspec->param[0]);
+ 			return -EINVAL;

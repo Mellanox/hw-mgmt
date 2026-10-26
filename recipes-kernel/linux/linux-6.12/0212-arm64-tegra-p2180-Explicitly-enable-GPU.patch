@@ -1,0 +1,29 @@
+From d1b72547610497ea4d0917214986cffb752a8710 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sun, 20 Apr 2025 17:25:17 -0500
+Subject: [PATCH 0212/0797] arm64: tegra: p2180: Explicitly enable GPU
+
+The gpu node originally was explicitly left disabled as it was expected
+for the bootloader to enable it. However, this is only done in u-boot.
+If u-boot is not in the boot chain, this will never be enabled. Other
+Tegra210 devices already explicitly enable the gpu, so make p2180 match.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250420-tx1-gpu-v1-1-d500de18e43e@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi b/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi
+index 9b9d1d15b0c7e..c57bd13563819 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi
+@@ -24,6 +24,7 @@
+ 
+ 	gpu@57000000 {
+ 		vdd-supply = <&vdd_gpu>;
++		status = "okay";
+ 	};
+ 
+ 	/* debug port */

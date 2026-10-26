@@ -1,0 +1,40 @@
+From 15dcf3ffd3a22869e3b2bb7e8b4edb4cf27701a5 Mon Sep 17 00:00:00 2001
+From: Sudeep Holla <sudeep.holla@arm.com>
+Date: Mon, 17 Feb 2025 15:38:50 +0000
+Subject: [PATCH 2/9] firmware: arm_ffa: Helper to check if a partition can
+ receive REQUEST2 messages
+
+Backport of upstream 84968e32d301 onto Linux 6.12.94.
+The partition info UUID stays a u32[4], which is the 6.12 layout.
+
+Upstream-commit: 84968e32d301
+
+diff --git a/include/linux/arm_ffa.h b/include/linux/arm_ffa.h
+index 53f2837ce..167c6da00 100644
+--- a/include/linux/arm_ffa.h
++++ b/include/linux/arm_ffa.h
+@@ -240,6 +240,10 @@ struct ffa_partition_info {
+ #define FFA_PARTITION_NOTIFICATION_RECV	BIT(3)
+ /* partition runs in the AArch64 execution state. */
+ #define FFA_PARTITION_AARCH64_EXEC	BIT(8)
++/* partition supports receipt of direct request2 */
++#define FFA_PARTITION_DIRECT_REQ2_RECV	BIT(9)
++/* partition can send direct request2. */
++#define FFA_PARTITION_DIRECT_REQ2_SEND	BIT(10)
+ 	u32 properties;
+ 	u32 uuid[4];
+ };
+@@ -259,6 +263,10 @@ bool ffa_partition_check_property(struct ffa_device *dev, u32 property)
+ #define ffa_partition_supports_direct_recv(dev)	\
+ 	ffa_partition_check_property(dev, FFA_PARTITION_DIRECT_RECV)
+ 
++#define ffa_partition_supports_direct_req2_recv(dev)	\
++	(ffa_partition_check_property(dev, FFA_PARTITION_DIRECT_REQ2_RECV) && \
++	 !dev->mode_32bit)
++
+ /* For use with FFA_MSG_SEND_DIRECT_{REQ,RESP} which pass data via registers */
+ struct ffa_send_direct_data {
+ 	unsigned long data0; /* w3/x3 */
+-- 
+2.34.1
+

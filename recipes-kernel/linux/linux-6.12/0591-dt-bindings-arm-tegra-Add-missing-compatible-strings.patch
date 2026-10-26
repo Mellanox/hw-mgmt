@@ -1,0 +1,94 @@
+From 37420acce494ca69e30c0a98e868f357ae2509f5 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 23 Feb 2026 15:33:00 +0100
+Subject: [PATCH 0591/0797] dt-bindings: arm: tegra: Add missing compatible strings
+
+The Nyan Blaze and Nyan Big, as well as Jetson Nano (P3450-0000), Darcy
+(P2894-0050-A08) and Pixel C (Smaug) were never mentioned. Add them.
+
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra.yaml | 51 ++++++++++++++++++++++--
+ 1 file changed, 48 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 50a31dba7becde..07e225a4d69b02 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -131,6 +131,33 @@ properties:
+           - const: toradex,apalis-tk1-v1.2
+           - const: toradex,apalis-tk1
+           - const: nvidia,tegra124
++      - items:
++          - const: google,nyan-big-rev7
++          - const: google,nyan-big-rev6
++          - const: google,nyan-big-rev5
++          - const: google,nyan-big-rev4
++          - const: google,nyan-big-rev3
++          - const: google,nyan-big-rev2
++          - const: google,nyan-big-rev1
++          - const: google,nyan-big-rev0
++          - const: google,nyan-big
++          - const: google,nyan
++          - const: nvidia,tegra124
++      - items:
++          - const: google,nyan-blaze-rev10
++          - const: google,nyan-blaze-rev9
++          - const: google,nyan-blaze-rev8
++          - const: google,nyan-blaze-rev7
++          - const: google,nyan-blaze-rev6
++          - const: google,nyan-blaze-rev5
++          - const: google,nyan-blaze-rev4
++          - const: google,nyan-blaze-rev3
++          - const: google,nyan-blaze-rev2
++          - const: google,nyan-blaze-rev1
++          - const: google,nyan-blaze-rev0
++          - const: google,nyan-blaze
++          - const: google,nyan
++          - const: nvidia,tegra124
+       - items:
+           - enum:
+               - nvidia,norrin
+@@ -184,17 +211,35 @@ properties:
+           - const: nvidia,tegra124
+       - items:
+           - enum:
+-              - nvidia,darcy
+               - nvidia,p2371-0000
+               - nvidia,p2371-2180
+               - nvidia,p2571
+-              - nvidia,p2894-0050-a08
+-              - nvidia,p3450-0000
+           - const: nvidia,tegra210
+       - items:
+           - const: nvidia,p3541-0000
+           - const: nvidia,p3450-0000
+           - const: nvidia,tegra210
++      - description: NVIDIA Jetson Nano
++        items:
++          - const: nvidia,p3450-0000
++          - const: nvidia,tegra210
++      - description: NVIDIA Shield TV
++        items:
++          - const: nvidia,p2894-0050-a08
++          - const: nvidia,darcy
++          - const: nvidia,tegra210
++      - description: Google Pixel C
++        items:
++          - const: google,smaug-rev8
++          - const: google,smaug-rev7
++          - const: google,smaug-rev6
++          - const: google,smaug-rev5
++          - const: google,smaug-rev4
++          - const: google,smaug-rev3
++          - const: google,smaug-rev2
++          - const: google,smaug-rev1
++          - const: google,smaug
++          - const: nvidia,tegra210
+       - description: Jetson TX2 Developer Kit
+         items:
+           - const: nvidia,p2771-0000
+-- 
+cgit 1.3.1-korg
+

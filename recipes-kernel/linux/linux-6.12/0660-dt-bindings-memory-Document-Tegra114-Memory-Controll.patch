@@ -1,0 +1,148 @@
+From b0822a883408f32d494ce9cdc26f4266774cf3f1 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 27 Apr 2026 10:03:06 +0300
+Subject: [PATCH 0660/0797] dt-bindings: memory: Document Tegra114 Memory Controller
+
+Add Tegra114 support into existing Tegra124 MC schema with the most
+notable difference in the amount of EMEM timings.
+
+Each memory client has unique hardware ID, add these IDs.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://patch.msgid.link/20260427070312.81679-2-clamor95@gmail.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ .../memory-controllers/nvidia,tegra124-mc.yaml     | 31 +++-------
+ include/dt-bindings/memory/tegra114-mc.h           | 67 ++++++++++++++++++++++
+ 2 files changed, 75 insertions(+), 23 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra124-mc.yaml b/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra124-mc.yaml
+index 7b18b4d11e0aea..f8747cebb6808c 100644
+--- a/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra124-mc.yaml
++++ b/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra124-mc.yaml
+@@ -19,7 +19,9 @@ description: |
+ 
+ properties:
+   compatible:
+-    const: nvidia,tegra124-mc
++    enum:
++      - nvidia,tegra114-mc
++      - nvidia,tegra124-mc
+ 
+   reg:
+     maxItems: 1
+@@ -64,29 +66,12 @@ patternProperties:
+ 
+           nvidia,emem-configuration:
+             $ref: /schemas/types.yaml#/definitions/uint32-array
+-            description: |
++            description:
+               Values to be written to the EMEM register block. See section
+-              "15.6.1 MC Registers" in the TRM.
+-            items:
+-              - description: MC_EMEM_ARB_CFG
+-              - description: MC_EMEM_ARB_OUTSTANDING_REQ
+-              - description: MC_EMEM_ARB_TIMING_RCD
+-              - description: MC_EMEM_ARB_TIMING_RP
+-              - description: MC_EMEM_ARB_TIMING_RC
+-              - description: MC_EMEM_ARB_TIMING_RAS
+-              - description: MC_EMEM_ARB_TIMING_FAW
+-              - description: MC_EMEM_ARB_TIMING_RRD
+-              - description: MC_EMEM_ARB_TIMING_RAP2PRE
+-              - description: MC_EMEM_ARB_TIMING_WAP2PRE
+-              - description: MC_EMEM_ARB_TIMING_R2R
+-              - description: MC_EMEM_ARB_TIMING_W2W
+-              - description: MC_EMEM_ARB_TIMING_R2W
+-              - description: MC_EMEM_ARB_TIMING_W2R
+-              - description: MC_EMEM_ARB_DA_TURNS
+-              - description: MC_EMEM_ARB_DA_COVERS
+-              - description: MC_EMEM_ARB_MISC0
+-              - description: MC_EMEM_ARB_MISC1
+-              - description: MC_EMEM_ARB_RING1_THROTTLE
++              "20.11.1 MC Registers" in the Tegea114 TRM or
++              "15.6.1 MC Registers" in the Tegra124 TRM.
++            minItems: 18
++            maxItems: 19
+ 
+         required:
+           - clock-frequency
+diff --git a/include/dt-bindings/memory/tegra114-mc.h b/include/dt-bindings/memory/tegra114-mc.h
+index dfe99c8a5ba573..5e0d6a1b91f2a1 100644
+--- a/include/dt-bindings/memory/tegra114-mc.h
++++ b/include/dt-bindings/memory/tegra114-mc.h
+@@ -40,4 +40,71 @@
+ #define TEGRA114_MC_RESET_VDE		14
+ #define TEGRA114_MC_RESET_VI		15
+ 
++#define TEGRA114_MC_PTCR		0
++#define TEGRA114_MC_DISPLAY0A		1
++#define TEGRA114_MC_DISPLAY0AB		2
++#define TEGRA114_MC_DISPLAY0B		3
++#define TEGRA114_MC_DISPLAY0BB		4
++#define TEGRA114_MC_DISPLAY0C		5
++#define TEGRA114_MC_DISPLAY0CB		6
++#define TEGRA114_MC_DISPLAY1B		7
++#define TEGRA114_MC_DISPLAY1BB		8
++#define TEGRA114_MC_EPPUP		9
++#define TEGRA114_MC_G2PR		10
++#define TEGRA114_MC_G2SR		11
++#define TEGRA114_MC_MPEUNIFBR		12
++#define TEGRA114_MC_VIRUV		13
++#define TEGRA114_MC_AFIR		14
++#define TEGRA114_MC_AVPCARM7R		15
++#define TEGRA114_MC_DISPLAYHC		16
++#define TEGRA114_MC_DISPLAYHCB		17
++#define TEGRA114_MC_FDCDRD		18
++#define TEGRA114_MC_FDCDRD2		19
++#define TEGRA114_MC_G2DR		20
++#define TEGRA114_MC_HDAR		21
++#define TEGRA114_MC_HOST1XDMAR		22
++#define TEGRA114_MC_HOST1XR		23
++#define TEGRA114_MC_IDXSRD		24
++#define TEGRA114_MC_IDXSRD2		25
++#define TEGRA114_MC_MPE_IPRED		26
++#define TEGRA114_MC_MPEAMEMRD		27
++#define TEGRA114_MC_MPECSRD		28
++#define TEGRA114_MC_PPCSAHBDMAR		29
++#define TEGRA114_MC_PPCSAHBSLVR		30
++#define TEGRA114_MC_SATAR		31
++#define TEGRA114_MC_TEXSRD		32
++#define TEGRA114_MC_TEXSRD2		33
++#define TEGRA114_MC_VDEBSEVR		34
++#define TEGRA114_MC_VDEMBER		35
++#define TEGRA114_MC_VDEMCER		36
++#define TEGRA114_MC_VDETPER		37
++#define TEGRA114_MC_MPCORELPR		38
++#define TEGRA114_MC_MPCORER		39
++#define TEGRA114_MC_EPPU		40
++#define TEGRA114_MC_EPPV		41
++#define TEGRA114_MC_EPPY		42
++#define TEGRA114_MC_MPEUNIFBW		43
++#define TEGRA114_MC_VIWSB		44
++#define TEGRA114_MC_VIWU		45
++#define TEGRA114_MC_VIWV		46
++#define TEGRA114_MC_VIWY		47
++#define TEGRA114_MC_G2DW		48
++#define TEGRA114_MC_AFIW		49
++#define TEGRA114_MC_AVPCARM7W		50
++#define TEGRA114_MC_FDCDWR		51
++#define TEGRA114_MC_FDCDWR2		52
++#define TEGRA114_MC_HDAW		53
++#define TEGRA114_MC_HOST1XW		54
++#define TEGRA114_MC_ISPW		55
++#define TEGRA114_MC_MPCORELPW		56
++#define TEGRA114_MC_MPCOREW		57
++#define TEGRA114_MC_MPECSWR		58
++#define TEGRA114_MC_PPCSAHBDMAW		59
++#define TEGRA114_MC_PPCSAHBSLVW		60
++#define TEGRA114_MC_SATAW		61
++#define TEGRA114_MC_VDEBSEVW		62
++#define TEGRA114_MC_VDEDBGW		63
++#define TEGRA114_MC_VDEMBEW		64
++#define TEGRA114_MC_VDETPMW		65
++
+ #endif
+-- 
+cgit 1.3.1-korg
+

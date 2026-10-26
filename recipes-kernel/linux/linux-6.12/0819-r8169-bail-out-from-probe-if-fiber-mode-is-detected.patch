@@ -1,0 +1,33 @@
+From 72b67faf15b7f4c5dd115dfe1f60ee4b984386c6 Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Thu, 13 Nov 2025 22:09:08 +0100
+Subject: [PATCH 7/9] r8169: bail out from probe if fiber mode is detected on
+ RTL8127AF
+
+Backport of upstream 28c0074fd4b7 onto Linux 6.12.94.
+
+Upstream-commit: 28c0074fd4b7
+
+diff --git a/drivers/net/ethernet/realtek/r8169_main.c b/drivers/net/ethernet/realtek/r8169_main.c
+index 81864f3ec..ce04576fc 100644
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -5505,6 +5505,15 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
+ 		rc = pci_disable_link_state(pdev, PCIE_LINK_STATE_L1);
+ 	tp->aspm_manageable = !rc;
+ 
++	/* Fiber mode on RTL8127AF isn't supported */
++	if (rtl_is_8125(tp)) {
++		u16 data = r8168_mac_ocp_read(tp, 0xd006);
++
++		if ((data & 0xff) == 0x07)
++			return dev_err_probe(&pdev->dev, -ENODEV,
++					     "Fiber mode not supported\n");
++	}
++
+ 	tp->dash_type = rtl_get_dash_type(tp);
+ 	tp->dash_enabled = rtl_dash_is_enabled(tp);
+ 
+-- 
+2.34.1
+

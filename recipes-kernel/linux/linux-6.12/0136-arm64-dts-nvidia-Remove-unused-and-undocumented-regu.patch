@@ -1,0 +1,102 @@
+From 828678a1f6384675133e28db643c3bb9e43c3666 Mon Sep 17 00:00:00 2001
+From: "Rob Herring (Arm)" <robh@kernel.org>
+Date: Wed, 5 Mar 2025 16:49:52 -0600
+Subject: [PATCH 0136/0797] arm64: dts: nvidia: Remove unused and undocumented "regulator-ramp-delay-scale" property
+
+Remove "regulator-ramp-delay-scale" property which is both unused in the
+kernel and undocumented. Most likely they are leftovers from downstream.
+
+Signed-off-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250305224952.2995841-2-robh@kernel.org
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts | 10 ----------
+ 1 file changed, 10 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts b/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
+index c56824d7f4d834..0ecdd7243b2eb1 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
+@@ -266,7 +266,6 @@
+ 					regulator-max-microvolt = <1170000>;
+ 					regulator-enable-ramp-delay = <146>;
+ 					regulator-ramp-delay = <27500>;
+-					regulator-ramp-delay-scale = <300>;
+ 					regulator-always-on;
+ 					regulator-boot-on;
+ 
+@@ -281,7 +280,6 @@
+ 					regulator-max-microvolt = <1150000>;
+ 					regulator-enable-ramp-delay = <176>;
+ 					regulator-ramp-delay = <27500>;
+-					regulator-ramp-delay-scale = <300>;
+ 					regulator-always-on;
+ 					regulator-boot-on;
+ 
+@@ -296,7 +294,6 @@
+ 					regulator-max-microvolt = <1350000>;
+ 					regulator-enable-ramp-delay = <176>;
+ 					regulator-ramp-delay = <27500>;
+-					regulator-ramp-delay-scale = <350>;
+ 					regulator-always-on;
+ 					regulator-boot-on;
+ 
+@@ -311,7 +308,6 @@
+ 					regulator-max-microvolt = <1800000>;
+ 					regulator-enable-ramp-delay = <242>;
+ 					regulator-ramp-delay = <27500>;
+-					regulator-ramp-delay-scale = <360>;
+ 					regulator-always-on;
+ 					regulator-boot-on;
+ 
+@@ -326,7 +322,6 @@
+ 					regulator-max-microvolt = <1200000>;
+ 					regulator-enable-ramp-delay = <26>;
+ 					regulator-ramp-delay = <100000>;
+-					regulator-ramp-delay-scale = <200>;
+ 					regulator-always-on;
+ 					regulator-boot-on;
+ 
+@@ -341,7 +336,6 @@
+ 					regulator-max-microvolt = <1050000>;
+ 					regulator-enable-ramp-delay = <22>;
+ 					regulator-ramp-delay = <100000>;
+-					regulator-ramp-delay-scale = <200>;
+ 
+ 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+ 					maxim,active-fps-power-up-slot = <0>;
+@@ -354,7 +348,6 @@
+ 					regulator-max-microvolt = <3300000>;
+ 					regulator-enable-ramp-delay = <62>;
+ 					regulator-ramp-delay = <100000>;
+-					regulator-ramp-delay-scale = <200>;
+ 
+ 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+ 					maxim,active-fps-power-up-slot = <0>;
+@@ -371,7 +364,6 @@
+ 					regulator-max-microvolt = <1100000>;
+ 					regulator-enable-ramp-delay = <22>;
+ 					regulator-ramp-delay = <100000>;
+-					regulator-ramp-delay-scale = <200>;
+ 					regulator-disable-active-discharge;
+ 					regulator-always-on;
+ 					regulator-boot-on;
+@@ -395,7 +387,6 @@
+ 					regulator-max-microvolt = <1050000>;
+ 					regulator-enable-ramp-delay = <24>;
+ 					regulator-ramp-delay = <100000>;
+-					regulator-ramp-delay-scale = <200>;
+ 
+ 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
+ 					maxim,active-fps-power-up-slot = <3>;
+@@ -408,7 +399,6 @@
+ 					regulator-max-microvolt = <1050000>;
+ 					regulator-enable-ramp-delay = <22>;
+ 					regulator-ramp-delay = <100000>;
+-					regulator-ramp-delay-scale = <200>;
+ 
+ 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
+ 					maxim,active-fps-power-up-slot = <6>;
+-- 
+cgit 1.3.1-korg
+

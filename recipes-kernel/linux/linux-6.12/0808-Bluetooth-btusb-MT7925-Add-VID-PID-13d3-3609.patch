@@ -1,0 +1,26 @@
+From c55108a73027e065b0138ab984f6f84d046eb4f2 Mon Sep 17 00:00:00 2001
+From: "luke-yj.chen" <luke-yj.chen@mediatek.com>
+Date: Tue, 12 May 2026 14:03:18 +0800
+Subject: [PATCH 1/9] Bluetooth: btusb: MT7925: Add VID/PID 13d3/3609
+
+Backport of upstream a55ef87b61b2 onto Linux 6.12.94.
+The ID is added next to the existing MT7925 13d3 entries.
+
+Upstream-commit: a55ef87b61b2
+
+diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
+index aaabc5f37..c0307400f 100644
+--- a/drivers/bluetooth/btusb.c
++++ b/drivers/bluetooth/btusb.c
+@@ -699,6 +699,8 @@ static const struct usb_device_id quirks_table[] = {
+ 						     BTUSB_WIDEBAND_SPEECH },
+ 	{ USB_DEVICE(0x13d3, 0x3607), .driver_info = BTUSB_MEDIATEK |
+ 						     BTUSB_WIDEBAND_SPEECH },
++	{ USB_DEVICE(0x13d3, 0x3609), .driver_info = BTUSB_MEDIATEK |
++						     BTUSB_WIDEBAND_SPEECH },
+ 	{ USB_DEVICE(0x13d3, 0x3614), .driver_info = BTUSB_MEDIATEK |
+ 						     BTUSB_WIDEBAND_SPEECH },
+ 	{ USB_DEVICE(0x13d3, 0x3615), .driver_info = BTUSB_MEDIATEK |
+-- 
+2.34.1
+

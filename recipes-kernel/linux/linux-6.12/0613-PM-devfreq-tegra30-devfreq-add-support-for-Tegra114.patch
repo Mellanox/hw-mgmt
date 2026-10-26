@@ -1,0 +1,61 @@
+From cd905830ea6184d6678386ce2d652bec324034d1 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 26 Jan 2026 20:54:23 +0200
+Subject: [PATCH 0613/0797] PM / devfreq: tegra30-devfreq: add support for Tegra114
+
+Lets add Tegra114 support to activity monitor device as a preparation to
+upcoming EMC controller support.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Acked-by: Dmitry Osipenko <digetx@gmail.com>
+Acked-by: MyungJoo Ham <myungjoo.ham@gmail.com>
+Signed-off-by: Chanwoo Choi <cw00.choi@samsung.com>
+Link: https://lore.kernel.org/lkml/20260126185423.77786-1-clamor95@gmail.com/
+---
+ drivers/devfreq/tegra30-devfreq.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/devfreq/tegra30-devfreq.c b/drivers/devfreq/tegra30-devfreq.c
+index 8b57194ac69843..401aac6a9f07ea 100644
+--- a/drivers/devfreq/tegra30-devfreq.c
++++ b/drivers/devfreq/tegra30-devfreq.c
+@@ -941,16 +941,22 @@ static int tegra_devfreq_probe(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++/*
++ * The activity counter is incremented every 256 memory transactions. However,
++ * the number of clock cycles required for each transaction varies across
++ * different SoC generations. For instance, a single transaction takes 2 EMC
++ * clocks on Tegra30, 1 EMC clock on Tegra114, and 4 EMC clocks on Tegra124.
++ */
+ static const struct tegra_devfreq_soc_data tegra124_soc = {
+ 	.configs = tegra124_device_configs,
+-
+-	/*
+-	 * Activity counter is incremented every 256 memory transactions,
+-	 * and each transaction takes 4 EMC clocks.
+-	 */
+ 	.count_weight = 4 * 256,
+ };
+ 
++static const struct tegra_devfreq_soc_data tegra114_soc = {
++	.configs = tegra124_device_configs,
++	.count_weight = 256,
++};
++
+ static const struct tegra_devfreq_soc_data tegra30_soc = {
+ 	.configs = tegra30_device_configs,
+ 	.count_weight = 2 * 256,
+@@ -958,6 +964,7 @@ static const struct tegra_devfreq_soc_data tegra30_soc = {
+ 
+ static const struct of_device_id tegra_devfreq_of_match[] = {
+ 	{ .compatible = "nvidia,tegra30-actmon",  .data = &tegra30_soc, },
++	{ .compatible = "nvidia,tegra114-actmon", .data = &tegra114_soc, },
+ 	{ .compatible = "nvidia,tegra124-actmon", .data = &tegra124_soc, },
+ 	{ },
+ };
+-- 
+cgit 1.3.1-korg
+

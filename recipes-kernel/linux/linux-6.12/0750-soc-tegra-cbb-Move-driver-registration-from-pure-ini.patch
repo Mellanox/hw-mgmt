@@ -1,0 +1,64 @@
+From cd6e95e7ab29c4f67475e3eafef6f836f06eb0e8 Mon Sep 17 00:00:00 2001
+From: Shashank Balaji <shashank.mahadasyam@sony.com>
+Date: Mon, 18 May 2026 19:19:57 +0900
+Subject: [PATCH 0750/0797] soc/tegra: cbb: Move driver registration from pure_initcall to core_initcall
+
+Commit "driver core: platform: set mod_name in driver registration" will
+set struct device_driver's mod_name member for platform driver
+registration. For a driver to be registered with its mod_name set,
+module_kset needs to be initialized, which currently happens in a
+subsys_initcall in param_sysfs_init().  The tegra cbb drivers register
+themselves before module_kset init, in a pure_initcall. This works
+currently because lookup_or_create_module_kobject(), which dereferences
+module_kset via kset_find_obj(), is not called if mod_name is not set,
+which is the case now.
+
+So in preparation for the commit "driver core: platform: set mod_name in
+driver registration", move tegra cbb driver registration to
+core_initcall level, and commit "kernel: param: initialize module_kset
+in a pure_initcall" will move module_kset init to pure_initcall level,
+ensuring module_kset init happens before tegra cbb driver registration.
+
+Suggested-by: Gary Guo <gary@garyguo.net>
+Acked-by: Sumit Gupta <sumitg@nvidia.com>
+Co-developed-by: Rahul Bukte <rahul.bukte@sony.com>
+Signed-off-by: Rahul Bukte <rahul.bukte@sony.com>
+Signed-off-by: Shashank Balaji <shashank.mahadasyam@sony.com>
+Reviewed-by: Gary Guo <gary@garyguo.net>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Link: https://patch.msgid.link/20260518-acpi_mod_name-v5-1-705ccc430885@sony.com
+Signed-off-by: Danilo Krummrich <dakr@kernel.org>
+---
+ drivers/soc/tegra/cbb/tegra194-cbb.c | 2 +-
+ drivers/soc/tegra/cbb/tegra234-cbb.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/soc/tegra/cbb/tegra194-cbb.c b/drivers/soc/tegra/cbb/tegra194-cbb.c
+index ab75d50cc85c46..2f69e104c8385f 100644
+--- a/drivers/soc/tegra/cbb/tegra194-cbb.c
++++ b/drivers/soc/tegra/cbb/tegra194-cbb.c
+@@ -2342,7 +2342,7 @@ static int __init tegra194_cbb_init(void)
+ {
+ 	return platform_driver_register(&tegra194_cbb_driver);
+ }
+-pure_initcall(tegra194_cbb_init);
++core_initcall(tegra194_cbb_init);
+ 
+ static void __exit tegra194_cbb_exit(void)
+ {
+diff --git a/drivers/soc/tegra/cbb/tegra234-cbb.c b/drivers/soc/tegra/cbb/tegra234-cbb.c
+index fb26f085f69143..785072fa4e85ec 100644
+--- a/drivers/soc/tegra/cbb/tegra234-cbb.c
++++ b/drivers/soc/tegra/cbb/tegra234-cbb.c
+@@ -1774,7 +1774,7 @@ static int __init tegra234_cbb_init(void)
+ {
+ 	return platform_driver_register(&tegra234_cbb_driver);
+ }
+-pure_initcall(tegra234_cbb_init);
++core_initcall(tegra234_cbb_init);
+ 
+ static void __exit tegra234_cbb_exit(void)
+ {
+-- 
+cgit 1.3.1-korg
+

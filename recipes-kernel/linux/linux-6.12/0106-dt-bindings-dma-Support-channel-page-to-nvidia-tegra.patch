@@ -1,0 +1,105 @@
+From 762b37fc6ae2af0c7ddf36556fe7427575e9c759 Mon Sep 17 00:00:00 2001
+From: Mohan Kumar D <mkumard@nvidia.com>
+Date: Tue, 17 Dec 2024 13:13:57 +0530
+Subject: [PATCH 0106/0797] dt-bindings: dma: Support channel page to nvidia,tegra210-adma
+
+Multiple ADMA Channel page hardware support has been added from
+TEGRA186 and onwards. Update the DT binding to use any of the
+ADMA channel page address space region.
+
+Signed-off-by: Mohan Kumar D <mkumard@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Link: https://lore.kernel.org/r/20241217074358.340180-2-mkumard@nvidia.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ .../bindings/dma/nvidia,tegra210-adma.yaml         | 60 ++++++++++++++++++++--
+ 1 file changed, 56 insertions(+), 4 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml b/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml
+index 877147e95ecc5d..d3f8c269916c77 100644
+--- a/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml
++++ b/Documentation/devicetree/bindings/dma/nvidia,tegra210-adma.yaml
+@@ -13,9 +13,6 @@ description: |
+ maintainers:
+   - Jon Hunter <jonathanh@nvidia.com>
+ 
+-allOf:
+-  - $ref: dma-controller.yaml#
+-
+ properties:
+   compatible:
+     oneOf:
+@@ -29,7 +26,19 @@ properties:
+           - const: nvidia,tegra186-adma
+ 
+   reg:
+-    maxItems: 1
++    description:
++      The 'page' region describes the address space of the page
++      used for accessing the DMA channel registers. The 'global'
++      region describes the address space of the global DMA registers.
++      In the absence of the 'reg-names' property, there must be a
++      single entry that covers the address space of the global DMA
++      registers and the DMA channel registers.
++    minItems: 1
++    maxItems: 2
++
++  reg-names:
++    minItems: 1
++    maxItems: 2
+ 
+   interrupts:
+     description: |
+@@ -63,6 +72,49 @@ required:
+   - clocks
+   - clock-names
+ 
++allOf:
++  - $ref: dma-controller.yaml#
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra210-adma
++    then:
++      properties:
++        reg:
++          items:
++            - description: Full address space range of DMA registers.
++
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra186-adma
++    then:
++      anyOf:
++        - properties:
++            reg:
++              items:
++                - description: Full address space range of DMA registers.
++        - properties:
++            reg:
++              items:
++                - description: Channel Page address space range of DMA registers.
++            reg-names:
++              items:
++                - const: page
++        - properties:
++            reg:
++              items:
++                - description: Channel Page address space range of DMA registers.
++                - description: Global Page address space range of DMA registers.
++            reg-names:
++              items:
++                - const: page
++                - const: global
++
+ additionalProperties: false
+ 
+ examples:
+-- 
+cgit 1.3.1-korg
+

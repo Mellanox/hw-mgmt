@@ -1,0 +1,27 @@
+From db46ae7049c06c27e88fa1536509f7110b610ba9 Mon Sep 17 00:00:00 2001
+From: Jan Klos <honza.klos@gmail.com>
+Date: Sat, 20 Jun 2026 03:19:53 +0200
+Subject: [PATCH 5/9] net: phy: realtek: Clear MDIO_AN_10GBT_CTRL_ADV10G bit
+
+Backport of upstream 510a283f4d12 onto Linux 6.12.94.
+6.12 programs the advertisement through the paged register.
+
+Upstream-commit: 510a283f4d12
+
+diff --git a/drivers/net/phy/realtek.c b/drivers/net/phy/realtek.c
+index bcae9ad6a..534c76877 100644
+--- a/drivers/net/phy/realtek.c
++++ b/drivers/net/phy/realtek.c
+@@ -1011,7 +1011,8 @@ static int rtl822x_config_aneg(struct phy_device *phydev)
+ 
+ 		ret = phy_modify_paged_changed(phydev, 0xa5d, 0x12,
+ 					       MDIO_AN_10GBT_CTRL_ADV2_5G |
+-					       MDIO_AN_10GBT_CTRL_ADV5G,
++					       MDIO_AN_10GBT_CTRL_ADV5G |
++					       MDIO_AN_10GBT_CTRL_ADV10G,
+ 					       adv);
+ 		if (ret < 0)
+ 			return ret;
+-- 
+2.34.1
+

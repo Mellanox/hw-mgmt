@@ -1,0 +1,74 @@
+From 7aa59bfe06875cc4c3cb5c04eed2cdf6f6288153 Mon Sep 17 00:00:00 2001
+From: Jisheng Zhang <jszhang@kernel.org>
+Date: Fri, 15 Aug 2025 09:34:03 +0800
+Subject: [PATCH 0311/0797] mmc: sdhci-tegra: use modern PM macros
+
+Use the modern PM macros for the suspend and resume functions to be
+automatically dropped by the compiler when CONFIG_PM or
+CONFIG_PM_SLEEP are disabled, without having to use #ifdef guards.
+
+This has the advantage of always compiling these functions in,
+independently of any Kconfig option. Thanks to that, bugs and other
+regressions are subsequently easier to catch.
+
+Signed-off-by: Jisheng Zhang <jszhang@kernel.org>
+Link: https://lore.kernel.org/r/20250815013413.28641-29-jszhang@kernel.org
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+---
+ drivers/mmc/host/sdhci-tegra.c | 13
+ 1 file changed, 5 insertions(+), 8 deletions(-)
+
+--- a/drivers/mmc/host/sdhci-tegra.c
++++ b/drivers/mmc/host/sdhci-tegra.c
+@@ -1831,7 +1831,7 @@ static void sdhci_tegra_remove(struct pl
+ 	clk_disable_unprepare(tegra_host->tmclk);
+ }
+ 
+-static int __maybe_unused sdhci_tegra_runtime_suspend(struct device *dev)
++static int sdhci_tegra_runtime_suspend(struct device *dev)
+ {
+ 	struct sdhci_host *host = dev_get_drvdata(dev);
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+@@ -1841,7 +1841,7 @@ static int __maybe_unused sdhci_tegra_ru
+ 	return 0;
+ }
+ 
+-static int __maybe_unused sdhci_tegra_runtime_resume(struct device *dev)
++static int sdhci_tegra_runtime_resume(struct device *dev)
+ {
+ 	struct sdhci_host *host = dev_get_drvdata(dev);
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+@@ -1849,7 +1849,6 @@ static int __maybe_unused sdhci_tegra_ru
+ 	return clk_prepare_enable(pltfm_host->clk);
+ }
+ 
+-#ifdef CONFIG_PM_SLEEP
+ static int sdhci_tegra_suspend(struct device *dev)
+ {
+ 	struct sdhci_host *host = dev_get_drvdata(dev);
+@@ -1910,12 +1909,10 @@ disable_clk:
+ 	pm_runtime_force_suspend(dev);
+ 	return ret;
+ }
+-#endif
+ 
+ static const struct dev_pm_ops sdhci_tegra_dev_pm_ops = {
+-	SET_RUNTIME_PM_OPS(sdhci_tegra_runtime_suspend, sdhci_tegra_runtime_resume,
+-			   NULL)
+-	SET_SYSTEM_SLEEP_PM_OPS(sdhci_tegra_suspend, sdhci_tegra_resume)
++	RUNTIME_PM_OPS(sdhci_tegra_runtime_suspend, sdhci_tegra_runtime_resume, NULL)
++	SYSTEM_SLEEP_PM_OPS(sdhci_tegra_suspend, sdhci_tegra_resume)
+ };
+ 
+ static struct platform_driver sdhci_tegra_driver = {
+@@ -1923,7 +1920,7 @@ static struct platform_driver sdhci_tegr
+ 		.name	= "sdhci-tegra",
+ 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
+ 		.of_match_table = sdhci_tegra_dt_match,
+-		.pm	= &sdhci_tegra_dev_pm_ops,
++		.pm	= pm_ptr(&sdhci_tegra_dev_pm_ops),
+ 	},
+ 	.probe		= sdhci_tegra_probe,
+ 	.remove_new	= sdhci_tegra_remove,
+-- 
+cgit 1.3.1-korg

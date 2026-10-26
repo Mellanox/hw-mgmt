@@ -1,0 +1,33 @@
+From 625b05cba6c71cd34d4595e6f51411e426b675ec Mon Sep 17 00:00:00 2001
+From: ChunHao Lin <hau@realtek.com>
+Date: Fri, 16 May 2025 13:56:22 +0800
+Subject: [PATCH 4/9] net: phy: realtek: add RTL8127-internal PHY
+
+Backport of upstream 83d962316128 onto Linux 6.12.94.
+The driver still lives in drivers/net/phy/realtek.c.
+
+Upstream-commit: 83d962316128
+
+diff --git a/drivers/net/phy/realtek.c b/drivers/net/phy/realtek.c
+index 8159a81e7..bcae9ad6a 100644
+--- a/drivers/net/phy/realtek.c
++++ b/drivers/net/phy/realtek.c
+@@ -102,6 +102,7 @@
+ #define RTL_8221B_VB_CG				0x001cc849
+ #define RTL_8221B_VN_CG				0x001cc84a
+ #define RTL_8251B				0x001cc862
++#define RTL_8261C				0x001cc890
+ 
+ #define RTL8211F_LED_COUNT			3
+ 
+@@ -1232,6 +1233,7 @@ static int rtl_internal_nbaset_match_phy_device(struct phy_device *phydev)
+ 	case RTL_GENERIC_PHYID:
+ 	case RTL_8221B:
+ 	case RTL_8251B:
++	case RTL_8261C:
+ 	case 0x001cc841:
+ 		break;
+ 	default:
+-- 
+2.34.1
+

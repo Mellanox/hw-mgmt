@@ -1,0 +1,35 @@
+From e0f863036a8d0a333112866646513015f1ebb6eb Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sun, 13 Apr 2025 14:35:34 -0500
+Subject: [PATCH 0218/0797] arm64: tegra: Add CEC controller on Tegra210
+
+The CEC controller found on Tegra210 can be used to control consumer
+devices using the HDMI CEC pin.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250413-tegra-cec-v4-3-b6337b66ccad@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210.dtsi | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210.dtsi b/arch/arm64/boot/dts/nvidia/tegra210.dtsi
+index b6c84d195c0ef..402b0ede1472a 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210.dtsi
+@@ -959,6 +959,15 @@
+ 		reset-names = "fuse";
+ 	};
+ 
++	cec@70015000 {
++		compatible = "nvidia,tegra210-cec";
++		reg = <0x0 0x070015000 0x0 0x1000>;
++		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>;
++		clocks = <&tegra_car TEGRA210_CLK_CEC>;
++		clock-names = "cec";
++		status = "disabled";
++	};
++
+ 	mc: memory-controller@70019000 {
+ 		compatible = "nvidia,tegra210-mc";
+ 		reg = <0x0 0x70019000 0x0 0x1000>;

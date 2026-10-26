@@ -1,0 +1,42 @@
+From 1f806218164d1bb93f3db21eaf61254b08acdf03 Mon Sep 17 00:00:00 2001
+From: "Luis Claudio R. Goncalves" <lgoncalv@redhat.com>
+Date: Fri, 6 Dec 2024 10:01:14 -0300
+Subject: [PATCH 0101/0797] iommu/tegra241-cmdqv: do not use smp_processor_id in preemptible context
+
+During boot some of the calls to tegra241_cmdqv_get_cmdq() will happen
+in preemptible context. As this function calls smp_processor_id(), if
+CONFIG_DEBUG_PREEMPT is enabled, these calls will trigger a series of
+"BUG: using smp_processor_id() in preemptible" backtraces.
+
+As tegra241_cmdqv_get_cmdq() only calls smp_processor_id() to use the
+CPU number as a factor to balance out traffic on cmdq usage, it is safe
+to use raw_smp_processor_id() here.
+
+Cc: <stable@vger.kernel.org>
+Fixes: 918eb5c856f6 ("iommu/arm-smmu-v3: Add in-kernel support for NVIDIA Tegra241 (Grace) CMDQV")
+Signed-off-by: Luis Claudio R. Goncalves <lgoncalv@redhat.com>
+Reviewed-by: Jason Gunthorpe <jgg@nvidia.com>
+Reviewed-by: Nicolin Chen <nicolinc@nvidia.com>
+Tested-by: Nicolin Chen <nicolinc@nvidia.com>
+Link: https://lore.kernel.org/r/Z1L1mja3nXzsJ0Pk@uudg.org
+Signed-off-by: Will Deacon <will@kernel.org>
+---
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+index c8ec74f089f3d6..6e41ddaa24d636 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
++++ b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+@@ -339,7 +339,7 @@ tegra241_cmdqv_get_cmdq(struct arm_smmu_device *smmu,
+ 	 * one CPU at a time can enter the process, while the others
+ 	 * will be spinning at the same lock.
+ 	 */
+-	lidx = smp_processor_id() % cmdqv->num_lvcmdqs_per_vintf;
++	lidx = raw_smp_processor_id() % cmdqv->num_lvcmdqs_per_vintf;
+ 	vcmdq = vintf->lvcmdqs[lidx];
+ 	if (!vcmdq || !READ_ONCE(vcmdq->enabled))
+ 		return NULL;
+-- 
+cgit 1.3.1-korg
+

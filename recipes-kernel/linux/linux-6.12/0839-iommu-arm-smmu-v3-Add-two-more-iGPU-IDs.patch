@@ -1,0 +1,25 @@
+From nirmoyd@nvidia.com Thu, 20 Nov 2025 08:10:15 -0800
+From: Nirmoy Das <nirmoyd@nvidia.com>
+Date: Thu, 20 Nov 2025 08:10:15 -0800
+Subject: [PATCH] iommu/arm-smmu-v3: Add two more DGX Spark iGPU IDs
+
+Backport of NVIDIA SAUCE 599812a02d16 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94.
+
+Upstream-commit: 599812a02d16
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index 4499b8f3e..a8680f1cf 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -3519,7 +3519,9 @@ static int arm_smmu_def_domain_type(struct device *dev)
+ 		if (IS_HISI_PTT_DEVICE(pdev))
+ 			return IOMMU_DOMAIN_IDENTITY;
+ 
+-		if (pdev->vendor == PCI_VENDOR_ID_NVIDIA && pdev->device == 0x2E12)
++		if (pdev->vendor == PCI_VENDOR_ID_NVIDIA &&
++		    (pdev->device == 0x2E12 || pdev->device == 0x2E2A ||
++		     pdev->device == 0x2E2B))
+ 			return IOMMU_DOMAIN_DMA;
+ 	}
+ 

@@ -1,0 +1,97 @@
+From 2cf244db791ab26b7be4d50b651a3b6d5d83a9a2 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Wed, 22 Oct 2025 17:49:29 +0300
+Subject: [PATCH 0403/0797] ARM: tegra: add CSI nodes for Tegra20 and Tegra30
+
+Add CSI node to Tegra20 and Tegra30 device trees.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra20.dtsi | 19 ++++++++++++++++++-
+ arch/arm/boot/dts/nvidia/tegra30.dtsi | 24 ++++++++++++++++++++++--
+ 2 files changed, 40 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra20.dtsi b/arch/arm/boot/dts/nvidia/tegra20.dtsi
+index 882adb7f2f2639..c60fc1971188c5 100644
+--- a/arch/arm/boot/dts/nvidia/tegra20.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra20.dtsi
+@@ -64,7 +64,7 @@
+ 
+ 		vi@54080000 {
+ 			compatible = "nvidia,tegra20-vi";
+-			reg = <0x54080000 0x00040000>;
++			reg = <0x54080000 0x00000800>;
+ 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&tegra_car TEGRA20_CLK_VI>;
+ 			resets = <&tegra_car 20>;
+@@ -72,6 +72,23 @@
+ 			power-domains = <&pd_venc>;
+ 			operating-points-v2 = <&vi_dvfs_opp_table>;
+ 			status = "disabled";
++
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			ranges = <0x0 0x54080000 0x4000>;
++
++			csi: csi@800 {
++				compatible = "nvidia,tegra20-csi";
++				reg = <0x800 0x200>;
++				clocks = <&tegra_car TEGRA20_CLK_CSI>;
++				power-domains = <&pd_venc>;
++				#nvidia,mipi-calibrate-cells = <1>;
++				status = "disabled";
++
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
+ 		};
+ 
+ 		epp@540c0000 {
+diff --git a/arch/arm/boot/dts/nvidia/tegra30.dtsi b/arch/arm/boot/dts/nvidia/tegra30.dtsi
+index 2a4d93db81347e..4c4e6097c9163b 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30.dtsi
+@@ -150,8 +150,8 @@
+ 		};
+ 
+ 		vi@54080000 {
+-			compatible = "nvidia,tegra30-vi";
+-			reg = <0x54080000 0x00040000>;
++			compatible = "nvidia,tegra30-vi", "nvidia,tegra20-vi";
++			reg = <0x54080000 0x00000800>;
+ 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&tegra_car TEGRA30_CLK_VI>;
+ 			resets = <&tegra_car 20>;
+@@ -162,6 +162,26 @@
+ 			iommus = <&mc TEGRA_SWGROUP_VI>;
+ 
+ 			status = "disabled";
++
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			ranges = <0x0 0x54080000 0x4000>;
++
++			csi: csi@800 {
++				compatible = "nvidia,tegra30-csi";
++				reg = <0x800 0x200>;
++				clocks = <&tegra_car TEGRA30_CLK_CSI>,
++					 <&tegra_car TEGRA30_CLK_CSIA_PAD>,
++					 <&tegra_car TEGRA30_CLK_CSIB_PAD>;
++				clock-names = "csi", "csia-pad", "csib-pad";
++				power-domains = <&pd_venc>;
++				#nvidia,mipi-calibrate-cells = <1>;
++				status = "disabled";
++
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
+ 		};
+ 
+ 		epp@540c0000 {
+-- 
+cgit 1.3.1-korg
+

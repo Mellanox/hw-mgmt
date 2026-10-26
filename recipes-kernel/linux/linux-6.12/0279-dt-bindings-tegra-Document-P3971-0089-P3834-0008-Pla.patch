@@ -1,0 +1,32 @@
+From ad83c4cd19b259a69515ae26410bc9cef7b1f938 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Wed, 7 May 2025 16:37:57 +0200
+Subject: [PATCH 0279/0797] dt-bindings: tegra: Document P3971-0089+P3834-0008 Platform
+
+This is an engineering reference platform for the Tegra264 SoC.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250507143802.1230919-4-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra.yaml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 9cae3268a8274f..d3a9e86337738d 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -242,5 +242,10 @@ properties:
+           - const: nvidia,p3768-0000+p3767-0005
+           - const: nvidia,p3767-0005
+           - const: nvidia,tegra234
++      - description: NVIDIA P3971-0089+P3834-0008 Engineering Reference Platform
++        items:
++          - const: nvidia,p3971-0089+p3834-0008
++          - const: nvidia,p3834-0008
++          - const: nvidia,tegra264
+ 
+ additionalProperties: true
+-- 
+cgit 1.3.1-korg
+

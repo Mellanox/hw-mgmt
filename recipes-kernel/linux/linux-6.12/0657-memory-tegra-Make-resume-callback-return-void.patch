@@ -1,0 +1,60 @@
+From 4f42beeb9796e24e8009c46d1a2d676803e5ab24 Mon Sep 17 00:00:00 2001
+From: Ashish Mhetre <amhetre@nvidia.com>
+Date: Thu, 30 Apr 2026 09:52:00 +0000
+Subject: [PATCH 0657/0797] memory: tegra: Make ->resume() callback return void
+
+tegra186_mc_resume() is the only implementation of the SoC ->resume()
+op in struct tegra_mc_ops, and it can never fail as the SID override
+loop has no error path. The int return value is therefore not used.
+
+Change the prototype to return void so callers do not need to deal
+with a value that is always 0. If a future SoC needs to report
+failure from resume, an int return type can be reintroduced then.
+
+Signed-off-by: Ashish Mhetre <amhetre@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260430095202.1167651-2-amhetre@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/tegra186.c | 4 +---
+ include/soc/tegra/mc.h          | 2 +-
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/memory/tegra/tegra186.c b/drivers/memory/tegra/tegra186.c
+index 91d56165605f66..579d058da220cd 100644
+--- a/drivers/memory/tegra/tegra186.c
++++ b/drivers/memory/tegra/tegra186.c
+@@ -154,7 +154,7 @@ static int tegra186_mc_probe_device(struct tegra_mc *mc, struct device *dev)
+ 	return 0;
+ }
+ 
+-static int tegra186_mc_resume(struct tegra_mc *mc)
++static void tegra186_mc_resume(struct tegra_mc *mc)
+ {
+ #if IS_ENABLED(CONFIG_IOMMU_API)
+ 	unsigned int i;
+@@ -165,8 +165,6 @@ static int tegra186_mc_resume(struct tegra_mc *mc)
+ 		tegra186_mc_client_sid_override(mc, client, client->sid);
+ 	}
+ #endif
+-
+-	return 0;
+ }
+ 
+ const struct tegra_mc_ops tegra186_mc_ops = {
+diff --git a/include/soc/tegra/mc.h b/include/soc/tegra/mc.h
+index e6da035d1306d8..25d465d7049389 100644
+--- a/include/soc/tegra/mc.h
++++ b/include/soc/tegra/mc.h
+@@ -164,7 +164,7 @@ struct tegra_mc_ops {
+ 	 */
+ 	int (*probe)(struct tegra_mc *mc);
+ 	void (*remove)(struct tegra_mc *mc);
+-	int (*resume)(struct tegra_mc *mc);
++	void (*resume)(struct tegra_mc *mc);
+ 	int (*probe_device)(struct tegra_mc *mc, struct device *dev);
+ };
+ 
+-- 
+cgit 1.3.1-korg
+

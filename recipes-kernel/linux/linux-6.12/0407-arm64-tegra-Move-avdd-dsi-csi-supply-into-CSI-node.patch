@@ -1,0 +1,53 @@
+From f797e587eb8bb7a8f11482b24c46e3359d8a9ffe Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Wed, 22 Oct 2025 17:20:41 +0300
+Subject: [PATCH 0407/0797] arm64: tegra: Move avdd-dsi-csi-supply into CSI node
+
+avdd-dsi-csi-supply belongs in CSI node, not VI.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Tested-by: Luca Ceresoli <luca.ceresoli@bootlin.com> # tegra20, parallel camera
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi     | 4 ++--
+ arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi b/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi
+index 584461f3a6196c..4a64fe510f0355 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi
+@@ -20,10 +20,10 @@
+ 		vi@54080000 {
+ 			status = "okay";
+ 
+-			avdd-dsi-csi-supply = <&vdd_dsi_csi>;
+-
+ 			csi@838 {
+ 				status = "okay";
++
++				avdd-dsi-csi-supply = <&vdd_dsi_csi>;
+ 			};
+ 		};
+ 
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts b/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
+index ec0e84cb83ef9b..f1d2606d9808aa 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p3450-0000.dts
+@@ -64,10 +64,10 @@
+ 		vi@54080000 {
+ 			status = "okay";
+ 
+-			avdd-dsi-csi-supply = <&vdd_sys_1v2>;
+-
+ 			csi@838 {
+ 				status = "okay";
++
++				avdd-dsi-csi-supply = <&vdd_sys_1v2>;
+ 			};
+ 		};
+ 
+-- 
+cgit 1.3.1-korg
+

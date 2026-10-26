@@ -1,0 +1,51 @@
+From 3c2c00572fc3e0b128f75c7ce9c3f70ca457cc3b Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Tue, 29 Apr 2025 09:18:02 +0300
+Subject: [PATCH 0288/0797] ARM: tegra: chagall: Add embedded controller node
+
+Add embedded controller node to Pegatron Chagall device-tree.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Link: https://lore.kernel.org/r/20250429061803.9581-5-clamor95@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra30-pegatron-chagall.dts | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-pegatron-chagall.dts b/arch/arm/boot/dts/nvidia/tegra30-pegatron-chagall.dts
+index 4012f9c799a8a3..b7d0ebb766a6ec 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-pegatron-chagall.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-pegatron-chagall.dts
+@@ -1155,6 +1155,14 @@
+ 		status = "okay";
+ 		clock-frequency = <400000>;
+ 
++		embedded-controller@10 {
++			compatible = "pegatron,chagall-ec";
++			reg = <0x10>;
++
++			monitored-battery = <&battery>;
++			power-supplies = <&mains>;
++		};
++
+ 		/* Wolfson Microelectronics WM8903 audio codec */
+ 		wm8903: audio-codec@1a {
+ 			compatible = "wlf,wm8903";
+@@ -2596,6 +2604,14 @@
+ 		default-brightness-level = <15>;
+ 	};
+ 
++	battery: battery-cell {
++		compatible = "simple-battery";
++		device-chemistry = "lithium-ion-polymer";
++		charge-full-design-microamp-hours = <3050000>;
++		energy-full-design-microwatt-hours = <23000000>;
++		operating-range-celsius = <0 45>;
++	};
++
+ 	/* PMIC has a built-in 32KHz oscillator which is used by PMC */
+ 	clk32k_in: clock-32k {
+ 		compatible = "fixed-clock";
+-- 
+cgit 1.3.1-korg
+

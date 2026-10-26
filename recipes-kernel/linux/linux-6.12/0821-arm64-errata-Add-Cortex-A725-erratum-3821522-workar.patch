@@ -1,0 +1,60 @@
+From 7fbb9bdebb6a13d4d1f5c6529822a5305b28db72 Mon Sep 17 00:00:00 2001
+From: Beata Michalska <beata.michalska@arm.com>
+Date: Thu, 1 Oct 2026 11:00:32 +0200
+Subject: [PATCH 9/9] arm64: errata: Add Cortex-A725 erratum 3821522 workaround
+
+Backport of upstream 45f730467987 onto Linux 6.12.94.
+The broken constant-counter check is still ARM64_WORKAROUND_2457168.
+
+Upstream-commit: 45f730467987
+
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 012ec1702..4ce801a7f 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -1038,6 +1038,21 @@ config ARM64_ERRATUM_2457168
+ 
+ 	  If unsure, say Y.
+ 
++config ARM64_ERRATUM_3821522
++	bool "Cortex-A725: 3821522: workaround for possible CNT_CYCLES increment error due to WFE/WFI"
++	depends on ARM64_AMU_EXTN
++	default y
++	help
++	  This option adds the workaround for ARM Cortex-A725 erratum 3821522.
++
++	  On affected A725 cores, the CNT_CYCLES event may incur a significant
++	  increment error when entering and subsequently exiting WFx. Reads of
++	  the affected counter return 0, using the existing 6.12
++	  ARM64_WORKAROUND_2457168 capability bit. Upstream later moved that
++	  check to ARM64_WORKAROUND_BROKEN_AMU_CONSTCNT.
++
++	  If unsure, say Y.
++
+ config ARM64_ERRATUM_2645198
+ 	bool "Cortex-A715: 2645198: Workaround possible [ESR|FAR]_ELx corruption"
+ 	default y
+diff --git a/arch/arm64/kernel/cpu_errata.c b/arch/arm64/kernel/cpu_errata.c
+index 80e47d3e8..69745c023 100644
+--- a/arch/arm64/kernel/cpu_errata.c
++++ b/arch/arm64/kernel/cpu_errata.c
+@@ -760,6 +760,16 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
+ 		CAP_MIDR_RANGE(MIDR_CORTEX_A510, 0, 0, 1, 1)
+ 	},
+ #endif
++#ifdef CONFIG_ARM64_ERRATUM_3821522
++	{
++		.desc = "ARM erratum 3821522",
++		.capability = ARM64_WORKAROUND_2457168,
++		.type = ARM64_CPUCAP_WEAK_LOCAL_CPU_FEATURE,
++
++		/* Cortex-A725 r0p0 - r0p2 */
++		CAP_MIDR_RANGE(MIDR_CORTEX_A725, 0, 0, 0, 2)
++	},
++#endif
+ #ifdef CONFIG_ARM64_ERRATUM_2038923
+ 	{
+ 		.desc = "ARM erratum 2038923",
+-- 
+2.34.1
+

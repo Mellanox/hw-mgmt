@@ -1,0 +1,173 @@
+From wysocki@backport Mon Sep 17 00:00:00 2001
+From: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
+Date: Tue, 6 May 2025 22:37:15 +0200
+Subject: [PATCH] cpufreq/sched: Move cpufreq-specific EAS checks to cpufreq
+
+Backport of upstream 4854649b1fb4 onto Linux 6.12.94.
+sugov_is_governor() from f42c8556a069 is included so sched_is_eas_possible()
+can stop reading the schedutil governor object. 6.12 has no policy guard
+helper, so the moved check uses cpufreq_cpu_get() and cpufreq_cpu_put().
+
+Upstream-commit: 4854649b1fb4
+
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index 9600a96..b7cee22 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -3075,6 +3075,39 @@ static int __init cpufreq_core_init(void)
+ 
+ 	return 0;
+ }
++
++static bool cpufreq_policy_is_good_for_eas(unsigned int cpu)
++{
++	struct cpufreq_policy *policy;
++	bool ready;
++
++	policy = cpufreq_cpu_get(cpu);
++	if (!policy) {
++		pr_debug("cpufreq policy not set for CPU: %d\n", cpu);
++		return false;
++	}
++
++	ready = sugov_is_governor(policy);
++	cpufreq_cpu_put(policy);
++	return ready;
++}
++
++bool cpufreq_ready_for_eas(const struct cpumask *cpu_mask)
++{
++	unsigned int cpu;
++
++	/* Do not attempt EAS if schedutil is not being used. */
++	for_each_cpu(cpu, cpu_mask) {
++		if (!cpufreq_policy_is_good_for_eas(cpu)) {
++			pr_debug("rd %*pbl: schedutil is mandatory for EAS\n",
++				 cpumask_pr_args(cpu_mask));
++			return false;
++		}
++	}
++
++	return true;
++}
++
+ module_param(off, int, 0444);
+ module_param_string(default_governor, default_governor, CPUFREQ_NAME_LEN, 0444);
+ core_initcall(cpufreq_core_init);
+diff --git a/include/linux/cpufreq.h b/include/linux/cpufreq.h
+index 794e383..8478a0b 100644
+--- a/include/linux/cpufreq.h
++++ b/include/linux/cpufreq.h
+@@ -644,6 +644,15 @@ module_exit(__governor##_exit)
+ struct cpufreq_governor *cpufreq_default_governor(void);
+ struct cpufreq_governor *cpufreq_fallback_governor(void);
+ 
++#ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
++bool sugov_is_governor(struct cpufreq_policy *policy);
++#else
++static inline bool sugov_is_governor(struct cpufreq_policy *policy)
++{
++	return false;
++}
++#endif
++
+ static inline void cpufreq_policy_apply_limits(struct cpufreq_policy *policy)
+ {
+ 	if (policy->max < policy->cur)
+@@ -1233,6 +1242,7 @@ unsigned int cpufreq_generic_get(unsigned int cpu);
+ void cpufreq_generic_init(struct cpufreq_policy *policy,
+ 		struct cpufreq_frequency_table *table,
+ 		unsigned int transition_latency);
++bool cpufreq_ready_for_eas(const struct cpumask *cpu_mask);
+ 
+ static inline void cpufreq_register_em_with_opp(struct cpufreq_policy *policy)
+ {
+diff --git a/kernel/sched/cpufreq_schedutil.c b/kernel/sched/cpufreq_schedutil.c
+index e5ced97..0856b76 100644
+--- a/kernel/sched/cpufreq_schedutil.c
++++ b/kernel/sched/cpufreq_schedutil.c
+@@ -652,7 +652,7 @@ static void sugov_eas_rebuild_sd(void)
+ static inline void sugov_eas_rebuild_sd(void) { };
+ #endif
+ 
+-struct cpufreq_governor schedutil_gov;
++static struct cpufreq_governor schedutil_gov;
+ 
+ static struct sugov_policy *sugov_policy_alloc(struct cpufreq_policy *policy)
+ {
+@@ -923,7 +923,7 @@ static void sugov_limits(struct cpufreq_policy *policy)
+ 	WRITE_ONCE(sg_policy->limits_changed, true);
+ }
+ 
+-struct cpufreq_governor schedutil_gov = {
++static struct cpufreq_governor schedutil_gov = {
+ 	.name			= "schedutil",
+ 	.owner			= THIS_MODULE,
+ 	.flags			= CPUFREQ_GOV_DYNAMIC_SWITCHING,
+@@ -941,4 +941,9 @@ struct cpufreq_governor *cpufreq_default_governor(void)
+ }
+ #endif
+ 
++bool sugov_is_governor(struct cpufreq_policy *policy)
++{
++	return policy->governor == &schedutil_gov;
++}
++
+ cpufreq_governor_init(schedutil_gov);
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 7956abe..371ed3e 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -3530,8 +3530,6 @@ static inline bool sched_energy_enabled(void)
+ 	return static_branch_unlikely(&sched_energy_present);
+ }
+ 
+-extern struct cpufreq_governor schedutil_gov;
+-
+ #else /* ! (CONFIG_ENERGY_MODEL && CONFIG_CPU_FREQ_GOV_SCHEDUTIL) */
+ 
+ #define perf_domain_span(pd) NULL
+diff --git a/kernel/sched/topology.c b/kernel/sched/topology.c
+index bd8b2b3..b60b397 100644
+--- a/kernel/sched/topology.c
++++ b/kernel/sched/topology.c
+@@ -215,8 +215,6 @@ static bool sched_energy_update;
+ static bool sched_is_eas_possible(const struct cpumask *cpu_mask)
+ {
+ 	bool any_asym_capacity = false;
+-	struct cpufreq_policy *policy;
+-	struct cpufreq_governor *gov;
+ 	int i;
+ 
+ 	/* EAS is enabled for asymmetric CPU capacity topologies. */
+@@ -251,25 +249,12 @@ static bool sched_is_eas_possible(const struct cpumask *cpu_mask)
+ 		return false;
+ 	}
+ 
+-	/* Do not attempt EAS if schedutil is not being used. */
+-	for_each_cpu(i, cpu_mask) {
+-		policy = cpufreq_cpu_get(i);
+-		if (!policy) {
+-			if (sched_debug()) {
+-				pr_info("rd %*pbl: Checking EAS, cpufreq policy not set for CPU: %d",
+-					cpumask_pr_args(cpu_mask), i);
+-			}
+-			return false;
+-		}
+-		gov = policy->governor;
+-		cpufreq_cpu_put(policy);
+-		if (gov != &schedutil_gov) {
+-			if (sched_debug()) {
+-				pr_info("rd %*pbl: Checking EAS, schedutil is mandatory\n",
+-					cpumask_pr_args(cpu_mask));
+-			}
+-			return false;
++	if (!cpufreq_ready_for_eas(cpu_mask)) {
++		if (sched_debug()) {
++			pr_info("rd %*pbl: Checking EAS: cpufreq is not ready\n",
++				cpumask_pr_args(cpu_mask));
+ 		}
++		return false;
+ 	}
+ 
+ 	return true;

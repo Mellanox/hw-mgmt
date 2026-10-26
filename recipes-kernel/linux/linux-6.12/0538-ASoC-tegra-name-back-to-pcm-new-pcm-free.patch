@@ -1,0 +1,97 @@
+From 1f7fc5f1f084af6fcb4c42ab8bcc9d46ef5d1f36 Mon Sep 17 00:00:00 2001
+From: Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
+Date: Mon, 16 Mar 2026 02:27:33 +0000
+Subject: [PATCH 0538/0797] ASoC: tegra: name back to pcm_new()/pcm_free()
+
+We have been used pcm_new()/pcm_free(), but switched to
+pcm_construct()/pcm_destruct() to use extra parameters [1].
+
+pcm_new()/free() had been removed [2], but each drivers are still
+using such function naming. Let's name back to pcm_new()/pcm_free()
+again.
+
+[1] commit c64bfc906600 ("ASoC: soc-core: add new pcm_construct/pcmdestruct")
+[2] commit e9067bb50278 ("ASoC: soc-component: remove snd_pcm_ops from component driver")
+
+Signed-off-by: Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
+Link: https://patch.msgid.link/87bjgojyoy.wl-kuninori.morimoto.gx@renesas.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_admaif.c | 6 +++---
+ sound/soc/tegra/tegra_pcm.c       | 6 +++---
+ sound/soc/tegra/tegra_pcm.h       | 4 ++--
+ 3 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_admaif.c b/sound/soc/tegra/tegra210_admaif.c
+index 0976779d29f286..ecb09552666289 100644
+--- a/sound/soc/tegra/tegra210_admaif.c
++++ b/sound/soc/tegra/tegra210_admaif.c
+@@ -839,7 +839,7 @@ static struct snd_kcontrol_new tegra264_admaif_controls[] = {
+ static const struct snd_soc_component_driver tegra210_admaif_cmpnt = {
+ 	.controls		= tegra210_admaif_controls,
+ 	.num_controls		= ARRAY_SIZE(tegra210_admaif_controls),
+-	.pcm_construct		= tegra_pcm_construct,
++	.pcm_new		= tegra_pcm_new,
+ 	.open			= tegra_pcm_open,
+ 	.close			= tegra_pcm_close,
+ 	.hw_params		= tegra_pcm_hw_params,
+@@ -849,7 +849,7 @@ static const struct snd_soc_component_driver tegra210_admaif_cmpnt = {
+ static const struct snd_soc_component_driver tegra186_admaif_cmpnt = {
+ 	.controls		= tegra186_admaif_controls,
+ 	.num_controls		= ARRAY_SIZE(tegra186_admaif_controls),
+-	.pcm_construct		= tegra_pcm_construct,
++	.pcm_new		= tegra_pcm_new,
+ 	.open			= tegra_pcm_open,
+ 	.close			= tegra_pcm_close,
+ 	.hw_params		= tegra_pcm_hw_params,
+@@ -859,7 +859,7 @@ static const struct snd_soc_component_driver tegra186_admaif_cmpnt = {
+ static const struct snd_soc_component_driver tegra264_admaif_cmpnt = {
+ 	.controls		= tegra264_admaif_controls,
+ 	.num_controls		= ARRAY_SIZE(tegra264_admaif_controls),
+-	.pcm_construct		= tegra_pcm_construct,
++	.pcm_new		= tegra_pcm_new,
+ 	.open			= tegra_pcm_open,
+ 	.close			= tegra_pcm_close,
+ 	.hw_params		= tegra_pcm_hw_params,
+diff --git a/sound/soc/tegra/tegra_pcm.c b/sound/soc/tegra/tegra_pcm.c
+index 05d59e03b1c5e4..c490a9e6685863 100644
+--- a/sound/soc/tegra/tegra_pcm.c
++++ b/sound/soc/tegra/tegra_pcm.c
+@@ -204,8 +204,8 @@ static int tegra_pcm_dma_allocate(struct device *dev, struct snd_soc_pcm_runtime
+ 	return snd_pcm_set_fixed_buffer_all(pcm, SNDRV_DMA_TYPE_DEV_WC, dev, size);
+ }
+ 
+-int tegra_pcm_construct(struct snd_soc_component *component,
+-			struct snd_soc_pcm_runtime *rtd)
++int tegra_pcm_new(struct snd_soc_component *component,
++		  struct snd_soc_pcm_runtime *rtd)
+ {
+ 	struct device *dev = component->dev;
+ 
+@@ -218,7 +218,7 @@ int tegra_pcm_construct(struct snd_soc_component *component,
+ 
+ 	return tegra_pcm_dma_allocate(dev, rtd, tegra_pcm_hardware.buffer_bytes_max);
+ }
+-EXPORT_SYMBOL_GPL(tegra_pcm_construct);
++EXPORT_SYMBOL_GPL(tegra_pcm_new);
+ 
+ MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
+ MODULE_DESCRIPTION("Tegra PCM ASoC driver");
+diff --git a/sound/soc/tegra/tegra_pcm.h b/sound/soc/tegra/tegra_pcm.h
+index 2a36eea1740dd6..ad69ca9233da0d 100644
+--- a/sound/soc/tegra/tegra_pcm.h
++++ b/sound/soc/tegra/tegra_pcm.h
+@@ -20,8 +20,8 @@
+ #include <sound/dmaengine_pcm.h>
+ #include <sound/asound.h>
+ 
+-int tegra_pcm_construct(struct snd_soc_component *component,
+-			struct snd_soc_pcm_runtime *rtd);
++int tegra_pcm_new(struct snd_soc_component *component,
++		  struct snd_soc_pcm_runtime *rtd);
+ int tegra_pcm_open(struct snd_soc_component *component,
+ 		   struct snd_pcm_substream *substream);
+ int tegra_pcm_close(struct snd_soc_component *component,
+-- 
+cgit 1.3.1-korg
+

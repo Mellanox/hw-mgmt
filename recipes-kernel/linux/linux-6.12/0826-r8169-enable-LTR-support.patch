@@ -1,0 +1,126 @@
+From xu@backport Mon Sep 17 00:00:00 2001
+From: Javen Xu <javen_xu@realsil.com.cn>
+Date: Fri, 9 Jan 2026 15:04:15 +0800
+Subject: [PATCH] r8169: enable LTR support
+
+Backport of upstream 9ab94a32af70 onto Linux 6.12.94.
+6.12 numbers RTL8126A as versions 65 and 66, which upstream later calls
+version 70. Those versions share the RTL8127A LTR sequence. Version 70
+itself is not present here.
+
+Upstream-commit: 9ab94a32af70
+
+diff --git a/drivers/net/ethernet/realtek/r8169_main.c b/drivers/net/ethernet/realtek/r8169_main.c
+index 1bf2c6a..0489abc 100644
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -335,6 +335,8 @@ enum rtl8168_registers {
+ #define PWM_EN				(1 << 22)
+ #define RXDV_GATED_EN			(1 << 19)
+ #define EARLY_TALLY_EN			(1 << 16)
++	COMBO_LTR_EXTEND	= 0xb6,
++#define COMBO_LTR_EXTEND_EN		BIT(0)
+ };
+ 
+ enum rtl8125_registers {
+@@ -359,6 +361,14 @@ enum rtl8125_registers {
+ #define RX_VLAN_OUTER_8125	BIT(23)
+ #define RX_VLAN_8125		(RX_VLAN_INNER_8125 | RX_VLAN_OUTER_8125)
+ 
++#define ALDPS_LTR			0xe0a2
++#define LTR_OBFF_LOCK			0xe032
++#define LTR_SNOOP			0xe034
++#define ALDPS_LTR_EN			BIT(0)
++#define LTR_OBFF_LOCK_EN		BIT(0)
++#define LINK_SPEED_CHANGE_EN		BIT(14)
++#define LTR_SNOOP_EN			(BIT(15) | BIT(14))
++
+ #define RX_FETCH_DFLT_8125	(8 << 27)
+ 
+ enum rtl_register_content {
+@@ -3016,6 +3026,77 @@ static void rtl_disable_exit_l1(struct rtl8169_private *tp)
+ 	}
+ }
+ 
++static void rtl_enable_ltr(struct rtl8169_private *tp)
++{
++	switch (tp->mac_version) {
++	case RTL_GIGA_MAC_VER_80:
++	case RTL_GIGA_MAC_VER_65 ... RTL_GIGA_MAC_VER_66:
++		/* 6.12 numbers RTL8126A as versions 65/66. Upstream calls
++		 * that version 70 and programs the same LTR values as 8127A.
++		 */
++		r8168_mac_ocp_write(tp, 0xcdd0, 0x9003);
++		r8168_mac_ocp_modify(tp, LTR_SNOOP, 0x0000, LTR_SNOOP_EN);
++		r8168_mac_ocp_modify(tp, ALDPS_LTR, 0x0000, ALDPS_LTR_EN);
++		r8168_mac_ocp_write(tp, 0xcdd2, 0x8c09);
++		r8168_mac_ocp_write(tp, 0xcdd8, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdd4, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdda, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdd6, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcddc, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcde8, 0x887a);
++		r8168_mac_ocp_write(tp, 0xcdea, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdec, 0x8c09);
++		r8168_mac_ocp_write(tp, 0xcdee, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdf0, 0x8a62);
++		r8168_mac_ocp_write(tp, 0xcdf2, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdf4, 0x883e);
++		r8168_mac_ocp_write(tp, 0xcdf6, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdf8, 0x8849);
++		r8168_mac_ocp_write(tp, 0xcdfa, 0x9003);
++		r8168_mac_ocp_modify(tp, LTR_OBFF_LOCK, 0x0000, LINK_SPEED_CHANGE_EN);
++		break;
++	case RTL_GIGA_MAC_VER_61:
++	case RTL_GIGA_MAC_VER_63 ... RTL_GIGA_MAC_VER_64:
++		r8168_mac_ocp_write(tp, 0xcdd0, 0x9003);
++		r8168_mac_ocp_modify(tp, LTR_SNOOP, 0x0000, LTR_SNOOP_EN);
++		r8168_mac_ocp_modify(tp, ALDPS_LTR, 0x0000, ALDPS_LTR_EN);
++		r8168_mac_ocp_write(tp, 0xcdd2, 0x889c);
++		r8168_mac_ocp_write(tp, 0xcdd8, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdd4, 0x8c30);
++		r8168_mac_ocp_write(tp, 0xcdda, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdd6, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcddc, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcde8, 0x883e);
++		r8168_mac_ocp_write(tp, 0xcdea, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdec, 0x889c);
++		r8168_mac_ocp_write(tp, 0xcdee, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdf0, 0x8C09);
++		r8168_mac_ocp_write(tp, 0xcdf2, 0x9003);
++		r8168_mac_ocp_modify(tp, LTR_OBFF_LOCK, 0x0000, LINK_SPEED_CHANGE_EN);
++		break;
++	case RTL_GIGA_MAC_VER_46 ... RTL_GIGA_MAC_VER_48:
++	case RTL_GIGA_MAC_VER_52:
++		r8168_mac_ocp_modify(tp, ALDPS_LTR, 0x0000, ALDPS_LTR_EN);
++		RTL_W8(tp, COMBO_LTR_EXTEND, RTL_R8(tp, COMBO_LTR_EXTEND) | COMBO_LTR_EXTEND_EN);
++		fallthrough;
++	case RTL_GIGA_MAC_VER_51:
++		r8168_mac_ocp_modify(tp, LTR_SNOOP, 0x0000, LTR_SNOOP_EN);
++		r8168_mac_ocp_write(tp, 0xe02c, 0x1880);
++		r8168_mac_ocp_write(tp, 0xe02e, 0x4880);
++		r8168_mac_ocp_write(tp, 0xcdd8, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdda, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcddc, 0x9003);
++		r8168_mac_ocp_write(tp, 0xcdd2, 0x883c);
++		r8168_mac_ocp_write(tp, 0xcdd4, 0x8c12);
++		r8168_mac_ocp_write(tp, 0xcdd6, 0x9003);
++		break;
++	default:
++		return;
++	}
++	/* chip can trigger LTR */
++	r8168_mac_ocp_modify(tp, LTR_OBFF_LOCK, 0x0003, LTR_OBFF_LOCK_EN);
++}
++
+ static void rtl_hw_aspm_clkreq_enable(struct rtl8169_private *tp, bool enable)
+ {
+ 	u8 val8;
+@@ -3045,6 +3126,7 @@ static void rtl_hw_aspm_clkreq_enable(struct rtl8169_private *tp, bool enable)
+ 			break;
+ 		}
+ 
++		rtl_enable_ltr(tp);
+ 		switch (tp->mac_version) {
+ 		case RTL_GIGA_MAC_VER_46 ... RTL_GIGA_MAC_VER_48:
+ 		case RTL_GIGA_MAC_VER_61 ... RTL_GIGA_MAC_VER_66:

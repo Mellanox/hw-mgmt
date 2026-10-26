@@ -1,0 +1,47 @@
+From 804ebc2bdcc85f30973708835b47ee023a4be003 Mon Sep 17 00:00:00 2001
+From: Kartik Rajput <kkartik@nvidia.com>
+Date: Thu, 28 Aug 2025 11:29:29 +0530
+Subject: [PATCH 0325/0797] dt-bindings: i2c: nvidia,tegra20-i2c: Document Tegra264 I2C
+
+Tegra264 has 17 generic I2C controllers, two of which are in always-on
+partition of the SoC. In addition to the features supported by Tegra194
+it also supports a SW mutex register to allow sharing the same I2C
+instance across multiple firmware.
+
+Document compatible string "nvidia,tegra264-i2c" for Tegra264 I2C.
+
+Signed-off-by: Kartik Rajput <kkartik@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml b/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
+index 6b6f6762d122f9..f0693b872cb6b3 100644
+--- a/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
++++ b/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
+@@ -80,6 +80,12 @@ properties:
+           support for 64 KiB transactions whereas earlier chips supported no
+           more than 4 KiB per transactions.
+         const: nvidia,tegra194-i2c
++      - description:
++          Tegra264 has 17 generic I2C controllers, two of which are in the AON
++          (always-on) partition of the SoC. In addition to the features from
++          Tegra194, a SW mutex register is added to support use of the same I2C
++          instance across multiple firmwares.
++        const: nvidia,tegra264-i2c
+ 
+   reg:
+     maxItems: 1
+@@ -186,6 +192,7 @@ allOf:
+             contains:
+               enum:
+                 - nvidia,tegra194-i2c
++                - nvidia,tegra264-i2c
+     then:
+       required:
+         - resets
+-- 
+cgit 1.3.1-korg
+

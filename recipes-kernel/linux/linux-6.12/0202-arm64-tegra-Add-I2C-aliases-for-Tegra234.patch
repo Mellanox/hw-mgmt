@@ -1,0 +1,38 @@
+From 34c6ba89e1487181b4278e5c1b329327439ec715 Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Tue, 6 May 2025 15:29:36 +0530
+Subject: [PATCH 0202/0797] arm64: tegra: Add I2C aliases for Tegra234
+
+Add aliases for all I2C nodes so that the I2C devnode numbers align with
+hardware bus number.
+
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Link: https://lore.kernel.org/r/20250506095936.10687-4-akhilrajeev@nvidia.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra234.dtsi | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra234.dtsi b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+index 12fc850f9f5c3..df034dbb82853 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra234.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+@@ -16,6 +16,18 @@
+ 	#address-cells = <2>;
+ 	#size-cells = <2>;
+ 
++	aliases {
++		i2c0 = &gen1_i2c;
++		i2c1 = &gen2_i2c;
++		i2c2 = &cam_i2c;
++		i2c3 = &dp_aux_ch1_i2c;
++		i2c4 = &bpmp_i2c;
++		i2c5 = &dp_aux_ch0_i2c;
++		i2c6 = &dp_aux_ch2_i2c;
++		i2c7 = &gen8_i2c;
++		i2c8 = &dp_aux_ch3_i2c;
++	};
++
+ 	bus@0 {
+ 		compatible = "simple-bus";
+ 

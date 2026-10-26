@@ -1,0 +1,41 @@
+From abhsahu@nvidia.com Tue, 22 Jul 2025 13:45:33 +0000
+From: Abhishek Sahu <abhsahu@nvidia.com>
+Date: Tue, 22 Jul 2025 13:45:33 +0000
+Subject: [PATCH] platform/arm64: Fix the FFH data response length
+
+Backport of NVIDIA SAUCE 4668e71ed358 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94.
+
+Upstream-commit: 4668e71ed358
+
+diff --git a/drivers/platform/arm64/nvidia-ffa-ec.c b/drivers/platform/arm64/nvidia-ffa-ec.c
+index 88745aea3..1c9da1bcd 100644
+--- a/drivers/platform/arm64/nvidia-ffa-ec.c
++++ b/drivers/platform/arm64/nvidia-ffa-ec.c
+@@ -531,6 +531,7 @@ static int nvidia_ffh_handler(struct acpi_ffh_info *info, acpi_integer *value, v
+ 	struct nvidia_ec_ffa_packet *ffa_packet = (struct nvidia_ec_ffa_packet *)value;
+ 	struct nvidia_ec_ffa_device *cur, *ec_dev =  NULL;
+ 	int ret;
++	unsigned int ffh_copy_len;
+ 	uuid_t uuid;
+ 
+ 	/* Only offset 4 is supported */
+@@ -594,9 +595,16 @@ static int nvidia_ffh_handler(struct acpi_ffh_info *info, acpi_integer *value, v
+ 	/* Set the status as success */
+ 	ffa_packet->status = 0;
+ 
+-	/* Copy the ACPI FFA data back into ACPI FFH packet */
+-	memcpy(ffa_packet->rawdata, ffa_data.data, ffa_packet->length);
++	/*
++	 * Copy the ACPI FFA data back into ACPI FFH packet.
++	 *
++	 * ACPI FFH packet raw data length can't be fetched here, so copy
++	 * all bytes from ffa_data.data
++	 */
++	ffh_copy_len = min(sizeof(ffa_data.data),
++			   info->length - offsetof(struct nvidia_ec_ffa_packet, rawdata));
+ 
++	memcpy(ffa_packet->rawdata, ffa_data.data, ffh_copy_len);
+ 	return 0;
+ }
+ 

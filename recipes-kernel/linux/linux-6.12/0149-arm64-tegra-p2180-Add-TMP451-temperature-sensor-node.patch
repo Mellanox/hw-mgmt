@@ -1,0 +1,42 @@
+From 65d691a4400e111e8bb2422a5f4f28de34298be7 Mon Sep 17 00:00:00 2001
+From: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Date: Mon, 24 Feb 2025 12:17:39 +0000
+Subject: [PATCH 0149/0797] arm64: tegra: p2180: Add TMP451 temperature sensor node
+
+The Jetson TX1 module contains a TI TMP451 temperature sensor.
+Add a DT node for it.
+
+Signed-off-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Link: https://lore.kernel.org/r/20250224-diogo-gpio_exp-v1-4-80fb84ac48c6@tecnico.ulisboa.pt
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi b/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi
+index 1c53ccc5e3cbf3..9b9d1d15b0c7ea 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p2180.dtsi
+@@ -49,6 +49,19 @@
+ 		};
+ 	};
+ 
++	i2c@7000c000 {
++		status = "okay";
++
++		tmp451: temperature-sensor@4c {
++			compatible = "ti,tmp451";
++			reg = <0x4c>;
++			interrupt-parent = <&gpio>;
++			interrupts = <TEGRA_GPIO(X, 4) IRQ_TYPE_LEVEL_LOW>;
++			vcc-supply = <&vdd_1v8>;
++			#thermal-sensor-cells = <1>;
++		};
++	};
++
+ 	i2c@7000c400 {
+ 		status = "okay";
+ 
+-- 
+cgit 1.3.1-korg
+
