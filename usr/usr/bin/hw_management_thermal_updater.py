@@ -16,15 +16,14 @@ of ASICs and optical modules with different poll intervals and lifecycle managem
 try:
     import os
     import re
+    import time
     import argparse
     import traceback
-    import signal
     import threading
     import psutil
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
         atomic_file_write,
-        exit_wait,
         current_milli_time,
     )
     from collections import Counter
@@ -66,8 +65,6 @@ class CONST(object):
     SDK_TEMP_MASK = 0xffff      # Mask for negative temperature values
 
     # Folder paths
-    HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
-    LOG_LEVEL_FILENAME = "config/log_level"
     LOG_FILE = "/var/log/hw-management-thermal-updater.log"
 
     # Log rotation size
@@ -136,19 +133,6 @@ thermal_config = _build_thermal_config()
 LOGGER = None
 PROCESS = None
 _memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
-
-EXIT = threading.Event()
-_sig_condition_name = ""
-
-
-class ShutdownRequested(BaseException):
-    """
-    @summary: Abort the daemon on SIGTERM/SIGINT/SIGHUP.
-
-    Must not subclass Exception: the main-loop safety net would swallow it.
-    Raising from the signal handler prevents CPython PEP 475 from restarting
-    a blocking sysfs read, which can exceed systemd TimeoutStopSec.
-    """
 
 # ----------------------------------------------------------------------
 
@@ -253,8 +237,6 @@ def asic_temp_populate(arg_list, arg):
     @param arg: Unused parameter (for interface compatibility)
     """
     for asic_name, asic_attr in arg_list.items():
-        if EXIT.is_set():
-            break
         cntrs_obj = asic_attr.get("counters")
         if not cntrs_obj:
             cntrs_obj = Counter()
@@ -348,8 +330,7 @@ def module_temp_populate(arg_list, _dummy):
     offset = arg_list["fout_idx_offset"]
     LOGGER.debug("module_temp_populate")
     for idx in range(module_count):
-        if EXIT.is_set():
-            break
+
         module_name = "module{}".format(idx + offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
@@ -487,11 +468,6 @@ def update_thermal_attr(attr_prop):
 
         try:
             globals()[fn_name](argv, None)
-        except ShutdownRequested:
-            raise
-        except InterruptedError:
-            # SIGTERM during sysfs I/O: do not treat as a normal read error
-            raise ShutdownRequested()
         except (OSError, ValueError, KeyError, TypeError):
             # Catch common errors from dynamically called functions
             # to prevent daemon crash
@@ -579,27 +555,6 @@ def print_periodic_info(_argv, _val):
 
 # ----------------------------------------------------------------------
 
-
-def handle_shutdown(sig, _frame):
-    """
-    @summary: Handle application signal
-    @param sig: Signal
-    @param _frame: Unused frame
-
-    Raise ShutdownRequested so a blocking sx_core sysfs read is not restarted
-    (PEP 475) and the process can exit before systemd TimeoutStopSec.
-    """
-    global _sig_condition_name
-    try:
-        _sig_condition_name = signal.Signals(sig).name
-    except (ValueError, AttributeError):
-        _sig_condition_name = str(sig)
-    EXIT.set()
-    raise ShutdownRequested()
-
-# ----------------------------------------------------------------------
-
-
 def main():
     """
     @summary: Hardware Management Thermal Updater Main Loop
@@ -658,65 +613,22 @@ def main():
             thermal_attr.extend(val)
             break
 
-    EXIT.clear()
-
     PROCESS = psutil.Process(os.getpid())
     LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
     if CONST.DBG_MEMORY_INFO:
         thermal_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
 
-    try:
-        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-            signal.signal(sig, handle_shutdown)
-            # Disable SA_RESTART so EINTR is not retried on sx_core sysfs reads
-            signal.siginterrupt(sig, True)
-
-        LOGGER.notice("hw-management-thermal-updater: start main loop")
-        while not EXIT.is_set():
-            try:
-                for attr in thermal_attr:
-                    if EXIT.is_set():
-                        break
-                    update_thermal_attr(attr)
-                try:
-                    log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
-                    if os.path.isfile(log_level_filename):
-                        with open(log_level_filename, 'r', encoding="utf-8") as f:
-                            log_level = f.read().rstrip('\n')
-                            log_level = int(log_level)
-                            LOGGER.set_loglevel(log_level)
-                except InterruptedError:
-                    raise ShutdownRequested()
-                except (OSError, ValueError):
-                    # Expected errors when reading/parsing log level file
-                    # These are non-critical, just skip and continue
-                    pass
-            except ShutdownRequested:
-                raise
-            except Exception as e:
-                # Safety net: catch any unexpected exceptions to keep daemon alive
-                LOGGER.error("Unexpected error in main loop: {}".format(e))
-                LOGGER.notice(traceback.format_exc())
-                # Continue running despite error
-
-            exit_wait(EXIT, 1)
-    except ShutdownRequested:
-        pass
-
-    try:
-        LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
-    except ShutdownRequested:
-        pass
-    finally:
+    LOGGER.notice("hw-management-thermal-updater: start main loop")
+    while True:
         try:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-                signal.signal(sig, signal.SIG_DFL)
-        except ShutdownRequested:
-            pass
+            for attr in thermal_attr:
+                update_thermal_attr(attr)
+        except Exception as e:
+            # Safety net: catch any unexpected exceptions to keep daemon alive
+            LOGGER.warning("Unexpected error in main loop: {}".format(e))
+            LOGGER.notice(traceback.format_exc())
+        time.sleep(1)
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except ShutdownRequested:
-        pass
+    main()

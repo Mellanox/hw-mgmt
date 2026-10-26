@@ -22,7 +22,7 @@ VERSION = "1.0.0"
 
 PLATFORM_CONFIG = {
     "def": [
-        {'fin': '/var/run/hw-management/config/thermal_enforced_full_spped', 'fn': 'run_cmd', 'arg': ['if [[ -f /var/run/hw-management/config/thermal_enforced_full_spped && $(</var/run/hw-management/config/thermal_enforced_full_spped) == "1" ]]; then /usr/bin/hw-management-user-dump; fi'], 'poll': 5, 'ts': 0},
+        {'fin': '/var/run/hw-management/config/thermal_enforced_full_spped', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-user-dump'], 'poll': 5, 'ts': 0},
     ],
     "test": [
         {'fin': '/tmp/power_button_clr', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
