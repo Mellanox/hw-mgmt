@@ -652,6 +652,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: BMC Redfish login service',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_bmc_login.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: labels_ready indicator',
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_labels_ready.py', '--tb=short'],
                 'cwd': self.tests_dir
