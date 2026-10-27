@@ -24,6 +24,7 @@ try:
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
         atomic_file_write,
+        ExitFlag,
         exit_wait,
         current_milli_time,
     )
@@ -136,7 +137,8 @@ LOGGER = None
 PROCESS = None
 _memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
 
-EXIT = threading.Event()
+# Lock-free exit flag: safe to set from the signal handler (threading.Event is not)
+EXIT = ExitFlag()
 _sig_condition_name = ""
 
 
@@ -145,8 +147,9 @@ class ShutdownRequested(BaseException):
     @summary: Abort the daemon on SIGTERM/SIGINT/SIGHUP.
 
     Must not subclass Exception: the main-loop safety net would swallow it.
-    Raising from the signal handler prevents CPython PEP 475 from restarting
-    a blocking sysfs read, which can exceed systemd TimeoutStopSec.
+    Raised from the signal handler, only while inside EXIT.interruptible(), to
+    prevent CPython PEP 475 from restarting a blocking sysfs read, which can
+    exceed systemd TimeoutStopSec.
     """
 
 # ----------------------------------------------------------------------
@@ -585,8 +588,12 @@ def handle_shutdown(sig, _frame):
     @param sig: Signal
     @param _frame: Unused frame
 
-    Raise ShutdownRequested so a blocking sx_core sysfs read is not restarted
-    (PEP 475) and the process can exit before systemd TimeoutStopSec.
+    Always records the signal and sets EXIT. Raises ShutdownRequested only when
+    the signal interrupted an EXIT.interruptible() section (the sysfs polling
+    pass), so a blocking sysfs read is not restarted (PEP 475) and the process
+    can exit before systemd TimeoutStopSec. Anywhere else (notably inside
+    exit_wait()) the handler returns normally: raising there can land inside
+    threading/lock internals and surface as "RuntimeError: release unlocked lock".
     """
     global _sig_condition_name
     try:
@@ -594,7 +601,8 @@ def handle_shutdown(sig, _frame):
     except (ValueError, AttributeError):
         _sig_condition_name = str(sig)
     EXIT.set()
-    raise ShutdownRequested()
+    if EXIT.take_interruptible():
+        raise ShutdownRequested()
 
 # ----------------------------------------------------------------------
 
@@ -673,10 +681,12 @@ def main():
         LOGGER.notice("hw-management-thermal-updater: start main loop")
         while not EXIT.is_set():
             try:
-                for attr in thermal_attr:
-                    if EXIT.is_set():
-                        break
-                    update_thermal_attr(attr)
+                # A signal here may raise ShutdownRequested to abort a blocking sysfs read
+                with EXIT.interruptible():
+                    for attr in thermal_attr:
+                        if EXIT.is_set():
+                            break
+                        update_thermal_attr(attr)
                 try:
                     log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
                     if os.path.isfile(log_level_filename):
