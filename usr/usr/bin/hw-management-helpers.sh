@@ -410,6 +410,29 @@ check_host_usb0_managed_by_nos()
 	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
 }
 
+# hw-management-bmc-login.service logs in to the BMC over Redfish, which also
+# provisions the NOS account there. systemd pulls it in after
+# hw-management.service, but "hw-management.sh restart" and a manual start run
+# do_start on their own, outside any systemd job, and nothing would log in
+# then. Start it from here in that case.
+#
+# This is not restricted to an active hw-management.service. A start after
+# "systemctl stop hw-management.service" initializes the hardware while leaving
+# that unit inactive, and the login has to happen on that path as well; the
+# login unit has no Requires= on it, so starting it there initializes nothing a
+# second time. --no-block because during the ExecStart of hw-management.service
+# the login is ordered after the very unit we are running under, so a blocking
+# start would wait for its own caller.
+start_bmc_login_if_needed()
+{
+    print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+    check_bmc_is_supported || return 0
+    systemctl is-active --quiet hw-management-bmc-login.service 2>/dev/null && return 0
+
+    log_info "Starting BMC Redfish login"
+    systemctl start --no-block hw-management-bmc-login.service 2>/dev/null
+}
+
 # This function create or cleans sysfs monitor helper files.
 init_sysfs_monitor_timestamp_files()
 {
