@@ -2910,26 +2910,6 @@ check_system_write_i2c_defaults()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu || return 1
 }
 
-check_system_bmc_redfish_login()
-{
-	# Obtain/rotate the BMC password and log in over Redfish only on platforms
-	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
-	# CPU<->BMC communication, so hw-management must not drive this flow.
-	if check_bmc_is_supported && ! check_host_os_is_sonic; then
-		pushd /usr/bin
-		for ((i=1; i<=5; i++)); do
-			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
-			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
-				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
-				break
-			fi
-			echo "Pinging BMC failed, i=$i"
-			sleep 3
-		done
-		popd
-	fi
-}
-
 check_system_json()
 {
 	local json_file="$1"
@@ -3117,7 +3097,6 @@ check_system()
 	else
 		check_system_internal || return 1
 	fi
-	check_system_bmc_redfish_login || true
 }
 
 create_event_files()
