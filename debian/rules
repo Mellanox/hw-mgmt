@@ -129,6 +129,7 @@ ifeq ($(with_host),1)
 	dh_installinit --name=hw-management-fast-sysfs-monitor
 	dh_installinit --name=hw-management-blacklist-generator
 	dh_installinit --name=hw-management-sync
+	dh_installinit --name=hw-management-bmc-login
 else
 	@true
 endif
@@ -143,6 +144,7 @@ ifeq ($(with_host),1)
 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
 	dh_systemd_enable --name=hw-management-blacklist-generator
 	dh_systemd_enable --no-enable --name=hw-management-sync
+	dh_systemd_enable --name=hw-management-bmc-login
 endif
 ifeq ($(with_bmc),1)
 	# IMPORTANT: do NOT use one `dh_systemd_enable --name=X` call per service
@@ -188,6 +190,10 @@ ifeq ($(with_host),1)
 	dh_systemd_start --name=hw-management-sysfs-monitor
 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
 	dh_systemd_start --name=hw-management-blacklist-generator
+	# hw-management-bmc-login is deliberately absent here:
+	# hw-management.service pulls it in through Wants=, so the restart of that
+	# unit above already runs the login on an upgrade, and a restart of its own
+	# would only cut short a login that is waiting for the BMC.
 endif
 ifeq ($(with_bmc),1)
 	# BMC services are boot-order units (DefaultDependencies=no,
