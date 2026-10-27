@@ -1,0 +1,40 @@
+[Unit]
+Description=HW Management BMC Redfish login
+Documentation=file:/usr/bin/hw-management-bmc-login.sh
+After=hw-management.service
+PartOf=hw-management.service
+# No Requires= on that unit: the login needs nothing from the hw-mgmt tree, only
+# the SKU of the system, usb0 and the network to the BMC. Requiring it would
+# start the whole hardware initialization whenever this unit is started on its
+# own - from the usb0 service after a BMC reset, or by hw-management-start-post.sh
+# on a start that systemd did not drive - and on a system whose SKU is not
+# readable without it the login skips itself anyway.
+# The login reads the address of usb0 to reach the BMC, so it has to run after
+# the interface has been brought up. That unit is activated by UDEV when the
+# interface appears, hence only the ordering is declared here: pulling it in
+# would start it on systems where the interface never shows up, and its
+# BindsTo= on the device would then fail it. That unit restarts this one once it
+# has handled the interface, so an interface that appears late - the BMC owns it
+# and takes it away while it resets - gets a login of its own, with budgets of
+# its own, instead of having to show up within the wait of a run that started
+# before it.
+After=hw-management-ifupdown@usb0.service
+
+StartLimitIntervalSec=1200
+StartLimitBurst=5
+
+[Service]
+# Not oneshot: multi-user.target orders itself after the units it wants, and a
+# oneshot holds it until the script exits, which can take minutes while the BMC
+# boots. As a simple service the start completes once the script runs.
+Type=simple
+ExecStart=/usr/bin/hw-management-bmc-login.sh
+# The script waits for the usb0 address for up to its own ADDRESS_TIMEOUT, then
+# for the BMC to serve Redfish for up to REDFISH_TIMEOUT, and then retries the
+# login a few times. Each of those may run the whole flow of the client, with
+# every request on both schemes, the TPM lock waits and password derivations.
+# Keep this above that sum and the overshoot of the last probe.
+RuntimeMaxSec=720
+
+[Install]
+WantedBy=multi-user.target

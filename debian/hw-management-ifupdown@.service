@@ -19,6 +19,13 @@ StartLimitBurst=5
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/hw-management-ifupdown.sh %i
+# Once the interface has been handled, log in to the BMC on it. A restart, as a
+# login that is already running - started at boot, or before the BMC reset that
+# brought the interface back - waits on a deadline that may run out before
+# anything answers it, and a start would leave it at that. The login is ordered
+# after this unit, so it runs once the interface is configured; --no-block
+# because it waits for this very unit to finish.
+ExecStartPost=-/bin/systemctl --no-block restart hw-management-bmc-login.service
 # The script retries a lock conflict for up to its own IFUP_TIMEOUT, and the last
 # ifup it starts may overshoot that deadline by IFUP_MIN_TIMEOUT. Keep this well
 # above their sum, so a lost race ends with the script's diagnostics in syslog
