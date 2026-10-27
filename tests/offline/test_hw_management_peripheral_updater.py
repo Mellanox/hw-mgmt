@@ -688,6 +688,103 @@ class TestUtilityFunctions(unittest.TestCase):
 
         mock_cmd.assert_called_once_with("/usr/bin/hw-management-user-dump", [], timeout=30.0)
 
+    def test_uncaught_exception_logs_traceback(self):
+        """A fatal exception writes its traceback to the log before the default exit hook."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        logger = MagicMock()
+        peripheral_module.LOGGER = logger
+        try:
+            raise RuntimeError("fatal boom")
+        except RuntimeError:
+            exc_info = sys.exc_info()
+        try:
+            with patch.object(peripheral_module.sys, "__excepthook__") as default_hook:
+                peripheral_module._log_uncaught_exception(*exc_info)
+            default_hook.assert_called_once()
+            logged = logger.error.call_args[0][0]
+            self.assertIn("Traceback", logged)
+            self.assertIn("RuntimeError: fatal boom", logged)
+        finally:
+            peripheral_module.LOGGER = None
+
+    def test_system_exit_during_init_is_logged(self):
+        """A stop after the logger exists is logged, then dies by that signal."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        logger = MagicMock()
+        with patch.object(sys, "argv", ["hw_management_peripheral_updater.py", "-s", "NO_SUCH_SKU"]), \
+                patch.object(peripheral_module, "Logger", return_value=logger), \
+                patch.object(peripheral_module, "feature_request", return_value=False), \
+                patch.object(peripheral_module, "write_module_counter", side_effect=SystemExit(143)), \
+                patch.object(peripheral_module.time, "sleep", side_effect=AssertionError("sleep after stop during init")), \
+                patch.object(peripheral_module.signal, "signal") as install, \
+                patch.object(peripheral_module.os, "kill") as kill:
+            peripheral_module.main()
+        logger.error.assert_not_called()
+        logger.notice.assert_any_call(
+            "hw-management-peripheral-updater: exit (SystemExit 143)")
+        install.assert_called_once_with(
+            peripheral_module.signal.SIGTERM, peripheral_module.signal.SIG_DFL)
+        kill.assert_called_once_with(os.getpid(), peripheral_module.signal.SIGTERM)
+
+    def test_stop_before_main_handler_dies_by_signal(self):
+        """A signal stop that escapes main dies by that signal and is not logged again."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        logger = MagicMock()
+        peripheral_module.LOGGER = logger
+        try:
+            with patch.object(peripheral_module, "main", side_effect=SystemExit(143)), \
+                    patch.object(peripheral_module.signal, "signal") as install, \
+                    patch.object(peripheral_module.os, "kill") as kill:
+                peripheral_module._call_main()
+            logger.notice.assert_not_called()
+            logger.error.assert_not_called()
+            install.assert_called_once_with(
+                peripheral_module.signal.SIGTERM, peripheral_module.signal.SIG_DFL)
+            kill.assert_called_once_with(os.getpid(), peripheral_module.signal.SIGTERM)
+            with patch.object(peripheral_module, "main", side_effect=SystemExit(1)), \
+                    patch.object(peripheral_module.os, "kill") as kill:
+                with self.assertRaises(SystemExit) as ctx:
+                    peripheral_module._call_main()
+            self.assertEqual(ctx.exception.code, 1)
+            kill.assert_not_called()
+        finally:
+            peripheral_module.LOGGER = None
+
+    def test_keyboard_interrupt_prints_no_traceback(self):
+        """Ctrl+C is a normal stop: the reason is logged and no traceback is printed."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        logger = MagicMock()
+        peripheral_module.LOGGER = logger
+        try:
+            with patch.object(peripheral_module.sys, "__excepthook__") as default_hook:
+                peripheral_module._log_uncaught_exception(
+                    KeyboardInterrupt, KeyboardInterrupt(), None)
+            default_hook.assert_not_called()
+            logger.error.assert_not_called()
+            logger.notice.assert_called_once_with(
+                "hw-management-peripheral-updater: exit (KeyboardInterrupt)")
+        finally:
+            peripheral_module.LOGGER = None
+
+    def test_stop_signal_raises_system_exit(self):
+        """systemd SIGTERM raises SystemExit and does not log from the handler."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        logger = MagicMock()
+        peripheral_module.LOGGER = logger
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                peripheral_module._handle_stop_signal(peripheral_module.signal.SIGTERM, None)
+            self.assertEqual(ctx.exception.code, 128 + peripheral_module.signal.SIGTERM)
+            logger.error.assert_not_called()
+            logger.notice.assert_not_called()
+        finally:
+            peripheral_module.LOGGER = None
+
     def test_sync_fan_absent(self):
         """Test sync_fan with fan absent (val=0)"""
         import hw_management_peripheral_updater as peripheral_module

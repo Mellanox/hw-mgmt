@@ -5,11 +5,13 @@
 
 try:
     import os
+    import sys
     import json
     import re
     import time
     import argparse
     import traceback
+    import signal
     import threading
     import shlex
     import psutil
@@ -259,6 +261,118 @@ LOGGER = None
 PROCESS = None
 _memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
 _periodic_memory_timer = None
+
+
+def _normal_exit_reason(exc_type, exc_value):
+    """
+    @summary: Reason string for a normal stop
+    @return: KeyboardInterrupt, or SystemExit and its status
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        return "KeyboardInterrupt"
+    code = exc_value.code if isinstance(exc_value, SystemExit) else exc_value
+    if code is None:
+        code = 0
+    return "SystemExit {}".format(code)
+
+
+def _log_handled_exception(exc_value):
+    """
+    @summary: Write a caught main-loop exception and its traceback to the service log
+    """
+    if LOGGER is None:
+        return
+    formatted = traceback.format_exc().rstrip()
+    try:
+        LOGGER.error("hw-management-peripheral-updater: exception ({}): {}\n{}".format(
+            type(exc_value).__name__, exc_value, formatted))
+    except Exception:
+        pass
+
+
+def _log_stop_reason(reason):
+    """
+    @summary: Write a normal stop reason to the service log
+    """
+    if LOGGER is None:
+        return
+    try:
+        LOGGER.notice("hw-management-peripheral-updater: exit ({})".format(reason))
+    except Exception:
+        pass
+
+
+def _log_normal_exit(exc_type, exc_value):
+    """
+    @summary: Write the normal-exit reason to the service log
+    """
+    _log_stop_reason(_normal_exit_reason(exc_type, exc_value))
+
+
+def _handle_stop_signal(signum, _frame):
+    """
+    @summary: Turn SIGTERM, SIGINT, or SIGHUP into SystemExit.
+
+    Do not log here. HW_Mgmt_Logger holds a non-reentrant lock, and this
+    handler can run while that lock is held.
+    """
+    raise SystemExit(128 + signum)
+
+
+def _terminate_for_stop_signal(exc):
+    """
+    @summary: Die by the stop signal so systemd records a clean signal death
+    @return: False when exc is not a signal stop and the caller should re-raise
+    """
+    code = exc.code if isinstance(exc, SystemExit) else None
+    if not isinstance(code, int) or code <= 128:
+        return False
+    signum = code - 128
+    signal.signal(signum, signal.SIG_DFL)
+    os.kill(os.getpid(), signum)
+    return True
+
+
+def _call_main():
+    """
+    @summary: Run main and die by signal when a stop escapes main
+
+    A SystemExit raised before main logs it, including during logger
+    construction, is not logged again here.
+    """
+    try:
+        main()
+    except SystemExit as exc:
+        if not _terminate_for_stop_signal(exc):
+            raise
+
+
+def _install_stop_signals():
+    """
+    @summary: Record the reason when the service is stopped by a signal
+    """
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(sig, _handle_stop_signal)
+
+
+def _log_uncaught_exception(exc_type, exc_value, exc_tb):
+    """
+    @summary: Log the traceback when the process exits because of an exception
+
+    KeyboardInterrupt is a normal stop. The exit reason is logged without a
+    traceback, and the default hook is not called. SystemExit is logged by
+    main(); the interpreter does not call sys.excepthook for SystemExit.
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        _log_normal_exit(exc_type, exc_value)
+        return
+    formatted = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).rstrip()
+    try:
+        if LOGGER is not None:
+            LOGGER.error("Uncaught exception, exiting:\n{}".format(formatted))
+    except Exception:
+        pass
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 # RedfishConnection: Singleton class to manage BMC connection state
 
@@ -957,60 +1071,66 @@ def main():
     args = vars(CMD_PARSER.parse_args())
     global LOGGER, PROCESS, _periodic_memory_timer
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
-    LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
+    try:
+        LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
 
-    if not FEATURE_REQUEST_AVAILABLE:
-        LOGGER.warning("hw-management-peripheral-updater: feature_request unavailable, assuming Redfish enabled host")
+        if not FEATURE_REQUEST_AVAILABLE:
+            LOGGER.warning("hw-management-peripheral-updater: feature_request unavailable, assuming Redfish enabled host")
 
-    if args["system_type"] is None:
-        try:
-            with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
-                product_sku = f.read()
-        except OSError:
-            product_sku = ""
-    else:
-        product_sku = args["system_type"]
-    product_sku = product_sku.strip()
+        if args["system_type"] is None:
+            try:
+                with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
+                    product_sku = f.read()
+            except OSError:
+                product_sku = ""
+        else:
+            product_sku = args["system_type"]
+        product_sku = product_sku.strip()
 
-    LOGGER.notice("hw-management-peripheral-updater: load config ({})".format(product_sku))
-    sys_attr = attrib_list["def"]
-    for key, val in attrib_list.items():
-        if re.match(key, product_sku):
-            sys_attr.extend(val)
-            break
+        LOGGER.notice("hw-management-peripheral-updater: load config ({})".format(product_sku))
+        sys_attr = attrib_list["def"]
+        for key, val in attrib_list.items():
+            if re.match(key, product_sku):
+                sys_attr.extend(val)
+                break
 
-    # On Redfish disabled hosts, drop the BMC Redfish
-    # entries so this daemon never logs in to the BMC or polls BMC sensors over
-    # Redfish. On any other host OS the configuration is left unchanged.
-    if feature_request("get", "is_redfish_disabled"):
-        sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
-        LOGGER.notice("hw-management-peripheral-updater: Redfish disabled host detected, BMC Redfish sync disabled")
+        # On Redfish disabled hosts, drop the BMC Redfish
+        # entries so this daemon never logs in to the BMC or polls BMC sensors over
+        # Redfish. On any other host OS the configuration is left unchanged.
+        if feature_request("get", "is_redfish_disabled"):
+            sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
+            LOGGER.notice("hw-management-peripheral-updater: Redfish disabled host detected, BMC Redfish sync disabled")
 
-    # Write module_counter for other services (must be done before they start)
-    # This is done here in peripheral_updater to ensure it's written even if
-    # thermal_updater is disabled by the customer
-    write_module_counter(product_sku)
+        # Write module_counter for other services (must be done before they start)
+        # This is done here in peripheral_updater to ensure it's written even if
+        # thermal_updater is disabled by the customer
+        write_module_counter(product_sku)
 
-    LOGGER.notice("hw-management-peripheral-updater: init attributes")
-    for attr in sys_attr:
-        init_attr(attr)
+        LOGGER.notice("hw-management-peripheral-updater: init attributes")
+        for attr in sys_attr:
+            init_attr(attr)
 
-    PROCESS = psutil.Process(os.getpid())
-    LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
-    if CONST.DBG_MEMORY_INFO:
-        sys_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
+        PROCESS = psutil.Process(os.getpid())
+        LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
+        if CONST.DBG_MEMORY_INFO:
+            sys_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
 
-    LOGGER.notice("hw-management-peripheral-updater: start main loop")
-    while True:
-        try:
-            for attr in sys_attr:
-                update_peripheral_attr(attr)
-        except Exception as e:
-            # Safety net: catch any unexpected exceptions to keep daemon alive
-            LOGGER.error("Unexpected error in main loop: {}".format(e))
-            LOGGER.notice(traceback.format_exc())
-        time.sleep(1)
+        LOGGER.notice("hw-management-peripheral-updater: start main loop")
+        while True:
+            try:
+                for attr in sys_attr:
+                    update_peripheral_attr(attr)
+            except Exception as e:
+                # Keep the daemon running, but record the failure and the stack.
+                _log_handled_exception(e)
+            time.sleep(1)
+    except SystemExit as exc:
+        _log_normal_exit(type(exc), exc)
+        if not _terminate_for_stop_signal(exc):
+            raise
 
 
 if __name__ == '__main__':
-    main()
+    sys.excepthook = _log_uncaught_exception
+    _install_stop_signals()
+    _call_main()

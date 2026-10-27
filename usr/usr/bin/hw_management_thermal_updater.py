@@ -15,10 +15,12 @@ of ASICs and optical modules with different poll intervals and lifecycle managem
 
 try:
     import os
+    import sys
     import re
     import time
     import argparse
     import traceback
+    import signal
     import threading
     import psutil
     from hw_management_lib import (
@@ -132,6 +134,118 @@ thermal_config = _build_thermal_config()
 LOGGER = None
 PROCESS = None
 _memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
+
+
+def _normal_exit_reason(exc_type, exc_value):
+    """
+    @summary: Reason string for a normal stop
+    @return: KeyboardInterrupt, or SystemExit and its status
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        return "KeyboardInterrupt"
+    code = exc_value.code if isinstance(exc_value, SystemExit) else exc_value
+    if code is None:
+        code = 0
+    return "SystemExit {}".format(code)
+
+
+def _log_handled_exception(exc_value):
+    """
+    @summary: Write a caught main-loop exception and its traceback to the service log
+    """
+    if LOGGER is None:
+        return
+    formatted = traceback.format_exc().rstrip()
+    try:
+        LOGGER.error("hw-management-thermal-updater: exception ({}): {}\n{}".format(
+            type(exc_value).__name__, exc_value, formatted))
+    except Exception:
+        pass
+
+
+def _log_stop_reason(reason):
+    """
+    @summary: Write a normal stop reason to the service log
+    """
+    if LOGGER is None:
+        return
+    try:
+        LOGGER.notice("hw-management-thermal-updater: exit ({})".format(reason))
+    except Exception:
+        pass
+
+
+def _log_normal_exit(exc_type, exc_value):
+    """
+    @summary: Write the normal-exit reason to the service log
+    """
+    _log_stop_reason(_normal_exit_reason(exc_type, exc_value))
+
+
+def _handle_stop_signal(signum, _frame):
+    """
+    @summary: Turn SIGTERM, SIGINT, or SIGHUP into SystemExit.
+
+    Do not log here. HW_Mgmt_Logger holds a non-reentrant lock, and this
+    handler can run while that lock is held.
+    """
+    raise SystemExit(128 + signum)
+
+
+def _terminate_for_stop_signal(exc):
+    """
+    @summary: Die by the stop signal so systemd records a clean signal death
+    @return: False when exc is not a signal stop and the caller should re-raise
+    """
+    code = exc.code if isinstance(exc, SystemExit) else None
+    if not isinstance(code, int) or code <= 128:
+        return False
+    signum = code - 128
+    signal.signal(signum, signal.SIG_DFL)
+    os.kill(os.getpid(), signum)
+    return True
+
+
+def _call_main():
+    """
+    @summary: Run main and die by signal when a stop escapes main
+
+    A SystemExit raised before main logs it, including during logger
+    construction, is not logged again here.
+    """
+    try:
+        main()
+    except SystemExit as exc:
+        if not _terminate_for_stop_signal(exc):
+            raise
+
+
+def _install_stop_signals():
+    """
+    @summary: Record the reason when the service is stopped by a signal
+    """
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(sig, _handle_stop_signal)
+
+
+def _log_uncaught_exception(exc_type, exc_value, exc_tb):
+    """
+    @summary: Log the traceback when the process exits because of an exception
+
+    KeyboardInterrupt is a normal stop. The exit reason is logged without a
+    traceback, and the default hook is not called. SystemExit is logged by
+    main(); the interpreter does not call sys.excepthook for SystemExit.
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        _log_normal_exit(exc_type, exc_value)
+        return
+    formatted = "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).rstrip()
+    try:
+        if LOGGER is not None:
+            LOGGER.error("Uncaught exception, exiting:\n{}".format(formatted))
+    except Exception:
+        pass
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 # ----------------------------------------------------------------------
 
@@ -595,39 +709,45 @@ def main():
         print("Failed to initialize logger: {}. Stopping service.".format(e))
         exit(1)
 
-    if args["system_type"] is None:
-        try:
-            with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
-                product_sku = f.read()
-        except OSError:
-            product_sku = ""
-    else:
-        product_sku = args["system_type"]
-    product_sku = product_sku.strip()
+    try:
+        if args["system_type"] is None:
+            try:
+                with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
+                    product_sku = f.read()
+            except OSError:
+                product_sku = ""
+        else:
+            product_sku = args["system_type"]
+        product_sku = product_sku.strip()
 
-    LOGGER.notice("hw-management-thermal-updater: load config ({})".format(product_sku))
-    thermal_attr = thermal_config["def"]
-    for key, val in thermal_config.items():
-        if re.match(key, product_sku):
-            thermal_attr.extend(val)
-            break
+        LOGGER.notice("hw-management-thermal-updater: load config ({})".format(product_sku))
+        thermal_attr = thermal_config["def"]
+        for key, val in thermal_config.items():
+            if re.match(key, product_sku):
+                thermal_attr.extend(val)
+                break
 
-    PROCESS = psutil.Process(os.getpid())
-    LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
-    if CONST.DBG_MEMORY_INFO:
-        thermal_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
+        PROCESS = psutil.Process(os.getpid())
+        LOGGER.info("periodic memory report {} sec".format(CONST.PERIODIC_MEMORY_REPORT_TIME))
+        if CONST.DBG_MEMORY_INFO:
+            thermal_attr.append({'fin': None, 'fn': 'print_periodic_info', 'arg': [], 'poll': CONST.PERIODIC_MEMORY_REPORT_TIME, 'ts': 0})
 
-    LOGGER.notice("hw-management-thermal-updater: start main loop")
-    while True:
-        try:
-            for attr in thermal_attr:
-                update_thermal_attr(attr)
-        except Exception as e:
-            # Safety net: catch any unexpected exceptions to keep daemon alive
-            LOGGER.error("Unexpected error in main loop: {}".format(e))
-            LOGGER.notice(traceback.format_exc())
-        time.sleep(1)
+        LOGGER.notice("hw-management-thermal-updater: start main loop")
+        while True:
+            try:
+                for attr in thermal_attr:
+                    update_thermal_attr(attr)
+            except Exception as e:
+                # Keep the daemon running, but record the failure and the stack.
+                _log_handled_exception(e)
+            time.sleep(1)
+    except SystemExit as exc:
+        _log_normal_exit(type(exc), exc)
+        if not _terminate_for_stop_signal(exc):
+            raise
 
 
 if __name__ == '__main__':
-    main()
+    sys.excepthook = _log_uncaught_exception
+    _install_stop_signals()
+    _call_main()

@@ -718,7 +718,7 @@ class TestThermalMainLoop(unittest.TestCase):
     def test_removed_exit_flow_symbols_stay_gone(self):
         """Signal wait, shutdown type, and dynamic log level are not part of this daemon."""
         module = self.thermal_module
-        for name in ("EXIT", "ShutdownRequested", "handle_shutdown", "exit_wait", "signal"):
+        for name in ("EXIT", "ShutdownRequested", "handle_shutdown", "exit_wait"):
             self.assertFalse(hasattr(module, name), name)
         self.assertFalse(hasattr(module.CONST, "HW_MGMT_FOLDER_DEF"))
         self.assertFalse(hasattr(module.CONST, "LOG_LEVEL_FILENAME"))
@@ -740,6 +740,7 @@ class TestThermalMainLoop(unittest.TestCase):
         self.assertGreaterEqual(update.call_count, 2)
         self.assertFalse(opened.called)
         logger.error.assert_not_called()
+        logger.notice.assert_any_call("hw-management-thermal-updater: exit (SystemExit 0)")
 
     def test_main_logs_pass_error_and_keeps_looping(self):
         """An unexpected pass error is logged, then the next pass still runs."""
@@ -759,7 +760,9 @@ class TestThermalMainLoop(unittest.TestCase):
         self.assertIsInstance(caught, SystemExit)
         self.assertGreaterEqual(passes["n"], 2)
         logger.error.assert_called()
-        self.assertIn("boom", logger.error.call_args[0][0])
+        logged = logger.error.call_args[0][0]
+        self.assertIn("exception (RuntimeError): boom", logged)
+        self.assertIn("Traceback", logged)
 
     def test_logger_init_failure_exits_1(self):
         """A logger that cannot be created stops the service with status 1."""
@@ -770,6 +773,93 @@ class TestThermalMainLoop(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 module.main()
         self.assertEqual(ctx.exception.code, 1)
+
+    def test_uncaught_exception_logs_traceback(self):
+        """A fatal exception writes its traceback to the log before the default exit hook."""
+        module = self.thermal_module
+        logger = MagicMock()
+        module.LOGGER = logger
+        try:
+            raise RuntimeError("fatal boom")
+        except RuntimeError:
+            exc_info = sys.exc_info()
+        try:
+            with patch.object(module.sys, "__excepthook__") as default_hook:
+                module._log_uncaught_exception(*exc_info)
+            default_hook.assert_called_once()
+            logged = logger.error.call_args[0][0]
+            self.assertIn("Traceback", logged)
+            self.assertIn("RuntimeError: fatal boom", logged)
+        finally:
+            module.LOGGER = None
+
+    def test_system_exit_during_init_is_logged(self):
+        """A stop after the logger exists is logged, then dies by that signal."""
+        module = self.thermal_module
+        logger = MagicMock()
+        with patch.object(sys, "argv", ["hw_management_thermal_updater.py", "-s", "NO_SUCH_SKU"]), \
+                patch.object(module, "Logger", return_value=logger), \
+                patch.object(module.psutil, "Process", side_effect=SystemExit(143)), \
+                patch.object(module.time, "sleep", side_effect=AssertionError("sleep after stop during init")), \
+                patch.object(module.signal, "signal") as install, \
+                patch.object(module.os, "kill") as kill:
+            module.main()
+        logger.error.assert_not_called()
+        logger.notice.assert_any_call("hw-management-thermal-updater: exit (SystemExit 143)")
+        install.assert_called_once_with(module.signal.SIGTERM, module.signal.SIG_DFL)
+        kill.assert_called_once_with(os.getpid(), module.signal.SIGTERM)
+
+    def test_stop_before_main_handler_dies_by_signal(self):
+        """A signal stop that escapes main dies by that signal and is not logged again."""
+        module = self.thermal_module
+        logger = MagicMock()
+        module.LOGGER = logger
+        try:
+            with patch.object(module, "main", side_effect=SystemExit(143)), \
+                    patch.object(module.signal, "signal") as install, \
+                    patch.object(module.os, "kill") as kill:
+                module._call_main()
+            logger.notice.assert_not_called()
+            logger.error.assert_not_called()
+            install.assert_called_once_with(module.signal.SIGTERM, module.signal.SIG_DFL)
+            kill.assert_called_once_with(os.getpid(), module.signal.SIGTERM)
+            with patch.object(module, "main", side_effect=SystemExit(1)), \
+                    patch.object(module.os, "kill") as kill:
+                with self.assertRaises(SystemExit) as ctx:
+                    module._call_main()
+            self.assertEqual(ctx.exception.code, 1)
+            kill.assert_not_called()
+        finally:
+            module.LOGGER = None
+
+    def test_keyboard_interrupt_prints_no_traceback(self):
+        """Ctrl+C is a normal stop: the reason is logged and no traceback is printed."""
+        module = self.thermal_module
+        logger = MagicMock()
+        module.LOGGER = logger
+        try:
+            with patch.object(module.sys, "__excepthook__") as default_hook:
+                module._log_uncaught_exception(KeyboardInterrupt, KeyboardInterrupt(), None)
+            default_hook.assert_not_called()
+            logger.error.assert_not_called()
+            logger.notice.assert_called_once_with(
+                "hw-management-thermal-updater: exit (KeyboardInterrupt)")
+        finally:
+            module.LOGGER = None
+
+    def test_stop_signal_raises_system_exit(self):
+        """systemd SIGTERM raises SystemExit and does not log from the handler."""
+        module = self.thermal_module
+        logger = MagicMock()
+        module.LOGGER = logger
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                module._handle_stop_signal(module.signal.SIGTERM, None)
+            self.assertEqual(ctx.exception.code, 128 + module.signal.SIGTERM)
+            logger.error.assert_not_called()
+            logger.notice.assert_not_called()
+        finally:
+            module.LOGGER = None
 
 
 def main():
