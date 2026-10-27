@@ -125,6 +125,10 @@ case $sku in
 		# Do nothing
 esac
 
+# Log in to the BMC on a start that systemd did not drive as well; on one that
+# it does, systemd starts the login on its own.
+start_bmc_login_if_needed
+
 # Check if TC service is enabled (unit enabled at boot) and if it is currently running.
 tc_is_enabled=0
 if systemctl is-enabled --quiet hw-management-tc.service 2>/dev/null; then
