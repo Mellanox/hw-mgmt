@@ -17,6 +17,7 @@
 #   7. Thresholds all 0: exits 0 immediately (no sleep)
 #   8. Thresholds met by populated dirs: exits 0 immediately
 #   9. Timeout (max_wait=2, poll=1): exits 1 after ~2 s
+#  10. SYSFS_THERMAL_COUNTER_HOST_OFF applies only while the host is off
 #
 # Environment (optional):
 #   BOOT_COMPLETE_SCRIPT — path to hw-management-bmc-boot-complete.sh
@@ -218,6 +219,37 @@ if [[ "$rc" -eq 1 ]]; then
 else
     fail "timeout: exits $rc (expected 1)"
 fi
+
+# ── host-off thermal threshold ───────────────────────────────────────────────
+
+echo ""
+echo "== SYSFS_THERMAL_COUNTER_HOST_OFF applies only while the host is off =="
+
+CONF_HOST_OFF="$WORK/host_off.conf"
+cat >"$CONF_HOST_OFF" <<'CONF'
+SYSFS_SYSTEM_COUNTER=2
+SYSFS_THERMAL_COUNTER=4
+SYSFS_THERMAL_COUNTER_HOST_OFF=1
+SYSFS_EEPROM_COUNTER=3
+BOOT_COMPLETE_MAX_WAIT_SEC=2
+BOOT_COMPLETE_POLL_SEC=1
+CONF
+LOST_FLAG="$WORK/host-power-lost"
+
+# thermal dir has 1 entry: below 4, meets the host-off minimum of 1.
+# Args: pwr_down pwr_button_halt flag(0|1) expected_rc label
+host_off_case() {
+    echo "$1" >"$SYS_DIR_MET/pwr_down"; echo "$2" >"$SYS_DIR_MET/pwr_button_halt"
+    rm -f "$LOST_FLAG"; [[ "$3" == 1 ]] && touch "$LOST_FLAG"
+    BOOT_COMPLETE_CONF="$CONF_HOST_OFF" BOOT_COMPLETE_POWER_LOST_FLAG="$LOST_FLAG" sh "$PATCHED_BOOT" >/dev/null 2>&1
+    rc=$?
+    if [[ "$rc" -eq "$4" ]]; then ok "$5: exits $rc"; else fail "$5: exits $rc (expected $4)"; fi
+}
+host_off_case 1 0 0 0 "host off (pwr_down=1)"
+host_off_case 0 1 0 0 "host halted (pwr_button_halt=1)"
+host_off_case 0 0 1 0 "host lost power (flag latched)"
+host_off_case 0 0 0 1 "host on: full thermal minimum enforced, times out"
+rm -f "$SYS_DIR_MET/pwr_down" "$SYS_DIR_MET/pwr_button_halt" "$LOST_FLAG"
 
 # ── conf output message contains threshold info ───────────────────────────────
 
