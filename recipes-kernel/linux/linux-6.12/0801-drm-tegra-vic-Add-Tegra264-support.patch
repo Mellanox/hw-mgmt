@@ -1,0 +1,533 @@
+From 262110be925a Mon Sep 17 00:00:00 2001
+From: Santosh BS <santoshb@nvidia.com>
+Date: Mon, 22 Jun 2026 15:57:41 +0900
+Subject: [PATCH] drm/tegra: vic: Add Tegra264 support
+
+Add the Tegra264 VIC compatible and teach the falcon loader to boot a
+RISC-V firmware image. Existing Falcon clients leave riscv clear.
+
+Upstream commits:
+450793a9762a dt-bindings: display: tegra: Changes to support Tegra264
+fd58cd8974a3 dt-bindings: display: tegra: Add Tegra264 compatible for VIC
+262110be925a drm/tegra: vic: Add Tegra264 support
+
+---
+diff --git a/Documentation/devicetree/bindings/display/tegra/nvidia,tegra124-vic.yaml b/Documentation/devicetree/bindings/display/tegra/nvidia,tegra124-vic.yaml
+index 7200095ef..bdf981781 100644
+--- a/Documentation/devicetree/bindings/display/tegra/nvidia,tegra124-vic.yaml
++++ b/Documentation/devicetree/bindings/display/tegra/nvidia,tegra124-vic.yaml
+@@ -22,6 +22,7 @@ properties:
+           - nvidia,tegra186-vic
+           - nvidia,tegra194-vic
+           - nvidia,tegra234-vic
++          - nvidia,tegra264-vic
+ 
+       - items:
+           - const: nvidia,tegra132-vic
+diff --git a/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-host1x.yaml b/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-host1x.yaml
+index 3563378a0..8312b7699 100644
+--- a/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-host1x.yaml
++++ b/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-host1x.yaml
+@@ -25,6 +25,7 @@ properties:
+           - nvidia,tegra186-host1x
+           - nvidia,tegra194-host1x
+           - nvidia,tegra234-host1x
++          - nvidia,tegra264-host1x
+ 
+       - items:
+           - const: nvidia,tegra132-host1x
+@@ -57,7 +58,8 @@ properties:
+     enum: [1, 2]
+ 
+   ranges:
+-    maxItems: 1
++    minItems: 1
++    maxItems: 2
+ 
+   clocks:
+     description: Must contain one entry, for the module clock. See
+@@ -192,6 +194,7 @@ allOf:
+           contains:
+             enum:
+               - nvidia,tegra234-host1x
++              - nvidia,tegra264-host1x
+     then:
+       properties:
+         reg-names:
+@@ -239,6 +242,21 @@ allOf:
+ 
+       required:
+         - reg-names
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra264-host1x
++    then:
++      properties:
++        ranges:
++          minItems: 2
++          maxItems: 2
++    else:
++      properties:
++        ranges:
++          maxItems: 1
+ 
+ examples:
+   - |
+diff --git a/drivers/gpu/drm/tegra/drm.c b/drivers/gpu/drm/tegra/drm.c
+index bcf1f91e7..91bb6769c 100644
+--- a/drivers/gpu/drm/tegra/drm.c
++++ b/drivers/gpu/drm/tegra/drm.c
+@@ -1393,6 +1393,7 @@ static const struct of_device_id host1x_drm_subdevs[] = {
+ 	{ .compatible = "nvidia,tegra194-nvdec", },
+ 	{ .compatible = "nvidia,tegra234-vic", },
+ 	{ .compatible = "nvidia,tegra234-nvdec", },
++	{ .compatible = "nvidia,tegra264-vic", },
+ 	{ /* sentinel */ }
+ };
+ 
+diff --git a/drivers/gpu/drm/tegra/falcon.c b/drivers/gpu/drm/tegra/falcon.c
+index c0d85463e..1172356b6 100644
+--- a/drivers/gpu/drm/tegra/falcon.c
++++ b/drivers/gpu/drm/tegra/falcon.c
+@@ -26,8 +26,20 @@ int falcon_wait_idle(struct falcon *falcon)
+ {
+ 	u32 value;
+ 
+-	return readl_poll_timeout(falcon->regs + FALCON_IDLESTATE, value,
+-				  (value == 0), 10, 100000);
++	if (falcon->riscv)
++		return readl_poll_timeout(falcon->regs + RISCV_CPUCTL, value,
++					  (value & RISCV_CPUCTL_ACTIVE_STAT_ACTIVE), 10, 100000);
++	else
++		return readl_poll_timeout(falcon->regs + FALCON_IDLESTATE, value,
++					  (value == 0), 10, 100000);
++}
++
++static int falcon_dma_wait_not_full(struct falcon *falcon)
++{
++	u32 value;
++
++	return readl_poll_timeout(falcon->regs + FALCON_DMATRFCMD, value,
++				  !(value & FALCON_DMATRFCMD_FULL), 10, 100000);
+ }
+ 
+ static int falcon_dma_wait_idle(struct falcon *falcon)
+@@ -44,6 +56,7 @@ static int falcon_copy_chunk(struct falcon *falcon,
+ 			     enum falcon_memory target)
+ {
+ 	u32 cmd = FALCON_DMATRFCMD_SIZE_256B;
++	int err;
+ 
+ 	if (target == FALCON_MEMORY_IMEM)
+ 		cmd |= FALCON_DMATRFCMD_IMEM;
+@@ -56,11 +69,15 @@ static int falcon_copy_chunk(struct falcon *falcon,
+ 	 */
+ 	cmd |= FALCON_DMATRFCMD_DMACTX(1);
+ 
++	err = falcon_dma_wait_not_full(falcon);
++	if (err < 0)
++		return err;
++
+ 	falcon_writel(falcon, offset, FALCON_DMATRFMOFFS);
+ 	falcon_writel(falcon, base, FALCON_DMATRFFBOFFS);
+ 	falcon_writel(falcon, cmd, FALCON_DMATRFCMD);
+ 
+-	return falcon_dma_wait_idle(falcon);
++	return 0;
+ }
+ 
+ static void falcon_copy_firmware_image(struct falcon *falcon,
+@@ -109,6 +126,17 @@ static int falcon_parse_firmware_image(struct falcon *falcon)
+ 	return 0;
+ }
+ 
++static void falcon_parse_firmware_desc(struct falcon *falcon)
++{
++	struct falcon_fw_riscv_desc *desc =
++		(struct falcon_fw_riscv_desc *)falcon->firmware.desc_firmware->data;
++
++	falcon->firmware.code.offset = desc->code_offset;
++	falcon->firmware.code.size = desc->code_size;
++	falcon->firmware.data.offset = desc->data_offset;
++	falcon->firmware.data.size = desc->data_size;
++}
++
+ int falcon_read_firmware(struct falcon *falcon, const char *name)
+ {
+ 	int err;
+@@ -120,7 +148,23 @@ int falcon_read_firmware(struct falcon *falcon, const char *name)
+ 
+ 	falcon->firmware.size = falcon->firmware.firmware->size;
+ 
++	if (falcon->riscv) {
++		/* Load separate descriptor */
++		char desc_name[128];
++
++		scnprintf(desc_name, sizeof(desc_name), "%s.desc", name);
++		err = request_firmware(&falcon->firmware.desc_firmware, desc_name, falcon->dev);
++		if (err < 0)
++			goto release_firmware;
++	}
++
+ 	return 0;
++
++release_firmware:
++	release_firmware(falcon->firmware.firmware);
++	falcon->firmware.firmware = NULL;
++
++	return err;
+ }
+ 
+ int falcon_load_firmware(struct falcon *falcon)
+@@ -131,16 +175,22 @@ int falcon_load_firmware(struct falcon *falcon)
+ 	/* copy firmware image into local area. this also ensures endianness */
+ 	falcon_copy_firmware_image(falcon, firmware);
+ 
+-	/* parse the image data */
+-	err = falcon_parse_firmware_image(falcon);
+-	if (err < 0) {
+-		dev_err(falcon->dev, "failed to parse firmware image\n");
+-		return err;
++	if (falcon->riscv) {
++		falcon_parse_firmware_desc(falcon);
++	} else {
++		err = falcon_parse_firmware_image(falcon);
++		if (err < 0) {
++			dev_err(falcon->dev, "failed to parse firmware image\n");
++			return err;
++		}
+ 	}
+ 
+ 	release_firmware(firmware);
+ 	falcon->firmware.firmware = NULL;
+ 
++	release_firmware(falcon->firmware.desc_firmware);
++	falcon->firmware.desc_firmware = NULL;
++
+ 	return 0;
+ }
+ 
+@@ -155,6 +205,9 @@ void falcon_exit(struct falcon *falcon)
+ {
+ 	if (falcon->firmware.firmware)
+ 		release_firmware(falcon->firmware.firmware);
++
++	if (falcon->firmware.desc_firmware)
++		release_firmware(falcon->firmware.desc_firmware);
+ }
+ 
+ int falcon_boot(struct falcon *falcon)
+@@ -191,6 +244,11 @@ int falcon_boot(struct falcon *falcon)
+ 		falcon_copy_chunk(falcon, falcon->firmware.code.offset + offset,
+ 				  offset, FALCON_MEMORY_IMEM);
+ 
++	/* wait for DMA to complete */
++	err = falcon_dma_wait_idle(falcon);
++	if (err < 0)
++		return err;
++
+ 	/* setup falcon interrupts */
+ 	falcon_writel(falcon, FALCON_IRQMSET_EXT(0xff) |
+ 			      FALCON_IRQMSET_SWGEN1 |
+@@ -211,9 +269,15 @@ int falcon_boot(struct falcon *falcon)
+ 			      FALCON_ITFEN_CTXEN,
+ 		      FALCON_ITFEN);
+ 
+-	/* boot falcon */
+-	falcon_writel(falcon, 0x00000000, FALCON_BOOTVEC);
+-	falcon_writel(falcon, FALCON_CPUCTL_STARTCPU, FALCON_CPUCTL);
++	if (falcon->riscv) {
++		falcon_writel(falcon, RISCV_BCR_CTRL_CORE_SELECT_RISCV, RISCV_BCR_CTRL);
++		falcon_writel(falcon, 0x0, RISCV_BOOT_VECTOR_HI);
++		falcon_writel(falcon, 0x100000, RISCV_BOOT_VECTOR_LO);
++		falcon_writel(falcon, RISCV_CPUCTL_STARTCPU, RISCV_CPUCTL);
++	} else {
++		falcon_writel(falcon, 0x00000000, FALCON_BOOTVEC);
++		falcon_writel(falcon, FALCON_CPUCTL_STARTCPU, FALCON_CPUCTL);
++	}
+ 
+ 	err = falcon_wait_idle(falcon);
+ 	if (err < 0) {
+diff --git a/drivers/gpu/drm/tegra/falcon.h b/drivers/gpu/drm/tegra/falcon.h
+index 1955cf11a..37a17c613 100644
+--- a/drivers/gpu/drm/tegra/falcon.h
++++ b/drivers/gpu/drm/tegra/falcon.h
+@@ -47,6 +47,7 @@
+ #define FALCON_DMATRFMOFFS			0x00001114
+ 
+ #define FALCON_DMATRFCMD			0x00001118
++#define FALCON_DMATRFCMD_FULL			(1 << 0)
+ #define FALCON_DMATRFCMD_IDLE			(1 << 1)
+ #define FALCON_DMATRFCMD_IMEM			(1 << 4)
+ #define FALCON_DMATRFCMD_SIZE_256B		(6 << 8)
+@@ -54,6 +55,16 @@
+ 
+ #define FALCON_DMATRFFBOFFS			0x0000111c
+ 
++#define RISCV_BOOT_VECTOR_LO			0x00001780
++#define RISCV_BOOT_VECTOR_HI			0x00001784
++
++#define RISCV_CPUCTL				0x00001788
++#define RISCV_CPUCTL_STARTCPU			(1 << 0)
++#define RISCV_CPUCTL_ACTIVE_STAT_ACTIVE		(1 << 7)
++
++#define RISCV_BCR_CTRL				0x00001a68
++#define RISCV_BCR_CTRL_CORE_SELECT_RISCV	(1 << 4)
++
+ struct falcon_fw_bin_header_v1 {
+ 	u32 magic;		/* 0x10de */
+ 	u32 version;		/* version of bin format (1) */
+@@ -75,6 +86,14 @@ struct falcon_fw_os_header_v1 {
+ 	u32 data_size;
+ };
+ 
++struct falcon_fw_riscv_desc {
++	u32 reserved[74];
++	u32 data_offset;
++	u32 data_size;
++	u32 code_offset;
++	u32 code_size;
++};
++
+ struct falcon_firmware_section {
+ 	unsigned long offset;
+ 	size_t size;
+@@ -83,6 +102,8 @@ struct falcon_firmware_section {
+ struct falcon_firmware {
+ 	/* Firmware after it is read but not loaded */
+ 	const struct firmware *firmware;
++	/* RISC-V firmware descriptor */
++	const struct firmware *desc_firmware;
+ 
+ 	/* Raw firmware data */
+ 	dma_addr_t iova;
+@@ -101,6 +122,9 @@ struct falcon {
+ 	struct device *dev;
+ 	void __iomem *regs;
+ 
++	/* Peregrine falcon, external boot */
++	bool riscv;
++
+ 	struct falcon_firmware firmware;
+ };
+ 
+diff --git a/drivers/gpu/drm/tegra/vic.c b/drivers/gpu/drm/tegra/vic.c
+index 73c356f1c..b02fc49b5 100644
+--- a/drivers/gpu/drm/tegra/vic.c
++++ b/drivers/gpu/drm/tegra/vic.c
+@@ -8,6 +8,7 @@
+ #include <linux/dma-mapping.h>
+ #include <linux/host1x.h>
+ #include <linux/iommu.h>
++#include <linux/iopoll.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
+@@ -20,10 +21,16 @@
+ #include "falcon.h"
+ #include "vic.h"
+ 
++#define VIC_FALCON_DEBUGINFO			0x1094
++#define VIC_DEBUGINFO_DUMMY			0xabcd1234
++#define VIC_DEBUGINFO_CLEAR			0x0
++
+ struct vic_config {
+ 	const char *firmware;
+ 	unsigned int version;
+ 	bool supports_sid;
++	bool has_riscv;
++	unsigned int transcfg_offset;
+ };
+ 
+ struct vic {
+@@ -54,8 +61,8 @@ static void vic_writel(struct vic *vic, u32 value, unsigned int offset)
+ 
+ static int vic_boot(struct vic *vic)
+ {
+-	u32 fce_ucode_size, fce_bin_data_offset, stream_id;
+-	void *hdr;
++	u32 stream_id;
++	u32 val;
+ 	int err = 0;
+ 
+ 	if (vic->config->supports_sid && tegra_dev_iommu_get_stream_id(vic->dev, &stream_id)) {
+@@ -63,7 +70,7 @@ static int vic_boot(struct vic *vic)
+ 
+ 		value = TRANSCFG_ATT(1, TRANSCFG_SID_FALCON) |
+ 			TRANSCFG_ATT(0, TRANSCFG_SID_HW);
+-		vic_writel(vic, value, VIC_TFBIF_TRANSCFG);
++		vic_writel(vic, value, vic->config->transcfg_offset);
+ 
+ 		/*
+ 		 * STREAMID0 is used for input/output buffers. Initialize it to SID_VIC in case
+@@ -85,31 +92,51 @@ static int vic_boot(struct vic *vic)
+ 			CG_WAKEUP_DLY_CNT(4),
+ 		   NV_PVIC_MISC_PRI_VIC_CG);
+ 
++	if (vic->config->has_riscv) {
++		/* Write a known pattern into DEBUGINFO register */
++		vic_writel(vic, VIC_DEBUGINFO_DUMMY, VIC_FALCON_DEBUGINFO);
++	}
++
+ 	err = falcon_boot(&vic->falcon);
+ 	if (err < 0)
+ 		return err;
+ 
+-	hdr = vic->falcon.firmware.virt;
+-	fce_bin_data_offset = *(u32 *)(hdr + VIC_UCODE_FCE_DATA_OFFSET);
+-
+-	/* Old VIC firmware needs kernel help with setting up FCE microcode. */
+-	if (fce_bin_data_offset != 0x0 && fce_bin_data_offset != 0xa5a5a5a5) {
+-		hdr = vic->falcon.firmware.virt +
+-			*(u32 *)(hdr + VIC_UCODE_FCE_HEADER_OFFSET);
+-		fce_ucode_size = *(u32 *)(hdr + FCE_UCODE_SIZE_OFFSET);
+-
+-		falcon_execute_method(&vic->falcon, VIC_SET_FCE_UCODE_SIZE,
+-				      fce_ucode_size);
+-		falcon_execute_method(
+-			&vic->falcon, VIC_SET_FCE_UCODE_OFFSET,
+-			(vic->falcon.firmware.iova + fce_bin_data_offset) >> 8);
+-	}
++	if (vic->config->has_riscv) {
++		/* Check VIC has reached a proper initialized state */
++		err = readl_poll_timeout(vic->regs + VIC_FALCON_DEBUGINFO, val,
++					 val == VIC_DEBUGINFO_CLEAR,
++					 1000, 2000000);
++		if (err) {
++			dev_err(vic->dev, "VIC not initialized, timeout, val=0x%x\n", val);
++			return err;
++		}
++	} else {
++		u32 fce_ucode_size, fce_bin_data_offset;
++		dma_addr_t iova;
++		void *hdr;
++
++		iova = vic->falcon.firmware.iova;
++		hdr = vic->falcon.firmware.virt;
++		fce_bin_data_offset = *(u32 *)(hdr + VIC_UCODE_FCE_DATA_OFFSET);
++
++		/* Old VIC firmware needs kernel help with setting up FCE microcode. */
++		if (fce_bin_data_offset != 0x0 && fce_bin_data_offset != 0xa5a5a5a5) {
++			hdr = vic->falcon.firmware.virt +
++				*(u32 *)(hdr + VIC_UCODE_FCE_HEADER_OFFSET);
++			fce_ucode_size = *(u32 *)(hdr + FCE_UCODE_SIZE_OFFSET);
++
++			falcon_execute_method(&vic->falcon, VIC_SET_FCE_UCODE_SIZE,
++					      fce_ucode_size);
++			falcon_execute_method(&vic->falcon, VIC_SET_FCE_UCODE_OFFSET,
++					      (iova + fce_bin_data_offset) >> 8);
++		}
+ 
+-	err = falcon_wait_idle(&vic->falcon);
+-	if (err < 0) {
+-		dev_err(vic->dev,
+-			"failed to set application ID and FCE base\n");
+-		return err;
++		err = falcon_wait_idle(&vic->falcon);
++		if (err < 0) {
++			dev_err(vic->dev,
++				"failed to set application ID and FCE base\n");
++			return err;
++		}
+ 	}
+ 
+ 	return 0;
+@@ -277,6 +304,8 @@ static int vic_load_firmware(struct vic *vic)
+ 
+ 	if (!vic->config->supports_sid) {
+ 		vic->can_use_context = false;
++	} else if (vic->config->has_riscv) {
++		vic->can_use_context = true;
+ 	} else if (fce_bin_data_offset != 0x0 && fce_bin_data_offset != 0xa5a5a5a5) {
+ 		/*
+ 		 * Firmware will access FCE through STREAMID0, so context
+@@ -302,7 +331,6 @@ static int vic_load_firmware(struct vic *vic)
+ 	return err;
+ }
+ 
+-
+ static int __maybe_unused vic_runtime_resume(struct device *dev)
+ {
+ 	struct vic *vic = dev_get_drvdata(dev);
+@@ -417,6 +445,7 @@ static const struct vic_config vic_t186_config = {
+ 	.firmware = NVIDIA_TEGRA_186_VIC_FIRMWARE,
+ 	.version = 0x18,
+ 	.supports_sid = true,
++	.transcfg_offset = 0x2044,
+ };
+ 
+ #define NVIDIA_TEGRA_194_VIC_FIRMWARE "nvidia/tegra194/vic.bin"
+@@ -425,6 +454,7 @@ static const struct vic_config vic_t194_config = {
+ 	.firmware = NVIDIA_TEGRA_194_VIC_FIRMWARE,
+ 	.version = 0x19,
+ 	.supports_sid = true,
++	.transcfg_offset = 0x2044,
+ };
+ 
+ #define NVIDIA_TEGRA_234_VIC_FIRMWARE "nvidia/tegra234/vic.bin"
+@@ -433,6 +463,18 @@ static const struct vic_config vic_t234_config = {
+ 	.firmware = NVIDIA_TEGRA_234_VIC_FIRMWARE,
+ 	.version = 0x23,
+ 	.supports_sid = true,
++	.transcfg_offset = 0x2044,
++};
++
++#define NVIDIA_TEGRA_264_VIC_FIRMWARE "nvidia/tegra264/vic.bin"
++#define NVIDIA_TEGRA_264_VIC_DESC "nvidia/tegra264/vic.bin.desc"
++
++static const struct vic_config vic_t264_config = {
++	.firmware = NVIDIA_TEGRA_264_VIC_FIRMWARE,
++	.version = 0x264,
++	.supports_sid = true,
++	.has_riscv = true,
++	.transcfg_offset = 0x2244,
+ };
+ 
+ static const struct of_device_id tegra_vic_of_match[] = {
+@@ -441,6 +483,7 @@ static const struct of_device_id tegra_vic_of_match[] = {
+ 	{ .compatible = "nvidia,tegra186-vic", .data = &vic_t186_config },
+ 	{ .compatible = "nvidia,tegra194-vic", .data = &vic_t194_config },
+ 	{ .compatible = "nvidia,tegra234-vic", .data = &vic_t234_config },
++	{ .compatible = "nvidia,tegra264-vic", .data = &vic_t264_config },
+ 	{ },
+ };
+ MODULE_DEVICE_TABLE(of, tegra_vic_of_match);
+@@ -495,6 +538,7 @@ static int vic_probe(struct platform_device *pdev)
+ 
+ 	vic->falcon.dev = dev;
+ 	vic->falcon.regs = vic->regs;
++	vic->falcon.riscv = vic->config->has_riscv;
+ 
+ 	err = falcon_init(&vic->falcon);
+ 	if (err < 0)
+@@ -571,3 +615,7 @@ MODULE_FIRMWARE(NVIDIA_TEGRA_194_VIC_FIRMWARE);
+ #if IS_ENABLED(CONFIG_ARCH_TEGRA_234_SOC)
+ MODULE_FIRMWARE(NVIDIA_TEGRA_234_VIC_FIRMWARE);
+ #endif
++#if IS_ENABLED(CONFIG_ARCH_TEGRA_264_SOC)
++MODULE_FIRMWARE(NVIDIA_TEGRA_264_VIC_FIRMWARE);
++MODULE_FIRMWARE(NVIDIA_TEGRA_264_VIC_DESC);
++#endif
+diff --git a/drivers/gpu/drm/tegra/vic.h b/drivers/gpu/drm/tegra/vic.h
+index acf35aac9..aca98a09c 100644
+--- a/drivers/gpu/drm/tegra/vic.h
++++ b/drivers/gpu/drm/tegra/vic.h
+@@ -21,11 +21,10 @@
+ #define CG_IDLE_CG_EN				(1 << 6)
+ #define CG_WAKEUP_DLY_CNT(val)			((val & 0xf) << 16)
+ 
+-#define VIC_TFBIF_TRANSCFG	0x00002044
+-#define  TRANSCFG_ATT(i, v)	(((v) & 0x3) << (i * 4))
+-#define  TRANSCFG_SID_HW	0
+-#define  TRANSCFG_SID_PHY	1
+-#define  TRANSCFG_SID_FALCON	2
++#define TRANSCFG_ATT(i, v)	(((v) & 0x3) << ((i) * 4))
++#define TRANSCFG_SID_HW		0
++#define TRANSCFG_SID_PHY	1
++#define TRANSCFG_SID_FALCON	2
+ 
+ /* Firmware offsets */
+ 

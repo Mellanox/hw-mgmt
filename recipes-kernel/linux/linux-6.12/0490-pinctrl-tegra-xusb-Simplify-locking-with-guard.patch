@@ -1,0 +1,69 @@
+From 160d686fbf8f9ee5aca85ee27557afb55358edae Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Sun, 18 Jan 2026 19:09:32 +0100
+Subject: [PATCH 0490/0797] pinctrl: tegra-xusb: Simplify locking with guard()
+
+Simplify error handling (less gotos) over locks with guard().
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Signed-off-by: Linus Walleij <linusw@kernel.org>
+---
+ drivers/pinctrl/tegra/pinctrl-tegra-xusb.c | 16 +++++-----------
+ 1 file changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c b/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c
+index 34a373f7e04dd9..c6a51bb212152c 100644
+--- a/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c
++++ b/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c
+@@ -478,10 +478,10 @@ static void tegra_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
+ {
+ 	u32 value;
+ 
+-	mutex_lock(&padctl->lock);
++	guard(mutex)(&padctl->lock);
+ 
+ 	if (padctl->enable++ > 0)
+-		goto out;
++		return;
+ 
+ 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+ 	value &= ~XUSB_PADCTL_ELPG_PROGRAM_AUX_MUX_LP0_CLAMP_EN;
+@@ -498,22 +498,19 @@ static void tegra_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
+ 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+ 	value &= ~XUSB_PADCTL_ELPG_PROGRAM_AUX_MUX_LP0_VCORE_DOWN;
+ 	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM);
+-
+-out:
+-	mutex_unlock(&padctl->lock);
+ }
+ 
+ static void tegra_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
+ {
+ 	u32 value;
+ 
+-	mutex_lock(&padctl->lock);
++	guard(mutex)(&padctl->lock);
+ 
+ 	if (WARN_ON(padctl->enable == 0))
+-		goto out;
++		return;
+ 
+ 	if (--padctl->enable > 0)
+-		goto out;
++		return;
+ 
+ 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+ 	value |= XUSB_PADCTL_ELPG_PROGRAM_AUX_MUX_LP0_VCORE_DOWN;
+@@ -530,9 +527,6 @@ static void tegra_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
+ 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+ 	value |= XUSB_PADCTL_ELPG_PROGRAM_AUX_MUX_LP0_CLAMP_EN;
+ 	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM);
+-
+-out:
+-	mutex_unlock(&padctl->lock);
+ }
+ 
+ static int tegra_xusb_phy_init(struct phy *phy)
+-- 
+cgit 1.3.1-korg
+

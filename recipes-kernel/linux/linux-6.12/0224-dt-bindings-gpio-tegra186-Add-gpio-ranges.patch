@@ -1,0 +1,30 @@
+From 1275c70c4c1ca764cbf9ced01fb4286e4f49747e Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Tue, 29 Apr 2025 16:33:31 -0500
+Subject: [PATCH 0224/0797] dt-bindings: gpio: tegra186: Add gpio-ranges
+
+Add optional gpio-ranges property.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Reviewed-by: Linus Walleij <linus.walleij@linaro.org>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250429-tegra186-pinctrl-v1-2-722c7c42394e@gmail.com
+Signed-off-by: Bartosz Golaszewski <bartosz.golaszewski@linaro.org>
+---
+ .../devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml         | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml b/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml
+index 4ef06b2ff1ff0..065f5761a93f6 100644
+--- a/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml
++++ b/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml
+@@ -111,6 +111,9 @@ properties:
+ 
+   gpio-controller: true
+ 
++  gpio-ranges:
++    maxItems: 1
++
+   "#gpio-cells":
+     description: |
+       Indicates how many cells are used in a consumer's GPIO specifier. In the

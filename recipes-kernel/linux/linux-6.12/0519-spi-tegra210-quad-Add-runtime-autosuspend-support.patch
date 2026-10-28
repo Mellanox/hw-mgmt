@@ -1,0 +1,96 @@
+From 7c12f6ead4672cb08b74e6f6115eb04dca8ccfa4 Mon Sep 17 00:00:00 2001
+From: Vishwaroop A <va@nvidia.com>
+Date: Tue, 24 Feb 2026 09:24:52 +0000
+Subject: [PATCH 0519/0797] spi: tegra210-quad: Add runtime autosuspend support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Using Tegra234, it was found that it takes about 10us to disable clocks
+and 20us to enable clocks, adding about 30us overhead per operation.
+For a 4MB firmware update with 16,384 page programs, this results in
+~491ms total overhead (12% impact).
+
+With Tegra234, flash operations were observed to occur in bursts with
+50-200μs gaps between page programs. Testing on Tegra234 with various
+operation patterns shows 500ms delay provides optimal balance, and for
+longer operations (>500ms), the overhead is negligible. Therefore,
+update the driver to use pm-runtime autosuspend with the default timeout
+of 500ms to reduce the clock gating overhead during consecutive QSPI
+transfers.
+
+Signed-off-by: Vishwaroop A <va@nvidia.com>
+Link: https://patch.msgid.link/20260224092452.1482800-1-va@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/spi-tegra210-quad.c | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/spi/spi-tegra210-quad.c b/drivers/spi/spi-tegra210-quad.c
+index 7ea5aa993596f6..7fac695b514219 100644
+--- a/drivers/spi/spi-tegra210-quad.c
++++ b/drivers/spi/spi-tegra210-quad.c
+@@ -1000,7 +1000,8 @@ static int tegra_qspi_setup(struct spi_device *spi)
+ 
+ 	spin_unlock_irqrestore(&tqspi->lock, flags);
+ 
+-	pm_runtime_put(tqspi->dev);
++	pm_runtime_mark_last_busy(tqspi->dev);
++	pm_runtime_put_autosuspend(tqspi->dev);
+ 
+ 	return 0;
+ }
+@@ -1765,6 +1766,14 @@ static int tegra_qspi_probe(struct platform_device *pdev)
+ 	init_completion(&tqspi->rx_dma_complete);
+ 	init_completion(&tqspi->xfer_completion);
+ 
++	/*
++	 * Set autosuspend delay to 500ms. Testing shows this value eliminates
++	 * suspend/resume overhead during burst operations while allowing quick
++	 * suspension during idle. For longer operations, the overhead is negligible.
++	 */
++	pm_runtime_set_autosuspend_delay(&pdev->dev, 500);
++	pm_runtime_use_autosuspend(&pdev->dev);
++
+ 	pm_runtime_enable(&pdev->dev);
+ 	ret = pm_runtime_resume_and_get(&pdev->dev);
+ 	if (ret < 0) {
+@@ -1781,7 +1790,8 @@ static int tegra_qspi_probe(struct platform_device *pdev)
+ 	tqspi->spi_cs_timing2 = tegra_qspi_readl(tqspi, QSPI_CS_TIMING2);
+ 	tqspi->def_command2_reg = tegra_qspi_readl(tqspi, QSPI_COMMAND2);
+ 
+-	pm_runtime_put(&pdev->dev);
++	pm_runtime_mark_last_busy(&pdev->dev);
++	pm_runtime_put_autosuspend(&pdev->dev);
+ 
+ 	ret = request_threaded_irq(tqspi->irq, NULL,
+ 				   tegra_qspi_isr_thread, IRQF_ONESHOT,
+@@ -1802,6 +1812,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
+ exit_free_irq:
+ 	free_irq(qspi_irq, tqspi);
+ exit_pm_disable:
++	pm_runtime_dont_use_autosuspend(&pdev->dev);
+ 	pm_runtime_force_suspend(&pdev->dev);
+ 	tegra_qspi_deinit_dma(tqspi);
+ 	return ret;
+@@ -1814,6 +1825,7 @@ static void tegra_qspi_remove(struct platform_device *pdev)
+ 
+ 	spi_unregister_controller(host);
+ 	free_irq(tqspi->irq, tqspi);
++	pm_runtime_dont_use_autosuspend(&pdev->dev);
+ 	pm_runtime_force_suspend(&pdev->dev);
+ 	tegra_qspi_deinit_dma(tqspi);
+ }
+@@ -1839,7 +1851,8 @@ static int __maybe_unused tegra_qspi_resume(struct device *dev)
+ 
+ 	tegra_qspi_writel(tqspi, tqspi->command1_reg, QSPI_COMMAND1);
+ 	tegra_qspi_writel(tqspi, tqspi->def_command2_reg, QSPI_COMMAND2);
+-	pm_runtime_put(dev);
++	pm_runtime_mark_last_busy(dev);
++	pm_runtime_put_autosuspend(dev);
+ 
+ 	return spi_controller_resume(host);
+ }
+-- 
+cgit 1.3.1-korg
+

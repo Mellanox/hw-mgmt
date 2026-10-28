@@ -1,0 +1,44 @@
+From 2ea99dade57e094625726de1ced1e99b48fc767a Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Fri, 2 Jan 2026 13:50:20 +0100
+Subject: [PATCH 0479/0797] clk: tegra: tegra124-emc: Simplify with scoped for each OF child loop
+
+Use scoped for-each loop when iterating over device nodes to make code a
+bit simpler.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/clk/tegra/clk-tegra124-emc.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/clk/tegra/clk-tegra124-emc.c b/drivers/clk/tegra/clk-tegra124-emc.c
+index 0f6fb776b2298d..251209ac50dbf9 100644
+--- a/drivers/clk/tegra/clk-tegra124-emc.c
++++ b/drivers/clk/tegra/clk-tegra124-emc.c
+@@ -444,7 +444,6 @@ static int load_timings_from_dt(struct tegra_clk_emc *tegra,
+ 				u32 ram_code)
+ {
+ 	struct emc_timing *timings_ptr;
+-	struct device_node *child;
+ 	int child_count = of_get_child_count(node);
+ 	int i = 0, err;
+ 	size_t size;
+@@ -458,12 +457,11 @@ static int load_timings_from_dt(struct tegra_clk_emc *tegra,
+ 	timings_ptr = tegra->timings + tegra->num_timings;
+ 	tegra->num_timings += child_count;
+ 
+-	for_each_child_of_node(node, child) {
++	for_each_child_of_node_scoped(node, child) {
+ 		struct emc_timing *timing = timings_ptr + (i++);
+ 
+ 		err = load_one_timing_from_dt(tegra, timing, child);
+ 		if (err) {
+-			of_node_put(child);
+ 			kfree(tegra->timings);
+ 			return err;
+ 		}
+-- 
+cgit 1.3.1-korg
+

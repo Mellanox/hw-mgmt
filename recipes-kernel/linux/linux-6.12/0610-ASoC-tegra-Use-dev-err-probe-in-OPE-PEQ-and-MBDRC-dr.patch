@@ -1,0 +1,145 @@
+From 2333abb25c7e2ba823d2113b83a22be4c2ba63c1 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 1 Apr 2026 11:24:58 +0000
+Subject: [PATCH 0610/0797] ASoC: tegra: Use dev_err_probe() in OPE, PEQ and MBDRC drivers
+
+Log errors in the Tegra210 OPE, PEQ and MBDRC probe paths using
+dev_err_probe(). Drop redundant dev_err() at tegra210_peq_regmap_init()
+and tegra210_mbdrc_regmap_init() call sites in ope_probe() since
+these functions already log errors internally.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260401112500.4076861-3-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_mbdrc.c | 17 ++++++++---------
+ sound/soc/tegra/tegra210_ope.c   | 22 ++++++++--------------
+ sound/soc/tegra/tegra210_peq.c   | 17 ++++++++---------
+ 3 files changed, 24 insertions(+), 32 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_mbdrc.c b/sound/soc/tegra/tegra210_mbdrc.c
+index 6a268dbb71978c..2e4f50b470a8fa 100644
+--- a/sound/soc/tegra/tegra210_mbdrc.c
++++ b/sound/soc/tegra/tegra210_mbdrc.c
+@@ -988,14 +988,14 @@ int tegra210_mbdrc_regmap_init(struct platform_device *pdev)
+ 
+ 	child = of_get_child_by_name(dev->of_node, "dynamic-range-compressor");
+ 	if (!child)
+-		return -ENODEV;
++		return dev_err_probe(dev, -ENODEV,
++				     "missing 'dynamic-range-compressor' DT child node\n");
+ 
+ 	err = of_address_to_resource(child, 0, &mem);
+ 	of_node_put(child);
+-	if (err < 0) {
+-		dev_err(dev, "fail to get MBDRC resource\n");
+-		return err;
+-	}
++	if (err < 0)
++		return dev_err_probe(dev, err,
++				     "failed to get MBDRC resource\n");
+ 
+ 	mem.flags = IORESOURCE_MEM;
+ 	regs = devm_ioremap_resource(dev, &mem);
+@@ -1004,10 +1004,9 @@ int tegra210_mbdrc_regmap_init(struct platform_device *pdev)
+ 
+ 	ope->mbdrc_regmap = devm_regmap_init_mmio(dev, regs,
+ 						  &tegra210_mbdrc_regmap_cfg);
+-	if (IS_ERR(ope->mbdrc_regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(ope->mbdrc_regmap);
+-	}
++	if (IS_ERR(ope->mbdrc_regmap))
++		return dev_err_probe(dev, PTR_ERR(ope->mbdrc_regmap),
++				     "MBDRC regmap init failed\n");
+ 
+ 	regcache_cache_only(ope->mbdrc_regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_ope.c b/sound/soc/tegra/tegra210_ope.c
+index a440888dcdbdf7..ad4c400281e819 100644
+--- a/sound/soc/tegra/tegra210_ope.c
++++ b/sound/soc/tegra/tegra210_ope.c
+@@ -318,34 +318,28 @@ static int tegra210_ope_probe(struct platform_device *pdev)
+ 
+ 	ope->regmap = devm_regmap_init_mmio(dev, regs,
+ 					    &tegra210_ope_regmap_config);
+-	if (IS_ERR(ope->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(ope->regmap);
+-	}
++	if (IS_ERR(ope->regmap))
++		return dev_err_probe(dev, PTR_ERR(ope->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(ope->regmap, true);
+ 
+ 	dev_set_drvdata(dev, ope);
+ 
+ 	err = tegra210_peq_regmap_init(pdev);
+-	if (err < 0) {
+-		dev_err(dev, "PEQ init failed\n");
++	if (err < 0)
+ 		return err;
+-	}
+ 
+ 	err = tegra210_mbdrc_regmap_init(pdev);
+-	if (err < 0) {
+-		dev_err(dev, "MBDRC init failed\n");
++	if (err < 0)
+ 		return err;
+-	}
+ 
+ 	err = devm_snd_soc_register_component(dev, &tegra210_ope_cmpnt,
+ 					      tegra210_ope_dais,
+ 					      ARRAY_SIZE(tegra210_ope_dais));
+-	if (err) {
+-		dev_err(dev, "can't register OPE component, err: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't register OPE component\n");
+ 
+ 	pm_runtime_enable(dev);
+ 
+diff --git a/sound/soc/tegra/tegra210_peq.c b/sound/soc/tegra/tegra210_peq.c
+index 2f72e9d541dca7..f7f98dfdd1c395 100644
+--- a/sound/soc/tegra/tegra210_peq.c
++++ b/sound/soc/tegra/tegra210_peq.c
+@@ -408,14 +408,14 @@ int tegra210_peq_regmap_init(struct platform_device *pdev)
+ 
+ 	child = of_get_child_by_name(dev->of_node, "equalizer");
+ 	if (!child)
+-		return -ENODEV;
++		return dev_err_probe(dev, -ENODEV,
++				     "missing 'equalizer' DT child node\n");
+ 
+ 	err = of_address_to_resource(child, 0, &mem);
+ 	of_node_put(child);
+-	if (err < 0) {
+-		dev_err(dev, "fail to get PEQ resource\n");
+-		return err;
+-	}
++	if (err < 0)
++		return dev_err_probe(dev, err,
++				     "failed to get PEQ resource\n");
+ 
+ 	mem.flags = IORESOURCE_MEM;
+ 	regs = devm_ioremap_resource(dev, &mem);
+@@ -423,10 +423,9 @@ int tegra210_peq_regmap_init(struct platform_device *pdev)
+ 		return PTR_ERR(regs);
+ 	ope->peq_regmap = devm_regmap_init_mmio(dev, regs,
+ 						&tegra210_peq_regmap_config);
+-	if (IS_ERR(ope->peq_regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(ope->peq_regmap);
+-	}
++	if (IS_ERR(ope->peq_regmap))
++		return dev_err_probe(dev, PTR_ERR(ope->peq_regmap),
++				     "PEQ regmap init failed\n");
+ 
+ 	regcache_cache_only(ope->peq_regmap, true);
+ 
+-- 
+cgit 1.3.1-korg
+

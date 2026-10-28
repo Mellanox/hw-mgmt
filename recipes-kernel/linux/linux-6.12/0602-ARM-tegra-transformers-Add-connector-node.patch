@@ -1,0 +1,60 @@
+From 464aac3a99e2522c25f0a005bc8413f3beea06eb Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 23 Feb 2026 08:55:00 +0200
+Subject: [PATCH 0602/0797] ARM: tegra: transformers: Add connector node
+
+All ASUS Transformers have micro-HDMI connector directly available.
+After Tegra HDMI got bridge/connector support, we should use connector
+framework for proper HW description.
+
+Tested-by: Andreas Westman Dorcsak <hedmoo@yahoo.com> # ASUS TF T30
+Tested-by: Robert Eckelmann <longnoserob@gmail.com> # ASUS TF101 T20
+Tested-by: Svyatoslav Ryhel <clamor95@gmail.com> # ASUS TF201 T30
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts | 21 +++++++++++++++++++--
+ 1 file changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts b/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts
+index 5d9e23a438204c..9296e7970ce4eb 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-asus-tf600t.dts
+@@ -62,8 +62,11 @@
+ 			pll-supply = <&vdd_1v8_vio>;
+ 			vdd-supply = <&vdd_3v3_sys>;
+ 
+-			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
+-			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
++			port {
++				hdmi_out: endpoint {
++					remote-endpoint = <&hdmi_connector_in>;
++				};
++			};
+ 		};
+ 	};
+ 
+@@ -2174,6 +2177,20 @@
+ 		clock-output-names = "pmic-oscillator";
+ 	};
+ 
++	hdmi-connector {
++		compatible = "hdmi-connector";
++		type = "d";
++
++		hpd-gpios = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
++		ddc-i2c-bus = <&hdmi_ddc>;
++
++		port {
++			hdmi_connector_in: endpoint {
++				remote-endpoint = <&hdmi_out>;
++			};
++		};
++	};
++
+ 	cpus {
+ 		cpu0: cpu@0 {
+ 			cpu-supply = <&vdd_cpu>;
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,35 @@
+From 3d027d4b93b9423d106d85cc82a084032fd2635d Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 25 Mar 2026 10:14:33 +0000
+Subject: [PATCH 0568/0797] ASoC: tegra: Use dev_err_probe() in tegra210_mixer probe
+
+Log errors in the Tegra210 Mixer probe path using dev_err_probe().
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260325101437.3059693-11-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_mixer.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_mixer.c b/sound/soc/tegra/tegra210_mixer.c
+index 6d3a2b76fd6174..2c0e9c1957c3ec 100644
+--- a/sound/soc/tegra/tegra210_mixer.c
++++ b/sound/soc/tegra/tegra210_mixer.c
+@@ -651,10 +651,9 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
+ 	err = devm_snd_soc_register_component(dev, &tegra210_mixer_cmpnt,
+ 					      tegra210_mixer_dais,
+ 					      ARRAY_SIZE(tegra210_mixer_dais));
+-	if (err) {
+-		dev_err(dev, "can't register MIXER component, err: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't register MIXER component\n");
+ 
+ 	pm_runtime_enable(dev);
+ 
+-- 
+cgit 1.3.1-korg
+

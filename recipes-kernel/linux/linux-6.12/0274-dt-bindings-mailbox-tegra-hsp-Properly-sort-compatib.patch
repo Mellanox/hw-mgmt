@@ -1,0 +1,38 @@
+From 276b86f6f665f52d9ad408d956a33420089c5962 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Tue, 6 May 2025 15:31:10 +0200
+Subject: [PATCH 0274/0797] dt-bindings: mailbox: tegra-hsp: Properly sort compatible string list
+
+Device tree maintainers prefer all single entry cases to be grouped
+under an enum. Furthermore, alphanumeric ordering is easier for the
+majority of people to understand than ordering by release, which is
+quirky.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250506133118.1011777-4-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml b/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml
+index 0fdf88a1f2d9ed..d97050e40fbfb4 100644
+--- a/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml
++++ b/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml
+@@ -64,9 +64,10 @@ properties:
+ 
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra186-hsp
+-      - const: nvidia,tegra194-hsp
+-      - const: nvidia,tegra264-hsp
++      - enum:
++          - nvidia,tegra186-hsp
++          - nvidia,tegra194-hsp
++          - nvidia,tegra264-hsp
+       - items:
+           - const: nvidia,tegra234-hsp
+           - const: nvidia,tegra194-hsp
+-- 
+cgit 1.3.1-korg
+

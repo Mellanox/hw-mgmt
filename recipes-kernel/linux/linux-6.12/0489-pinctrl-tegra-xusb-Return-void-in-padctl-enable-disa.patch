@@ -1,0 +1,73 @@
+From 0899bab9b2364c2ff2779d0f28c86474fb09b985 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Sun, 18 Jan 2026 19:09:31 +0100
+Subject: [PATCH 0489/0797] pinctrl: tegra-xusb: Return void in padctl enable/disable functions
+
+Make the padctl functions a bit simpler by returning void instead of
+always '0'.  The callers - phy init/exit - still need to return 0, but
+these are smaller function without if/branching.
+
+Acked-by: Thierry Reding <treding@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Signed-off-by: Linus Walleij <linusw@kernel.org>
+---
+ drivers/pinctrl/tegra/pinctrl-tegra-xusb.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c b/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c
+index 49c5edeba87f82..34a373f7e04dd9 100644
+--- a/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c
++++ b/drivers/pinctrl/tegra/pinctrl-tegra-xusb.c
+@@ -474,7 +474,7 @@ static const struct pinconf_ops tegra_xusb_padctl_pinconf_ops = {
+ #endif
+ };
+ 
+-static int tegra_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
++static void tegra_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
+ {
+ 	u32 value;
+ 
+@@ -501,10 +501,9 @@ static int tegra_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
+ 
+ out:
+ 	mutex_unlock(&padctl->lock);
+-	return 0;
+ }
+ 
+-static int tegra_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
++static void tegra_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
+ {
+ 	u32 value;
+ 
+@@ -534,21 +533,24 @@ static int tegra_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
+ 
+ out:
+ 	mutex_unlock(&padctl->lock);
+-	return 0;
+ }
+ 
+ static int tegra_xusb_phy_init(struct phy *phy)
+ {
+ 	struct tegra_xusb_padctl *padctl = phy_get_drvdata(phy);
+ 
+-	return tegra_xusb_padctl_enable(padctl);
++	tegra_xusb_padctl_enable(padctl);
++
++	return 0;
+ }
+ 
+ static int tegra_xusb_phy_exit(struct phy *phy)
+ {
+ 	struct tegra_xusb_padctl *padctl = phy_get_drvdata(phy);
+ 
+-	return tegra_xusb_padctl_disable(padctl);
++	tegra_xusb_padctl_disable(padctl);
++
++	return 0;
+ }
+ 
+ static int pcie_phy_power_on(struct phy *phy)
+-- 
+cgit 1.3.1-korg
+

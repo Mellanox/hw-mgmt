@@ -1,0 +1,45 @@
+From 36df0ef3b4187c69c271af7a1d56f7abb788655e Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 18 Mar 2026 07:11:29 +0000
+Subject: [PATCH 0653/0797] bus: tegra-aconnect: Use dev_err_probe for probe error paths
+
+Convert probe error handling to use dev_err_probe() which provides
+proper handling of -EPROBE_DEFER.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/bus/tegra-aconnect.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/bus/tegra-aconnect.c b/drivers/bus/tegra-aconnect.c
+index 90e3b0a108161e..9b2b227332b22f 100644
+--- a/drivers/bus/tegra-aconnect.c
++++ b/drivers/bus/tegra-aconnect.c
+@@ -32,16 +32,14 @@ static int tegra_aconnect_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	aconnect->ape_clk = devm_clk_get(&pdev->dev, "ape");
+-	if (IS_ERR(aconnect->ape_clk)) {
+-		dev_err(&pdev->dev, "Can't retrieve ape clock\n");
+-		return PTR_ERR(aconnect->ape_clk);
+-	}
++	if (IS_ERR(aconnect->ape_clk))
++		return dev_err_probe(&pdev->dev, PTR_ERR(aconnect->ape_clk),
++				     "can't retrieve ape clock\n");
+ 
+ 	aconnect->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
+-	if (IS_ERR(aconnect->apb2ape_clk)) {
+-		dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
+-		return PTR_ERR(aconnect->apb2ape_clk);
+-	}
++	if (IS_ERR(aconnect->apb2ape_clk))
++		return dev_err_probe(&pdev->dev, PTR_ERR(aconnect->apb2ape_clk),
++				     "can't retrieve apb2ape clock\n");
+ 
+ 	dev_set_drvdata(&pdev->dev, aconnect);
+ 	pm_runtime_enable(&pdev->dev);
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,32 @@
+From da4eb06ea52c25d52a31c2c3b1eaff6a5c7882a4 Mon Sep 17 00:00:00 2001
+From: Hans Zhang <18255117159@163.com>
+Date: Fri, 23 May 2025 00:38:14 +0800
+Subject: [PATCH 0297/0797] i2c: tegra: Add missing kernel-doc for dma_dev member
+
+Fix the kernel-doc warning by describing the 'dma_dev' member in
+the tegra_i2c_dev struct.  This resolves the compilation warning:
+
+drivers/i2c/busses/i2c-tegra.c:297: warning: Function parameter or struct member 'dma_dev' not described in 'tegra_i2c_dev'
+
+Signed-off-by: Hans Zhang <18255117159@163.com>
+Signed-off-by: Andi Shyti <andi.shyti@kernel.org>
+Link: https://lore.kernel.org/r/20250522163814.399630-1-18255117159@163.com
+---
+ drivers/i2c/busses/i2c-tegra.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/i2c/busses/i2c-tegra.c b/drivers/i2c/busses/i2c-tegra.c
+index 0862b98007f547..fb58078971b69b 100644
+--- a/drivers/i2c/busses/i2c-tegra.c
++++ b/drivers/i2c/busses/i2c-tegra.c
+@@ -253,6 +253,7 @@ struct tegra_i2c_hw_feature {
+  * @dma_phys: handle to DMA resources
+  * @dma_buf: pointer to allocated DMA buffer
+  * @dma_buf_size: DMA buffer size
++ * @dma_dev: DMA device used for transfers
+  * @dma_mode: indicates active DMA transfer
+  * @dma_complete: DMA completion notifier
+  * @atomic_mode: indicates active atomic transfer
+-- 
+cgit 1.3.1-korg
+

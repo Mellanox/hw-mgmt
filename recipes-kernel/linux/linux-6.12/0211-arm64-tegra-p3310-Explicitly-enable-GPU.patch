@@ -1,0 +1,32 @@
+From 52dedbe81ee5e99b0d44321347fc85417837eea6 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sat, 26 Apr 2025 19:45:32 -0500
+Subject: [PATCH 0211/0797] arm64: tegra: p3310: Explicitly enable GPU
+
+The gpu node originally was explicitly left disabled as it was expected
+for the bootloader to enable it. However, this is only done in U-Boot.
+If U-Boot is not in the boot chain, this will never be enabled. Other
+Tegra186 devices already explicitly enable the GPU, so make p3310 match.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250426-tx2-gpu-v1-1-fa1c78dcdbdc@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi b/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi
+index 51ced62cd42be..970ce5a03540c 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi
+@@ -193,6 +193,10 @@
+ 		nvidia,invert-interrupt;
+ 	};
+ 
++	gpu@17000000 {
++		status = "okay";
++	};
++
+ 	bpmp {
+ 		i2c {
+ 			status = "okay";
