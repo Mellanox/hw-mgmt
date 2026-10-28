@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.2004
+- Wed, 28 Oct 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - 
+
+- Bug fixes
+    - #5349060, hw-mgmt: scripts: Drop updater signal exit and os.system calls, 7e9e14e
+    - #5341619, hw-mgmt: patches: 6.1-6.12: Fix mp2975 vout fault limits, 88be8a5
+    - #5172489, hw-mgmt: scripts: SSD dump collection: review part 2, ae112f7
+    - #N/A, Update changelog and release notes for V.7.0070.2003, 799cf00
+    - #6867263, hw-mgmt: kernel 6.12: Fix leakage count for l1_scale_out systems, 58bcfc3
+    - #5306970, hw-mgmt: scripts: Avoid mlxsw_minimal PWM write failure on chipdown, e5be306
+    - #5324711, hw-mgmt: scripts: Skip SSD dump when no NVMe controller is present, 6b80592
+    - #N/A, hw-mgmt: scripts: Addressed review comments for SSD dump collection, bb626c3
+    - #N/A, hw-mgmt: scripts: Serialize SSD dump collection, 24a289b
+    - #5345730, hw-mgmt: kernel: Enable CONFIG_SENSORS_LM90, 9930bc7
+    - #N/A, Update changelog and release notes for V.7.0070.2002, 6686937
+    - #5320566, hw-mgmt: kernel 6.12: Add support for Q3401-RD platform driver, 3e3a289
+    - #N/A, Update changelog and Release notes to V.7.0070.2001, d3bd57e
+    - #5332817, hw-mgmt: kernel: Enable LAN743X config, 390e317
+    - #N/A, hw-mgmt: license: Drop the Linux kernel patches clause from THIRD_PARTY_NOTICES (#3041), 79c1993
+    - #N/A, hw-mgmt: scripts: report SSD dump skip reason, 1912fb4
+    - #N/A, Update changelog and release notes for V.7.0070.2000, d3de4f8
+    - #N/A, Update changelog and release notes for V.7.0070.1938, 416bb94
+    - #N/A, hw-mgmt: license: Use 3-line SPDX header (#3024), 96df142
+    - #N/A, Update changelog and release notes for V.7.0070.1937, a618bf9
+
+- Kernel Patches for New Features:
+    - 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.2004/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    - Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    - Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    - Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+
+================================================================================
 - V.7.0070.2003
 - Thu, 22 Oct 2026
 --------------------------------------------------------------------------------
