@@ -81,6 +81,7 @@ power_off() {
 	echo 1 >"${MLX_HWMON}/bmc_to_cpu_ctrl"
 	log_msg "Setting CurrentHostState to Off"
 	set_host_powerstate_off
+	/usr/bin/hw-management-bmc-host-i2c-devices.sh sync || true
 }
 
 reset() {
@@ -114,6 +115,7 @@ grace_off() {
 	echo 1 >"${MLX_HWMON}/pwr_down"
 	echo 0 >"${MLX_HWMON}/uart_sel"
 	set_host_powerstate_off
+	/usr/bin/hw-management-bmc-host-i2c-devices.sh sync || true
 }
 
 grace_reset() {

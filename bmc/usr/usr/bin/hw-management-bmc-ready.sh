@@ -192,6 +192,9 @@ bmc_init_main()
 
 	if [ "${CPU_OFF}" = "1" ]; then
 		echo 1 > $BMC_TO_CPU_CTRL
+	else
+		# Host already on: no CPU_RESET_DEASSERT event will follow.
+		/usr/bin/hw-management-bmc-host-i2c-devices.sh sync || true
 	fi
 
 	cpu_start_policy=$(check_power_restore_policy)
