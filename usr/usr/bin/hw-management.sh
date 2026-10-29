@@ -3002,32 +3002,6 @@ check_system_write_i2c_defaults()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu || return 1
 }
 
-check_system_bmc_redfish_login()
-{
-	# Obtain/rotate the BMC password and log in over Redfish on platforms with
-	# a BMC when Redfish is enabled. is_redfish_disabled is a temporary
-	# stand-in (Bug 5272044) and currently always returns false, so this login
-	# runs on every NOS that has a BMC.
-	print_function_call "$0" "${FUNCNAME[0]}" "Checking BMC Redfish login started"
-	if check_bmc_is_supported && ! check_host_os_is_redfish_disabled; then
-		pushd /usr/bin
-		for ((i=1; i<=5; i++)); do
-			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
-			print_function_call "$0" "${FUNCNAME[0]}" "BMC IP address: $bmc_ip_addr"
-			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
-				print_function_call "$0" "${FUNCNAME[0]}" "Pinging BMC successful"
-				print_function_call "$0" "${FUNCNAME[0]}" "Logging in to BMC"
-				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
-				break
-			fi
-			echo "Pinging BMC failed, i=$i"
-			sleep 3
-		done
-		popd
-	fi
-	print_function_call "$0" "${FUNCNAME[0]}" "BMC Redfish login check completed"
-}
-
 check_system_json()
 {
 	local json_file="$1"
@@ -3224,7 +3198,6 @@ check_system()
 		print_function_call "$0" "${FUNCNAME[0]}" "no json, using check_system_internal"
 		check_system_internal || return 1
 	fi
-	check_system_bmc_redfish_login || true
 }
 
 create_event_files()
