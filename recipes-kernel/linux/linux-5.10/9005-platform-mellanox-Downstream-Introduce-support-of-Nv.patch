@@ -19,6 +19,9 @@ scale-out system; leakage5 and leakage6 were missing.
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending [downstream: platform support for NVIDIA-specific systems, not submitted]
+
 ---
  drivers/platform/mellanox/mlx-platform.c | 1155 ++++++++++++++++++++--
  1 file changed, 1055 insertions(+), 100 deletions(-)

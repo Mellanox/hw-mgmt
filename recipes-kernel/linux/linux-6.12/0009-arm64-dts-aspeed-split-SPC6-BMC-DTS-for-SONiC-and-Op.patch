@@ -29,6 +29,9 @@ with the eMMC pinctrl group, and add an mmc-pwrseq-emmc node that drives
 the eMMC hardware reset (RST_n) from GPIOQ7 (EMMC_1V8_RST*).
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending [downstream: SPC6 BMC board DTS, not submitted]
+
 ---
  .../aspeed/aspeed-nvidia-spc6-bmc-openbmc.dts | 536 ++++++++++++++++++
  .../dts/aspeed/aspeed-nvidia-spc6-bmc.dts     |   2 +-

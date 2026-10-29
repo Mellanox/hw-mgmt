@@ -20,6 +20,9 @@ direct format is used, and the input current coefficient is changed
 when I_SCALE_SEL bit 6 is set.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending [modified from mainline ca2cf3554492]
+
 ---
  drivers/hwmon/pmbus/Kconfig  |   9 ++
  drivers/hwmon/pmbus/Makefile |   1 +

@@ -14,7 +14,7 @@ Key changes:
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 
-Upstream-Status: Inappropriate [downstream: Q3401-RD DGX flavor support]
+Upstream-Status: Pending [downstream: Q3401-RD DGX flavor support, not submitted]
 ---
  drivers/platform/mellanox/mlx-platform.c | 259 ++++++++++++++++++++++-
  1 file changed, 253 insertions(+), 6 deletions(-)

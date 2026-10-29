@@ -27,6 +27,9 @@ addition moved to the new end of mctp-pcie-vdm.c, after
 EXPORT_SYMBOL_GPL(mctp_pcie_vdm_set_carrier).
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending
+
 ---
  drivers/net/mctp/mctp-pcie-vdm.c | 3 +++
  include/linux/mctp-pcie-vdm.h    | 5 +++--
