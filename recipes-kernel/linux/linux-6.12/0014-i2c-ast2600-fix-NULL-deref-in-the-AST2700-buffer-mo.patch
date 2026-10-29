@@ -43,8 +43,6 @@ present on aspeed-master-v6.12 and v6.18. It is deliberately written to be the
 same change Aspeed would make, so it should drop out cleanly once they fix it.
 
 Signed-off-by: Leo Huang <leohu@nvidia.com>
-
-[hw-mgmt] Ported unchanged from dgx/bmc/linux 0684fbc5e1fc (MR !1037), nvbug 6636807.
 ---
  drivers/i2c/busses/i2c-ast2600.c | 10 ++++------
  1 file changed, 4 insertions(+), 6 deletions(-)

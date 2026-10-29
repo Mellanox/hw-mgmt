@@ -68,6 +68,9 @@ kconfig changes live in their own layers and are out of scope.
       reset to a known state before the faster mode is negotiated.
 
 Signed-off-by: Dvir Zaguri <dzaguri@nvidia.com>
+
+Upstream-Status: Pending [downstream: SPC6 BMC board DTS, not submitted]
+
 ---
  .../boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts     | 70 +++++++++++++++++++---
  1 file changed, 70 insertions(+), 2 deletions(-)

@@ -19,6 +19,9 @@ Q3450-LD Features:
 
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending [downstream: platform support for NVIDIA-specific systems, not submitted]
+
 ---
  drivers/platform/mellanox/mlx-platform.c | 295 ++++++++++++++++++++++++++++++-
  1 file changed, 294 insertions(+), 1 deletion(-)
