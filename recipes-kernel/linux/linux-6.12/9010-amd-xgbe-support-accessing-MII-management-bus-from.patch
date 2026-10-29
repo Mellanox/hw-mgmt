@@ -3,6 +3,17 @@ From: Sunil Uttarwar <Sunilprakashrao.uttarwar@amd.com>
 Date: Mon, 17 Aug 2020 16:24:21 +0530
 Subject: [PATCH] amd-xgbe: Support accessing MII management bus from userspace
 
+Forward ioctls not handled by xgbe_ioctl() to phy_mii_ioctl(), so the
+MII registers of the attached PHY can be accessed from userspace (for
+example SIOCGMIIREG/SIOCSMIIREG). Return -ENODEV when no PHY is attached.
+
+Keep a phydev pointer in struct xgbe_prv_data, set when the PHY device
+is found and cleared when it is freed, so the ioctl never uses a
+stale pointer.
+
+Signed-off-by: Dvir Zaguri <dzaguri@nvidia.com>
+
+Upstream-Status: Pending
 ---
  drivers/net/ethernet/amd/xgbe/xgbe-drv.c    | 2 +-
  drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c | 1 +
