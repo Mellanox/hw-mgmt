@@ -10,6 +10,15 @@ The MP5926 is a high voltage hot-swap controller capable of operating
 with supplies 8V to 80V. The MP5926 provides a controlled soft start
 during hot insertion to ensure a controlled output voltage ramp occurs.
 
+Write PAGE 0 at probe: the device may have been left on a non-zero page
+and, with .pages = 1, the PMBus core never programs PAGE itself.
+
+EFUSE_CFG bit 12 selects the telemetry format. When set, all quantities
+are linear11: the driver keeps the unsigned 11-bit READ_VOUT mantissa
+and reports the exponent read at probe through VOUT_MODE. Otherwise the
+direct format is used, and the input current coefficient is changed
+when I_SCALE_SEL bit 6 is set.
+
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/hwmon/pmbus/Kconfig  |   9 ++

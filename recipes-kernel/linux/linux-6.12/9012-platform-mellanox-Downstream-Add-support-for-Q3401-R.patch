@@ -13,6 +13,8 @@ Key changes:
 - Air Cooled: 7 + 1 redundant fan units C2P not reversable 80x80mm 48V (instead of 9 +1 60x60mm)
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
+
+Upstream-Status: Inappropriate [downstream: Q3401-RD DGX flavor support]
 ---
  drivers/platform/mellanox/mlx-platform.c | 259 ++++++++++++++++++++++-
  1 file changed, 253 insertions(+), 6 deletions(-)
