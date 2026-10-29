@@ -9,6 +9,9 @@ to correctly reflect the new functionality.
 
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending [downstream: platform support for NVIDIA-specific systems, not submitted]
+
 ---
  drivers/platform/mellanox/mlx-platform.c | 7 +++----
  1 file changed, 3 insertions(+), 4 deletions(-)

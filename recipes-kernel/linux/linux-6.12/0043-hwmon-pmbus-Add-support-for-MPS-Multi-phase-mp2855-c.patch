@@ -32,6 +32,9 @@ registers with pmbus_set_update() so inX_crit and inX_lcrit do not go
 stale.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending
+
 ---
  drivers/hwmon/pmbus/Kconfig  |  10 ++
  drivers/hwmon/pmbus/Makefile |   1 +

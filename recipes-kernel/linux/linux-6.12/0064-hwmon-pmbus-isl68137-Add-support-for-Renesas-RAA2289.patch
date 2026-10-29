@@ -17,6 +17,9 @@ RAA228942 and all existing devices retain their current behavior.
 
 Signed-off-by: Dawei Liu <dawei.liu.jy@renesas.com>
 Signed-off-by: Vasily Vityukov <vvityukov@nvidia.com>
+
+Upstream-Status: Pending
+
 ---
  Documentation/hwmon/isl68137.rst | 23 +++++++++++++++++++++++
  drivers/hwmon/pmbus/isl68137.c   | 116 +++++++++++++++++++++++++++++++++++++++-

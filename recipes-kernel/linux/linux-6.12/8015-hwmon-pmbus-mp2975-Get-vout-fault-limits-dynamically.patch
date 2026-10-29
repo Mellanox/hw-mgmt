@@ -34,6 +34,8 @@ be exceeded by the offset, while a negative value would be interpreted
 by the PMBus core as a read error.
 
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+
+Upstream-Status: Pending
 ---
  drivers/hwmon/pmbus/mp2975.c | 200 +++++++++++++++++++----------------
  1 file changed, 109 insertions(+), 91 deletions(-)

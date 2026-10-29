@@ -14,8 +14,14 @@ System contains the following components:
 Add the structures related to the new systems to allow proper activation
 of the all required platform driver.
 
+Expose all six CPLD leakage sensors (leakage1-leakage6) for the L1
+scale-out system; leakage5 and leakage6 were missing.
+
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+
+Upstream-Status: Pending [downstream: platform support for NVIDIA-specific systems, not submitted]
+
 ---
  drivers/platform/mellanox/mlx-platform.c | 1154 ++++++++++++++++++++--
  1 file changed, 1055 insertions(+), 99 deletions(-)

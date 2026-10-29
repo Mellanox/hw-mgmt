@@ -15,6 +15,9 @@ Add the jtag-aspeed-internal driver for Aspeed SoC internal JTAG
 controller support.
 
 Signed-off-by: SONiC JTAG patch <sonic@nvidia.com>
+
+Upstream-Status: Pending
+
 ---
 Rebased to Linux 6.12.94: the jtag-aspeed.c include-block hunk was
 re-contextualised because the 6.12.94 Aspeed base now adds
