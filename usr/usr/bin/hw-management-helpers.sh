@@ -318,7 +318,6 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI169" ] ||
         [ "$ui_tree_sku" = "HI170" ] || 
         [ "$ui_tree_sku" = "HI173" ] ||
-        [ "$ui_tree_sku" = "HI174" ] ||
         [ "$ui_tree_sku" = "HI175" ] ||
         [ "$ui_tree_sku" = "HI176" ] ||
         [ "$ui_tree_sku" = "HI177" ] ||
