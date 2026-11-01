@@ -2200,7 +2200,6 @@ sn5600d_specific()
 	psu_count=0
 	echo 7 > $config_path/fan_drwr_num
 	echo 4 > $config_path/cpld_num
-	echo 0 > "$config_path"/labels_ready
 	lm_sensors_config="$lm_sensors_configs_path/sn5600d_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn5600d.json"
 	named_busses+=(${sn5600_named_busses[@]})
@@ -2787,7 +2786,6 @@ sn5640_specific()
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
-	echo 0 > "$config_path"/labels_ready
 }
 
 sn58xxld_specific()
