@@ -627,12 +627,6 @@ n61xxld_cartridge_eeprom_connect_table=( \
 n6350ld_psu_connect_table=( \
 	dps460 0x59 7 psu1)
 
-n7xxxld_cartridge_eeprom_connect_table=( \
-	24c02 0x50 67 cable_cartridge1_eeprom \
-	24c02 0x50 68 cable_cartridge2_eeprom \
-	24c02 0x50 69 cable_cartridge3_eeprom \
-	24c02 0x50 70 cable_cartridge4_eeprom)
-
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
@@ -2757,9 +2751,6 @@ n7xxxld_specific()
 	HI194)
 		asic_i2c_buses=(4 20 36 52)
 		cpld_num=3
-		add_i2c_dynamic_bus_dev_connection_table "${n7xxxld_cartridge_eeprom_connect_table[@]}"
-		echo -n "${n7xxxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
-		cartridge_count=4
 		;;
 	esac
 

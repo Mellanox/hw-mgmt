@@ -1317,7 +1317,7 @@ if [ "$1" == "add" ]; then
 			;;
 		cable_cartridge*_eeprom*)
 			case "$dmi_board_name" in
-			VMOD0021|VMOD0023|VMOD0026)
+			VMOD0021|VMOD0023)
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
 					validate_cartridge_fru "$eeprom_name"
