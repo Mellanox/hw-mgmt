@@ -936,21 +936,21 @@ set_jtag_gpio()
 set_gpios()
 {
 	local export_unexport=$1
+	# When set, handle only the GPIO with this name and skip the JTAG GPIOs.
+	local gpio_filter=$2
 	gpiobase=
 
 	case $cpu_type in
 		$BDW_CPU|$CFL_CPU|$DNV_CPU)
-			set_jtag_gpio $1
+			[ -z "$gpio_filter" ] && set_jtag_gpio $1
 			return 1
 			;;
 		$AMD_SNW_CPU)
-			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
 			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
 			;;
 		$AMD_V3000_CPU)
-			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 10 12 23)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
@@ -960,7 +960,6 @@ set_gpios()
 			fi
 			;;
 		$AMD_FRNG_CPU)
-			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 3 12 10)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
@@ -969,6 +968,8 @@ set_gpios()
 			return 1
 			;;
 	esac
+
+	[ -z "$gpio_filter" ] && set_jtag_gpio $1
 
 	for gpiochip in /sys/class/gpio/*; do
 		if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
@@ -984,10 +985,20 @@ set_gpios()
 	fi
 
 	for ((i=0; i<${#gpio_idx[@]}; i+=1)); do
+		if [ -n "$gpio_filter" ] && [ "$gpio_filter" != "${gpio_names[$i]}" ]; then
+			continue
+		fi
 		gpionum=$((gpiobase+${gpio_idx[$i]}))
-		echo $gpionum > /sys/class/gpio/$export_unexport
 		if [ "$export_unexport" == "export" ]; then
+			# A GPIO can be already exported by an earlier partial call.
+			if [ ! -d /sys/class/gpio/gpio$gpionum ]; then
+				echo $gpionum > /sys/class/gpio/export
+			fi
 			check_n_link /sys/class/gpio/gpio$gpionum/value $system_path/"${gpio_names[$i]}"
+		else
+			if [ -d /sys/class/gpio/gpio$gpionum ]; then
+				echo $gpionum > /sys/class/gpio/unexport
+			fi
 		fi
 	done
 }
@@ -4198,12 +4209,15 @@ do_start()
 	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	# start i2c bus trace recording
 	start_i2c_trace
-	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
 	run_fixup_script pre
 	check_cpu_type
 	print_function_call "$0" "do_start" "cpu_type:$cpu_type"
+	# iorw selects the CPLD bus by this indication, so it must be in place
+	# before the first CPLD access.
+	set_gpios "export" "v3000_lpc_support"
+	show_hw_info
 	pre_devtr_init || {
 		print_function_call "$0" "do_start" "pre_devtr_init failed"
 		exit 1
