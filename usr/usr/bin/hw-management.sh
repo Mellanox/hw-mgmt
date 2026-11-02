@@ -1648,7 +1648,7 @@ msn4700a1_specific()
 		system_ver_str="V0-S*RaRaRaR0RaR0RaT0Ee-F*Tb-O*Tb-C*TlRkRa"
 		devtr_check_smbios_device_description "$system_ver_str" "0" ""
 	fi
-	lm_sensors_config="$lm_sensors_configs_path/msn4700a1_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/sn4700a1_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700_mps.json"
 
 	max_tachos=12
