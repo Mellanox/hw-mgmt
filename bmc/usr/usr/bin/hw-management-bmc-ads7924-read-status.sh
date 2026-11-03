@@ -30,6 +30,8 @@ MODE_DATA=$(i2ctransfer -f -y "$BUS" w1@"$ADDR" 0x00 r1 2>/dev/null) || true
 INT_DATA=$(i2ctransfer -f -y "$BUS" w1@"$ADDR" 0x01 r1 2>/dev/null) || true
 # Auto-increment from DATA0_U (0x02): pointer 0x82, read 8 bytes (4 channels × 2).
 CHAN_DATA=$(i2ctransfer -f -y "$BUS" w1@"$ADDR" 0x82 r8 2>/dev/null) || true
+# Auto-increment from ULR0 (0x0a): pointer 0x8a, read 8 bytes (ULR/LLR x 4).
+LIMITS=$(i2ctransfer -f -y "$BUS" w1@"$ADDR" 0x8a r8 2>/dev/null) || true
 
 MODE_B=$(echo "$MODE_DATA" | awk '{print $1}')
 INT_B=$(echo "$INT_DATA" | awk '{print $1}')
@@ -56,7 +58,7 @@ echo "I2C address : $ADDR"
 echo "Scale       : $SCALE V/LSB"
 echo ""
 printf 'MODECNTRL (0x00): 0x%02x\n' "$MODE"
-echo "  MODE [7:2]  : $MODE_FIELD"
+printf '  MODE [7:2]  : 0x%02x  (0x33=Auto-Scan, 0x3b=Auto-Scan+Sleep, 0x20=Awake, 0x00=Idle)\n' "$MODE_FIELD"
 echo "  SEL [1:0]   : $SEL"
 echo ""
 printf 'INTCNTRL (0x01): 0x%02x\n' "$INT"
@@ -72,7 +74,23 @@ done
 if [ "$ALRM" -eq 0 ]; then
     echo "    (none)"
 fi
-echo "  Alarm enable (AEN3..0, bits 3:0): $(printf '0x%x' "$AEN")"
+# AEN[3:0] is write-to-enable but reads back as status (SBAS482 Figure 35): 1 only
+# for a channel that is enabled AND alarming. The enable mask itself is not readable.
+echo "  Enabled-and-alarming (bits 3:0): $(printf '0x%x' "$AEN")  (0 = disabled or not alarming)"
+echo ""
+echo "INTCONFIG (0x12): not read (reading it clears the latched alarm)"
+echo ""
+echo "Window (ULRx/LLRx, pointer 0x8a + INC):"
+# shellcheck disable=SC2086
+set -- $LIMITS
+if [ $# -eq 8 ]; then
+    echo "  Channel 0: ULR=$1 LLR=$2"
+    echo "  Channel 1: ULR=$3 LLR=$4"
+    echo "  Channel 2: ULR=$5 LLR=$6"
+    echo "  Channel 3: ULR=$7 LLR=$8"
+else
+    echo "  (read failed)"
+fi
 echo ""
 echo "Channel data (DATAx_U/L, pointer 0x82 + INC):"
 
