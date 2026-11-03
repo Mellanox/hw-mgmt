@@ -8,6 +8,15 @@ kernel.org v7.x download. They expect, for a 7.0 kernel:
   a Kernel-7.0 section in Patch_Status_Table.txt
   a Kernel-7.0 section in Patch_BMC_Status_Table.txt for the SONiC BMC build
 
+Docker:
+  All scripts build inside a container made from the Dockerfile in this
+  directory (Debian bookworm with every build package and the arm64 cross
+  toolchain). The image is built on first use. Only docker is needed on the
+  host; there is no host build mode.
+    KERNEL_BUILD_IMAGE=NAME   use a prebuilt image
+    KERNEL_BUILD_BASE_IMAGE=N base image for the Dockerfile
+    KERNEL_BUILD_DOCKER_ARGS  extra "docker run" arguments
+
 Scripts:
   kernel_build_6_x.sh
   kernel_build_7_x.sh
