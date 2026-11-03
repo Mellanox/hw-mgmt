@@ -1,0 +1,40 @@
+{
+  "strictness": 3,
+  "autoReview": ["open", "push"],
+  "rules": [
+    {
+      "id": "patch-registration",
+      "severity": "high",
+      "scope": ["recipes-kernel/linux/**/*.patch", "recipes-kernel/linux/Patch_*Status_Table.txt"],
+      "rule": "Every kernel patch file must have a matching status table row, and every row a matching file.",
+      "instruction": "Applies when the diff adds, renames or deletes a file ending in .patch under recipes-kernel/linux/. Host patches are listed in Patch_Status_Table.txt, BMC patches in Patch_BMC_Status_Table.txt. Both series share the same linux-<version>/ directories and number independently, so the path does not identify the table and one sequence number can appear in both. Search both tables and report a patch only when it is absent from both. Rows name a patch by base file name, under the Kernel-<version> heading matching its directory. Require that an added patch has a row, a renamed patch has its row renamed, and a deleted patch has its row removed. A patch under linux-<version>/<os>/ is listed by base name with that OS inside os[...]. The same base name legitimately appears in several kernel sections, and again in both a default and an OS directory. An unregistered patch is skipped by deploy_kernel_patches.py with no error and no warning."
+    },
+    {
+      "id": "patch-status-syntax",
+      "severity": "high",
+      "scope": ["recipes-kernel/linux/Patch_*Status_Table.txt"],
+      "rule": "Status cells must use a known status word and well-formed os/take/skip modifiers.",
+      "instruction": "Applies to added or changed rows in either status table. The status cell splits on ';'. The first field must be one of: Feature upstream, Feature accepted, Feature pending, Downstream, Downstream accepted, Bugfix upstream, Bugfix accepted, Bugfix pending, Rejected. Case is irrelevant, no other wording exists, and there is no 'Downstream pending'. Every remaining field must be exactly os[...], take[...] or skip[...]; any other key, such as takes[...], is stored and never read, so the intent is lost in silence. Bracket contents split on ',' and are compared literally against the lower-case names sonic, opt, cumulus, nvos, dvs: flag any space or capital letter inside the brackets, because 'take[ sonic ]' and 'skip[SONIC]' match nothing and are dropped without warning. ALL is valid inside take[...] and skip[...] only. Flag os[ALL], take[ALL] together with skip[ALL], and any OS named in both take[...] and skip[...] - each exits the build with a conflict. Flag a row whose count of '|'-separated fields differs from the header, the one format error the loader reports. Do not describe an unknown status word as a silent failure: it aborts the run."
+    },
+    {
+      "id": "authorship",
+      "severity": "high",
+      "rule": "Authorship must always be an identifiable person. An AI tool is never an author, co-author or signer.",
+      "instruction": "Check every Author, From:, Signed-off-by:, Co-authored-by: and Co-developed-by: line, in the pull request's own commits and description as well as inside .patch files. Each must name a real person and a working address in the form 'Firstname Lastname <user@domain>'. Flag AI assistants and bots - Claude, Anthropic, Copilot, ChatGPT, OpenAI, Gemini, Cursor, Devin, Codex, Aider and the like - machine addresses such as noreply@anthropic.com, noreply@github.com, any *@users.noreply address, a bot@ address or a name ending in [bot], and generated-with or co-authored-with tool footers. Flag a role, team or tool used in place of a person, for example 'SONiC JTAG patch <sonic@nvidia.com>' or 'Platform Team'. Flag placeholder addresses: root@localhost, anything @example.com, @localhost or @localdomain, and bare user names with no domain. A .patch file added by the diff must also carry at least one Signed-off-by: trailer. Do not flag an author for being outside @nvidia.com, since upstream commits keep their original authorship, and do not require a From: line, since some patches carry only Subject: and Signed-off-by:."
+    },
+    {
+      "id": "patch-description",
+      "severity": "high",
+      "scope": ["recipes-kernel/linux/**/*.patch"],
+      "rule": "A downstream patch must explain what it changes and why.",
+      "instruction": "Read the body of any added .patch file: the text between the Subject: line and the '---' separator, ignoring trailers such as Signed-off-by:, Reviewed-by:, Tested-by:, Acked-by:, Fixes:, Link: and Cc:, and ignoring the diffstat. Apply the exemption first and stop there if it matches: if the patch carries '(cherry picked from commit <sha>)', 'commit <sha> upstream', 'upstream commit <sha>', an 'Upstream-Status: Backport' line, or a lore.kernel.org Link:, the text belongs to the upstream author and must not be rewritten - say nothing about it. Determine the author from the From: line, or from the Signed-off-by: trailer when the reduced header form omits From:, and apply the same exemption when that address is outside @nvidia.com and @mellanox.com. If the patch carries neither, there is no authorship signal and its origin cannot be established, so do not judge the description length; the missing trailer is reported by the authorship rule instead. Otherwise flag a body that is empty, that only restates the Subject line in different words, or that is shorter than 30 words. State the number of words you counted and quote the body, so the measurement is checkable. Name what is missing rather than only asking for more text: the symptom or gap that prompted the change, the mechanism of the fix, and the board or SKU when the change is hardware-specific."
+    },
+    {
+      "id": "patch-header-structure",
+      "severity": "medium",
+      "scope": ["recipes-kernel/linux/**/*.patch"],
+      "rule": "Patch headers must be ordered, closed by the separator, and match the file name.",
+      "instruction": "Check added .patch files. Two header shapes are valid: full git format-patch output, and a reduced form carrying only Subject: and Signed-off-by:. Never ask for a 'From <40-hex> Mon Sep 17 00:00:00 2001' magic line, a From: or a Date: that the reduced form omits. Flag mail headers that are present but out of order, the established order being magic line, From:, Date:, Subject:; a Date: that is not a valid RFC 2822 date; a missing Subject:; a header line appearing after the body has started; a header block not closed by a line of exactly three dashes before the first diff line; and a Signed-off-by: or similar trailer placed below that separator, where it reads as part of the diff. Also flag the misspelling '[PATH' where '[PATCH' is meant, and a subject that clearly does not correspond to its file name - the name is normally the subject after the leading NNNN- sequence number with non-alphanumeric characters replaced by dashes, so allow truncation, a trailing dash and the NNNN-N- sub-numbering used for split series."
+    }
+  ]
+}
