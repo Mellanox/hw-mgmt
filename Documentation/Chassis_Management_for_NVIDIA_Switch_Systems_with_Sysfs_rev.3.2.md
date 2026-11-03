@@ -1,19 +1,15 @@
 # What changed in this revision
 
-Rev. 3.2.12, October 2026. Revisions through 3.2.11 are in
+Rev. 3.2.13, October 2026. Revisions through 3.2.12 are in
 [CHANGELOG_User_Manual.md](CHANGELOG_User_Manual.md).
 
-- [mlxsw sysfs ready](#mlxsw-sysfs-ready). `$bsp_path/sysfs_mlxsw_rdy` is written when
-  hw-management has created the virtual links for an hwmon device whose name is `mlxsw`.
-  The file contains uptime in milliseconds. The helper comment limits that indication to SPC1.
-- Read-only nodes no longer have an Arguments table. The value meaning is on a Values line.
-  Empty examples on those nodes now show the `cat` command.
-- [Drivers](#drivers) covers the kernel modules behind this hierarchy, including
-  [Watchdog (mlx-wdt)](#watchdog-mlx-wdt). Type 3 watchdog maximum timeout is 65535 seconds.
-- [TC v2.5](#tc-v2.5) is selected when `tc_version` in `tc_config.json` is `2.5` or `2.5.*`.
-  On this branch that is SN5600 (HI144), SN2201 SKU HI168, MSN4700 DGX (HI184), Q3401 (HI179),
-  SN5610 (HI172), and SN5640 (HI171), plus any other SKU on the SN5640 board.
-- The host and BMC role line names the stack only.
+- [Management PHY Reset](#management-phy-reset). `$bsp_path/system/sgmii_phy2_reset` resets the eth0
+  management PHY through the Comex CPLD, which makes the pulse. `$bsp_path/system/sgmii_phy_reset`
+  (eth1, MGMT CPLD) is documented too. N51XX_LD platform family and N5240_LD have both nodes.
+  SN5640 and SN5610 have the eth0 node only.
+- [Management PHY Recovery Helper](#management-phy-recovery-helper). `hw-management-phy-recover.sh`
+  pulses the reset of one port with the sequence that fits the port, waits for the hw-management
+  service, stores optional PHY snapshots, and returns exit codes 0 to 4 for the NOS.
 
 # Introduction
 
@@ -5001,6 +4997,47 @@ Values & \multicolumn{3}{p{0.735\linewidth}}{Status, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
 Example & \multicolumn{3}{p{0.735\linewidth}}{Get ASIC power good failure status: \texttt{\small cat \$bsp\_path/system/asic\_pg\_fail}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
+
+### Management PHY Reset
+
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/sgmii\_phy2\_reset} (eth0), \texttt{\small \$bsp\_path/system/sgmii\_phy\_reset} (eth1)} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Reset the PHY of one CPU management port: \texttt{\small sgmii\_phy2\_reset} is eth0, \texttt{\small sgmii\_phy\_reset} is eth1. Write 0, wait 120 ms, then read the node. If it still reads 0, write 1. \texttt{\small hw-management-phy-recover.sh} does this sequence (see Management PHY Recovery Helper).\newline Nodes per system: N51XX\_LD: both. SN5640 and SN5610: \texttt{\small sgmii\_phy2\_reset}. SN6600\_LD, SN6800\_LD and SN6810\_LD: both.} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small sgmii\_phy\_reset} V.7.0030.4000, \texttt{\small sgmii\_phy2\_reset} TBD (first release with this change)} \\
+\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
+ & reset & Integer & 0 (assert), 1 (release) \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Reset the eth0 PHY, the CPLD makes the pulse: \texttt{\small echo 0 \textgreater{} \$bsp\_path/system/sgmii\_phy2\_reset}\newline Reset the eth1 PHY: \texttt{\small echo 0 \textgreater{} \$bsp\_path/system/sgmii\_phy\_reset; sleep 0.12; echo 1 \textgreater{} \$bsp\_path/system/sgmii\_phy\_reset}} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\vspace{3mm}
+```
+
+### Management PHY Recovery Helper
+
+```{=latex}
+\begin{minipage}{\linewidth}
+\small
+\begin{tabular}{@{}>{\bfseries}p{0.20\linewidth} p{0.245\linewidth} p{0.245\linewidth} p{0.245\linewidth}@{}}
+\toprule
+Command & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small hw-management-phy-recover.sh [-d] [-t \textless{}seconds\textgreater{}] \textless{}eth0 or eth1\textgreater{}}} \\
+\midrule
+Description & \multicolumn{3}{p{0.735\linewidth}}{Pulse the CPLD PHY reset of one CPU management port with the sequence that fits the port. Use it when the port does not come up at boot and the kernel log shows \texttt{\small amd-xgbe ... ethN: get\_phy\_device failed}. The helper waits for the \texttt{\small hw-management} service to be active, up to 30 seconds by default. It does not open the port: after exit 0 the caller runs \texttt{\small ifup} again. Options come before the port name.} \\
+Options & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small -d}, \texttt{\small --dump-phy}: write a PHY snapshot line (\texttt{\small phy\_id}, driver, link state) to \texttt{\small /var/log/hw-mgmt.trace.log} before and after the pulse. The hw-management dump collects that log.\newline \texttt{\small -t \textless{}seconds\textgreater{}}, \texttt{\small --timeout \textless{}seconds\textgreater{}}: wait time for the \texttt{\small hw-management} service. Default 30. With 0 the helper checks once and does not wait.} \\
+Exit codes & \multicolumn{3}{p{0.735\linewidth}}{0: reset done.\newline 1: usage error.\newline 2: no reset attribute for this port on this system.\newline 3: sysfs write or read failed or timed out, the bit stayed asserted, or a signal interrupted the pulse.\newline 4: \texttt{\small hw-management} service not active within the wait time.} \\
+Release version & \multicolumn{3}{p{0.735\linewidth}}{TBD (first release with this change)} \\
+Example & \multicolumn{3}{p{0.735\linewidth}}{Recover eth0 and bring it up: \texttt{\small hw-management-phy-recover.sh -d eth0 \&\& ifup eth0}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
