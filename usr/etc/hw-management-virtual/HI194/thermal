@@ -10,6 +10,3 @@ pwr_conv2_temp2_input 30000
 somdimm_temp1_crit 95000
 somdimm_temp1_input 32000
 somdimm_temp1_max 85000
-somdimm_temp2_crit 95000
-somdimm_temp2_input 32000
-somdimm_temp2_max 85000

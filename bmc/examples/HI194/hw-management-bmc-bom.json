@@ -145,10 +145,6 @@
         {
             "key": "spd5118_0",
             "spec": "spd5118 0x52 19 somdimm_temp1"
-        },
-        {
-            "key": "spd5118_1",
-            "spec": "spd5118 0x53 19 somdimm_temp2"
         }
     ]
 }
