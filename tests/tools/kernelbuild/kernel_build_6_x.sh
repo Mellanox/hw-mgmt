@@ -21,7 +21,10 @@
 set -euo pipefail
 
 # The 7.x entry points source this file, so $0 remains kernel_build_7*.
-case "${0##*/}" in
+# Inside the build container $0 is this file; the entry name is passed in
+# KERNEL_BUILD_ENTRY so the series and example version stay the same.
+KERNEL_BUILD_ENTRY="${KERNEL_BUILD_ENTRY:-${0##*/}}"
+case "$KERNEL_BUILD_ENTRY" in
     kernel_build_7*)
         KERNEL_SERIES=7
         EXAMPLE_VER=7.0.1
@@ -157,7 +160,7 @@ Options:
                    and any sibling linux-<major.minor>/ tree are kept.
   --skip-build     Import patches, then stop before olddefconfig and deb-pkg.
   --no-retry       Do not start a second build after a failure.
-  --dry-run        Check arguments, the patch table, and host tools, then exit.
+  --dry-run        Check arguments, the patch table, and the container tools, then exit.
   --debug          Trace shell commands (set -x).
 
 On the first build failure the log is kept and, unless --no-retry is set,
@@ -172,259 +175,33 @@ Examples:
   kernel_build_${KERNEL_SERIES}_x_sonic_bmc.sh /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} \
       --third-party-patches /path/to/sonic-patches
 
+Docker:
+  The build always runs in a container that has every tool listed below
+  (see Dockerfile next to this script). The host needs only docker. The
+  image is built on first use and reused afterwards. build_path,
+  hw_mgmt_path and any path given in an option are mounted at the same
+  absolute path inside the container, and files are created with your
+  uid/gid.
+  Environment:
+    KERNEL_BUILD_IMAGE=NAME    Use this image and do not build the Dockerfile.
+    KERNEL_BUILD_BASE_IMAGE=N  Base image for the Dockerfile
+                               (default debian:bookworm).
+    KERNEL_BUILD_DOCKER_ARGS   Extra arguments for "docker run".
+
 Tools:
-  Checked before the kernel is downloaded.
-  Always: tar, xz, git, stg (stgit), python3, make, and wget or curl.
-  To build .deb packages: the Build-Depends used by "make deb-pkg"
-  (debhelper, bc, bison, cpio, flex, kmod, rsync, libelf-dev, libssl-dev,
-  and the gcc package for the package architecture). The check matches
-  Linux 6.12 scripts/package/mkdebian and is used for ${KERNEL_SERIES}.x too.
-  An arm64 build needs the host libssl-dev and libssl-dev:arm64.
+  All of them are installed by the Dockerfile. tar, xz, git, stg (stgit),
+  python3, make, wget or curl, and gcc (or the --cross-compile gcc) are
+  checked in the container before the kernel is downloaded.
+  The packages for "make deb-pkg" (the Build-Depends of Linux 6.12
+  scripts/package/mkdebian, used for ${KERNEL_SERIES}.x too) are debhelper, bc,
+  bison, cpio, flex, kmod, rsync, libelf-dev, libssl-dev, and the gcc package
+  for the package architecture. An arm64 build also needs libssl-dev:arm64.
+  A custom KERNEL_BUILD_IMAGE must provide all of them.
 EOF
 }
 
 need_cmd() {
     command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
-}
-
-# Same Build-Depends Linux 6.12 scripts/package/mkdebian gives dpkg-buildpackage.
-# Run it before download so a cross build does not fail an hour later on
-# libssl-dev:<target-arch>.
-check_kernel_package_deps() {
-    local debarch native_arch host_gnu control err
-    if [[ -n "$KBUILD_DEBARCH" ]]; then
-        debarch=$KBUILD_DEBARCH
-    else
-        debarch=$(dpkg --print-architecture)
-    fi
-    need_cmd dpkg-checkbuilddeps
-    need_cmd dpkg-architecture
-    info "checking packages for ${debarch} kernel .deb"
-    host_gnu=$(env -u CC -u CROSS_COMPILE dpkg-architecture -a "$debarch" -q DEB_HOST_GNU_TYPE 2>/dev/null | sed 's/_/-/g')
-    [[ -n "$host_gnu" ]] || die "cannot determine the Debian toolchain package for ${debarch}"
-    native_arch=$(dpkg --print-architecture)
-    control=$(mktemp)
-    cat >"$control" <<EOF
-Source: linux-upstream
-Section: kernel
-Priority: optional
-Maintainer: kernel build <kernel-build@localhost>
-Rules-Requires-Root: no
-Build-Depends: debhelper-compat (= 12)
-Build-Depends-Arch: bc, bison, cpio, flex,
- gcc-${host_gnu} <!pkg.linux-upstream.nokernelheaders>,
- kmod, libelf-dev:native,
- libssl-dev:native, libssl-dev <!pkg.linux-upstream.nokernelheaders>,
- rsync
-Homepage: https://www.kernel.org/
-
-Package: linux-image
-Architecture: ${debarch}
-Description: kernel package build dependencies
- placeholder
-EOF
-    if err=$(dpkg-checkbuilddeps -a "$debarch" "$control" 2>&1); then
-        rm -f "$control"
-        return 0
-    fi
-    rm -f "$control"
-    report_missing_packages "$debarch" "$native_arch" "$err"
-}
-
-# dpkg-checkbuilddeps joins unmet dependencies with spaces. One dependency
-# can contain spaces of its own: "pkg (= 1)", "pkg [arch]", "pkg <!profile>",
-# and "pkg | other". A new dependency starts at the next package name.
-split_build_deps() {
-    local rest=$1
-    local word="" depth=0 ch open close current="" after_or=0
-    local -a words=()
-    rest=${rest#"${rest%%[![:space:]]*}"}
-    rest=${rest%"${rest##*[![:space:]]}"}
-    while [[ -n "$rest" ]]; do
-        rest=${rest#"${rest%%[![:space:]]*}"}
-        [[ -z "$rest" ]] && break
-        ch=${rest:0:1}
-        word=""
-        if [[ "$ch" == '(' || "$ch" == '[' || "$ch" == '<' ]]; then
-            # Version relations contain "<" and ">" inside "()", so only the
-            # bracket that opened this word closes it.
-            open=$ch
-            case "$open" in
-                '(') close=')' ;;
-                '[') close=']' ;;
-                '<') close='>' ;;
-            esac
-            depth=0
-            while [[ -n "$rest" ]]; do
-                ch=${rest:0:1}
-                rest=${rest:1}
-                word+="$ch"
-                if [[ "$ch" == "$open" ]]; then
-                    depth=$((depth + 1))
-                elif [[ "$ch" == "$close" ]]; then
-                    depth=$((depth - 1))
-                    if [[ "$depth" -eq 0 ]]; then
-                        break
-                    fi
-                fi
-            done
-        else
-            while [[ -n "$rest" && "$rest" != [[:space:]]* ]]; do
-                word+="${rest:0:1}"
-                rest=${rest:1}
-            done
-        fi
-        words+=("$word")
-    done
-
-    DEP_TOKENS=()
-    for word in "${words[@]}"; do
-        if [[ "$word" == "|" ]]; then
-            current=${current%"${current##*[![:space:]]}"}
-            current+=" | "
-            after_or=1
-            continue
-        fi
-        if [[ "$after_or" -eq 1 ]]; then
-            current+="$word"
-            after_or=0
-            continue
-        fi
-        if [[ -z "$current" ]]; then
-            current=$word
-            continue
-        fi
-        case "$word" in
-            '('*|'['*|'<'*)
-                current+=" $word"
-                ;;
-            *)
-                DEP_TOKENS+=("$current")
-                current=$word
-                ;;
-        esac
-    done
-    if [[ -n "$current" ]]; then
-        DEP_TOKENS+=("$current")
-    fi
-}
-
-# Architecture and Multi-Arch of a real package, or of the package that
-# provides a virtual one such as debhelper-compat. Empty when apt has neither.
-lookup_pkg_arch() {
-    local name=$1 provider meta=""
-    PKG_MULTI=""
-    PKG_ARCH=""
-    meta=$(apt-cache show "$name" 2>/dev/null | awk '
-        /^$/ { exit }
-        /^Multi-Arch:/ { ma = $2 }
-        /^Architecture:/ { ar = $2 }
-        END { if (ar != "" || ma != "") printf "%s\t%s\n", ma, ar }
-    ' || true)
-    if [[ -z "$meta" ]]; then
-        provider=$(apt-cache showpkg "$name" 2>/dev/null | awk '
-            /^Reverse Provides:/ { found = 1; next }
-            found && $1 ~ /^[a-z0-9][a-z0-9+.-]*$/ { print $1; exit }
-        ' || true)
-        if [[ -n "$provider" ]]; then
-            meta=$(apt-cache show "$provider" 2>/dev/null | awk '
-                /^$/ { exit }
-                /^Multi-Arch:/ { ma = $2 }
-                /^Architecture:/ { ar = $2 }
-                END { if (ar != "" || ma != "") printf "%s\t%s\n", ma, ar }
-            ' || true)
-        fi
-    fi
-    if [[ -n "$meta" ]]; then
-        PKG_MULTI=${meta%%$'\t'*}
-        PKG_ARCH=${meta#*$'\t'}
-    fi
-}
-
-quote_apt_atom() {
-    local atom=$1
-    case "$atom" in
-        *' '*|*'('*|*')'*|*"'"*)
-            atom=${atom//\'/\'\\\'\'}
-            printf "'%s'" "$atom"
-            ;;
-        *)
-            printf '%s' "$atom"
-            ;;
-    esac
-}
-
-report_missing_packages() {
-    local debarch=$1 native_arch=$2 err=$3
-    local unmet dep alt name relation spec multi arch need_foreign=0
-    local rel_re='^([^[:space:]]+)[[:space:]]+(\([^)]*\))'
-    local -a install=()
-    printf 'error: packages required to build the %s kernel .deb are not installed.\n' "$debarch" >&2
-    printf '%s\n' "$err" >&2
-    if [[ "$err" =~ Unmet\ build\ dependencies:\ (.*) ]]; then
-        unmet=${BASH_REMATCH[1]}
-    else
-        exit 1
-    fi
-    split_build_deps "$unmet"
-    for dep in "${DEP_TOKENS[@]}"; do
-        # An alternative list is "pkg | other". The first one is enough.
-        alt=${dep%% | *}
-        alt=${alt#"${alt%%[![:space:]]*}"}
-        alt=${alt%"${alt##*[![:space:]]}"}
-        [[ -z "$alt" ]] && continue
-        # rel_re is a variable so the ")" in the version pattern does not end [[ ]].
-        if [[ "$alt" =~ $rel_re ]]; then
-            name=${BASH_REMATCH[1]}
-            relation=${BASH_REMATCH[2]}
-        else
-            name=${alt%%[[:space:]]*}
-            relation=""
-        fi
-        [[ -z "$name" ]] && continue
-        if [[ "$name" == *:native ]]; then
-            name=${name%:native}
-        elif [[ "$name" != *:* ]]; then
-            lookup_pkg_arch "$name"
-            multi=$PKG_MULTI
-            arch=$PKG_ARCH
-            if [[ "$debarch" != "$native_arch" && "$multi" != "foreign" && "$arch" != "all" ]]; then
-                name="${name}:${debarch}"
-                need_foreign=1
-            fi
-        fi
-        spec=$name
-        if [[ -n "$relation" ]]; then
-            spec="$name $relation"
-        fi
-        install+=("$(quote_apt_atom "$spec")")
-    done
-    if [[ "${#install[@]}" -eq 0 ]]; then
-        exit 1
-    fi
-    printf '\n' >&2
-    if [[ "$need_foreign" -eq 1 ]] && ! dpkg --print-foreign-architectures | grep -qx "$debarch"; then
-        printf 'sudo dpkg --add-architecture %s\n' "$debarch" >&2
-    fi
-    # archive.ubuntu.com lists foreign architectures in Release but does not
-    # publish their indexes (404). Those packages are on ports.ubuntu.com.
-    if [[ "$need_foreign" -eq 1 ]] && grep -Rqs 'archive.ubuntu.com' /etc/apt/sources.list /etc/apt/sources.list.d && ! grep -Rqs 'ports.ubuntu.com' /etc/apt/sources.list /etc/apt/sources.list.d; then
-        local codename=""
-        if [[ -r /etc/os-release ]]; then
-            codename=$(. /etc/os-release && printf '%s' "${VERSION_CODENAME:-}")
-        fi
-        if [[ -n "$codename" ]]; then
-            printf 'archive.ubuntu.com has no %s package indexes. Add Ubuntu ports, then install:\n' "$debarch" >&2
-            printf 'sudo tee /etc/apt/sources.list.d/ubuntu-ports-%s.list >/dev/null <<'\''EOF'\''\n' "$debarch" >&2
-            printf 'deb [arch=%s] http://ports.ubuntu.com/ubuntu-ports %s main universe restricted multiverse\n' "$debarch" "$codename" >&2
-            printf 'deb [arch=%s] http://ports.ubuntu.com/ubuntu-ports %s-updates main universe restricted multiverse\n' "$debarch" "$codename" >&2
-            printf 'deb [arch=%s] http://ports.ubuntu.com/ubuntu-ports %s-security main universe restricted multiverse\n' "$debarch" "$codename" >&2
-            printf 'EOF\n' >&2
-        fi
-    fi
-    printf 'sudo apt-get update\n' >&2
-    printf 'sudo apt-get install %s\n' "${install[*]}" >&2
-    exit 1
 }
 
 abspath_existing() {
@@ -888,6 +665,144 @@ run_make() {
     return "${pipe_status[1]}"
 }
 
+# ---------------------------------------------------------------------------
+# Docker build environment
+#
+# The script re-runs itself in a container built from the Dockerfile next to
+# it, so the host needs only docker. The arguments are rebuilt from the
+# parsed (and absolute) values, and every path is mounted at the same path
+# inside the container.
+# ---------------------------------------------------------------------------
+KERNEL_BUILD_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+MOUNT_PATHS=()
+MOUNT_MODES=()
+
+require_docker() {
+    command -v docker >/dev/null 2>&1 || die "docker is required to build the kernel (not found in PATH)"
+    docker info >/dev/null 2>&1 || die "cannot talk to the docker daemon"
+}
+
+# add_mount PATH MODE (ro|rw). Same path inside the container.
+# Docker rejects two mounts with the same destination, so a path asked for
+# twice (for example build_path that is the checkout itself) is mounted
+# once, and it is writable when any of the uses needs it.
+add_mount() {
+    local path=$1 mode=$2 i
+    [[ -e "$path" ]] || return 0
+    for i in "${!MOUNT_PATHS[@]}"; do
+        if [[ "${MOUNT_PATHS[$i]}" == "$path" ]]; then
+            [[ "$mode" == "rw" ]] && MOUNT_MODES[i]=rw
+            return 0
+        fi
+    done
+    MOUNT_PATHS+=("$path")
+    MOUNT_MODES+=("$mode")
+}
+
+# Build the image on first use. The tag follows the Dockerfile content and the
+# base image, so editing the Dockerfile rebuilds it.
+docker_prepare_image() {
+    local dockerfile="$KERNEL_BUILD_SCRIPT_DIR/Dockerfile" base sum
+    if [[ -n "${KERNEL_BUILD_IMAGE:-}" ]]; then
+        DOCKER_IMAGE=$KERNEL_BUILD_IMAGE
+        return 0
+    fi
+    [[ -f "$dockerfile" ]] || die "Dockerfile not found: $dockerfile"
+    base=${KERNEL_BUILD_BASE_IMAGE:-debian:bookworm}
+    sum=$({ cat "$dockerfile"; printf '%s\n' "$base"; } | cksum | awk '{print $1}')
+    DOCKER_IMAGE="hw-mgmt-kernel-build:${sum}"
+    if docker image inspect "$DOCKER_IMAGE" >/dev/null 2>&1; then
+        info "docker image: $DOCKER_IMAGE"
+        return 0
+    fi
+    info "building docker image $DOCKER_IMAGE (first run only)"
+    # The Dockerfile is sent on stdin: no build context is needed.
+    docker build --build-arg "BASE_IMAGE=$base" -t "$DOCKER_IMAGE" - <"$dockerfile" \
+        || die "docker build failed"
+}
+
+run_in_docker() {
+    local -a args=() run=() extra=()
+    local user_name host_name var gid i
+
+    docker_prepare_image
+
+    args+=("$BUILD_PATH" "$HW_MGMT_PATH" "$KERNEL_VER")
+    if [[ "$OS_TYPE_SET" -eq 1 ]]; then
+        args+=(--os-type "${OS_TYPE,,}")
+    fi
+    [[ -n "$ARCH_SET" ]] && args+=(--arch "$ARCH_SET")
+    [[ "$CROSS_COMPILE_SET" -eq 1 ]] && args+=(--cross-compile "$CROSS_COMPILE")
+    [[ -n "$DEPLOY_ARCH_SET" ]] && args+=(--deploy-arch "$DEPLOY_ARCH_SET")
+    if [[ -n "$CONFIG_FILE" ]]; then
+        args+=(--config "$CONFIG_FILE")
+    elif [[ -f "$DEFAULT_CONFIG" ]]; then
+        # The container does not see the parent of build_path.
+        args+=(--config "$DEFAULT_CONFIG")
+    fi
+    args+=(--patch-table "$PATCH_TABLE")
+    [[ -n "$BMC_PATCH_TABLE" ]] && args+=(--bmc-patch-table "$BMC_PATCH_TABLE")
+    [[ -n "$THIRD_PARTY_DIR" ]] && args+=(--third-party-patches "$THIRD_PARTY_DIR")
+    [[ -n "$TARBALL" ]] && args+=(--tarball "$TARBALL")
+    args+=(--jobs "$JOBS")
+    [[ "$FORCE" -eq 1 ]] && args+=(--force)
+    [[ "$SKIP_BUILD" -eq 1 ]] && args+=(--skip-build)
+    [[ "$NO_RETRY" -eq 1 ]] && args+=(--no-retry)
+    [[ "$DRY_RUN" -eq 1 ]] && args+=(--dry-run)
+    [[ "$DEBUG" -eq 1 ]] && args+=(--debug)
+
+    MOUNT_PATHS=()
+    MOUNT_MODES=()
+    add_mount "$KERNEL_BUILD_SCRIPT_DIR" ro
+    add_mount "$HW_MGMT_PATH" ro
+    add_mount "$BUILD_PATH" rw
+    add_mount "$PATCH_TABLE" ro
+    [[ -n "$BMC_PATCH_TABLE" ]] && add_mount "$BMC_PATCH_TABLE" ro
+    [[ -n "$THIRD_PARTY_DIR" ]] && add_mount "$THIRD_PARTY_DIR" ro
+    [[ -n "$TARBALL" ]] && add_mount "$TARBALL" ro
+    [[ -n "$CONFIG_FILE" ]] && add_mount "$CONFIG_FILE" ro
+    [[ -z "$CONFIG_FILE" && -f "$DEFAULT_CONFIG" ]] && add_mount "$DEFAULT_CONFIG" ro
+
+    user_name=$(id -un 2>/dev/null || id -u)
+    host_name=$(hostname 2>/dev/null || echo localhost)
+    run=(docker run --rm --init
+        --user "$(id -u):$(id -g)"
+        -e HOME=/tmp
+        -e KERNEL_BUILD_IN_DOCKER=1
+        -e "KERNEL_BUILD_ENTRY=$KERNEL_BUILD_ENTRY"
+        # The uid has no passwd entry in the container; the kernel build
+        # (mkcompile_h, mkdebian) would otherwise fail to name the builder.
+        -e "KBUILD_BUILD_USER=${KBUILD_BUILD_USER:-$user_name}"
+        -e "KBUILD_BUILD_HOST=${KBUILD_BUILD_HOST:-$host_name}")
+    for var in http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY; do
+        [[ -n "${!var:-}" ]] && run+=(-e "$var=${!var}")
+    done
+    # --user keeps only the primary group. A shared checkout or an existing
+    # build directory may be reachable through a secondary group, so pass
+    # those on as well; the container then sees what the caller sees.
+    for gid in $(id -G); do
+        [[ "$gid" == "$(id -g)" ]] && continue
+        run+=(--group-add "$gid")
+    done
+    [[ -t 0 ]] && run+=(-i)
+    [[ -t 1 ]] && run+=(-t)
+    for i in "${!MOUNT_PATHS[@]}"; do
+        run+=(-v "${MOUNT_PATHS[$i]}:${MOUNT_PATHS[$i]}:${MOUNT_MODES[$i]}")
+    done
+    if [[ -d "$BUILD_PATH" ]]; then
+        run+=(-w "$BUILD_PATH")
+    fi
+    if [[ -n "${KERNEL_BUILD_DOCKER_ARGS:-}" ]]; then
+        # shellcheck disable=SC2206
+        extra=($KERNEL_BUILD_DOCKER_ARGS)
+        run+=("${extra[@]}")
+    fi
+    run+=("$DOCKER_IMAGE" bash "$KERNEL_BUILD_SCRIPT_DIR/kernel_build_6_x.sh" "${args[@]}")
+
+    info "running in docker ($DOCKER_IMAGE)"
+    exec "${run[@]}"
+}
+
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -1150,6 +1065,12 @@ case "$BUILD_PATH/" in
         ;;
 esac
 
+# KERNEL_BUILD_IN_DOCKER is set by run_in_docker for the run inside the container.
+if [[ "${KERNEL_BUILD_IN_DOCKER:-0}" != "1" ]]; then
+    require_docker
+    run_in_docker
+fi
+
 need_cmd tar
 need_cmd xz
 need_cmd git
@@ -1167,7 +1088,6 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
     else
         need_cmd gcc
     fi
-    check_kernel_package_deps
 fi
 
 info "build path:  $BUILD_PATH"
