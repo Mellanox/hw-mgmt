@@ -3727,7 +3727,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(0),
 -		.mode = 0644,
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc2_pwr",
@@ -3736,7 +3736,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(1),
 -		.mode = 0644,
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc3_pwr",
@@ -3745,7 +3745,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(2),
 -		.mode = 0644,
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc4_pwr",
@@ -3754,7 +3754,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(3),
 -		.mode = 0644,
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc5_pwr",
@@ -3764,7 +3764,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.label = "dpu1_pwr",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc6_pwr",
@@ -3774,7 +3774,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.label = "dpu2_pwr",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(1),
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc7_pwr",
@@ -3784,7 +3784,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.label = "dpu3_pwr",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "lc8_pwr",
@@ -3794,7 +3794,7 @@ index 6f24de172b90..f563a4456ce6 100644
 +		.label = "dpu4_pwr",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0200,
++		.mode = 0644,
  	},
  	{
 -		.label = "config1",

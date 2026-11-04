@@ -28,17 +28,24 @@ QM3000 Features:
  - System management board based on Intel Coffee Lake CPU
    with secure-boot support.
 
+Complete the regmap access lists: ASIC3 and ASIC4 health registers are
+readable and volatile, FAN2 registers are volatile, so the status is
+always read from hardware and not served from the register cache.
+Provide the capability bit mask for the smart switch and NG800 hotplug
+tables, as it is done for the XDR tables. Drop the duplicated FAN2
+register definitions.
+
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 421 +++++++++++++++++++++++++++++--
- 1 file changed, 406 insertions(+), 15 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 440 +++++++++++++++++++++++++++++--
+ 1 file changed, 425 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index c7c3aaa..de3dbaf 100644
+index 58fe807..453a8e8 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -102,12 +102,24 @@
+@@ -102,6 +102,15 @@
  #define MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET	0x70
  #define MLXPLAT_CPLD_LPC_REG_LC_IN_EVENT_OFFSET	0x71
  #define MLXPLAT_CPLD_LPC_REG_LC_IN_MASK_OFFSET	0x72
@@ -54,16 +61,7 @@ index c7c3aaa..de3dbaf 100644
  #define MLXPLAT_CPLD_LPC_REG_FAN_OFFSET		0x88
  #define MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET	0x89
  #define MLXPLAT_CPLD_LPC_REG_FAN_MASK_OFFSET	0x8a
- #define MLXPLAT_CPLD_LPC_REG_FAN2_OFFSET	0x8b
- #define MLXPLAT_CPLD_LPC_REG_FAN2_EVENT_OFFSET	0x8c
- #define MLXPLAT_CPLD_LPC_REG_FAN2_MASK_OFFSET	0x8d
-+#define MLXPLAT_CPLD_LPC_REG_FAN2_OFFSET	0x8b
-+#define MLXPLAT_CPLD_LPC_REG_FAN2_EVENT_OFFSET	0x8c
-+#define MLXPLAT_CPLD_LPC_REG_FAN2_MASK_OFFSET	0x8d
- #define MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET	0x8e
- #define MLXPLAT_CPLD_LPC_REG_CPLD5_PN_OFFSET	0x8f
- #define MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET	0x90
-@@ -258,6 +270,8 @@
+@@ -258,6 +267,8 @@
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2	BIT(2)
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	GENMASK(5, 4)
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_I2C	BIT(6)
@@ -72,7 +70,7 @@ index c7c3aaa..de3dbaf 100644
  #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_PSU_EXT_MASK	GENMASK(3, 0)
-@@ -268,13 +282,18 @@
+@@ -268,13 +279,18 @@
  #define MLXPLAT_CPLD_ASIC_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_ASIC_XDR_MASK	GENMASK(3, 0)
  #define MLXPLAT_CPLD_FAN_NG_MASK	GENMASK(6, 0)
@@ -91,7 +89,7 @@ index c7c3aaa..de3dbaf 100644
  #define MLXPLAT_CPLD_BIOS_STATUS_MASK	GENMASK(3, 1)
  #define MLXPLAT_CPLD_DPU_MASK		GENMASK(3, 0)
  #define MLXPLAT_CPLD_PWR_BUTTON_MASK	BIT(0)
-@@ -326,6 +345,7 @@
+@@ -326,6 +342,7 @@
  #define MLXPLAT_CPLD_CH4_ETH_MODULAR		51
  #define MLXPLAT_CPLD_CH2_RACK_SWITCH		18
  #define MLXPLAT_CPLD_CH2_NG800			34
@@ -99,7 +97,7 @@ index c7c3aaa..de3dbaf 100644
  
  /* Number of LPC attached MUX platform devices */
  #define MLXPLAT_CPLD_LPC_MUX_DEVS		4
-@@ -682,6 +702,38 @@ static struct i2c_mux_reg_platform_data mlxplat_ng800_mux_data[] = {
+@@ -682,6 +699,38 @@ static struct i2c_mux_reg_platform_data mlxplat_ng800_mux_data[] = {
  
  };
  
@@ -138,7 +136,7 @@ index c7c3aaa..de3dbaf 100644
  /* Platform hotplug devices */
  static struct i2c_board_info mlxplat_mlxcpld_pwr[] = {
  	{
-@@ -2471,7 +2523,7 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_rack_switch_data = {
+@@ -2471,7 +2520,7 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_rack_switch_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
@@ -147,7 +145,7 @@ index c7c3aaa..de3dbaf 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  	{
  		.label = "psu1",
-@@ -2479,6 +2531,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2479,6 +2528,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(0),
  		.slot = 1,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -155,7 +153,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2487,6 +2540,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2487,6 +2537,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(1),
  		.slot = 2,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -163,7 +161,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2495,6 +2549,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2495,6 +2546,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(2),
  		.slot = 3,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -171,7 +169,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2503,6 +2558,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2503,6 +2555,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(3),
  		.slot = 4,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -179,7 +177,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2511,6 +2567,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2511,6 +2564,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(4),
  		.slot = 5,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -187,7 +185,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2519,6 +2576,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2519,6 +2573,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(5),
  		.slot = 6,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -195,7 +193,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2527,6 +2585,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2527,6 +2582,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(6),
  		.slot = 7,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -203,7 +201,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  	{
-@@ -2535,6 +2594,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
+@@ -2535,6 +2591,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_psu_items_data[] = {
  		.mask = BIT(7),
  		.slot = 8,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -211,7 +209,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
  };
-@@ -2546,6 +2606,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2546,6 +2603,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(0),
  		.slot = 1,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -219,7 +217,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[0],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR,
  	},
-@@ -2555,6 +2616,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2555,6 +2613,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(1),
  		.slot = 2,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -227,7 +225,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[1],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR,
  	},
-@@ -2564,6 +2626,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2564,6 +2623,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(2),
  		.slot = 3,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -235,7 +233,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_ext_pwr[0],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR,
  	},
-@@ -2573,6 +2636,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2573,6 +2633,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(3),
  		.slot = 4,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -243,7 +241,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_ext_pwr[1],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR,
  	},
-@@ -2582,6 +2646,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2582,6 +2643,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(4),
  		.slot = 5,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -251,7 +249,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_xdr_pwr[0],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_XDR_NR,
  	},
-@@ -2591,6 +2656,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2591,6 +2653,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(5),
  		.slot = 6,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -259,7 +257,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_xdr_pwr[1],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_XDR_NR,
  	},
-@@ -2600,6 +2666,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2600,6 +2663,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(6),
  		.slot = 7,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -267,7 +265,7 @@ index c7c3aaa..de3dbaf 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_xdr_pwr[2],
  		.hpdev.nr = MLXPLAT_CPLD_PSU_XDR_NR,
  	},
-@@ -2609,11 +2676,23 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
+@@ -2609,11 +2673,23 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_pwr_items_data[] = {
  		.mask = BIT(7),
  		.slot = 8,
  		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
@@ -291,7 +289,7 @@ index c7c3aaa..de3dbaf 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  	{
  		.label = "fan1",
-@@ -2621,6 +2700,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2621,6 +2697,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(0),
  		.slot = 1,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -299,7 +297,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(0),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2630,6 +2710,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2630,6 +2707,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(1),
  		.slot = 2,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -307,7 +305,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(1),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2639,6 +2720,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2639,6 +2717,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(2),
  		.slot = 3,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -315,7 +313,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(2),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2648,6 +2730,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2648,6 +2727,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(3),
  		.slot = 4,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -323,7 +321,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(3),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2657,6 +2740,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2657,6 +2737,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(4),
  		.slot = 5,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -331,7 +329,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(4),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2666,6 +2750,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2666,6 +2747,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(5),
  		.slot = 6,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -339,7 +337,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(5),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2675,6 +2760,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2675,6 +2757,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(6),
  		.slot = 7,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -347,7 +345,7 @@ index c7c3aaa..de3dbaf 100644
  		.bit = BIT(6),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
  	},
-@@ -2684,11 +2770,55 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
+@@ -2684,11 +2767,55 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_items_data[] = {
  		.mask = BIT(7),
  		.slot = 8,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
@@ -403,7 +401,7 @@ index c7c3aaa..de3dbaf 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_asic1_items_data[] = {
  	{
  		.label = "asic1",
-@@ -2696,10 +2826,148 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_asic1_items_data[] = {
+@@ -2696,10 +2823,148 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_asic1_items_data[] = {
  		.mask = MLXPLAT_CPLD_ASIC_MASK,
  		.slot = 1,
  		.capability = MLXPLAT_CPLD_LPC_REG_ASIC_CAP_OFFSET,
@@ -552,7 +550,127 @@ index c7c3aaa..de3dbaf 100644
  /* Platform hotplug for smart switch systems families data */
  static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_ready_data[] = {
  	{
-@@ -3758,7 +4026,7 @@ static struct mlxreg_core_platform_data mlxplat_l1_switch_led_data = {
+@@ -2708,6 +2973,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_ready_data[] = {
+ 		.mask = BIT(0),
+ 		.slot = 1,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+@@ -2716,6 +2982,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_ready_data[] = {
+ 		.mask = BIT(1),
+ 		.slot = 2,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+@@ -2724,6 +2991,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_ready_data[] = {
+ 		.mask = BIT(2),
+ 		.slot = 3,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+@@ -2732,6 +3000,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_ready_data[] = {
+ 		.mask = BIT(3),
+ 		.slot = 4,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ };
+@@ -2743,6 +3012,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_shtdn_ready_data
+ 		.mask = BIT(0),
+ 		.slot = 1,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+@@ -2751,6 +3021,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_shtdn_ready_data
+ 		.mask = BIT(1),
+ 		.slot = 2,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+@@ -2759,6 +3030,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_shtdn_ready_data
+ 		.mask = BIT(2),
+ 		.slot = 3,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+@@ -2767,6 +3039,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_shtdn_ready_data
+ 		.mask = BIT(3),
+ 		.slot = 4,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ };
+@@ -2778,6 +3051,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
+ 		.mask = MLXPLAT_CPLD_PSU_XDR_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_PSU_CAP_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_psu_items_data),
+ 		.inversed = 1,
+ 		.health = false,
+@@ -2788,6 +3062,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
+ 		.mask = MLXPLAT_CPLD_PWR_XDR_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_PSU_CAP_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_pwr_items_data),
+ 		.inversed = 0,
+ 		.health = false,
+@@ -2798,6 +3073,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = MLXPLAT_CPLD_FAN_XDR_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_FAN_CAP_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_fan_items_data),
+ 		.inversed = 1,
+ 		.health = false,
+@@ -2808,6 +3084,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
+ 		.mask = MLXPLAT_CPLD_ASIC_XDR_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_ASIC_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_ASIC_CAP_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_asic1_items_data),
+ 		.inversed = 0,
+ 		.health = true,
+@@ -2818,6 +3095,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LC_RD_OFFSET,
+ 		.mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_smart_switch_dpu_ready_data),
+ 		.inversed = 1,
+ 		.health = false,
+@@ -2828,6 +3106,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_DPU_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_smart_switch_dpu_shtdn_ready_data),
+ 		.inversed = 1,
+ 		.health = false,
+@@ -3096,6 +3375,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ng800_hi171_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = MLXPLAT_CPLD_FAN_XDR_MASK,
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_FAN_CAP_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_fan_items_data),
+ 		.inversed = 1,
+ 		.health = false,
+@@ -3758,7 +4038,7 @@ static struct mlxreg_core_platform_data mlxplat_l1_switch_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_l1_switch_led_data),
  };
  
@@ -561,7 +679,7 @@ index c7c3aaa..de3dbaf 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  	{
  		.label = "status:green",
-@@ -3766,9 +4034,9 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3766,9 +4046,9 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
  	},
  	{
@@ -573,7 +691,7 @@ index c7c3aaa..de3dbaf 100644
  	},
  	{
  		.label = "psu:green",
-@@ -3776,7 +4044,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3776,7 +4056,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  	},
  	{
@@ -582,7 +700,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  	},
-@@ -3788,7 +4056,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3788,7 +4068,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 1,
  	},
  	{
@@ -591,7 +709,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED2_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3802,7 +4070,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3802,7 +4082,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 2,
  	},
  	{
@@ -600,7 +718,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED2_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3816,7 +4084,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3816,7 +4096,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 3,
  	},
  	{
@@ -609,7 +727,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3830,7 +4098,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3830,7 +4110,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 4,
  	},
  	{
@@ -618,7 +736,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3844,7 +4112,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3844,7 +4124,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 5,
  	},
  	{
@@ -627,7 +745,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED4_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3858,7 +4126,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3858,7 +4138,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 6,
  	},
  	{
@@ -636,7 +754,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED4_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3872,7 +4140,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3872,7 +4152,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 7,
  	},
  	{
@@ -645,7 +763,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED6_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3886,7 +4154,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3886,7 +4166,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 8,
  	},
  	{
@@ -654,7 +772,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED7_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3900,7 +4168,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3900,7 +4180,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 9,
  	},
  	{
@@ -663,7 +781,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED7_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -3914,7 +4182,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
+@@ -3914,7 +4194,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  		.slot = 10,
  	},
  	{
@@ -672,7 +790,7 @@ index c7c3aaa..de3dbaf 100644
  		.reg = MLXPLAT_CPLD_LPC_REG_LED8_OFFSET,
  		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-@@ -4229,6 +4497,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4229,6 +4509,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0444,
  	},
  	{
@@ -685,7 +803,7 @@ index c7c3aaa..de3dbaf 100644
  		.label = "cpld1_pn",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET,
  		.bit = GENMASK(15, 0),
-@@ -4264,6 +4538,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4264,6 +4550,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.regnum = 2,
  	},
  	{
@@ -699,7 +817,7 @@ index c7c3aaa..de3dbaf 100644
  		.label = "cpld1_version_min",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_MVER_OFFSET,
  		.bit = GENMASK(7, 0),
-@@ -4294,6 +4575,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4294,6 +4587,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0444,
  	},
  	{
@@ -712,7 +830,7 @@ index c7c3aaa..de3dbaf 100644
  		.label = "asic_reset",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(3),
-@@ -4483,6 +4770,43 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4483,6 +4782,43 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0200,
  	},
  	{
@@ -756,7 +874,7 @@ index c7c3aaa..de3dbaf 100644
  		.label = "pwr_cycle",
  		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(2),
-@@ -4558,6 +4882,20 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4558,6 +4894,20 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0444,
  	},
  	{
@@ -777,7 +895,7 @@ index c7c3aaa..de3dbaf 100644
  		.label = "fan_dir",
  		.reg = MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION,
  		.bit = GENMASK(7, 0),
-@@ -6449,6 +6787,10 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -6449,6 +6799,10 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_ASIC_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_MASK_OFFSET:
@@ -788,7 +906,7 @@ index c7c3aaa..de3dbaf 100644
  	case MLXPLAT_CPLD_LPC_REG_PSU_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_AC_OFFSET:
-@@ -6516,6 +6858,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -6516,6 +6870,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
@@ -796,7 +914,7 @@ index c7c3aaa..de3dbaf 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -6526,6 +6869,8 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -6526,6 +6881,8 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
@@ -805,18 +923,20 @@ index c7c3aaa..de3dbaf 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -6581,6 +6926,10 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -6581,6 +6938,12 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_HEALTH_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_ASIC3_HEALTH_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC3_EVENT_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC3_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_ASIC4_HEALTH_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC4_EVENT_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC4_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_MASK_OFFSET:
-@@ -6700,6 +7049,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -6700,6 +7063,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
@@ -824,7 +944,7 @@ index c7c3aaa..de3dbaf 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -6710,6 +7060,8 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -6710,6 +7074,8 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
@@ -833,18 +953,30 @@ index c7c3aaa..de3dbaf 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -6763,6 +7115,10 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -6763,6 +7129,12 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_HEALTH_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_ASIC2_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_ASIC3_HEALTH_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC3_EVENT_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC3_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_ASIC4_HEALTH_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC4_EVENT_OFFSET:
 +	case MLXPLAT_CPLD_LPC_REG_ASIC4_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PSU_MASK_OFFSET:
-@@ -7610,6 +7966,35 @@ static int __init mlxplat_dmi_ng400_hi171_matched(const struct dmi_system_id *dm
+@@ -6774,6 +7146,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN2_EVENT_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN2_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_EROT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_EROT_EVENT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_EROT_MASK_OFFSET:
+@@ -7610,6 +7985,35 @@ static int __init mlxplat_dmi_ng400_hi171_matched(const struct dmi_system_id *dm
  	return mlxplat_register_platform_device();
  }
  
@@ -880,7 +1012,7 @@ index c7c3aaa..de3dbaf 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -7711,6 +8096,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -7711,6 +8115,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
  	{
