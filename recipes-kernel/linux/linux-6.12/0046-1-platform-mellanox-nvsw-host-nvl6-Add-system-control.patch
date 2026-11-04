@@ -452,7 +452,7 @@ index 000000000000..2d2ad0d34bd5
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_51v",
++		.label = "reset_main_5v",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
