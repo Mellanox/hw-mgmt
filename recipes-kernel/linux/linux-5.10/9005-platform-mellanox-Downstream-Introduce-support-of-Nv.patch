@@ -740,7 +740,7 @@ index 4be0f29cc..a867ba4f8 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_51v",
++		.label = "reset_main_5v",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
