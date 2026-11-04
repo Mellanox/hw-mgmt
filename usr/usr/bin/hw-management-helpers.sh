@@ -201,12 +201,21 @@ show_hw_info()
 		CPLD_IOREG_RANGE=256
 	fi
 
+	# 1. Get the cpldreg dump
 	io_dump=$(iorw -b 0x2500 -r -l  $CPLD_IOREG_RANGE | expand)
+
+	# 2. Add extra reg dump [0x203d, 0x20f4] x86 only
+	if [ "$arch" = "x86_64" ]; then
+		extra_dump1=$(iorw -b 0x203d -r -l 1 | expand)
+		extra_dump2=$(iorw -b 0x20f4 -r -l 1 | expand)
+		io_dump="$io_dump"$'\n'"$extra_dump1"$'\n'"$extra_dump2"
+	fi
+
 	log_info "== cpld reg dump start =="
     echo "$io_dump" | logger
 	log_info "== cpld reg dump end =="
-		
-	# Append the new cpldreg dump entry
+
+	# 1. Append the new cpldreg dump entry
  	timestamp=$(date +"%d_%m_%y %H:%M:%S")
 	echo "====== $timestamp cpldreg dump ======" >> "$cpldreg_log_file"
 	echo "$io_dump" >> "$cpldreg_log_file"
@@ -214,7 +223,8 @@ show_hw_info()
 	echo "" >> "$cpldreg_log_file"
 
 	N_REC=100
-	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / 16 + 4)))
+	MSG_LINES=$(echo "$io_dump" | wc -l)
+	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / $MSG_LINES + 4)))
 	tail -n $dump_max_lines "$cpldreg_log_file" > "${cpldreg_log_file}.tmp" && mv "${cpldreg_log_file}.tmp" "$cpldreg_log_file"
 }
 
