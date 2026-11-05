@@ -1184,21 +1184,56 @@ def resolve_device(explicit, cfg=None, dev_dir="/dev"):
     raise DumpSkip("no NVMe model in sysfs")
 
 
+def check_tool_basename(name):
+    """JSON `tool` / `tool_alt` must be a bare name looked up on PATH.
+
+    A path (absolute or relative) would let a config edit run any
+    executable as root, so it is refused before any lookup.
+    """
+    if os.path.sep in name or (os.path.altsep and os.path.altsep in name):
+        raise DumpError(
+            "SSD dump tool must be a PATH basename, not a path: %s" % name
+        )
+
+
+def check_tool_dir(path):
+    """The PATH directory that holds the tool must be writable by root only.
+
+    PATH is the caller's. A user can prepend a directory they can write,
+    such as /var/tmp, and drop a file or a symlink there with the vendor
+    tool's basename. The collector runs as root, so that file would run
+    as root. Refuse the directory unless root owns it and neither group
+    nor other has the write bit.
+    """
+    directory = os.path.dirname(os.path.abspath(path))
+    try:
+        st = os.stat(directory)
+    except OSError as exc:
+        raise DumpError(
+            "SSD dump tool directory not usable: %s (%s)" % (directory, exc)
+        )
+    if (
+        not stat.S_ISDIR(st.st_mode)
+        or st.st_uid != 0
+        or (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH))
+    ):
+        raise DumpError(
+            "SSD dump tool directory must be writable by root only: %s"
+            % directory
+        )
+
+
 def find_tool(name):
-    """Locate JSON `tool` on PATH (or as an absolute path).
+    """Locate JSON `tool` on PATH by bare name.
 
     shutil.which() skips non-executable files, so a present but
     chmod -x binary looked like "not found". Search PATH ourselves:
     executable match wins; else a non-executable file -> that warning.
+    The directory of an executable match must be writable by root only.
     """
     if not name:
         raise DumpError("SSD dump tool not found on PATH: %s" % name)
-    if os.path.isabs(name):
-        if os.path.isfile(name):
-            if os.access(name, os.X_OK):
-                return name
-            raise DumpError("SSD dump tool not executable: %s" % name)
-        raise DumpError("SSD dump tool not found on PATH: %s" % name)
+    check_tool_basename(name)
 
     found_nonexec = None
     for d in os.environ.get("PATH", "").split(os.pathsep):
@@ -1208,6 +1243,7 @@ def find_tool(name):
         if not os.path.isfile(p):
             continue
         if os.access(p, os.X_OK):
+            check_tool_dir(p)
             return p
         if found_nonexec is None:
             found_nonexec = p
@@ -1231,13 +1267,22 @@ def resolve_tool(mcfg):
     names = tool_candidates(mcfg)
     if not names:
         raise DumpError("SSD dump tool not found on PATH: ")
+    # Refuse every path-like name up front, so a bad `tool` cannot
+    # quietly fall back to a valid `tool_alt`.
+    for name in names:
+        check_tool_basename(name)
     nonexec = None
     for name in names:
         try:
             return find_tool(name), name
         except DumpError as exc:
-            if "not executable" in str(exc) and nonexec is None:
+            msg = str(exc)
+            if "not found on PATH" in msg:
+                continue
+            if "not executable" in msg and nonexec is None:
                 nonexec = exc
+                continue
+            raise
     if nonexec is not None:
         raise nonexec
     raise DumpError("SSD dump tool not found on PATH: %s" % ", ".join(names))
