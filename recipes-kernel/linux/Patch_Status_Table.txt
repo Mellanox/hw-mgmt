@@ -740,6 +740,7 @@ Kernel-6.1
 |0123-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600 SN6600_LD SN6800_LD SN6810_LD PHY reset |
 |0124-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
 |0125-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
+|0126-platform-mellanox-nvsw-host-nvl6-Introduce-cpu-power.patch  |                    | Downstream accepted                      |            | CPU reboot with pwr_cycle                      |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
@@ -858,6 +859,7 @@ Kernel-6.12
 |0075-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600 SN6600_LD SN6800_LD SN6810_LD PHY reset |
 |0076-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
 |0077-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
+|0078-platform-mellanox-nvsw-host-nvl6-Introduce-cpu-power.patch  |                    | Downstream accepted                      |            | CPU reboot with pwr_cycle                      |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
