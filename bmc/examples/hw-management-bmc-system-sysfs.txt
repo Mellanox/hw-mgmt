@@ -88,7 +88,7 @@ reset_system                            0444
 reset_sw_pwr_off                        0444
 reset_thermal                           0444
 reset_pwr_converter_fail                0444
-reset_main_51v                          0444
+reset_main_5v                          0444
 reset_mgmt_pwr                          0444
 port80                                  0444
 switch_ic_qty                           0444

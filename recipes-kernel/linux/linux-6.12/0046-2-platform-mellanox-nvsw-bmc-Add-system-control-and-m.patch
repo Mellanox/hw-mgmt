@@ -4015,7 +4015,7 @@ index 000000000000..d8ee66da5bd1
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_51v",
++		.label = "reset_main_5v",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
@@ -4395,7 +4395,7 @@ index 000000000000..d8ee66da5bd1
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_51v",
++		.label = "reset_main_5v",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
@@ -5993,7 +5993,7 @@ index 000000000000..d8ee66da5bd1
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_51v",
++		.label = "reset_main_5v",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
@@ -6532,7 +6532,7 @@ index 000000000000..d8ee66da5bd1
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_51v",
++		.label = "reset_main_5v",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,

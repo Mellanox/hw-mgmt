@@ -887,7 +887,7 @@ index 0773d59..0dcd5da 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "graseful_pwr_off",
++		.label = "graceful_pwr_off",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP_RST_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0644,
