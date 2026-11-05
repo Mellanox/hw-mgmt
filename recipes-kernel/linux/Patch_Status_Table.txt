@@ -862,6 +862,7 @@ Kernel-6.12
 |0077-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
 |0078-platform-mellanox-nvsw-host-nvl6-Introduce-cpu-power.patch  |                    | Downstream accepted                      |            | CPU reboot with pwr_cycle                      |
 |0079-platform-mellanox-nvsw-Notify-BMC-on-CPU-power-off-c.patch  |                    | Downstream accepted                      |            | NVL6 SPC6 notify BMC on CPU power off          |
+|0080-platform-mellanox-mlx-platform-Fix-SW-reboot-reset-ca.patch |                    | Downstream accepted                      |            | Reset cause fix for V3000 Comex based system   |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
