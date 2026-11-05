@@ -1,0 +1,71 @@
+From f7191f9fc053344675ff375462e11c3471573f15 Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Thu, 5 Nov 2026 19:10:00 +0200
+Subject: [PATCH] platform: mellanox: nvsw: Add cpu power cycle definitions
+
+Add the register offset and the watchdog action mask used to trigger a
+CPU only power cycle, and allow the new register to be read and written
+through the regmap.
+
+These definitions are shared by the host platform drivers. They are
+already present on the branches carrying the NVLink6 driver, so this
+patch is only needed where that driver is absent and can be dropped once
+the two are merged.
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-core.c | 3 +++
+ drivers/platform/mellanox/nvsw.h      | 2 ++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
+index 1bd2dfc62..cae5fa675 100644
+--- a/drivers/platform/mellanox/nvsw-core.c
++++ b/drivers/platform/mellanox/nvsw-core.c
+@@ -39,6 +39,7 @@
+ 	case NVSW_REG_UART_BAUD_OFFSET:
+ 	case NVSW_REG_PWM_CONTROL_OFFSET:
+ 	case NVSW_REG_RESET_GP2_OFFSET:
++	case NVSW_REG_RESET_GP3_OFFSET:
+ 	case NVSW_REG_GP4_OFFSET:
+ 	case NVSW_REG_GP5_OFFSET:
+ 	case NVSW_REG_GP6_OFFSET:
+@@ -151,6 +152,7 @@
+ 	case NVSW_REG_CPLD7_PN_OFFSET:
+ 	case NVSW_REG_CPLD7_PN1_OFFSET:
+ 	case NVSW_REG_RESET_GP2_OFFSET:
++	case NVSW_REG_RESET_GP3_OFFSET:
+ 	case NVSW_REG_GP0_RO_OFFSET:
+ 	case NVSW_REG_GP1_RO_OFFSET:
+ 	case NVSW_REG_GP2_RO_OFFSET:
+@@ -325,6 +327,7 @@
+ 	case NVSW_REG_CPLD7_PN_OFFSET:
+ 	case NVSW_REG_CPLD7_PN1_OFFSET:
+ 	case NVSW_REG_RESET_GP2_OFFSET:
++	case NVSW_REG_RESET_GP3_OFFSET:
+ 	case NVSW_REG_GP0_RO_OFFSET:
+ 	case NVSW_REG_GP1_RO_OFFSET:
+ 	case NVSW_REG_GPCOM0_OFFSET:
+diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
+index b45b5df54..fea09e9a7 100644
+--- a/drivers/platform/mellanox/nvsw.h
++++ b/drivers/platform/mellanox/nvsw.h
+@@ -34,6 +34,7 @@
+ #define NVSW_REG_PG2_MASK_OFFSET	0x2516
+ #define NVSW_REG_RESET_GP1_OFFSET	0x2517
+ #define NVSW_REG_RESET_GP2_OFFSET	0x2519
++#define NVSW_REG_RESET_GP3_OFFSET	0x251b
+ #define NVSW_REG_RESET_CAUSE_OFFSET	0x251d
+ #define NVSW_REG_RESET_CAUSE1_OFFSET	0x251e
+ #define NVSW_REG_RESET_CAUSE2_OFFSET	0x251f
+@@ -228,6 +229,7 @@
+ #define NVSW_MASTER_MASK		BIT(5)
+ #define NVSW_FU_CAP_MASK		GENMASK(1, 0)
+ #define NVSW_WD_RESET_ACT_MASK		GENMASK(7, 1)
++#define NVSW_WD_CPU_PWR_CYCLE_MASK	(GENMASK(7, 0) & ~BIT(1))
+ #define NVSW_WD_FAN_ACT_MASK		(GENMASK(7, 0) & ~BIT(4))
+ #define NVSW_WD_TYPE2_TO_MASK		0
+ #define NVSW_WD3_DFLT_TIMEOUT		600
+-- 
+2.34.1
+

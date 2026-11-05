@@ -10,9 +10,9 @@ Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  10 +
  drivers/platform/mellanox/Makefile         |   1 +
- drivers/platform/mellanox/nvsw-host-nvl7.c | 664 +++++++++++++++++++++
+ drivers/platform/mellanox/nvsw-host-nvl7.c | 670 +++++++++++++++++++++
  drivers/platform/mellanox/nvsw.h           |   1 +
- 4 files changed, 676 insertions(+)
+ 4 files changed, 682 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-host-nvl7.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -48,10 +48,10 @@ index 0230613a9..b30b4808b 100644
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl7.c b/drivers/platform/mellanox/nvsw-host-nvl7.c
 new file mode 100644
-index 000000000..acdde1a76 100644
+index 000000000..a73cb43dc 100644
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-nvl7.c
-@@ -0,0 +1,664 @@
+@@ -0,0 +1,670 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia NVL7 host platform driver
@@ -221,6 +221,12 @@ index 000000000..acdde1a76 100644
 +		.label = "pwr_cycle",
 +		.reg = NVSW_REG_GP1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0244,
++	},
++	{
++		.label = "cpu_pwr_cycle",
++		.reg = NVSW_REG_RESET_GP3_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
 +		.mode = 0244,
 +	},
 +	{
@@ -444,8 +450,8 @@ index 000000000..acdde1a76 100644
 +	{
 +		.label = "action",
 +		.reg = NVSW_REG_WD2_ACT_OFFSET,
-+		.mask = NVSW_WD_RESET_ACT_MASK,
-+		.bit = 0,
++		.mask = NVSW_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
 +	},
 +	{
 +		.label = "timeout",
@@ -461,8 +467,8 @@ index 000000000..acdde1a76 100644
 +	{
 +		.label = "ping",
 +		.reg = NVSW_REG_WD2_ACT_OFFSET,
-+		.mask = NVSW_WD_RESET_ACT_MASK,
-+		.bit = 0,
++		.mask = NVSW_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
 +	},
 +	{
 +		.label = "reset",
@@ -717,10 +723,10 @@ index 000000000..acdde1a76 100644
 +MODULE_DESCRIPTION("Nvidia platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
-index b45b5df54..931b7831b 100644
+index fea09e9a7..ba98a1c50 100644
 --- a/drivers/platform/mellanox/nvsw.h
 +++ b/drivers/platform/mellanox/nvsw.h
-@@ -254,6 +254,7 @@ enum nvsw_core_hid_type {
+@@ -256,6 +256,7 @@ enum nvsw_core_hid_type {
  	HID189,
  	HID191,
  	HID193,
