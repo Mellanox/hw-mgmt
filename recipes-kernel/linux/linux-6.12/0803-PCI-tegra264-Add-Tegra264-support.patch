@@ -1,0 +1,662 @@
+From 01c3c27a0ef6 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Fri, 14 Aug 2026 12:00:00 +0200
+Subject: [PATCH] PCI: tegra264: Add Tegra264 support
+
+Add the Tegra264 ECAM host controller, the BPMP MRQ_PCIE ABI it uses to
+power the root port off, and tegra_bpmp_get_with_id().
+
+Upstream commits:
+77344118720e firmware: tegra: bpmp: Add tegra_bpmp_get_with_id() function
+01c3c27a0ef6 PCI: tegra264: Add Tegra264 support
+42b5b17cf4bb PCI: tegra264: Fix Link Capabilities register offset
+
+---
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 8b170f5fe..e37a09508 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -17716,8 +17716,8 @@ M:	Thierry Reding <thierry.reding@gmail.com>
+ L:	linux-tegra@vger.kernel.org
+ L:	linux-pci@vger.kernel.org
+ S:	Supported
+-F:	Documentation/devicetree/bindings/pci/nvidia,tegra20-pcie.txt
+-F:	drivers/pci/controller/pci-tegra.c
++F:	Documentation/devicetree/bindings/pci/*tegra*
++F:	drivers/pci/controller/*tegra*
+ 
+ PCI DRIVER FOR NXP LAYERSCAPE GEN4 CONTROLLER
+ M:	Hou Zhiqiang <Zhiqiang.Hou@nxp.com>
+diff --git a/drivers/firmware/tegra/bpmp.c b/drivers/firmware/tegra/bpmp.c
+index 2bee6e918..d30567e61 100644
+--- a/drivers/firmware/tegra/bpmp.c
++++ b/drivers/firmware/tegra/bpmp.c
+@@ -33,6 +33,40 @@ channel_to_ops(struct tegra_bpmp_channel *channel)
+ 	return bpmp->soc->ops;
+ }
+ 
++struct tegra_bpmp *tegra_bpmp_get_with_id(struct device *dev, unsigned int *id)
++{
++	struct platform_device *pdev;
++	struct of_phandle_args args;
++	struct tegra_bpmp *bpmp;
++	int err;
++
++	err = __of_parse_phandle_with_args(dev->of_node, "nvidia,bpmp", NULL,
++					   1, 0, &args);
++	if (err < 0)
++		return ERR_PTR(err);
++
++	pdev = of_find_device_by_node(args.np);
++	if (!pdev) {
++		bpmp = ERR_PTR(-ENODEV);
++		goto put;
++	}
++
++	bpmp = platform_get_drvdata(pdev);
++	if (!bpmp) {
++		bpmp = ERR_PTR(-EPROBE_DEFER);
++		put_device(&pdev->dev);
++		goto put;
++	}
++
++	if (id)
++		*id = args.args[0];
++
++put:
++	of_node_put(args.np);
++	return bpmp;
++}
++EXPORT_SYMBOL_GPL(tegra_bpmp_get_with_id);
++
+ struct tegra_bpmp *tegra_bpmp_get(struct device *dev)
+ {
+ 	struct device_node *np __free(device_node);
+diff --git a/drivers/pci/controller/Kconfig b/drivers/pci/controller/Kconfig
+index 8b99bd42b..17eedea24 100644
+--- a/drivers/pci/controller/Kconfig
++++ b/drivers/pci/controller/Kconfig
+@@ -231,6 +231,14 @@ config PCI_TEGRA
+ 	  Say Y here if you want support for the PCIe host controller found
+ 	  on NVIDIA Tegra SoCs.
+ 
++config PCIE_TEGRA264
++	tristate "NVIDIA Tegra264 PCIe controller"
++	depends on ARCH_TEGRA || COMPILE_TEST
++	select PCI_ECAM
++	help
++	  Say Y here if you want support for the PCIe Host Controller found
++	  on NVIDIA Tegra264 SoCs.
++
+ config PCIE_RCAR_HOST
+ 	bool "Renesas R-Car PCIe controller (host mode)"
+ 	depends on ARCH_RENESAS || COMPILE_TEST
+diff --git a/drivers/pci/controller/Makefile b/drivers/pci/controller/Makefile
+index 038ccbd9e..af722df8c 100644
+--- a/drivers/pci/controller/Makefile
++++ b/drivers/pci/controller/Makefile
+@@ -7,6 +7,7 @@ obj-$(CONFIG_PCI_HYPERV_INTERFACE) += pci-hyperv-intf.o
+ obj-$(CONFIG_PCI_MVEBU) += pci-mvebu.o
+ obj-$(CONFIG_PCI_AARDVARK) += pci-aardvark.o
+ obj-$(CONFIG_PCI_TEGRA) += pci-tegra.o
++obj-$(CONFIG_PCIE_TEGRA264) += pcie-tegra264.o
+ obj-$(CONFIG_PCI_RCAR_GEN2) += pci-rcar-gen2.o
+ obj-$(CONFIG_PCIE_RCAR_HOST) += pcie-rcar.o pcie-rcar-host.o
+ obj-$(CONFIG_PCIE_RCAR_EP) += pcie-rcar.o pcie-rcar-ep.o
+diff --git a/drivers/pci/controller/pcie-tegra264.c b/drivers/pci/controller/pcie-tegra264.c
+new file mode 100644
+index 000000000..fc9831553
+--- /dev/null
++++ b/drivers/pci/controller/pcie-tegra264.c
+@@ -0,0 +1,472 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * PCIe host controller driver for Tegra264 SoC
++ *
++ * Copyright (c) 2022-2026, NVIDIA CORPORATION. All rights reserved.
++ */
++
++#include <linux/delay.h>
++#include <linux/init.h>
++#include <linux/interconnect.h>
++#include <linux/iopoll.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/of_address.h>
++#include <linux/of_device.h>
++#include <linux/of.h>
++#include <linux/of_pci.h>
++#include <linux/of_platform.h>
++#include <linux/pci-ecam.h>
++#include <linux/pci.h>
++#include <linux/platform_device.h>
++#include <linux/pm_runtime.h>
++
++#include <soc/tegra/bpmp.h>
++#include <soc/tegra/bpmp-abi.h>
++#include <soc/tegra/fuse.h>
++
++#include "../pci.h"
++
++/* drivers/pci/pci.h gained these in later kernels. */
++#ifndef PCIE_LINK_WAIT_MAX_RETRIES
++#define PCIE_LINK_WAIT_MAX_RETRIES	10
++#define PCIE_LINK_WAIT_SLEEP_MS		90
++#endif
++
++/* XAL registers */
++#define XAL_RC_ECAM_BASE_HI			0x00
++#define XAL_RC_ECAM_BASE_LO			0x04
++#define XAL_RC_ECAM_BUSMASK			0x08
++#define XAL_RC_IO_BASE_HI			0x0c
++#define XAL_RC_IO_BASE_LO			0x10
++#define XAL_RC_IO_LIMIT_HI			0x14
++#define XAL_RC_IO_LIMIT_LO			0x18
++#define XAL_RC_MEM_32BIT_BASE_HI		0x1c
++#define XAL_RC_MEM_32BIT_BASE_LO		0x20
++#define XAL_RC_MEM_32BIT_LIMIT_HI		0x24
++#define XAL_RC_MEM_32BIT_LIMIT_LO		0x28
++#define XAL_RC_MEM_64BIT_BASE_HI		0x2c
++#define XAL_RC_MEM_64BIT_BASE_LO		0x30
++#define XAL_RC_MEM_64BIT_LIMIT_HI		0x34
++#define XAL_RC_MEM_64BIT_LIMIT_LO		0x38
++#define XAL_RC_BAR_CNTL_STANDARD		0x40
++#define XAL_RC_BAR_CNTL_STANDARD_IOBAR_EN	BIT(0)
++#define XAL_RC_BAR_CNTL_STANDARD_32B_BAR_EN	BIT(1)
++#define XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN	BIT(2)
++
++/* XTL registers */
++#define XTL_RC_PCIE_CAP				0x48	/* PCIe Capability */
++
++#define XTL_RC_MGMT_PERST_CONTROL		0x218
++#define XTL_RC_MGMT_PERST_CONTROL_PERST_O_N	BIT(0)
++
++#define XTL_RC_MGMT_CLOCK_CONTROL		0x47c
++#define XTL_RC_MGMT_CLOCK_CONTROL_PEX_CLKREQ_I_N_PIN_USE_CONV_TO_PRSNT	BIT(9)
++
++struct tegra264_pcie {
++	struct device *dev;
++
++	/* I/O memory */
++	void __iomem *xal;
++	void __iomem *xtl;
++	void __iomem *ecam;
++
++	/* bridge configuration */
++	struct pci_config_window *cfg;
++	struct pci_host_bridge *bridge;
++
++	/* BPMP and bandwidth management */
++	struct icc_path *icc_path;
++	struct tegra_bpmp *bpmp;
++	u32 ctl_id;
++
++	bool supports_hotplug;
++	bool link_up;
++};
++
++static void tegra264_pcie_power_off(struct tegra264_pcie *pcie)
++{
++	struct tegra_bpmp_message msg = {};
++	struct mrq_pcie_request req = {};
++	int err;
++
++	req.cmd = CMD_PCIE_RP_CONTROLLER_OFF;
++	req.rp_ctrlr_off.rp_controller = pcie->ctl_id;
++
++	msg.mrq = MRQ_PCIE;
++	msg.tx.data = &req;
++	msg.tx.size = sizeof(req);
++
++	err = tegra_bpmp_transfer(pcie->bpmp, &msg);
++	if (err)
++		dev_err(pcie->dev, "failed to turn off PCIe #%u: %pe\n",
++			pcie->ctl_id, ERR_PTR(err));
++
++	if (msg.rx.ret)
++		dev_err(pcie->dev, "failed to turn off PCIe #%u: %d\n",
++			pcie->ctl_id, msg.rx.ret);
++}
++
++static void tegra264_pcie_icc_set(struct tegra264_pcie *pcie)
++{
++	u32 value, speed, width;
++	int err;
++
++	/*
++	 * If the link is up, read the negotiated speed and width fields from
++	 * the link status register. Otherwise, read the corresponding values
++	 * from the link capabilities register to ensure the link works after
++	 * hotplug.
++	 *
++	 * Ideally we'll want to update this dynamically, either on hotplug
++	 * or bandwidth change notifications. Neither of those are currently
++	 * possible, so this is as good as it gets for now.
++	 */
++	if (pcie->link_up) {
++		value = readw(pcie->ecam + XTL_RC_PCIE_CAP + PCI_EXP_LNKSTA);
++		speed = FIELD_GET(PCI_EXP_LNKSTA_CLS, value);
++		width = FIELD_GET(PCI_EXP_LNKSTA_NLW, value);
++	} else {
++		value = readl(pcie->ecam + XTL_RC_PCIE_CAP + PCI_EXP_LNKCAP);
++		speed = FIELD_GET(PCI_EXP_LNKCAP_SLS, value);
++		width = FIELD_GET(PCI_EXP_LNKCAP_MLW, value);
++	}
++
++	value = Mbps_to_icc(width * PCIE_SPEED2MBS_ENC(pcie_link_speed[speed]));
++
++	/*
++	 * We don't want to error out here because a boot-critical device
++	 * could be connected to this root port. Failure to set the bandwidth
++	 * request may have an adverse impact on performance, but it is not
++	 * generally fatal, so we opt to continue regardless so that users
++	 * get a chance to fix things.
++	 */
++	err = icc_set_bw(pcie->icc_path, value, value);
++	if (err < 0)
++		dev_err(pcie->dev,
++			"failed to request bandwidth (%u kBps): %pe\n",
++			value, ERR_PTR(err));
++}
++
++/*
++ * The various memory regions used by the controller (I/O, memory, ECAM) are
++ * set up during early boot and have hardware-level protections in place. If
++ * the DT ranges don't match what's been setup, the controller won't be able
++ * to write the address endpoints properly, so make sure to validate that DT
++ * and firmware programming agree on these ranges.
++ */
++static bool tegra264_pcie_valid_ranges(struct platform_device *pdev)
++{
++	struct tegra264_pcie *pcie = platform_get_drvdata(pdev);
++	struct device_node *np = pcie->dev->of_node;
++	struct of_pci_range_parser parser;
++	phys_addr_t phys, limit, hi, lo;
++	struct of_pci_range range;
++	struct resource *res;
++	bool status = true;
++	u32 value;
++	int err;
++
++	err = of_pci_range_parser_init(&parser, np);
++	if (err < 0)
++		return false;
++
++	for_each_of_pci_range(&parser, &range) {
++		unsigned int addr_hi, addr_lo, limit_hi, limit_lo, enable;
++		unsigned long type = range.flags & IORESOURCE_TYPE_BITS;
++		phys_addr_t start, end, mask;
++		const char *region = NULL;
++
++		end = range.cpu_addr + range.size - 1;
++		start = range.cpu_addr;
++
++		switch (type) {
++		case IORESOURCE_IO:
++			addr_hi = XAL_RC_IO_BASE_HI;
++			addr_lo = XAL_RC_IO_BASE_LO;
++			limit_hi = XAL_RC_IO_LIMIT_HI;
++			limit_lo = XAL_RC_IO_LIMIT_LO;
++			enable = XAL_RC_BAR_CNTL_STANDARD_IOBAR_EN;
++			mask = SZ_64K - 1;
++			region = "I/O";
++			break;
++
++		case IORESOURCE_MEM:
++			if (range.flags & IORESOURCE_PREFETCH) {
++				addr_hi = XAL_RC_MEM_64BIT_BASE_HI;
++				addr_lo = XAL_RC_MEM_64BIT_BASE_LO;
++				limit_hi = XAL_RC_MEM_64BIT_LIMIT_HI;
++				limit_lo = XAL_RC_MEM_64BIT_LIMIT_LO;
++				enable = XAL_RC_BAR_CNTL_STANDARD_64B_BAR_EN;
++				region = "prefetchable memory";
++			} else {
++				addr_hi = XAL_RC_MEM_32BIT_BASE_HI;
++				addr_lo = XAL_RC_MEM_32BIT_BASE_LO;
++				limit_hi = XAL_RC_MEM_32BIT_LIMIT_HI;
++				limit_lo = XAL_RC_MEM_32BIT_LIMIT_LO;
++				enable = XAL_RC_BAR_CNTL_STANDARD_32B_BAR_EN;
++				region = "memory";
++			}
++
++			mask = SZ_1M - 1;
++			break;
++		}
++
++		/* not interested in anything that's not I/O or memory */
++		if (!region)
++			continue;
++
++		/* don't check regions that haven't been enabled */
++		value = readl(pcie->xal + XAL_RC_BAR_CNTL_STANDARD);
++		if ((value & enable) == 0)
++			continue;
++
++		hi = readl(pcie->xal + addr_hi);
++		lo = readl(pcie->xal + addr_lo);
++		phys = ((hi << 16) << 16) | lo;
++
++		hi = readl(pcie->xal + limit_hi);
++		lo = readl(pcie->xal + limit_lo);
++		limit = ((hi << 16) << 16) | lo | mask;
++
++		if (phys != start || limit != end) {
++			dev_err(pcie->dev,
++				"%s region mismatch: %pap-%pap -> %pap-%pap\n",
++				region, &phys, &limit, &start, &end);
++			status = false;
++		}
++	}
++
++	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ecam");
++	if (!res)
++		return false;
++
++	hi = readl(pcie->xal + XAL_RC_ECAM_BASE_HI);
++	lo = readl(pcie->xal + XAL_RC_ECAM_BASE_LO);
++	phys = ((hi << 16) << 16) | lo;
++
++	value = readl(pcie->xal + XAL_RC_ECAM_BUSMASK);
++	limit = phys + ((value + 1) << 20) - 1;
++
++	if (phys != res->start || limit != res->end) {
++		dev_err(pcie->dev,
++			"ECAM region mismatch: %pap-%pap -> %pap-%pap\n",
++			&phys, &limit, &res->start, &res->end);
++		status = false;
++	}
++
++	return status;
++}
++
++static bool tegra264_pcie_supports_hotplug(struct tegra264_pcie *pcie)
++{
++	u32 value = readl(pcie->xtl + XTL_RC_MGMT_CLOCK_CONTROL);
++
++	return (value & XTL_RC_MGMT_CLOCK_CONTROL_PEX_CLKREQ_I_N_PIN_USE_CONV_TO_PRSNT) != 0;
++}
++
++static bool tegra264_pcie_link_up(struct tegra264_pcie *pcie,
++				  enum pci_bus_speed *speed)
++{
++	u16 value = readw(pcie->ecam + XTL_RC_PCIE_CAP + PCI_EXP_LNKSTA);
++
++	if (value & PCI_EXP_LNKSTA_DLLLA) {
++		if (speed)
++			*speed = pcie_link_speed[FIELD_GET(PCI_EXP_LNKSTA_CLS,
++							   value)];
++
++		return true;
++	}
++
++	return false;
++}
++
++static void tegra264_pcie_init(struct tegra264_pcie *pcie)
++{
++	enum pci_bus_speed speed;
++	unsigned int i;
++	u32 value;
++
++	/* bring the endpoint out of reset */
++	value = readl(pcie->xtl + XTL_RC_MGMT_PERST_CONTROL);
++	value |= XTL_RC_MGMT_PERST_CONTROL_PERST_O_N;
++	writel(value, pcie->xtl + XTL_RC_MGMT_PERST_CONTROL);
++
++	for (i = 0; i < PCIE_LINK_WAIT_MAX_RETRIES; i++) {
++		if (tegra264_pcie_link_up(pcie, NULL))
++			break;
++
++		msleep(PCIE_LINK_WAIT_SLEEP_MS);
++	}
++
++	pcie->supports_hotplug = tegra264_pcie_supports_hotplug(pcie);
++	pcie->link_up = tegra264_pcie_link_up(pcie, &speed);
++
++	if (pcie->link_up) {
++		msleep(PCIE_RESET_CONFIG_WAIT_MS);
++		dev_info(pcie->dev, "PCIe #%u link is up (speed: %s)\n",
++			 pcie->ctl_id, pci_speed_string(speed));
++		tegra264_pcie_icc_set(pcie);
++	} else {
++		dev_info(pcie->dev, "PCIe #%u link is down\n", pcie->ctl_id);
++
++		/*
++		 * Make sure to reset the bandwidth requirements if the link
++		 * is down but hotplug-capable.
++		 */
++		if (pcie->supports_hotplug)
++			tegra264_pcie_icc_set(pcie);
++	}
++}
++
++static int tegra264_pcie_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct pci_host_bridge *bridge;
++	struct tegra264_pcie *pcie;
++	struct resource_entry *bus;
++	struct resource *res;
++	int err;
++
++	bridge = devm_pci_alloc_host_bridge(dev, sizeof(struct tegra264_pcie));
++	if (!bridge)
++		return dev_err_probe(dev, -ENOMEM,
++				     "failed to allocate host bridge\n");
++
++	pcie = pci_host_bridge_priv(bridge);
++	platform_set_drvdata(pdev, pcie);
++	pcie->bridge = bridge;
++	pcie->dev = dev;
++
++	pcie->xal = devm_platform_ioremap_resource_byname(pdev, "xal");
++	if (IS_ERR(pcie->xal))
++		return dev_err_probe(dev, PTR_ERR(pcie->xal),
++				     "failed to map XAL memory\n");
++
++	pcie->xtl = devm_platform_ioremap_resource_byname(pdev, "xtl-pri");
++	if (IS_ERR(pcie->xtl))
++		return dev_err_probe(dev, PTR_ERR(pcie->xtl),
++				     "failed to map XTL-PRI memory\n");
++
++	bus = resource_list_first_type(&bridge->windows, IORESOURCE_BUS);
++	if (!bus)
++		return dev_err_probe(dev, -ENODEV,
++				     "failed to get bus resources\n");
++
++	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ecam");
++	if (!res)
++		return dev_err_probe(dev, -ENXIO,
++				     "failed to get ECAM resource\n");
++
++	pcie->icc_path = devm_of_icc_get(dev, "write");
++	if (IS_ERR(pcie->icc_path))
++		return dev_err_probe(dev, PTR_ERR(pcie->icc_path),
++				     "failed to get ICC\n");
++
++	pcie->bpmp = tegra_bpmp_get_with_id(dev, &pcie->ctl_id);
++	if (IS_ERR(pcie->bpmp))
++		return dev_err_probe(dev, PTR_ERR(pcie->bpmp),
++				     "failed to get BPMP\n");
++
++	err = devm_pm_runtime_set_active_enabled(dev);
++	if (err < 0) {
++		dev_err_probe(dev, err, "failed to enable runtime PM\n");
++		goto err_put_bpmp;
++	}
++
++	err = pm_runtime_resume_and_get(dev);
++	if (err < 0) {
++		dev_err_probe(dev, err, "failed to power on device\n");
++		goto err_put_bpmp;
++	}
++
++	/* sanity check that programmed ranges match what's in DT */
++	if (!tegra264_pcie_valid_ranges(pdev)) {
++		err = -EINVAL;
++		goto err_put_pm;
++	}
++
++	pcie->cfg = pci_ecam_create(dev, res, bus->res, &pci_generic_ecam_ops);
++	if (IS_ERR(pcie->cfg)) {
++		err = dev_err_probe(dev, PTR_ERR(pcie->cfg),
++				    "failed to create ECAM\n");
++		goto err_put_pm;
++	}
++
++	bridge->ops = (struct pci_ops *)&pci_generic_ecam_ops.pci_ops;
++	bridge->sysdata = pcie->cfg;
++	pcie->ecam = pcie->cfg->win;
++
++	tegra264_pcie_init(pcie);
++
++	/*
++	 * Fail if the link isn't up and doesn't support hotplug, no device
++	 * will ever be able to be added on this bus.
++	 */
++	if (!pcie->link_up && !pcie->supports_hotplug) {
++		err = dev_err_probe(pcie->dev, -ENODEV,
++				    "PCIe #%u link is down and not hotplug-capable, turning off\n",
++				    pcie->ctl_id);
++		tegra264_pcie_power_off(pcie);
++		goto err_free_ecam;
++	}
++
++	err = pci_host_probe(bridge);
++	if (err < 0) {
++		dev_err_probe(dev, err, "failed to register Host Bridge\n");
++		goto err_free_ecam;
++	}
++
++	return 0;
++
++err_free_ecam:
++	pci_ecam_free(pcie->cfg);
++err_put_pm:
++	pm_runtime_put_sync(dev);
++err_put_bpmp:
++	tegra_bpmp_put(pcie->bpmp);
++
++	return err;
++}
++
++static void tegra264_pcie_remove(struct platform_device *pdev)
++{
++	struct tegra264_pcie *pcie = platform_get_drvdata(pdev);
++
++	/*
++	 * If we undo tegra264_pcie_init() then link goes down and need
++	 * controller reset to bring up the link again. Remove intention is
++	 * to clean up the root bridge and re-enumerate during bind.
++	 */
++	pci_lock_rescan_remove();
++	pci_stop_root_bus(pcie->bridge->bus);
++	pci_remove_root_bus(pcie->bridge->bus);
++	pci_unlock_rescan_remove();
++
++	pm_runtime_put_sync(&pdev->dev);
++	tegra_bpmp_put(pcie->bpmp);
++	pci_ecam_free(pcie->cfg);
++}
++
++static const struct of_device_id tegra264_pcie_of_match[] = {
++	{
++		.compatible = "nvidia,tegra264-pcie",
++	},
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, tegra264_pcie_of_match);
++
++static struct platform_driver tegra264_pcie_driver = {
++	.probe = tegra264_pcie_probe,
++	.remove = tegra264_pcie_remove,
++	.driver = {
++		.name = "tegra264-pcie",
++		.of_match_table = tegra264_pcie_of_match,
++	},
++};
++module_platform_driver(tegra264_pcie_driver);
++
++MODULE_AUTHOR("Manikanta Maddireddy <mmaddireddy@nvidia.com>");
++MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
++MODULE_DESCRIPTION("NVIDIA Tegra264 PCIe host controller driver");
++MODULE_LICENSE("GPL");
+diff --git a/include/soc/tegra/bpmp-abi.h b/include/soc/tegra/bpmp-abi.h
+index 6b995a8f0..a355c0440 100644
+--- a/include/soc/tegra/bpmp-abi.h
++++ b/include/soc/tegra/bpmp-abi.h
+@@ -341,6 +341,7 @@ struct mrq_response {
+ #define MRQ_GEARS		82U
+ #define MRQ_BWMGR_INT		83U
+ #define MRQ_OC_STATUS		84U
++#define MRQ_PCIE		88U
+ 
+ /** @cond DEPRECATED */
+ #define MRQ_RESERVED_2		2U
+@@ -3966,6 +3967,42 @@ struct mrq_gears_response {
+ 
+ /** @} Error_Codes */
+ 
++/**
++ * @brief Sub-command identifiers for MRQ_PCIE.
++ */
++enum mrq_pcie_cmd {
++	CMD_PCIE_EP_CONTROLLER_INIT = 0,
++	CMD_PCIE_EP_CONTROLLER_OFF = 1,
++	CMD_PCIE_RP_CONTROLLER_OFF = 100,
++	CMD_PCIE_MAX,
++};
++
++struct cmd_pcie_ep_controller_init_request {
++	uint8_t ep_controller;
++	uint8_t progif_code;
++	uint8_t subclass_code;
++	uint8_t baseclass_code;
++	uint8_t deviceid;
++	uint8_t bar1_size;
++} BPMP_ABI_PACKED;
++
++struct cmd_pcie_ep_controller_off_request {
++	uint8_t ep_controller;
++} BPMP_ABI_PACKED;
++
++struct cmd_pcie_rp_controller_off_request {
++	uint8_t rp_controller;
++} BPMP_ABI_PACKED;
++
++struct mrq_pcie_request {
++	uint32_t cmd;
++	union {
++		struct cmd_pcie_ep_controller_init_request ep_ctrlr_init;
++		struct cmd_pcie_ep_controller_off_request ep_ctrlr_off;
++		struct cmd_pcie_rp_controller_off_request rp_ctrlr_off;
++	} BPMP_UNION_ANON;
++} BPMP_ABI_PACKED;
++
+ #if defined(BPMP_ABI_CHECKS)
+ #include "bpmp_abi_checks.h"
+ #endif
+diff --git a/include/soc/tegra/bpmp.h b/include/soc/tegra/bpmp.h
+index f5e4ac5b8..db120058c 100644
+--- a/include/soc/tegra/bpmp.h
++++ b/include/soc/tegra/bpmp.h
+@@ -127,6 +127,7 @@ struct tegra_bpmp_message {
+ 
+ #if IS_ENABLED(CONFIG_TEGRA_BPMP)
+ struct tegra_bpmp *tegra_bpmp_get(struct device *dev);
++struct tegra_bpmp *tegra_bpmp_get_with_id(struct device *dev, unsigned int *id);
+ void tegra_bpmp_put(struct tegra_bpmp *bpmp);
+ int tegra_bpmp_transfer_atomic(struct tegra_bpmp *bpmp,
+ 			       struct tegra_bpmp_message *msg);
+@@ -145,6 +146,11 @@ static inline struct tegra_bpmp *tegra_bpmp_get(struct device *dev)
+ {
+ 	return ERR_PTR(-ENOTSUPP);
+ }
++static inline struct tegra_bpmp *tegra_bpmp_get_with_id(struct device *dev,
++						       unsigned int *id)
++{
++	return ERR_PTR(-ENOTSUPP);
++}
+ static inline void tegra_bpmp_put(struct tegra_bpmp *bpmp)
+ {
+ }

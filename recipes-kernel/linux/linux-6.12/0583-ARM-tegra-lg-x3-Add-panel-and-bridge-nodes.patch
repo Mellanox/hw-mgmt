@@ -1,0 +1,203 @@
+From e045ba8a5684ec7a7821ede67c5f305609d6236c Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 26 Jan 2026 12:10:15 +0200
+Subject: [PATCH 0583/0797] ARM: tegra: lg-x3: Add panel and bridge nodes
+
+Add RGB-DSI bridge and panel nodes to LG Optimus 4X and Vu device trees.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts | 23 ++++++++
+ arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts | 27 ++++++++++
+ arch/arm/boot/dts/nvidia/tegra30-lg-x3.dtsi  | 81 +++++++++++++++++++++++++++-
+ 3 files changed, 130 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts b/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts
+index c6ef0a20c19f34..cc14e6dca7707c 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-lg-p880.dts
+@@ -116,6 +116,29 @@
+ 		};
+ 	};
+ 
++	spi@7000dc00 {
++		dsi@2 {
++			/*
++			 * JDI 4.57" 720x1280 DX12D100VM0EAA MIPI DSI panel
++			 */
++			panel@1 {
++				compatible = "jdi,dx12d100vm0eaa", "renesas,r69328";
++				reg = <1>;
++
++				reset-gpios = <&gpio TEGRA_GPIO(W, 0) GPIO_ACTIVE_LOW>;
++
++				vdd-supply = <&vcc_3v0_lcd>;
++				vddio-supply = <&iovcc_1v8_lcd>;
++
++				port {
++					panel_input: endpoint {
++						remote-endpoint = <&bridge_output>;
++					};
++				};
++			};
++		};
++	};
++
+ 	memory-controller@7000f000 {
+ 		emc-timings-0 {
+ 			/* SAMSUNG 1GB K4P8G304EB FGC1 533MHz */
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts b/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts
+index e32fafc7f5e087..ab8f5cf317bfc0 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-lg-p895.dts
+@@ -112,6 +112,33 @@
+ 		};
+ 	};
+ 
++	spi@7000dc00 {
++		dsi@2 {
++			/*
++			 * HITACHI/KOE 5" 768x1024 TX13D100VM0EAA MIPI DSI panel
++			 */
++			panel@1 {
++				compatible = "koe,tx13d100vm0eaa", "renesas,r61307";
++				reg = <1>;
++
++				reset-gpios = <&gpio TEGRA_GPIO(W, 0) GPIO_ACTIVE_LOW>;
++
++				renesas,gamma = <3>;
++				renesas,column-inversion;
++				renesas,contrast;
++
++				vcc-supply = <&vcc_3v0_lcd>;
++				iovcc-supply = <&iovcc_1v8_lcd>;
++
++				port {
++					panel_input: endpoint {
++						remote-endpoint = <&bridge_output>;
++					};
++				};
++			};
++		};
++	};
++
+ 	memory-controller@7000f000 {
+ 		emc-timings-2 {
+ 			/* Hynix 1GB H9TCNNN8JDMMPR LPDDR2 533MHz */
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-lg-x3.dtsi b/arch/arm/boot/dts/nvidia/tegra30-lg-x3.dtsi
+index 909260a5d0fbe8..6eea8eacd7d55e 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-lg-x3.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30-lg-x3.dtsi
+@@ -20,6 +20,8 @@
+ 		rtc0 = &pmic;
+ 		rtc1 = "/rtc@7000e000";
+ 
++		display0 = &lcd;
++
+ 		serial0 = &uartd; /* Console */
+ 		serial1 = &uartc; /* Bluetooth */
+ 		serial2 = &uartb; /* GPS */
+@@ -71,6 +73,21 @@
+ 		};
+ 	};
+ 
++	host1x@50000000 {
++		lcd: dc@54200000 {
++			rgb {
++				status = "okay";
++
++				port {
++					dpi_output: endpoint {
++						remote-endpoint = <&bridge_input>;
++						bus-width = <24>;
++					};
++				};
++			};
++		};
++	};
++
+ 	vde@6001a000 {
+ 		assigned-clocks = <&tegra_car TEGRA30_CLK_VDE>;
+ 		assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_P>;
+@@ -1357,7 +1374,58 @@
+ 		status = "okay";
+ 		spi-max-frequency = <25000000>;
+ 
+-		/* DSI bridge */
++		dsi@2 {
++			compatible = "solomon,ssd2825";
++			reg = <2>;
++
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			spi-max-frequency = <1000000>;
++
++			spi-cpha;
++			spi-cpol;
++
++			reset-gpios = <&gpio TEGRA_GPIO(O, 2) GPIO_ACTIVE_LOW>;
++
++			dvdd-supply = <&vdd_1v2_rgb>;
++			avdd-supply = <&vdd_1v2_rgb>;
++			vddio-supply = <&vdd_1v8_vio>;
++
++			solomon,hs-zero-delay-ns = <300>;
++			solomon,hs-prep-delay-ns = <65>;
++
++			clocks = <&tegra_pmc TEGRA_PMC_CLK_OUT_3>;
++
++			assigned-clocks = <&tegra_car TEGRA30_CLK_EXTERN3>,
++					  <&tegra_pmc TEGRA_PMC_CLK_OUT_3>;
++			assigned-clock-rates = <24000000>;
++
++			assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_P>,
++						 <&tegra_car TEGRA30_CLK_EXTERN3>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@0 {
++					reg = <0>;
++
++					bridge_input: endpoint {
++						remote-endpoint = <&dpi_output>;
++						bus-width = <24>;
++					};
++				};
++
++				port@1 {
++					reg = <1>;
++
++					bridge_output: endpoint {
++						remote-endpoint = <&panel_input>;
++					};
++				};
++			};
++		};
+ 	};
+ 
+ 	pmc@7000e400 {
+@@ -1617,6 +1685,17 @@
+ 		vin-supply = <&vdd_3v3_vbat>;
+ 	};
+ 
++	vdd_1v2_rgb: regulator-rgb1v2 {
++		compatible = "regulator-fixed";
++		regulator-name = "vdd_1v2_rgb";
++		regulator-min-microvolt = <1200000>;
++		regulator-max-microvolt = <1200000>;
++		regulator-boot-on;
++		gpio = <&gpio TEGRA_GPIO(B, 1) GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&vdd_3v3_vbat>;
++	};
++
+ 	vcc_3v0_lcd: regulator-lcd3v {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vcc_3v0_lcd";
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,83 @@
+From e5b250214aa402e079de566e10f6e01223fd26bd Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 2 Feb 2026 10:05:26 +0200
+Subject: [PATCH 0512/0797] usb: phy: tegra: parametrize PORTSC1 register offset
+
+The PORTSC1 register has a different offset in Tegra20 compared to
+Tegra30+, yet they share a crucial set of registers required for HSIC
+functionality. Reflect this register offset change in the SoC config.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://patch.msgid.link/20260202080526.23487-5-clamor95@gmail.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/phy/phy-tegra-usb.c   | 17 ++++++-----------
+ include/linux/usb/tegra_usb_phy.h |  2 ++
+ 2 files changed, 8 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/usb/phy/phy-tegra-usb.c b/drivers/usb/phy/phy-tegra-usb.c
+index 812d9944318049..00443a7beaeb05 100644
+--- a/drivers/usb/phy/phy-tegra-usb.c
++++ b/drivers/usb/phy/phy-tegra-usb.c
+@@ -965,17 +965,10 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
+ 		writel_relaxed(val, base + USB_TXFILLTUNING);
+ 	}
+ 
+-	if (phy->soc_config->has_hostpc) {
+-		val = readl_relaxed(base + TEGRA30_USB_PORTSC1);
+-		val &= ~(TEGRA_USB_PORTSC1_WKOC | TEGRA_USB_PORTSC1_WKDS |
+-			 TEGRA_USB_PORTSC1_WKCN);
+-		writel_relaxed(val, base + TEGRA30_USB_PORTSC1);
+-	} else {
+-		val = readl_relaxed(base + TEGRA_USB_PORTSC1);
+-		val &= ~(TEGRA_USB_PORTSC1_WKOC | TEGRA_USB_PORTSC1_WKDS |
+-			 TEGRA_USB_PORTSC1_WKCN);
+-		writel_relaxed(val, base + TEGRA_USB_PORTSC1);
+-	}
++	val = readl_relaxed(base + phy->soc_config->portsc1_offset);
++	val &= ~(TEGRA_USB_PORTSC1_WKOC | TEGRA_USB_PORTSC1_WKDS |
++		 TEGRA_USB_PORTSC1_WKCN);
++	writel_relaxed(val, base + phy->soc_config->portsc1_offset);
+ 
+ 	val = tegra_hsic_readl(phy, UHSIC_PADS_CFG0);
+ 	val &= ~UHSIC_TX_RTUNEN;
+@@ -1472,6 +1465,7 @@ static const struct tegra_phy_soc_config tegra20_soc_config = {
+ 	.uhsic_registers_offset = 0,
+ 	.uhsic_tx_rtune = 0, /* 40 ohm */
+ 	.uhsic_pts_value = 0, /* UTMI */
++	.portsc1_offset = TEGRA_USB_PORTSC1,
+ };
+ 
+ static const struct tegra_phy_soc_config tegra30_soc_config = {
+@@ -1483,6 +1477,7 @@ static const struct tegra_phy_soc_config tegra30_soc_config = {
+ 	.uhsic_registers_offset = 0x400,
+ 	.uhsic_tx_rtune = 8,  /* 50 ohm */
+ 	.uhsic_pts_value = TEGRA_USB_HOSTPC1_DEVLC_PTS_HSIC,
++	.portsc1_offset = TEGRA30_USB_PORTSC1,
+ };
+ 
+ static const struct of_device_id tegra_usb_phy_id_table[] = {
+diff --git a/include/linux/usb/tegra_usb_phy.h b/include/linux/usb/tegra_usb_phy.h
+index 7209b7731c29fc..6343f88df5de81 100644
+--- a/include/linux/usb/tegra_usb_phy.h
++++ b/include/linux/usb/tegra_usb_phy.h
+@@ -27,6 +27,7 @@ struct gpio_desc;
+  *      comparing to Tegra20 by 0x400, since Tegra20 has no UTMIP on PHY2
+  * uhsic_tx_rtune: fine tuned 50 Ohm termination resistor for NMOS/PMOS driver
+  * uhsic_pts_value: parallel transceiver select enumeration value
++ * portsc1_offset: register offset of PORTSC1
+  */
+ 
+ struct tegra_phy_soc_config {
+@@ -38,6 +39,7 @@ struct tegra_phy_soc_config {
+ 	u32 uhsic_registers_offset;
+ 	u32 uhsic_tx_rtune;
+ 	u32 uhsic_pts_value;
++	u32 portsc1_offset;
+ };
+ 
+ struct tegra_utmip_config {
+-- 
+cgit 1.3.1-korg
+

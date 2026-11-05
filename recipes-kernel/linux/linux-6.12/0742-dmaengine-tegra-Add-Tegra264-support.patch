@@ -1,0 +1,77 @@
+From b236b7973808195fd9c471492bee0041148b823e Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Tue, 31 Mar 2026 15:53:02 +0530
+Subject: [PATCH 0742/0797] dmaengine: tegra: Add Tegra264 support
+
+Add compatible and chip data to support GPCDMA in Tegra264, which has
+differences in register layout and address bits compared to previous
+versions.
+
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Reviewed-by: Frank Li <Frank.Li@nxp.com>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260331102303.33181-10-akhilrajeev@nvidia.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ drivers/dma/tegra186-gpc-dma.c | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/drivers/dma/tegra186-gpc-dma.c b/drivers/dma/tegra186-gpc-dma.c
+index 939eb5462d0a8e..c364c278a8b068 100644
+--- a/drivers/dma/tegra186-gpc-dma.c
++++ b/drivers/dma/tegra186-gpc-dma.c
+@@ -1319,6 +1319,23 @@ static const struct tegra_dma_channel_regs tegra186_reg_offsets = {
+ 	.fixed_pattern = 0x34,
+ };
+ 
++static const struct tegra_dma_channel_regs tegra264_reg_offsets = {
++	.csr = 0x0,
++	.status = 0x4,
++	.csre = 0x8,
++	.src = 0xc,
++	.dst = 0x10,
++	.src_high = 0x14,
++	.dst_high = 0x18,
++	.mc_seq = 0x1c,
++	.mmio_seq = 0x20,
++	.wcount = 0x24,
++	.wxfer = 0x28,
++	.wstatus = 0x2c,
++	.err_status = 0x34,
++	.fixed_pattern = 0x38,
++};
++
+ static const struct tegra_dma_chip_data tegra186_dma_chip_data = {
+ 	.nr_channels = 32,
+ 	.addr_bits = 39,
+@@ -1349,6 +1366,16 @@ static const struct tegra_dma_chip_data tegra234_dma_chip_data = {
+ 	.terminate = tegra_dma_pause_noerr,
+ };
+ 
++static const struct tegra_dma_chip_data tegra264_dma_chip_data = {
++	.nr_channels = 32,
++	.addr_bits = 41,
++	.channel_reg_size = SZ_64K,
++	.max_dma_count = SZ_1G,
++	.hw_support_pause = true,
++	.channel_regs = &tegra264_reg_offsets,
++	.terminate = tegra_dma_pause_noerr,
++};
++
+ static const struct of_device_id tegra_dma_of_match[] = {
+ 	{
+ 		.compatible = "nvidia,tegra186-gpcdma",
+@@ -1359,6 +1386,9 @@ static const struct of_device_id tegra_dma_of_match[] = {
+ 	}, {
+ 		.compatible = "nvidia,tegra234-gpcdma",
+ 		.data = &tegra234_dma_chip_data,
++	}, {
++		.compatible = "nvidia,tegra264-gpcdma",
++		.data = &tegra264_dma_chip_data,
+ 	}, {
+ 	},
+ };
+-- 
+cgit 1.3.1-korg
+

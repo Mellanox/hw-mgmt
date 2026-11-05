@@ -1,0 +1,44 @@
+From d310c08db2d80488435e6cef2b42d09bc63f3f43 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 25 Mar 2026 10:14:29 +0000
+Subject: [PATCH 0565/0797] ASoC: tegra: Add error logging in tegra210_amx driver
+
+Log errors in the Tegra210 AMX probe and set_audio_cif paths.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260325101437.3059693-7-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_amx.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_amx.c b/sound/soc/tegra/tegra210_amx.c
+index bfda825052980a..fadfcdf031987e 100644
+--- a/sound/soc/tegra/tegra210_amx.c
++++ b/sound/soc/tegra/tegra210_amx.c
+@@ -163,6 +163,8 @@ static int tegra210_amx_set_audio_cif(struct snd_soc_dai *dai,
+ 		audio_bits = TEGRA_ACIF_BITS_32;
+ 		break;
+ 	default:
++		dev_err(dai->dev, "unsupported format: %d\n",
++			params_format(params));
+ 		return -EINVAL;
+ 	}
+ 
+@@ -767,10 +769,9 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
+ 	err = devm_snd_soc_register_component(dev, &tegra210_amx_cmpnt,
+ 					      tegra210_amx_dais,
+ 					      ARRAY_SIZE(tegra210_amx_dais));
+-	if (err) {
+-		dev_err(dev, "can't register AMX component, err: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't register AMX component\n");
+ 
+ 	pm_runtime_enable(dev);
+ 
+-- 
+cgit 1.3.1-korg
+

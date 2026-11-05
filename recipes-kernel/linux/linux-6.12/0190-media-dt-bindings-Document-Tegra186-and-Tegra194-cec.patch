@@ -1,0 +1,41 @@
+From 5bc68bd3826e573f9a83c82c5107536cf616fea8 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sun, 13 Apr 2025 14:35:32 -0500
+Subject: [PATCH 0190/0797] media: dt-bindings: Document Tegra186 and Tegra194 cec
+
+These are already used in device trees, so describe them here. As the
+driver only declares up through Tegra210, these must use a fallback
+compatible of tegra210-cec.
+
+Acked-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Signed-off-by: Hans Verkuil <hverkuil@xs4all.nl>
+---
+ .../bindings/media/cec/nvidia,tegra114-cec.yaml    | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/media/cec/nvidia,tegra114-cec.yaml b/Documentation/devicetree/bindings/media/cec/nvidia,tegra114-cec.yaml
+index a6b73498bc217..4b46aa755ccd3 100644
+--- a/Documentation/devicetree/bindings/media/cec/nvidia,tegra114-cec.yaml
++++ b/Documentation/devicetree/bindings/media/cec/nvidia,tegra114-cec.yaml
+@@ -14,10 +14,16 @@ allOf:
+ 
+ properties:
+   compatible:
+-    enum:
+-      - nvidia,tegra114-cec
+-      - nvidia,tegra124-cec
+-      - nvidia,tegra210-cec
++    oneOf:
++      - enum:
++          - nvidia,tegra114-cec
++          - nvidia,tegra124-cec
++          - nvidia,tegra210-cec
++      - items:
++          - enum:
++              - nvidia,tegra186-cec
++              - nvidia,tegra194-cec
++          - const: nvidia,tegra210-cec
+ 
+   clocks:
+     maxItems: 1

@@ -1,0 +1,215 @@
+From 39e1cbf57e3034bff1272b83b9e606a0bc2c3dc3 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Mon, 28 Apr 2025 20:51:48 -0500
+Subject: [PATCH 0210/0797] arm64: tegra: Add DMA properties for Tegra186 and Tegra194 UARTs
+
+Adding the missing dmas and dma-names properties which are required
+for uart when using with the Tegra HSUART driver.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250428-tegra-serial-fixes-v1-2-4f47c5d85bf6@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi   |  2 ++
+ .../nvidia/tegra186-p3509-0000+p3636-0001.dts    |  2 ++
+ arch/arm64/boot/dts/nvidia/tegra186.dtsi         | 14 ++++++++++++++
+ arch/arm64/boot/dts/nvidia/tegra194-p2888.dtsi   |  2 ++
+ arch/arm64/boot/dts/nvidia/tegra194-p3668.dtsi   |  2 ++
+ arch/arm64/boot/dts/nvidia/tegra194.dtsi         | 16 ++++++++++++++++
+ 6 files changed, 38 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi b/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi
+index e2d6857a37097..51ced62cd42be 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186-p3310.dtsi
+@@ -61,6 +61,8 @@
+ 	};
+ 
+ 	serial@3100000 {
++		/delete-property/ dmas;
++		/delete-property/ dma-names;
+ 		status = "okay";
+ 	};
+ 
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186-p3509-0000+p3636-0001.dts b/arch/arm64/boot/dts/nvidia/tegra186-p3509-0000+p3636-0001.dts
+index 26f71651933d1..4ab66ebd874d0 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186-p3509-0000+p3636-0001.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra186-p3509-0000+p3636-0001.dts
+@@ -549,6 +549,8 @@
+ 	};
+ 
+ 	serial@3100000 {
++		/delete-property/ dmas;
++		/delete-property/ dma-names;
+ 		status = "okay";
+ 	};
+ 
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186.dtsi b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+index f0b7949df92c0..f0c9295f55e77 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+@@ -612,6 +612,8 @@
+ 		interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTA>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTA>;
++		dmas = <&gpcdma 8>, <&gpcdma 8>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+@@ -622,6 +624,8 @@
+ 		interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTB>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTB>;
++		dmas = <&gpcdma 9>, <&gpcdma 9>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+@@ -632,6 +636,8 @@
+ 		interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTD>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTD>;
++		dmas = <&gpcdma 19>, <&gpcdma 19>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+@@ -642,6 +648,8 @@
+ 		interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTE>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTE>;
++		dmas = <&gpcdma 20>, <&gpcdma 20>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+@@ -652,6 +660,8 @@
+ 		interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTF>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTF>;
++		dmas = <&gpcdma 12>, <&gpcdma 12>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+@@ -1229,6 +1239,8 @@
+ 		interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTC>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTC>;
++		dmas = <&gpcdma 3>, <&gpcdma 3>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+@@ -1239,6 +1251,8 @@
+ 		interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_UARTG>;
+ 		resets = <&bpmp TEGRA186_RESET_UARTG>;
++		dmas = <&gpcdma 2>, <&gpcdma 2>;
++		dma-names = "rx", "tx";
+ 		status = "disabled";
+ 	};
+ 
+diff --git a/arch/arm64/boot/dts/nvidia/tegra194-p2888.dtsi b/arch/arm64/boot/dts/nvidia/tegra194-p2888.dtsi
+index e8b296d9e0d3e..43942db6eac9a 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra194-p2888.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra194-p2888.dtsi
+@@ -104,6 +104,8 @@
+ 		};
+ 
+ 		serial@3110000 {
++			/delete-property/ dmas;
++			/delete-property/ dma-names;
+ 			status = "okay";
+ 		};
+ 
+diff --git a/arch/arm64/boot/dts/nvidia/tegra194-p3668.dtsi b/arch/arm64/boot/dts/nvidia/tegra194-p3668.dtsi
+index 59860d19f0f6a..a410fc335fa3b 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra194-p3668.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra194-p3668.dtsi
+@@ -78,6 +78,8 @@
+ 		};
+ 
+ 		serial@3100000 {
++			/delete-property/ dmas;
++			/delete-property/ dma-names;
+ 			status = "okay";
+ 		};
+ 
+diff --git a/arch/arm64/boot/dts/nvidia/tegra194.dtsi b/arch/arm64/boot/dts/nvidia/tegra194.dtsi
+index c369507747851..3a4e086dcc8c5 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra194.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra194.dtsi
+@@ -747,6 +747,8 @@
+ 			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTA>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTA>;
++			dmas = <&gpcdma 8>, <&gpcdma 8>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -757,6 +759,8 @@
+ 			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTB>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTB>;
++			dmas = <&gpcdma 9>, <&gpcdma 9>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -767,6 +771,8 @@
+ 			interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTD>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTD>;
++			dmas = <&gpcdma 19>, <&gpcdma 19>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -777,6 +783,8 @@
+ 			interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTE>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTE>;
++			dmas = <&gpcdma 20>, <&gpcdma 20>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -787,6 +795,8 @@
+ 			interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTF>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTF>;
++			dmas = <&gpcdma 12>, <&gpcdma 12>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -812,6 +822,8 @@
+ 			interrupts = <GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTH>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTH>;
++			dmas = <&gpcdma 13>, <&gpcdma 13>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -1609,6 +1621,8 @@
+ 			interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTC>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTC>;
++			dmas = <&gpcdma 3>, <&gpcdma 3>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 
+@@ -1619,6 +1633,8 @@
+ 			interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_UARTG>;
+ 			resets = <&bpmp TEGRA194_RESET_UARTG>;
++			dmas = <&gpcdma 2>, <&gpcdma 2>;
++			dma-names = "rx", "tx";
+ 			status = "disabled";
+ 		};
+ 

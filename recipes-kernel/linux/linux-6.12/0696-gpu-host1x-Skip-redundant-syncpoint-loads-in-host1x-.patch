@@ -1,0 +1,86 @@
+From 6fea41ff3642483cd6d968c3a9bcdb47a8c35312 Mon Sep 17 00:00:00 2001
+From: Tanmay Patil <tanmayp@nvidia.com>
+Date: Thu, 14 May 2026 10:31:52 +0000
+Subject: [PATCH 0696/0797] gpu: host1x: Skip redundant syncpoint loads in host1x_syncpt_wait()
+
+In host1x_syncpt_wait(), the hardware syncpoint value was loaded
+initially for expiry check, and then loaded a second time to
+populate the caller's value pointer. Reuse a single load for
+both purposes.
+
+After dma_fence_wait_timeout(), the previous code reloaded the syncpoint
+value for the expiry check, which is only required in the timeout case.
+On success (i.e., return value > 0, or return value == 0 with zero
+jiffies remaining), the ISR has already cached the value before
+signaling the fence. The value pointer can therefore be populated using
+the cached value using host1x_syncpt_read_min() without MMIO access.
+Only the timeout path requires a fresh load, move host1x_syncpt_load()
+under that path.
+
+Measured Syncpoint wait latency (50000 samples):
+  Average latency:   12.2 us  -> 10.6 us
+  99.99 pct latency: 62.96 us -> 51.90 us
+
+Signed-off-by: Tanmay Patil <tanmayp@nvidia.com>
+Acked-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://patch.msgid.link/20260514103153.766343-2-tanmayp@nvidia.com
+---
+ drivers/gpu/host1x/syncpt.c | 23 ++++++++++++++---------
+ 1 file changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/gpu/host1x/syncpt.c b/drivers/gpu/host1x/syncpt.c
+index acc7d82e0585e8..807c74fc6a0aca 100644
+--- a/drivers/gpu/host1x/syncpt.c
++++ b/drivers/gpu/host1x/syncpt.c
+@@ -222,11 +222,12 @@ int host1x_syncpt_wait(struct host1x_syncpt *sp, u32 thresh, long timeout,
+ {
+ 	struct dma_fence *fence;
+ 	long wait_err;
++	u32 curr;
+ 
+-	host1x_hw_syncpt_load(sp->host, sp);
++	curr = host1x_syncpt_load(sp);
+ 
+ 	if (value)
+-		*value = host1x_syncpt_load(sp);
++		*value = curr;
+ 
+ 	if (host1x_syncpt_is_expired(sp, thresh))
+ 		return 0;
+@@ -245,21 +246,25 @@ int host1x_syncpt_wait(struct host1x_syncpt *sp, u32 thresh, long timeout,
+ 		host1x_fence_cancel(fence);
+ 	dma_fence_put(fence);
+ 
+-	if (value)
+-		*value = host1x_syncpt_load(sp);
+-
+ 	/*
+ 	 * Don't rely on dma_fence_wait_timeout return value,
+ 	 * since it returns zero both on timeout and if the
+ 	 * wait completed with 0 jiffies left.
+ 	 */
+-	host1x_hw_syncpt_load(sp->host, sp);
+-	if (wait_err == 0 && !host1x_syncpt_is_expired(sp, thresh))
++	if (wait_err == 0 && !host1x_syncpt_is_expired(sp, thresh)) {
++		if (value)
++			*value = host1x_syncpt_load(sp);
++
+ 		return -EAGAIN;
+-	else if (wait_err < 0)
++	} else if (wait_err < 0) {
+ 		return wait_err;
+-	else
++	} else {
++		/* Success, read the value cached by ISR */
++		if (value)
++			*value = host1x_syncpt_read_min(sp);
++
+ 		return 0;
++	}
+ }
+ EXPORT_SYMBOL(host1x_syncpt_wait);
+ 
+-- 
+cgit 1.3.1-korg
+

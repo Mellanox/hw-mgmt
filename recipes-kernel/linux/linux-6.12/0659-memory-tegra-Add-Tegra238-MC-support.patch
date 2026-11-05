@@ -1,0 +1,504 @@
+From 907ef6a1baf0ad61f64d31a3f5040feb82f48929 Mon Sep 17 00:00:00 2001
+From: Ashish Mhetre <amhetre@nvidia.com>
+Date: Mon, 27 Apr 2026 07:34:19 +0000
+Subject: [PATCH 0659/0797] memory: tegra: Add Tegra238 MC support
+
+Add Memory Controller driver support for Tegra238 SOC, including:
+- MC client definitions with Tegra238-specific stream IDs
+- Reuse of Tegra234 ICC operations for bandwidth management via BPMP-FW
+- Device tree compatible string "nvidia,tegra238-mc"
+
+Export tegra234_mc_icc_ops so it can be shared with the Tegra238 MC
+driver, as both SoCs use the same ICC aggregation and bandwidth
+management logic.
+
+Signed-off-by: Ashish Mhetre <amhetre@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260427073419.567360-3-amhetre@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/Makefile   |   1 +
+ drivers/memory/tegra/mc.c       |   3 +
+ drivers/memory/tegra/mc.h       |   9 +
+ drivers/memory/tegra/tegra234.c |   2 +-
+ drivers/memory/tegra/tegra238.c | 402 ++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 416 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/memory/tegra/tegra238.c
+
+diff --git a/drivers/memory/tegra/Makefile b/drivers/memory/tegra/Makefile
+index 75ebb4cb4f293c..218361cdaf2d7c 100644
+--- a/drivers/memory/tegra/Makefile
++++ b/drivers/memory/tegra/Makefile
+@@ -10,6 +10,7 @@ tegra-mc-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210.o
+ tegra-mc-$(CONFIG_ARCH_TEGRA_186_SOC) += tegra186.o
+ tegra-mc-$(CONFIG_ARCH_TEGRA_194_SOC) += tegra186.o tegra194.o
+ tegra-mc-$(CONFIG_ARCH_TEGRA_234_SOC) += tegra186.o tegra234.o
++tegra-mc-$(CONFIG_ARCH_TEGRA_238_SOC) += tegra186.o tegra234.o tegra238.o
+ tegra-mc-$(CONFIG_ARCH_TEGRA_264_SOC) += tegra186.o tegra264.o
+ 
+ obj-$(CONFIG_TEGRA_MC) += tegra-mc.o
+diff --git a/drivers/memory/tegra/mc.c b/drivers/memory/tegra/mc.c
+index cfcfc729110620..ec80ea9cc17364 100644
+--- a/drivers/memory/tegra/mc.c
++++ b/drivers/memory/tegra/mc.c
+@@ -50,6 +50,9 @@ static const struct of_device_id tegra_mc_of_match[] = {
+ #ifdef CONFIG_ARCH_TEGRA_234_SOC
+ 	{ .compatible = "nvidia,tegra234-mc", .data = &tegra234_mc_soc },
+ #endif
++#ifdef CONFIG_ARCH_TEGRA_238_SOC
++	{ .compatible = "nvidia,tegra238-mc", .data = &tegra238_mc_soc },
++#endif
+ #ifdef CONFIG_ARCH_TEGRA_264_SOC
+ 	{ .compatible = "nvidia,tegra264-mc", .data = &tegra264_mc_soc },
+ #endif
+diff --git a/drivers/memory/tegra/mc.h b/drivers/memory/tegra/mc.h
+index 649b54369263ac..e94d265d7b6787 100644
+--- a/drivers/memory/tegra/mc.h
++++ b/drivers/memory/tegra/mc.h
+@@ -240,6 +240,14 @@ extern const struct tegra_mc_soc tegra194_mc_soc;
+ extern const struct tegra_mc_soc tegra234_mc_soc;
+ #endif
+ 
++#if defined(CONFIG_ARCH_TEGRA_234_SOC) || defined(CONFIG_ARCH_TEGRA_238_SOC)
++extern const struct tegra_mc_icc_ops tegra234_mc_icc_ops;
++#endif
++
++#ifdef CONFIG_ARCH_TEGRA_238_SOC
++extern const struct tegra_mc_soc tegra238_mc_soc;
++#endif
++
+ #ifdef CONFIG_ARCH_TEGRA_264_SOC
+ extern const struct tegra_mc_soc tegra264_mc_soc;
+ #endif
+@@ -256,6 +264,7 @@ extern const struct tegra_mc_ops tegra30_mc_ops;
+ #if defined(CONFIG_ARCH_TEGRA_186_SOC) || \
+     defined(CONFIG_ARCH_TEGRA_194_SOC) || \
+     defined(CONFIG_ARCH_TEGRA_234_SOC) || \
++    defined(CONFIG_ARCH_TEGRA_238_SOC) || \
+     defined(CONFIG_ARCH_TEGRA_264_SOC)
+ extern const struct tegra_mc_ops tegra186_mc_ops;
+ #endif
+diff --git a/drivers/memory/tegra/tegra234.c b/drivers/memory/tegra/tegra234.c
+index 87b22038a5fbff..9fbd34d4abe048 100644
+--- a/drivers/memory/tegra/tegra234.c
++++ b/drivers/memory/tegra/tegra234.c
+@@ -1125,7 +1125,7 @@ static int tegra234_mc_icc_get_init_bw(struct icc_node *node, u32 *avg, u32 *pea
+ 	return 0;
+ }
+ 
+-static const struct tegra_mc_icc_ops tegra234_mc_icc_ops = {
++const struct tegra_mc_icc_ops tegra234_mc_icc_ops = {
+ 	.xlate = tegra_mc_icc_xlate,
+ 	.aggregate = tegra234_mc_icc_aggregate,
+ 	.get_bw = tegra234_mc_icc_get_init_bw,
+diff --git a/drivers/memory/tegra/tegra238.c b/drivers/memory/tegra/tegra238.c
+new file mode 100644
+index 00000000000000..938c8985600e6a
+--- /dev/null
++++ b/drivers/memory/tegra/tegra238.c
+@@ -0,0 +1,402 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (C) 2026, NVIDIA CORPORATION.  All rights reserved.
++ */
++
++#include <soc/tegra/mc.h>
++
++#include <dt-bindings/memory/tegra234-mc.h>
++#include <dt-bindings/memory/nvidia,tegra238-mc.h>
++#include <linux/interconnect.h>
++#include <linux/tegra-icc.h>
++
++#include <soc/tegra/bpmp.h>
++#include "mc.h"
++
++static const struct tegra_mc_client tegra238_mc_clients[] = {
++	{
++		.id = TEGRA234_MEMORY_CLIENT_HDAR,
++		.name = "hdar",
++		.bpmp_id = TEGRA_ICC_BPMP_HDA,
++		.type = TEGRA_ICC_ISO_AUDIO,
++		.sid = TEGRA238_SID_HDA,
++		.regs = {
++			.sid = {
++				.override = 0xa8,
++				.security = 0xac,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_HDAW,
++		.name = "hdaw",
++		.bpmp_id = TEGRA_ICC_BPMP_HDA,
++		.type = TEGRA_ICC_ISO_AUDIO,
++		.sid = TEGRA238_SID_HDA,
++		.regs = {
++			.sid = {
++				.override = 0x1a8,
++				.security = 0x1ac,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_SDMMCRAB,
++		.name = "sdmmcrab",
++		.bpmp_id = TEGRA_ICC_BPMP_SDMMC_4,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_SDMMC4A,
++		.regs = {
++			.sid = {
++				.override = 0x318,
++				.security = 0x31c,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_SDMMCWAB,
++		.name = "sdmmcwab",
++		.bpmp_id = TEGRA_ICC_BPMP_SDMMC_4,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_SDMMC4A,
++		.regs = {
++			.sid = {
++				.override = 0x338,
++				.security = 0x33c,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_APER,
++		.name = "aper",
++		.bpmp_id = TEGRA_ICC_BPMP_APE,
++		.type = TEGRA_ICC_ISO_AUDIO,
++		.sid = TEGRA238_SID_ISO_APE0,
++		.regs = {
++			.sid = {
++				.override = 0x3d0,
++				.security = 0x3d4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_APEW,
++		.name = "apew",
++		.bpmp_id = TEGRA_ICC_BPMP_APE,
++		.type = TEGRA_ICC_ISO_AUDIO,
++		.sid = TEGRA238_SID_ISO_APE0,
++		.regs = {
++			.sid = {
++				.override = 0x3d8,
++				.security = 0x3dc,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVDISPLAYR,
++		.name = "nvdisplayr",
++		.bpmp_id = TEGRA_ICC_BPMP_DISPLAY,
++		.type = TEGRA_ICC_ISO_DISPLAY,
++		.sid = TEGRA238_SID_ISO_NVDISPLAY,
++		.regs = {
++			.sid = {
++				.override = 0x490,
++				.security = 0x494,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVDISPLAYR1,
++		.name = "nvdisplayr1",
++		.bpmp_id = TEGRA_ICC_BPMP_DISPLAY,
++		.type = TEGRA_ICC_ISO_DISPLAY,
++		.sid = TEGRA238_SID_ISO_NVDISPLAY,
++		.regs = {
++			.sid = {
++				.override = 0x508,
++				.security = 0x50c,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_BPMPR,
++		.name = "bpmpr",
++		.sid = TEGRA238_SID_BPMP,
++		.regs = {
++			.sid = {
++				.override = 0x498,
++				.security = 0x49c,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_BPMPW,
++		.name = "bpmpw",
++		.sid = TEGRA238_SID_BPMP,
++		.regs = {
++			.sid = {
++				.override = 0x4a0,
++				.security = 0x4a4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_BPMPDMAR,
++		.name = "bpmpdmar",
++		.sid = TEGRA238_SID_BPMP,
++		.regs = {
++			.sid = {
++				.override = 0x4a8,
++				.security = 0x4ac,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_BPMPDMAW,
++		.name = "bpmpdmaw",
++		.sid = TEGRA238_SID_BPMP,
++		.regs = {
++			.sid = {
++				.override = 0x4b0,
++				.security = 0x4b4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_APEDMAR,
++		.name = "apedmar",
++		.bpmp_id = TEGRA_ICC_BPMP_APEDMA,
++		.type = TEGRA_ICC_ISO_AUDIO,
++		.sid = TEGRA238_SID_ISO_APE1,
++		.regs = {
++			.sid = {
++				.override = 0x4f8,
++				.security = 0x4fc,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_APEDMAW,
++		.name = "apedmaw",
++		.bpmp_id = TEGRA_ICC_BPMP_APEDMA,
++		.type = TEGRA_ICC_ISO_AUDIO,
++		.sid = TEGRA238_SID_ISO_APE1,
++		.regs = {
++			.sid = {
++				.override = 0x500,
++				.security = 0x504,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_VICSRD,
++		.name = "vicsrd",
++		.bpmp_id = TEGRA_ICC_BPMP_VIC,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_VIC,
++		.regs = {
++			.sid = {
++				.override = 0x360,
++				.security = 0x364,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_VICSWR,
++		.name = "vicswr",
++		.bpmp_id = TEGRA_ICC_BPMP_VIC,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_VIC,
++		.regs = {
++			.sid = {
++				.override = 0x368,
++				.security = 0x36c,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVDECSRD,
++		.name = "nvdecsrd",
++		.bpmp_id = TEGRA_ICC_BPMP_NVDEC,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_NVDEC,
++		.regs = {
++			.sid = {
++				.override = 0x3c0,
++				.security = 0x3c4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVDECSWR,
++		.name = "nvdecswr",
++		.bpmp_id = TEGRA_ICC_BPMP_NVDEC,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_NVDEC,
++		.regs = {
++			.sid = {
++				.override = 0x3c8,
++				.security = 0x3cc,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVENCSRD,
++		.name = "nvencsrd",
++		.bpmp_id = TEGRA_ICC_BPMP_NVENC,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_NVENC,
++		.regs = {
++			.sid = {
++				.override = 0xe0,
++				.security = 0xe4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVENCSWR,
++		.name = "nvencswr",
++		.bpmp_id = TEGRA_ICC_BPMP_NVENC,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_NVENC,
++		.regs = {
++			.sid = {
++				.override = 0x158,
++				.security = 0x15c,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE0R,
++		.name = "pcie0r",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_0,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE0,
++		.regs = {
++			.sid = {
++				.override = 0x6c0,
++				.security = 0x6c4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE0W,
++		.name = "pcie0w",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_0,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE0,
++		.regs = {
++			.sid = {
++				.override = 0x6c8,
++				.security = 0x6cc,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE1R,
++		.name = "pcie1r",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_1,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE1,
++		.regs = {
++			.sid = {
++				.override = 0x6d0,
++				.security = 0x6d4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE1W,
++		.name = "pcie1w",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_1,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE1,
++		.regs = {
++			.sid = {
++				.override = 0x6d8,
++				.security = 0x6dc,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE2AR,
++		.name = "pcie2ar",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_2,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE2,
++		.regs = {
++			.sid = {
++				.override = 0x6e0,
++				.security = 0x6e4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE2AW,
++		.name = "pcie2aw",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_2,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE2,
++		.regs = {
++			.sid = {
++				.override = 0x6e8,
++				.security = 0x6ec,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE3R,
++		.name = "pcie3r",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_3,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE3,
++		.regs = {
++			.sid = {
++				.override = 0x6f0,
++				.security = 0x6f4,
++			},
++		},
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_PCIE3W,
++		.name = "pcie3w",
++		.bpmp_id = TEGRA_ICC_BPMP_PCIE_3,
++		.type = TEGRA_ICC_NISO,
++		.sid = TEGRA238_SID_PCIE3,
++		.regs = {
++			.sid = {
++				.override = 0x6f8,
++				.security = 0x6fc,
++			},
++		},
++	}, {
++		.id = TEGRA_ICC_MC_CPU_CLUSTER0,
++		.name = "sw_cluster0",
++		.bpmp_id = TEGRA_ICC_BPMP_CPU_CLUSTER0,
++		.type = TEGRA_ICC_NISO,
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVL1R,
++		.name = "nvl1r",
++		.bpmp_id = TEGRA_ICC_BPMP_GPU,
++		.type = TEGRA_ICC_NISO,
++	}, {
++		.id = TEGRA234_MEMORY_CLIENT_NVL1W,
++		.name = "nvl1w",
++		.bpmp_id = TEGRA_ICC_BPMP_GPU,
++		.type = TEGRA_ICC_NISO,
++	}
++};
++
++#ifdef TEGRA_MC_SOC_HAS_INTMASKS
++static const struct tegra_mc_intmask tegra238_mc_intmasks[] = {
++	{
++		.reg = MC_INTMASK,
++		.mask = MC_INT_DECERR_ROUTE_SANITY | MC_INT_DECERR_GENERALIZED_CARVEOUT |
++			MC_INT_DECERR_MTS | MC_INT_SECERR_SEC | MC_INT_DECERR_VPR |
++			MC_INT_SECURITY_VIOLATION | MC_INT_DECERR_EMEM,
++	},
++};
++#endif
++
++const struct tegra_mc_soc tegra238_mc_soc = {
++	.num_clients = ARRAY_SIZE(tegra238_mc_clients),
++	.clients = tegra238_mc_clients,
++	.num_address_bits = 40,
++	.num_channels = 8,
++	.client_id_mask = 0x1ff,
++#ifdef TEGRA_MC_SOC_HAS_INTMASKS
++	.intmasks = tegra238_mc_intmasks,
++	.num_intmasks = ARRAY_SIZE(tegra238_mc_intmasks),
++#else
++	.intmask = MC_INT_DECERR_ROUTE_SANITY |
++		   MC_INT_DECERR_GENERALIZED_CARVEOUT | MC_INT_DECERR_MTS |
++		   MC_INT_SECERR_SEC | MC_INT_DECERR_VPR |
++		   MC_INT_SECURITY_VIOLATION | MC_INT_DECERR_EMEM,
++#endif
++	.has_addr_hi_reg = true,
++	.ops = &tegra186_mc_ops,
++	.icc_ops = &tegra234_mc_icc_ops,
++	.ch_intmask = 0x0000ff00,
++	.global_intstatus_channel_shift = 8,
++	.num_carveouts = 32,
++	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
++#ifdef TEGRA_MC_SOC_HAS_INTMASKS
++	.mc_addr_hi_mask = 0x3,
++	.mc_err_status_type_mask = (0x7 << 28),
++#endif
++};
+-- 
+cgit 1.3.1-korg
+

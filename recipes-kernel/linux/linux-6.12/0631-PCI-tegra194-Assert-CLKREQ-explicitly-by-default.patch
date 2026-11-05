@@ -1,0 +1,53 @@
+From 01d36261ae331583e6bc2034e6aa75c101b83e1d Mon Sep 17 00:00:00 2001
+From: Vidya Sagar <vidyas@nvidia.com>
+Date: Wed, 25 Mar 2026 00:39:52 +0530
+Subject: [PATCH 0631/0797] PCI: tegra194: Assert CLKREQ# explicitly by default
+
+The Root Port's CLKREQ# signal is shared with a downstream PCIe switch and
+the endpoints behind it. By default, APPL_PINMUX_CLKREQ_OVERRIDE only
+overrides the CLKREQ# input to the controller (so REFCLK is enabled
+internally); it does not drive the CLKREQ# output pin low. Some PCIe
+switches (e.g. Broadcom PCIe Gen4) forward the Root Port's CLKREQ# to their
+downstream side and expect it to be driven low for REFCLK, even when the
+switch does not support CLK-PM or ASPM-L1SS. Without driving the output
+pin low, link-up can fail between the switch and endpoints.
+
+Clear APPL_PINMUX_CLKREQ_DEFAULT_VALUE so the CLKREQ# output pad is
+explicitly driven low. That makes the shared CLKREQ# line low on the wire
+and avoids link-up issues with such switches.
+
+Signed-off-by: Vidya Sagar <vidyas@nvidia.com>
+Signed-off-by: Manikanta Maddireddy <mmaddireddy@nvidia.com>
+Signed-off-by: Manivannan Sadhasivam <mani@kernel.org>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Tested-by: Jon Hunter <jonathanh@nvidia.com>
+Reviewed-by: Vidya Sagar <vidyas@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260324191000.1095768-2-mmaddireddy@nvidia.com
+---
+ drivers/pci/controller/dwc/pcie-tegra194.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/pci/controller/dwc/pcie-tegra194.c b/drivers/pci/controller/dwc/pcie-tegra194.c
+index 336d3c759547ab..002945de5e1171 100644
+--- a/drivers/pci/controller/dwc/pcie-tegra194.c
++++ b/drivers/pci/controller/dwc/pcie-tegra194.c
+@@ -44,6 +44,7 @@
+ #define APPL_PINMUX_CLKREQ_OVERRIDE		BIT(3)
+ #define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN	BIT(4)
+ #define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE	BIT(5)
++#define APPL_PINMUX_CLKREQ_DEFAULT_VALUE	BIT(13)
+ 
+ #define APPL_CTRL				0x4
+ #define APPL_CTRL_SYS_PRE_DET_STATE		BIT(6)
+@@ -1429,6 +1430,7 @@ static int tegra_pcie_config_controller(struct tegra_pcie_dw *pcie,
+ 		val = appl_readl(pcie, APPL_PINMUX);
+ 		val |= APPL_PINMUX_CLKREQ_OVERRIDE_EN;
+ 		val &= ~APPL_PINMUX_CLKREQ_OVERRIDE;
++		val &= ~APPL_PINMUX_CLKREQ_DEFAULT_VALUE;
+ 		appl_writel(pcie, val, APPL_PINMUX);
+ 	}
+ 
+-- 
+cgit 1.3.1-korg
+

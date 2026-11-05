@@ -1,0 +1,228 @@
+From 82dcd68f7246 Mon Sep 17 00:00:00 2001
+From: Mikko Perttunen <mperttunen@nvidia.com>
+Date: Wed, 1 Jul 2026 12:20:34 +0900
+Subject: [PATCH] pwm: tegra: Add support for Tegra264
+
+Parameterize the scale field and move the enable bit to a per-SoC
+register so Tegra264 can enable PWM from CSR_1. Existing SoCs keep
+their max-frequency limits.
+
+Upstream commits:
+b9a6f48de9a4 pwm: tegra: Parametrize duty and scale field widths
+83a4cadc7ae5 pwm: tegra: Modify read/write accessors for multi-register channel
+82dcd68f7246 pwm: tegra: Add support for Tegra264
+b4772201070d dt-bindings: pwm: Document Tegra264 controller
+
+---
+diff --git a/Documentation/devicetree/bindings/pwm/nvidia,tegra20-pwm.yaml b/Documentation/devicetree/bindings/pwm/nvidia,tegra20-pwm.yaml
+index 41cea4979..cb2f36e7b 100644
+--- a/Documentation/devicetree/bindings/pwm/nvidia,tegra20-pwm.yaml
++++ b/Documentation/devicetree/bindings/pwm/nvidia,tegra20-pwm.yaml
+@@ -16,6 +16,7 @@ properties:
+       - enum:
+           - nvidia,tegra20-pwm
+           - nvidia,tegra186-pwm
++          - nvidia,tegra264-pwm
+ 
+       - items:
+           - enum:
+diff --git a/drivers/pwm/pwm-tegra.c b/drivers/pwm/pwm-tegra.c
+index 172063b51..ff241a011 100644
+--- a/drivers/pwm/pwm-tegra.c
++++ b/drivers/pwm/pwm-tegra.c
+@@ -52,13 +52,19 @@
+ #include <soc/tegra/common.h>
+ 
+ #define PWM_ENABLE	(1 << 31)
+-#define PWM_DUTY_WIDTH	8
+ #define PWM_DUTY_SHIFT	16
+-#define PWM_SCALE_WIDTH	13
+ #define PWM_SCALE_SHIFT	0
+ 
++#define PWM_CSR_0	0
++#define PWM_CSR_1	4
++
++/* Fixed before Tegra264. Tegra264 programs the same depth in CSR_1. */
++#define PWM_DEPTH	256
++
+ struct tegra_pwm_soc {
+ 	unsigned int num_channels;
++	unsigned int enable_reg;
++	unsigned int scale_width;
+ 
+ 	/* Maximum IP frequency for given SoCs */
+ 	unsigned long max_frequency;
+@@ -81,14 +87,18 @@ static inline struct tegra_pwm_chip *to_tegra_pwm_chip(struct pwm_chip *chip)
+ 	return pwmchip_get_drvdata(chip);
+ }
+ 
+-static inline u32 pwm_readl(struct tegra_pwm_chip *pc, unsigned int offset)
++static inline u32 pwm_readl(struct pwm_device *pwm, unsigned int offset)
+ {
+-	return readl(pc->regs + (offset << 4));
++	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(pwm->chip);
++
++	return readl(pc->regs + (pwm->hwpwm * 16) + offset);
+ }
+ 
+-static inline void pwm_writel(struct tegra_pwm_chip *pc, unsigned int offset, u32 value)
++static inline void pwm_writel(struct pwm_device *pwm, unsigned int offset, u32 value)
+ {
+-	writel(value, pc->regs + (offset << 4));
++	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(pwm->chip);
++
++	writel(value, pc->regs + (pwm->hwpwm * 16) + offset);
+ }
+ 
+ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+@@ -102,22 +112,22 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 
+ 	/*
+ 	 * Convert from duty_ns / period_ns to a fixed number of duty ticks
+-	 * per (1 << PWM_DUTY_WIDTH) cycles and make sure to round to the
++	 * per PWM_DEPTH cycles and make sure to round to the
+ 	 * nearest integer during division.
+ 	 */
+-	c *= (1 << PWM_DUTY_WIDTH);
++	c *= PWM_DEPTH;
+ 	c = DIV_ROUND_CLOSEST_ULL(c, period_ns);
+ 
+ 	val = (u32)c << PWM_DUTY_SHIFT;
+ 
+ 	/*
+-	 *  min period = max clock limit >> PWM_DUTY_WIDTH
++	 *  min period = max clock limit / PWM_DEPTH
+ 	 */
+ 	if (period_ns < pc->min_period_ns)
+ 		return -EINVAL;
+ 
+ 	/*
+-	 * Compute the prescaler value for which (1 << PWM_DUTY_WIDTH)
++	 * Compute the prescaler value for which PWM_DEPTH
+ 	 * cycles at the PWM clock rate will take period_ns nanoseconds.
+ 	 *
+ 	 * num_channels: If single instance of PWM controller has multiple
+@@ -131,7 +141,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	 */
+ 	if (pc->soc->num_channels == 1) {
+ 		/*
+-		 * Rate is multiplied with 2^PWM_DUTY_WIDTH so that it matches
++		 * Rate is multiplied with PWM_DEPTH so that it matches
+ 		 * with the maximum possible rate that the controller can
+ 		 * provide. Any further lower value can be derived by setting
+ 		 * PFM bits[0:12].
+@@ -141,7 +151,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		 * source clock rate as required_clk_rate, PWM controller will
+ 		 * be able to configure the requested period.
+ 		 */
+-		required_clk_rate = DIV_ROUND_UP_ULL((u64)NSEC_PER_SEC << PWM_DUTY_WIDTH,
++		required_clk_rate = DIV_ROUND_UP_ULL((u64)NSEC_PER_SEC * PWM_DEPTH,
+ 						     period_ns);
+ 
+ 		if (required_clk_rate > clk_round_rate(pc->clk, required_clk_rate))
+@@ -163,9 +173,9 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		pc->clk_rate = clk_get_rate(pc->clk);
+ 	}
+ 
+-	/* Consider precision in PWM_SCALE_WIDTH rate calculation */
++	/* Consider precision in scale_width rate calculation */
+ 	rate = mul_u64_u64_div_u64(pc->clk_rate, period_ns,
+-				   (u64)NSEC_PER_SEC << PWM_DUTY_WIDTH);
++				   (u64)NSEC_PER_SEC * PWM_DEPTH);
+ 
+ 	/*
+ 	 * Since the actual PWM divider is the register's frequency divider
+@@ -181,7 +191,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	 * Make sure that the rate will fit in the register's frequency
+ 	 * divider field.
+ 	 */
+-	if (rate >> PWM_SCALE_WIDTH)
++	if (rate >> pc->soc->scale_width)
+ 		return -EINVAL;
+ 
+ 	val |= rate << PWM_SCALE_SHIFT;
+@@ -194,10 +204,11 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		err = pm_runtime_resume_and_get(pwmchip_parent(chip));
+ 		if (err)
+ 			return err;
+-	} else
++	} else if (pc->soc->enable_reg == PWM_CSR_0) {
+ 		val |= PWM_ENABLE;
++	}
+ 
+-	pwm_writel(pc, pwm->hwpwm, val);
++	pwm_writel(pwm, PWM_CSR_0, val);
+ 
+ 	/*
+ 	 * If the PWM is not enabled, turn the clock off again to save power.
+@@ -218,9 +229,9 @@ static int tegra_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+ 	if (rc)
+ 		return rc;
+ 
+-	val = pwm_readl(pc, pwm->hwpwm);
++	val = pwm_readl(pwm, pc->soc->enable_reg);
+ 	val |= PWM_ENABLE;
+-	pwm_writel(pc, pwm->hwpwm, val);
++	pwm_writel(pwm, pc->soc->enable_reg, val);
+ 
+ 	return 0;
+ }
+@@ -230,9 +241,9 @@ static void tegra_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
+ 	struct tegra_pwm_chip *pc = to_tegra_pwm_chip(chip);
+ 	u32 val;
+ 
+-	val = pwm_readl(pc, pwm->hwpwm);
++	val = pwm_readl(pwm, pc->soc->enable_reg);
+ 	val &= ~PWM_ENABLE;
+-	pwm_writel(pc, pwm->hwpwm, val);
++	pwm_writel(pwm, pc->soc->enable_reg, val);
+ 
+ 	pm_runtime_put_sync(pwmchip_parent(chip));
+ }
+@@ -318,7 +329,7 @@ static int tegra_pwm_probe(struct platform_device *pdev)
+ 
+ 	/* Set minimum limit of PWM period for the IP */
+ 	pc->min_period_ns =
+-	    (NSEC_PER_SEC / (pc->soc->max_frequency >> PWM_DUTY_WIDTH)) + 1;
++	    (NSEC_PER_SEC / (pc->soc->max_frequency / PWM_DEPTH)) + 1;
+ 
+ 	pc->rst = devm_reset_control_get_exclusive(&pdev->dev, "pwm");
+ 	if (IS_ERR(pc->rst)) {
+@@ -397,16 +408,29 @@ static int __maybe_unused tegra_pwm_runtime_resume(struct device *dev)
+ 
+ static const struct tegra_pwm_soc tegra20_pwm_soc = {
+ 	.num_channels = 4,
++	.enable_reg = PWM_CSR_0,
++	.scale_width = 13,
+ 	.max_frequency = 48000000UL,
+ };
+ 
+ static const struct tegra_pwm_soc tegra186_pwm_soc = {
+ 	.num_channels = 1,
++	.enable_reg = PWM_CSR_0,
++	.scale_width = 13,
+ 	.max_frequency = 102000000UL,
+ };
+ 
+ static const struct tegra_pwm_soc tegra194_pwm_soc = {
+ 	.num_channels = 1,
++	.enable_reg = PWM_CSR_0,
++	.scale_width = 13,
++	.max_frequency = 408000000UL,
++};
++
++static const struct tegra_pwm_soc tegra264_pwm_soc = {
++	.num_channels = 1,
++	.enable_reg = PWM_CSR_1,
++	.scale_width = 16,
+ 	.max_frequency = 408000000UL,
+ };
+ 
+@@ -414,6 +438,7 @@ static const struct of_device_id tegra_pwm_of_match[] = {
+ 	{ .compatible = "nvidia,tegra20-pwm", .data = &tegra20_pwm_soc },
+ 	{ .compatible = "nvidia,tegra186-pwm", .data = &tegra186_pwm_soc },
+ 	{ .compatible = "nvidia,tegra194-pwm", .data = &tegra194_pwm_soc },
++	{ .compatible = "nvidia,tegra264-pwm", .data = &tegra264_pwm_soc },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, tegra_pwm_of_match);

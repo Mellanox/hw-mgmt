@@ -1,0 +1,101 @@
+From 5333a49e51c2d0d5fe1615f721898036733ed5b0 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 11 May 2026 10:48:56 +0300
+Subject: [PATCH 0728/0797] ARM: tegra: transformers: Add connector node for common trees
+
+All ASUS Transformers have micro-HDMI connector directly available. After
+Tegra HDMI got bridge/connector support, we should use connector framework
+for proper HW description.
+
+Tested-by: Andreas Westman Dorcsak <hedmoo@yahoo.com> # ASUS TF T30
+Tested-by: Robert Eckelmann <longnoserob@gmail.com> # ASUS TF101 T20
+Tested-by: Svyatoslav Ryhel <clamor95@gmail.com> # ASUS TF201 T30
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../nvidia/tegra20-asus-transformer-common.dtsi    | 22 +++++++++++++++++++---
+ .../nvidia/tegra30-asus-transformer-common.dtsi    | 21 +++++++++++++++++++--
+ 2 files changed, 38 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra20-asus-transformer-common.dtsi b/arch/arm/boot/dts/nvidia/tegra20-asus-transformer-common.dtsi
+index b48f53c00efae8..5b758aad8d1503 100644
+--- a/arch/arm/boot/dts/nvidia/tegra20-asus-transformer-common.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra20-asus-transformer-common.dtsi
+@@ -79,9 +79,11 @@
+ 			pll-supply = <&hdmi_pll_reg>;
+ 			hdmi-supply = <&vdd_hdmi_en>;
+ 
+-			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
+-			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7)
+-				GPIO_ACTIVE_HIGH>;
++			port {
++				hdmi_out: endpoint {
++					remote-endpoint = <&hdmi_connector_in>;
++				};
++			};
+ 		};
+ 	};
+ 
+@@ -1017,6 +1019,20 @@
+ 		};
+ 	};
+ 
++	hdmi-connector {
++		compatible = "hdmi-connector";
++		type = "d";
++
++		hpd-gpios = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
++		ddc-i2c-bus = <&hdmi_ddc>;
++
++		port {
++			hdmi_connector_in: endpoint {
++				remote-endpoint = <&hdmi_out>;
++			};
++		};
++	};
++
+ 	i2cmux {
+ 		compatible = "i2c-mux-pinctrl";
+ 		#address-cells = <1>;
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-asus-transformer-common.dtsi b/arch/arm/boot/dts/nvidia/tegra30-asus-transformer-common.dtsi
+index e6d079647f772c..bf1c3a31d40624 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-asus-transformer-common.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30-asus-transformer-common.dtsi
+@@ -166,8 +166,11 @@
+ 			pll-supply = <&vdd_1v8_vio>;
+ 			vdd-supply = <&vdd_3v3_sys>;
+ 
+-			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
+-			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
++			port {
++				hdmi_out: endpoint {
++					remote-endpoint = <&hdmi_connector_in>;
++				};
++			};
+ 		};
+ 	};
+ 
+@@ -1688,6 +1691,20 @@
+ 		};
+ 	};
+ 
++	hdmi-connector {
++		compatible = "hdmi-connector";
++		type = "d";
++
++		hpd-gpios = <&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
++		ddc-i2c-bus = <&hdmi_ddc>;
++
++		port {
++			hdmi_connector_in: endpoint {
++				remote-endpoint = <&hdmi_out>;
++			};
++		};
++	};
++
+ 	vdd_5v0_bat: regulator-bat {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vdd_ac_bat";
+-- 
+cgit 1.3.1-korg
+

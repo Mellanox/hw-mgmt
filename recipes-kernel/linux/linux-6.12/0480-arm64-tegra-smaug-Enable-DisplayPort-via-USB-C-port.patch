@@ -1,0 +1,48 @@
+From 8acdb94dcfd37ad974abbf3209ed49821e8a5686 Mon Sep 17 00:00:00 2001
+From: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Date: Fri, 26 Dec 2025 12:17:32 +0000
+Subject: [PATCH 0480/0797] arm64: tegra: smaug: Enable DisplayPort via USB-C port
+
+Enable both SOR and DPAUX modules allowing the USB-C port to transmit
+video in DP altmode. Tested on several monitors with USB-C to HDMI
+adapter.
+
+Signed-off-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-smaug.dts | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts b/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
+index 5aa6afd56cbc63..e9e925cc5774b4 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
+@@ -31,6 +31,11 @@
+ 	};
+ 
+ 	host1x@50000000 {
++		dpaux1: dpaux@54040000 {
++			vdd-supply = <&pp3300>;
++			status = "okay";
++		};
++
+ 		dsia: dsi@54300000 {
+ 			avdd-dsi-csi-supply = <&vdd_dsi_csi>;
+ 			status = "okay";
+@@ -58,6 +63,13 @@
+ 			};
+ 		};
+ 
++		sor1: sor@54580000 {
++			avdd-io-hdmi-dp-supply = <&pp1800>;
++			vdd-hdmi-dp-pll-supply = <&avddio_1v05>;
++			nvidia,dpaux = <&dpaux1>;
++			status = "okay";
++		};
++
+ 		dpaux: dpaux@545c0000 {
+ 			status = "okay";
+ 		};
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,51 @@
+From 3cfae15302b398fd2d9884dcea0a1d2188e6513d Mon Sep 17 00:00:00 2001
+From: "Dr. David Alan Gilbert" <linux@treblig.org>
+Date: Sun, 15 Dec 2024 21:47:50 +0000
+Subject: [PATCH 0131/0797] gpu: host1x: Remove unused host1x_debug_dump_syncpts
+
+host1x_debug_dump_syncpts() has been unused since
+commit f0fb260a0cdb ("gpu: host1x: Implement syncpoint wait using DMA
+fences")
+
+Remove it.
+
+Signed-off-by: Dr. David Alan Gilbert <linux@treblig.org>
+Acked-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://patchwork.freedesktop.org/patch/msgid/20241215214750.448209-1-linux@treblig.org
+---
+ drivers/gpu/host1x/debug.c | 9 ---------
+ drivers/gpu/host1x/debug.h | 1 -
+ 2 files changed, 10 deletions(-)
+
+diff --git a/drivers/gpu/host1x/debug.c b/drivers/gpu/host1x/debug.c
+index a18cc8d8caf57f..6433c00d5d7e07 100644
+--- a/drivers/gpu/host1x/debug.c
++++ b/drivers/gpu/host1x/debug.c
+@@ -216,12 +216,3 @@ void host1x_debug_dump(struct host1x *host1x)
+ 
+ 	show_all(host1x, &o, true);
+ }
+-
+-void host1x_debug_dump_syncpts(struct host1x *host1x)
+-{
+-	struct output o = {
+-		.fn = write_to_printk
+-	};
+-
+-	show_syncpts(host1x, &o, false);
+-}
+diff --git a/drivers/gpu/host1x/debug.h b/drivers/gpu/host1x/debug.h
+index 62bd8a091fa7f2..c43c61d876a9e3 100644
+--- a/drivers/gpu/host1x/debug.h
++++ b/drivers/gpu/host1x/debug.h
+@@ -41,6 +41,5 @@ extern unsigned int host1x_debug_trace_cmdbuf;
+ void host1x_debug_init(struct host1x *host1x);
+ void host1x_debug_deinit(struct host1x *host1x);
+ void host1x_debug_dump(struct host1x *host1x);
+-void host1x_debug_dump_syncpts(struct host1x *host1x);
+ 
+ #endif
+-- 
+cgit 1.3.1-korg
+

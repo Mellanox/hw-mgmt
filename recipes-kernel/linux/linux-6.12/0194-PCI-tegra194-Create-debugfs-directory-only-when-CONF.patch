@@ -1,0 +1,69 @@
+From ed798ff1c52f6fe232ce2e24e68fb63f5470ab97 Mon Sep 17 00:00:00 2001
+From: Hans Zhang <18255117159@163.com>
+Date: Mon, 7 Apr 2025 20:43:31 +0800
+Subject: [PATCH 0194/0797] PCI: tegra194: Create debugfs directory only when CONFIG_PCIEASPM is enabled
+
+Previously, the debugfs directory was unconditionally created in
+tegra_pcie_config_rp() regardless of the CONFIG_PCIEASPM setting.
+This led to unnecessary directory creation when ASPM support was disabled
+since only ASPM state count was exposed through debugfs.
+
+Hence, move the debugfs directory creation into init_debugfs() which is
+conditionally compiled based on CONFIG_PCIEASPM. This ensures that both
+the directory and 'aspm_state_cnt' entry are only created when ASPM is
+enabled and avoids cluttering debugfs with empty directories when ASPM is
+disabled.
+
+Signed-off-by: Hans Zhang <18255117159@163.com>
+[mani: subject and description change]
+Signed-off-by: Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
+Reviewed-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Link: https://patch.msgid.link/20250407124331.69459-1-18255117159@163.com
+---
+ drivers/pci/controller/dwc/pcie-tegra194.c | 19 ++++++++++---------
+ 1 file changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/pci/controller/dwc/pcie-tegra194.c b/drivers/pci/controller/dwc/pcie-tegra194.c
+index 5103995cd6c75..bc419688527a0 100644
+--- a/drivers/pci/controller/dwc/pcie-tegra194.c
++++ b/drivers/pci/controller/dwc/pcie-tegra194.c
+@@ -713,7 +713,16 @@ static void init_host_aspm(struct tegra_pcie_dw *pcie)
+ 
+ static void init_debugfs(struct tegra_pcie_dw *pcie)
+ {
+-	debugfs_create_devm_seqfile(pcie->dev, "aspm_state_cnt", pcie->debugfs,
++	struct device *dev = pcie->dev;
++	char *name;
++
++	name = devm_kasprintf(dev, GFP_KERNEL, "%pOFP", dev->of_node);
++	if (!name)
++		return;
++
++	pcie->debugfs = debugfs_create_dir(name, NULL);
++
++	debugfs_create_devm_seqfile(dev, "aspm_state_cnt", pcie->debugfs,
+ 				    aspm_state_cnt);
+ }
+ #else
+@@ -1634,7 +1643,6 @@ static void tegra_pcie_deinit_controller(struct tegra_pcie_dw *pcie)
+ static int tegra_pcie_config_rp(struct tegra_pcie_dw *pcie)
+ {
+ 	struct device *dev = pcie->dev;
+-	char *name;
+ 	int ret;
+ 
+ 	pm_runtime_enable(dev);
+@@ -1664,13 +1672,6 @@ static int tegra_pcie_config_rp(struct tegra_pcie_dw *pcie)
+ 		goto fail_host_init;
+ 	}
+ 
+-	name = devm_kasprintf(dev, GFP_KERNEL, "%pOFP", dev->of_node);
+-	if (!name) {
+-		ret = -ENOMEM;
+-		goto fail_host_init;
+-	}
+-
+-	pcie->debugfs = debugfs_create_dir(name, NULL);
+ 	init_debugfs(pcie);
+ 
+ 	return ret;

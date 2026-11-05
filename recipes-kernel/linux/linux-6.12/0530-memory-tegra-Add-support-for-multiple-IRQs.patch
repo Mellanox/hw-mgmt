@@ -1,0 +1,276 @@
+From 4d865a2374037d2d0842f88822fd753f0918b370 Mon Sep 17 00:00:00 2001
+From: Ketan Patil <ketanp@nvidia.com>
+Date: Thu, 26 Feb 2026 16:31:12 +0000
+Subject: [PATCH 0530/0797] memory: tegra: Add support for multiple IRQs
+
+Add support to handle multiple MC interrupts lines, as supported by
+Tegra264. Turn the single IRQ handler callback into a counted array to
+allow specifying a separate handler for each interrupt. Move IRQ
+handlers into tegra_mc_soc struct, so as to specify SoC specific
+values.
+
+Signed-off-by: Ketan Patil <ketanp@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Tested-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260226163115.1152181-4-ketanp@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/mc.c       | 34 +++++++++++++++++++++-------------
+ drivers/memory/tegra/mc.h       |  1 +
+ drivers/memory/tegra/tegra114.c |  2 ++
+ drivers/memory/tegra/tegra124.c |  4 ++++
+ drivers/memory/tegra/tegra186.c |  3 ++-
+ drivers/memory/tegra/tegra194.c |  2 ++
+ drivers/memory/tegra/tegra20.c  |  7 ++++++-
+ drivers/memory/tegra/tegra210.c |  2 ++
+ drivers/memory/tegra/tegra234.c |  2 ++
+ drivers/memory/tegra/tegra30.c  |  2 ++
+ include/soc/tegra/mc.h          |  8 +++++---
+ 11 files changed, 49 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/memory/tegra/mc.c b/drivers/memory/tegra/mc.c
+index 63f402aa1976e5..8114574374d5c7 100644
+--- a/drivers/memory/tegra/mc.c
++++ b/drivers/memory/tegra/mc.c
+@@ -398,6 +398,10 @@ unsigned int tegra_mc_get_emem_device_count(struct tegra_mc *mc)
+ }
+ EXPORT_SYMBOL_GPL(tegra_mc_get_emem_device_count);
+ 
++const irq_handler_t tegra30_mc_irq_handlers[] = {
++	tegra30_mc_handle_irq
++};
++
+ #if defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
+     defined(CONFIG_ARCH_TEGRA_114_SOC) || \
+     defined(CONFIG_ARCH_TEGRA_124_SOC) || \
+@@ -542,7 +546,6 @@ int tegra30_mc_probe(struct tegra_mc *mc)
+ 
+ const struct tegra_mc_ops tegra30_mc_ops = {
+ 	.probe = tegra30_mc_probe,
+-	.handle_irq = tegra30_mc_handle_irq,
+ };
+ #endif
+ 
+@@ -943,26 +946,31 @@ static int tegra_mc_probe(struct platform_device *pdev)
+ 
+ 	tegra_mc_num_channel_enabled(mc);
+ 
+-	if (mc->soc->ops && mc->soc->ops->handle_irq) {
+-		mc->irq = platform_get_irq(pdev, 0);
+-		if (mc->irq < 0)
+-			return mc->irq;
++	if (mc->soc->handle_irq) {
++		unsigned int i;
+ 
+ 		WARN(!mc->soc->client_id_mask, "missing client ID mask for this SoC\n");
+ 
++		for (i = 0; i < mc->soc->num_interrupts; i++) {
++			int irq;
++
++			irq = platform_get_irq(pdev, i);
++			if (irq < 0)
++				return irq;
++
++			err = devm_request_irq(&pdev->dev, irq, mc->soc->handle_irq[i], 0,
++					       dev_name(&pdev->dev), mc);
++			if (err < 0) {
++				dev_err(&pdev->dev, "failed to request IRQ#%u: %d\n", irq, err);
++				return err;
++			}
++		}
++
+ 		if (mc->soc->num_channels)
+ 			mc_ch_writel(mc, MC_BROADCAST_CHANNEL, mc->soc->intmask,
+ 				     MC_INTMASK);
+ 		else
+ 			mc_writel(mc, mc->soc->intmask, MC_INTMASK);
+-
+-		err = devm_request_irq(&pdev->dev, mc->irq, mc->soc->ops->handle_irq, 0,
+-				       dev_name(&pdev->dev), mc);
+-		if (err < 0) {
+-			dev_err(&pdev->dev, "failed to request IRQ#%u: %d\n", mc->irq,
+-				err);
+-			return err;
+-		}
+ 	}
+ 
+ 	if (mc->soc->reset_ops) {
+diff --git a/drivers/memory/tegra/mc.h b/drivers/memory/tegra/mc.h
+index 5f816d703d8155..34ce03ebc51cae 100644
+--- a/drivers/memory/tegra/mc.h
++++ b/drivers/memory/tegra/mc.h
+@@ -193,6 +193,7 @@ extern const struct tegra_mc_ops tegra186_mc_ops;
+ #endif
+ 
+ irqreturn_t tegra30_mc_handle_irq(int irq, void *data);
++extern const irq_handler_t tegra30_mc_irq_handlers[1];
+ extern const char * const tegra_mc_status_names[32];
+ extern const char * const tegra_mc_error_names[8];
+ 
+diff --git a/drivers/memory/tegra/tegra114.c b/drivers/memory/tegra/tegra114.c
+index ea7e4c7bb5f837..fffb28eea57f04 100644
+--- a/drivers/memory/tegra/tegra114.c
++++ b/drivers/memory/tegra/tegra114.c
+@@ -1115,4 +1115,6 @@ const struct tegra_mc_soc tegra114_mc_soc = {
+ 	.num_resets = ARRAY_SIZE(tegra114_mc_resets),
+ 	.ops = &tegra30_mc_ops,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+diff --git a/drivers/memory/tegra/tegra124.c b/drivers/memory/tegra/tegra124.c
+index f0cfe14bb47581..2cf733198782c2 100644
+--- a/drivers/memory/tegra/tegra124.c
++++ b/drivers/memory/tegra/tegra124.c
+@@ -1276,6 +1276,8 @@ const struct tegra_mc_soc tegra124_mc_soc = {
+ 	.icc_ops = &tegra124_mc_icc_ops,
+ 	.ops = &tegra30_mc_ops,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+ #endif /* CONFIG_ARCH_TEGRA_124_SOC */
+ 
+@@ -1309,5 +1311,7 @@ const struct tegra_mc_soc tegra132_mc_soc = {
+ 	.icc_ops = &tegra124_mc_icc_ops,
+ 	.ops = &tegra30_mc_ops,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+ #endif /* CONFIG_ARCH_TEGRA_132_SOC */
+diff --git a/drivers/memory/tegra/tegra186.c b/drivers/memory/tegra/tegra186.c
+index 51e2dd628fb47e..eb1eaaffc79a82 100644
+--- a/drivers/memory/tegra/tegra186.c
++++ b/drivers/memory/tegra/tegra186.c
+@@ -174,7 +174,6 @@ const struct tegra_mc_ops tegra186_mc_ops = {
+ 	.remove = tegra186_mc_remove,
+ 	.resume = tegra186_mc_resume,
+ 	.probe_device = tegra186_mc_probe_device,
+-	.handle_irq = tegra30_mc_handle_irq,
+ };
+ 
+ #if defined(CONFIG_ARCH_TEGRA_186_SOC)
+@@ -915,5 +914,7 @@ const struct tegra_mc_soc tegra186_mc_soc = {
+ 	.ch_intmask = 0x0000000f,
+ 	.global_intstatus_channel_shift = 0,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+ #endif
+diff --git a/drivers/memory/tegra/tegra194.c b/drivers/memory/tegra/tegra194.c
+index 5b7ff2dd68122a..cb0e7886857d90 100644
+--- a/drivers/memory/tegra/tegra194.c
++++ b/drivers/memory/tegra/tegra194.c
+@@ -1359,4 +1359,6 @@ const struct tegra_mc_soc tegra194_mc_soc = {
+ 	.ch_intmask = 0x00000f00,
+ 	.global_intstatus_channel_shift = 8,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+diff --git a/drivers/memory/tegra/tegra20.c b/drivers/memory/tegra/tegra20.c
+index 1b2b598ab5645c..6750b08d875fe9 100644
+--- a/drivers/memory/tegra/tegra20.c
++++ b/drivers/memory/tegra/tegra20.c
+@@ -761,9 +761,12 @@ static irqreturn_t tegra20_mc_handle_irq(int irq, void *data)
+ 	return IRQ_HANDLED;
+ }
+ 
++static const irq_handler_t tegra20_mc_irq_handlers[] = {
++	tegra20_mc_handle_irq
++};
++
+ static const struct tegra_mc_ops tegra20_mc_ops = {
+ 	.probe = tegra20_mc_probe,
+-	.handle_irq = tegra20_mc_handle_irq,
+ };
+ 
+ const struct tegra_mc_soc tegra20_mc_soc = {
+@@ -779,4 +782,6 @@ const struct tegra_mc_soc tegra20_mc_soc = {
+ 	.icc_ops = &tegra20_mc_icc_ops,
+ 	.ops = &tegra20_mc_ops,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra20_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra20_mc_irq_handlers),
+ };
+diff --git a/drivers/memory/tegra/tegra210.c b/drivers/memory/tegra/tegra210.c
+index e166b33848e955..8283601ab52cda 100644
+--- a/drivers/memory/tegra/tegra210.c
++++ b/drivers/memory/tegra/tegra210.c
+@@ -1288,4 +1288,6 @@ const struct tegra_mc_soc tegra210_mc_soc = {
+ 	.num_resets = ARRAY_SIZE(tegra210_mc_resets),
+ 	.ops = &tegra30_mc_ops,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+diff --git a/drivers/memory/tegra/tegra234.c b/drivers/memory/tegra/tegra234.c
+index 512d054d759246..9586d7528fb702 100644
+--- a/drivers/memory/tegra/tegra234.c
++++ b/drivers/memory/tegra/tegra234.c
+@@ -1153,4 +1153,6 @@ const struct tegra_mc_soc tegra234_mc_soc = {
+ 	 */
+ 	.num_carveouts = 32,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+diff --git a/drivers/memory/tegra/tegra30.c b/drivers/memory/tegra/tegra30.c
+index 337501a30a73f8..ff89b907877216 100644
+--- a/drivers/memory/tegra/tegra30.c
++++ b/drivers/memory/tegra/tegra30.c
+@@ -1401,4 +1401,6 @@ const struct tegra_mc_soc tegra30_mc_soc = {
+ 	.icc_ops = &tegra30_mc_icc_ops,
+ 	.ops = &tegra30_mc_ops,
+ 	.regs = &tegra20_mc_regs,
++	.handle_irq = tegra30_mc_irq_handlers,
++	.num_interrupts = ARRAY_SIZE(tegra30_mc_irq_handlers),
+ };
+diff --git a/include/soc/tegra/mc.h b/include/soc/tegra/mc.h
+index 372f47e824d537..d07de04c0f337b 100644
+--- a/include/soc/tegra/mc.h
++++ b/include/soc/tegra/mc.h
+@@ -10,10 +10,11 @@
+ #include <linux/debugfs.h>
+ #include <linux/err.h>
+ #include <linux/interconnect-provider.h>
++#include <linux/interrupt.h>
+ #include <linux/irq.h>
+ #include <linux/reset-controller.h>
+-#include <linux/types.h>
+ #include <linux/tegra-icc.h>
++#include <linux/types.h>
+ 
+ struct clk;
+ struct device;
+@@ -164,7 +165,6 @@ struct tegra_mc_ops {
+ 	int (*probe)(struct tegra_mc *mc);
+ 	void (*remove)(struct tegra_mc *mc);
+ 	int (*resume)(struct tegra_mc *mc);
+-	irqreturn_t (*handle_irq)(int irq, void *data);
+ 	int (*probe_device)(struct tegra_mc *mc, struct device *dev);
+ };
+ 
+@@ -214,6 +214,9 @@ struct tegra_mc_soc {
+ 	const struct tegra_mc_icc_ops *icc_ops;
+ 	const struct tegra_mc_ops *ops;
+ 	const struct tegra_mc_regs *regs;
++
++	const irq_handler_t *handle_irq;
++	unsigned int num_interrupts;
+ };
+ 
+ struct tegra_mc {
+@@ -224,7 +227,6 @@ struct tegra_mc {
+ 	void __iomem *bcast_ch_regs;
+ 	void __iomem **ch_regs;
+ 	struct clk *clk;
+-	int irq;
+ 
+ 	const struct tegra_mc_soc *soc;
+ 	unsigned long tick;
+-- 
+cgit 1.3.1-korg
+

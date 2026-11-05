@@ -1,0 +1,51 @@
+From 21e380f272415387454d81788f2d62642e1fe93a Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Tue, 17 Feb 2026 10:16:37 +0100
+Subject: [PATCH 0560/0797] ARM: tegra: defconfig: Drop redundant ARCH_TEGRA_foo_SOC
+
+All CONFIG_ARCH_TEGRA_2x_SOC-like symbols are now default for
+ARCH_TEGRA, so drop redundant lines from defconfigs.  Tested with
+comparing include/generated/autoconf.h.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Reviewed-by: Linus Walleij <linusw@kernel.org>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/configs/multi_v7_defconfig | 4 ----
+ arch/arm/configs/tegra_defconfig    | 4 ----
+ 2 files changed, 8 deletions(-)
+
+diff --git a/arch/arm/configs/multi_v7_defconfig b/arch/arm/configs/multi_v7_defconfig
+index f75d75cf91c88c..0985b8b00689b5 100644
+--- a/arch/arm/configs/multi_v7_defconfig
++++ b/arch/arm/configs/multi_v7_defconfig
+@@ -1142,10 +1142,6 @@ CONFIG_QCOM_SOCINFO=m
+ CONFIG_QCOM_STATS=m
+ CONFIG_QCOM_WCNSS_CTRL=m
+ CONFIG_ROCKCHIP_IODOMAIN=y
+-CONFIG_ARCH_TEGRA_2x_SOC=y
+-CONFIG_ARCH_TEGRA_3x_SOC=y
+-CONFIG_ARCH_TEGRA_114_SOC=y
+-CONFIG_ARCH_TEGRA_124_SOC=y
+ CONFIG_SOC_TI=y
+ CONFIG_KEYSTONE_NAVIGATOR_QMSS=y
+ CONFIG_KEYSTONE_NAVIGATOR_DMA=y
+diff --git a/arch/arm/configs/tegra_defconfig b/arch/arm/configs/tegra_defconfig
+index 68aedaf92667a4..66157e9721efce 100644
+--- a/arch/arm/configs/tegra_defconfig
++++ b/arch/arm/configs/tegra_defconfig
+@@ -296,10 +296,6 @@ CONFIG_CROS_EC=y
+ CONFIG_CROS_EC_I2C=m
+ CONFIG_CROS_EC_SPI=m
+ CONFIG_TEGRA_IOMMU_SMMU=y
+-CONFIG_ARCH_TEGRA_2x_SOC=y
+-CONFIG_ARCH_TEGRA_3x_SOC=y
+-CONFIG_ARCH_TEGRA_114_SOC=y
+-CONFIG_ARCH_TEGRA_124_SOC=y
+ CONFIG_ARM_TEGRA_DEVFREQ=y
+ CONFIG_MEMORY=y
+ CONFIG_IIO=y
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,43 @@
+From 7263d6a8b8743e6022f44d9dc367213c7695a8f2 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Thu, 15 Jan 2026 19:48:45 +0100
+Subject: [PATCH 0478/0797] arm64: tegra: Correct CPU compatibles on Tegra264
+
+"arm,armv8" CPU compatible is only for software models and must not be
+used in DTS for actual hardware.  Replace them with Neoverse V3AE
+compatible, based what is written on Wikipedia [1].
+
+Link: https://en.wikipedia.org/wiki/Tegra#Thor [1]
+Reported-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+Closes: https://lore.kernel.org/all/59ae6b16-7866-413a-a1d2-4a735024c108@oss.qualcomm.com/
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra264.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264.dtsi b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+index ef37b2a39cdbfd..7644a41d5f7214 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+@@ -3774,7 +3774,7 @@
+ 		#size-cells = <0>;
+ 
+ 		cpu0: cpu@0 {
+-			compatible = "arm,armv8";
++			compatible = "arm,neoverse-v3ae";
+ 			device_type = "cpu";
+ 			reg = <0x00000>;
+ 
+@@ -3789,7 +3789,7 @@
+ 		};
+ 
+ 		cpu1: cpu@1 {
+-			compatible = "arm,armv8";
++			compatible = "arm,neoverse-v3ae";
+ 			device_type = "cpu";
+ 			reg = <0x10000>;
+ 
+-- 
+cgit 1.3.1-korg
+

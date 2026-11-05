@@ -1,0 +1,43 @@
+From cca0fe281687dccb032f84067776a1018ad46e0b Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Sat, 3 May 2025 13:29:48 +0300
+Subject: [PATCH 0204/0797] dt-bindings: arm: tegra: Group Tegra30 based ASUS Transformers
+
+Group Tegra30 based ASUS Transformers under a common description.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Link: https://lore.kernel.org/r/20250503102950.32744-2-clamor95@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../devicetree/bindings/arm/tegra.yaml         | 18 +++++++-----------
+ 1 file changed, 7 insertions(+), 11 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 65e0ff1fdf1ec..49021e940d3cc 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -52,17 +52,13 @@ properties:
+               - nvidia,cardhu-a04
+           - const: nvidia,cardhu
+           - const: nvidia,tegra30
+-      - items:
+-          - const: asus,tf201
+-          - const: nvidia,tegra30
+-      - items:
+-          - const: asus,tf300t
+-          - const: nvidia,tegra30
+-      - items:
+-          - const: asus,tf300tg
+-          - const: nvidia,tegra30
+-      - items:
+-          - const: asus,tf700t
++      - description: ASUS Transformers Device family
++        items:
++          - enum:
++              - asus,tf201
++              - asus,tf300t
++              - asus,tf300tg
++              - asus,tf700t
+           - const: nvidia,tegra30
+       - description: LG Optimus 4X P880
+         items:

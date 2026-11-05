@@ -1,0 +1,35 @@
+From f521678d1921e0c1a206fa03a87b318d3e97d89b Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Thu, 4 Dec 2025 08:17:00 +0200
+Subject: [PATCH 0483/0797] clk: tegra20: Reparent dsi clock to pll_d_out0
+
+Reparent DSI clock to PLLD_OUT0 instead of directly descend from PLLD.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Acked-by: Stephen Boyd <sboyd@kernel.org>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/clk/tegra/clk-tegra20.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/clk/tegra/clk-tegra20.c b/drivers/clk/tegra/clk-tegra20.c
+index 2c58ce25af752a..c606c2b160d642 100644
+--- a/drivers/clk/tegra/clk-tegra20.c
++++ b/drivers/clk/tegra/clk-tegra20.c
+@@ -802,9 +802,9 @@ static void __init tegra20_periph_clk_init(void)
+ 	clks[TEGRA20_CLK_MC] = clk;
+ 
+ 	/* dsi */
+-	clk = tegra_clk_register_periph_gate("dsi", "pll_d", 0, clk_base, 0,
+-				    48, periph_clk_enb_refcnt);
+-	clk_register_clkdev(clk, NULL, "dsi");
++	clk = tegra_clk_register_periph_gate("dsi", "pll_d_out0", 0,
++					     clk_base, 0, TEGRA20_CLK_DSI,
++					     periph_clk_enb_refcnt);
+ 	clks[TEGRA20_CLK_DSI] = clk;
+ 
+ 	/* pex */
+-- 
+cgit 1.3.1-korg
+

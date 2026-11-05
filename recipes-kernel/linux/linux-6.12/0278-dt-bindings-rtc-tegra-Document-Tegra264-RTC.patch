@@ -1,0 +1,29 @@
+From 9ef6e3a1c69c5ecbe702c62ac620e5777aadead4 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Wed, 7 May 2025 16:37:56 +0200
+Subject: [PATCH 0278/0797] dt-bindings: rtc: tegra: Document Tegra264 RTC
+
+Add the compatible string for the RTC block found on the Tegra264 SoC.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250507143802.1230919-3-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/rtc/nvidia,tegra20-rtc.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/rtc/nvidia,tegra20-rtc.yaml b/Documentation/devicetree/bindings/rtc/nvidia,tegra20-rtc.yaml
+index 17d6280e551501..a86e926ae3d1ca 100644
+--- a/Documentation/devicetree/bindings/rtc/nvidia,tegra20-rtc.yaml
++++ b/Documentation/devicetree/bindings/rtc/nvidia,tegra20-rtc.yaml
+@@ -28,6 +28,7 @@ properties:
+               - nvidia,tegra186-rtc
+               - nvidia,tegra194-rtc
+               - nvidia,tegra234-rtc
++              - nvidia,tegra264-rtc
+           - const: nvidia,tegra20-rtc
+ 
+   reg:
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,30 @@
+From eefff3d9f65689610d63ff36bff0b95da9409c2a Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Thu, 31 Jul 2025 16:59:25 -0500
+Subject: [PATCH 0452/0797] cpuidle: tegra: Export tegra_cpuidle_pcie_irqs_in_use()
+
+Export tegra_cpuidle_pcie_irqs_in_use() to allow pci-tegra to be built as a
+module.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Link: https://patch.msgid.link/20250731-pci-tegra-module-v7-2-cad4b088b8fb@gmail.com
+---
+ drivers/cpuidle/cpuidle-tegra.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/cpuidle/cpuidle-tegra.c b/drivers/cpuidle/cpuidle-tegra.c
+index b203a93deac5f3..aca907a62bb5de 100644
+--- a/drivers/cpuidle/cpuidle-tegra.c
++++ b/drivers/cpuidle/cpuidle-tegra.c
+@@ -336,6 +336,7 @@ void tegra_cpuidle_pcie_irqs_in_use(void)
+ 	pr_info("disabling CC6 state, since PCIe IRQs are in use\n");
+ 	tegra_cpuidle_disable_state(TEGRA_CC6);
+ }
++EXPORT_SYMBOL_GPL(tegra_cpuidle_pcie_irqs_in_use);
+ 
+ static void tegra_cpuidle_setup_tegra114_c7_state(void)
+ {
+-- 
+cgit 1.3.1-korg
+

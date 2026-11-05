@@ -1,0 +1,63 @@
+From 0a293451030b4ad69026b77c7d6b6bdf5cafd7e4 Mon Sep 17 00:00:00 2001
+From: Kartik Rajput <kkartik@nvidia.com>
+Date: Fri, 24 Oct 2025 12:19:51 +0530
+Subject: [PATCH 0446/0797] rtc: tegra: Add ACPI support
+
+Add ACPI support for Tegra RTC, which is available on Tegra241 and
+Tegra410. Both Tegra241 and Tegra410 use the same ACPI ID 'NVDA0280'.
+When ACPI boot is used, the RTC clock is configured by UEFI before
+the kernel boots. On device-tree boot, the probe must fail if clocks are
+not provided in the device-tree.
+
+Signed-off-by: Kartik Rajput <kkartik@nvidia.com>
+Reviewed-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20251024064952.775883-2-kkartik@nvidia.com
+Signed-off-by: Alexandre Belloni <alexandre.belloni@bootlin.com>
+---
+ drivers/rtc/rtc-tegra.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/rtc/rtc-tegra.c b/drivers/rtc/rtc-tegra.c
+index e8c83a6a96b30e..9e4e9c88178f3d 100644
+--- a/drivers/rtc/rtc-tegra.c
++++ b/drivers/rtc/rtc-tegra.c
+@@ -274,6 +274,12 @@ static const struct of_device_id tegra_rtc_dt_match[] = {
+ };
+ MODULE_DEVICE_TABLE(of, tegra_rtc_dt_match);
+ 
++static const struct acpi_device_id tegra_rtc_acpi_match[] = {
++	{ "NVDA0280" },
++	{ }
++};
++MODULE_DEVICE_TABLE(acpi, tegra_rtc_acpi_match);
++
+ static int tegra_rtc_probe(struct platform_device *pdev)
+ {
+ 	struct tegra_rtc_info *info;
+@@ -300,9 +306,11 @@ static int tegra_rtc_probe(struct platform_device *pdev)
+ 	info->rtc->ops = &tegra_rtc_ops;
+ 	info->rtc->range_max = U32_MAX;
+ 
+-	info->clk = devm_clk_get_enabled(&pdev->dev, NULL);
+-	if (IS_ERR(info->clk))
+-		return PTR_ERR(info->clk);
++	if (dev_of_node(&pdev->dev)) {
++		info->clk = devm_clk_get_enabled(&pdev->dev, NULL);
++		if (IS_ERR(info->clk))
++			return PTR_ERR(info->clk);
++	}
+ 
+ 	/* set context info */
+ 	info->pdev = pdev;
+@@ -386,6 +394,7 @@ static struct platform_driver tegra_rtc_driver = {
+ 	.driver = {
+ 		.name = "tegra_rtc",
+ 		.of_match_table = tegra_rtc_dt_match,
++		.acpi_match_table = tegra_rtc_acpi_match,
+ 		.pm = &tegra_rtc_pm_ops,
+ 	},
+ };
+-- 
+cgit 1.3.1-korg
+

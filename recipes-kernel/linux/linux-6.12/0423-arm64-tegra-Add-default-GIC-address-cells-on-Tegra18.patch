@@ -1,0 +1,39 @@
+From 311cbb9c130e2af184f5e0dc49bd891b020b6596 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Fri, 22 Aug 2025 15:33:53 +0200
+Subject: [PATCH 0423/0797] arm64: tegra: Add default GIC address cells on Tegra186
+
+Add missing address-cells 0 to GIC interrupt node to silence W=1
+warning:
+
+  tegra186.dtsi:1355.3-41: Warning (interrupt_map): /pcie@10003000:interrupt-map:
+    Missing property '#address-cells' in node /interrupt-controller@3881000, using 0 as fallback
+
+Value '0' is correct because:
+1. GIC interrupt controller does not have children,
+2. interrupt-map property (in PCI node) consists of five components and
+   the fourth component "parent unit address", which size is defined by
+   '#address-cells' of the node pointed to by the interrupt-parent
+   component, is not used (=0)
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra186.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186.dtsi b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+index 66fdcec17073a0..b006304519096a 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+@@ -1179,6 +1179,7 @@
+ 
+ 	gic: interrupt-controller@3881000 {
+ 		compatible = "arm,gic-400";
++		#address-cells = <0>;
+ 		#interrupt-cells = <3>;
+ 		interrupt-controller;
+ 		reg = <0x0 0x03881000 0x0 0x1000>,
+-- 
+cgit 1.3.1-korg
+

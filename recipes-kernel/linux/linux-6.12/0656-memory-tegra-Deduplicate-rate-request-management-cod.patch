@@ -1,0 +1,811 @@
+From 8879cff7f86f82e8922208668fb0f7227e4836db Mon Sep 17 00:00:00 2001
+From: Mikko Perttunen <mperttunen@nvidia.com>
+Date: Fri, 1 May 2026 16:00:52 +0900
+Subject: [PATCH 0656/0797] memory: tegra: Deduplicate rate request management code
+
+As is, the EMC drivers for each 32-bit platform contain almost
+identical duplicated code for aggregating rate requests. Move this
+code out to a shared tegra-emc-common file to reduce duplication,
+and add kerneldoc comments.
+
+Based on code from the tegra20-emc driver.
+
+Signed-off-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://patch.msgid.link/20260501-memory-refactor-v3-1-69fb1ae1a7ca@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/Kconfig            |   6 ++
+ drivers/memory/tegra/Makefile           |   1 +
+ drivers/memory/tegra/tegra-emc-common.c | 143 ++++++++++++++++++++++++++++++++
+ drivers/memory/tegra/tegra-emc-common.h |  46 ++++++++++
+ drivers/memory/tegra/tegra124-emc.c     | 107 ++----------------------
+ drivers/memory/tegra/tegra20-emc.c      | 110 ++----------------------
+ drivers/memory/tegra/tegra30-emc.c      | 107 ++----------------------
+ 7 files changed, 215 insertions(+), 305 deletions(-)
+ create mode 100644 drivers/memory/tegra/tegra-emc-common.c
+ create mode 100644 drivers/memory/tegra/tegra-emc-common.h
+
+diff --git a/drivers/memory/tegra/Kconfig b/drivers/memory/tegra/Kconfig
+index fc5a277918267e..92671f9df67213 100644
+--- a/drivers/memory/tegra/Kconfig
++++ b/drivers/memory/tegra/Kconfig
+@@ -17,6 +17,7 @@ config TEGRA20_EMC
+ 	select DEVFREQ_GOV_SIMPLE_ONDEMAND
+ 	select PM_DEVFREQ
+ 	select DDR
++	select TEGRA_EMC_COMMON
+ 	help
+ 	  This driver is for the External Memory Controller (EMC) found on
+ 	  Tegra20 chips. The EMC controls the external DRAM on the board.
+@@ -29,6 +30,7 @@ config TEGRA30_EMC
+ 	depends on ARCH_TEGRA_3x_SOC || COMPILE_TEST
+ 	select PM_OPP
+ 	select DDR
++	select TEGRA_EMC_COMMON
+ 	help
+ 	  This driver is for the External Memory Controller (EMC) found on
+ 	  Tegra30 chips. The EMC controls the external DRAM on the board.
+@@ -41,6 +43,7 @@ config TEGRA124_EMC
+ 	depends on ARCH_TEGRA_124_SOC || COMPILE_TEST
+ 	select TEGRA124_CLK_EMC if ARCH_TEGRA
+ 	select PM_OPP
++	select TEGRA_EMC_COMMON
+ 	help
+ 	  This driver is for the External Memory Controller (EMC) found on
+ 	  Tegra124 chips. The EMC controls the external DRAM on the board.
+@@ -61,4 +64,7 @@ config TEGRA210_EMC
+ 	  This driver is required to change memory timings / clock rate for
+ 	  external memory.
+ 
++config TEGRA_EMC_COMMON
++	tristate
++
+ endif
+diff --git a/drivers/memory/tegra/Makefile b/drivers/memory/tegra/Makefile
+index 6334601e6120d0..75ebb4cb4f293c 100644
+--- a/drivers/memory/tegra/Makefile
++++ b/drivers/memory/tegra/Makefile
+@@ -14,6 +14,7 @@ tegra-mc-$(CONFIG_ARCH_TEGRA_264_SOC) += tegra186.o tegra264.o
+ 
+ obj-$(CONFIG_TEGRA_MC) += tegra-mc.o
+ 
++obj-$(CONFIG_TEGRA_EMC_COMMON) += tegra-emc-common.o
+ obj-$(CONFIG_TEGRA20_EMC)  += tegra20-emc.o
+ obj-$(CONFIG_TEGRA30_EMC)  += tegra30-emc.o
+ obj-$(CONFIG_TEGRA124_EMC) += tegra124-emc.o
+diff --git a/drivers/memory/tegra/tegra-emc-common.c b/drivers/memory/tegra/tegra-emc-common.c
+new file mode 100644
+index 00000000000000..bbe86cb4942c56
+--- /dev/null
++++ b/drivers/memory/tegra/tegra-emc-common.c
+@@ -0,0 +1,143 @@
++// SPDX-License-Identifier: GPL-2.0
++
++#include <linux/device.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++#include <linux/pm_opp.h>
++
++#include "tegra-emc-common.h"
++
++/**
++ * tegra_emc_rate_requests_init() - Initialize EMC rate request tracking
++ * @reqs: struct tegra_emc_rate_requests to initialize.
++ * @dev: EMC device.
++ *
++ * Initializes the rate request tracking state with default state
++ * (no active requests). Must be called before using @reqs with
++ * other functions.
++ */
++void tegra_emc_rate_requests_init(struct tegra_emc_rate_requests *reqs,
++				  struct device *dev)
++{
++	unsigned int i;
++
++	mutex_init(&reqs->rate_lock);
++	reqs->dev = dev;
++
++	for (i = 0; i < TEGRA_EMC_RATE_TYPE_MAX; i++) {
++		reqs->requested_rate[i].min_rate = 0;
++		reqs->requested_rate[i].max_rate = ULONG_MAX;
++	}
++}
++EXPORT_SYMBOL_GPL(tegra_emc_rate_requests_init);
++
++/* Caller must hold reqs->rate_lock. */
++static int tegra_emc_request_rate(struct tegra_emc_rate_requests *reqs,
++				  unsigned long new_min_rate,
++				  unsigned long new_max_rate,
++				  enum tegra_emc_rate_request_type type)
++{
++	struct tegra_emc_rate_request *req = reqs->requested_rate;
++	unsigned long min_rate = 0, max_rate = ULONG_MAX;
++	unsigned int i;
++	int err;
++
++	lockdep_assert_held(&reqs->rate_lock);
++
++	/* select minimum and maximum rates among the requested rates */
++	for (i = 0; i < TEGRA_EMC_RATE_TYPE_MAX; i++, req++) {
++		if (i == type) {
++			min_rate = max(new_min_rate, min_rate);
++			max_rate = min(new_max_rate, max_rate);
++		} else {
++			min_rate = max(req->min_rate, min_rate);
++			max_rate = min(req->max_rate, max_rate);
++		}
++	}
++
++	if (min_rate > max_rate) {
++		dev_err_ratelimited(reqs->dev, "%s: type %u: out of range: %lu %lu\n",
++				    __func__, type, min_rate, max_rate);
++		return -ERANGE;
++	}
++
++	/*
++	 * EMC rate-changes should go via OPP API because it manages voltage
++	 * changes.
++	 */
++	err = dev_pm_opp_set_rate(reqs->dev, min_rate);
++	if (err)
++		return err;
++
++	reqs->requested_rate[type].min_rate = new_min_rate;
++	reqs->requested_rate[type].max_rate = new_max_rate;
++
++	return 0;
++}
++
++/**
++ * tegra_emc_set_min_rate() - Update minimum rate request for a request type
++ * @reqs: rate request tracking state
++ * @rate: new minimum rate in Hz requested by @type
++ * @type: type of request
++ *
++ * Records @rate as the new minimum rate request for @type, recalculates target
++ * rate based on all requests and applies new rate through the OPP API.
++ *
++ * Context: Sleeps. Requests to same @reqs are synchronized via mutex.
++ *
++ * Return:
++ * * %0 - success
++ * * %-ERANGE - request would cause minimum rate request to be higher than
++ *              maximum rate request
++ * * other - setting new rate failed
++ */
++int tegra_emc_set_min_rate(struct tegra_emc_rate_requests *reqs,
++			   unsigned long rate,
++			   enum tegra_emc_rate_request_type type)
++{
++	struct tegra_emc_rate_request *req = &reqs->requested_rate[type];
++	int ret;
++
++	mutex_lock(&reqs->rate_lock);
++	ret = tegra_emc_request_rate(reqs, rate, req->max_rate, type);
++	mutex_unlock(&reqs->rate_lock);
++
++	return ret;
++}
++EXPORT_SYMBOL_GPL(tegra_emc_set_min_rate);
++
++/**
++ * tegra_emc_set_max_rate() - Update maximum rate request for a request type
++ * @reqs: rate request tracking state
++ * @rate: new maximum rate in Hz requested by @type
++ * @type: type of request
++ *
++ * Records @rate as the new maximum rate request for @type, recalculates target
++ * rate based on all requests and applies new rate through the OPP API.
++ *
++ * Context: Sleeps. Requests to same @reqs are synchronized via mutex.
++ *
++ * Return:
++ * * %0 - success
++ * * %-ERANGE - request would cause minimum rate request to be higher than
++ *              maximum rate request
++ * * other - setting new rate failed
++ */
++int tegra_emc_set_max_rate(struct tegra_emc_rate_requests *reqs,
++			   unsigned long rate,
++			   enum tegra_emc_rate_request_type type)
++{
++	struct tegra_emc_rate_request *req = &reqs->requested_rate[type];
++	int ret;
++
++	mutex_lock(&reqs->rate_lock);
++	ret = tegra_emc_request_rate(reqs, req->min_rate, rate, type);
++	mutex_unlock(&reqs->rate_lock);
++
++	return ret;
++}
++EXPORT_SYMBOL_GPL(tegra_emc_set_max_rate);
++
++MODULE_DESCRIPTION("NVIDIA Tegra EMC common code");
++MODULE_LICENSE("GPL");
+diff --git a/drivers/memory/tegra/tegra-emc-common.h b/drivers/memory/tegra/tegra-emc-common.h
+new file mode 100644
+index 00000000000000..157e27024342bf
+--- /dev/null
++++ b/drivers/memory/tegra/tegra-emc-common.h
+@@ -0,0 +1,46 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++
++#ifndef TEGRA_EMC_COMMON_H
++#define TEGRA_EMC_COMMON_H
++
++#include <linux/device.h>
++#include <linux/mutex.h>
++
++/**
++ * enum tegra_emc_rate_request_type - source of rate request
++ * @TEGRA_EMC_RATE_DEVFREQ: rate requested by devfreq governor
++ * @TEGRA_EMC_RATE_DEBUG: rate requested through debugfs knobs
++ * @TEGRA_EMC_RATE_ICC: rate requested by ICC framework
++ * @TEGRA_EMC_RATE_TYPE_MAX: number of valid request types
++ */
++enum tegra_emc_rate_request_type {
++	TEGRA_EMC_RATE_DEVFREQ,
++	TEGRA_EMC_RATE_DEBUG,
++	TEGRA_EMC_RATE_ICC,
++	TEGRA_EMC_RATE_TYPE_MAX,
++};
++
++struct tegra_emc_rate_request {
++	unsigned long min_rate;
++	unsigned long max_rate;
++};
++
++struct tegra_emc_rate_requests {
++	struct tegra_emc_rate_request requested_rate[TEGRA_EMC_RATE_TYPE_MAX];
++	/* Protects @requested_rate. */
++	struct mutex rate_lock;
++	struct device *dev;
++};
++
++void tegra_emc_rate_requests_init(struct tegra_emc_rate_requests *reqs,
++				  struct device *dev);
++
++int tegra_emc_set_min_rate(struct tegra_emc_rate_requests *reqs,
++			   unsigned long rate,
++			   enum tegra_emc_rate_request_type type);
++
++int tegra_emc_set_max_rate(struct tegra_emc_rate_requests *reqs,
++			   unsigned long rate,
++			   enum tegra_emc_rate_request_type type);
++
++#endif /* TEGRA_EMC_COMMON_H */
+diff --git a/drivers/memory/tegra/tegra124-emc.c b/drivers/memory/tegra/tegra124-emc.c
+index 5cfbc169c5f988..555a6c753be768 100644
+--- a/drivers/memory/tegra/tegra124-emc.c
++++ b/drivers/memory/tegra/tegra124-emc.c
+@@ -27,6 +27,7 @@
+ #include <soc/tegra/mc.h>
+ 
+ #include "mc.h"
++#include "tegra-emc-common.h"
+ 
+ #define EMC_FBIO_CFG5				0x104
+ #define	EMC_FBIO_CFG5_DRAM_TYPE_MASK		0x3
+@@ -467,17 +468,6 @@ struct emc_timing {
+ 	u32 emc_zcal_interval;
+ };
+ 
+-enum emc_rate_request_type {
+-	EMC_RATE_DEBUG,
+-	EMC_RATE_ICC,
+-	EMC_RATE_TYPE_MAX,
+-};
+-
+-struct emc_rate_request {
+-	unsigned long min_rate;
+-	unsigned long max_rate;
+-};
+-
+ struct tegra_emc {
+ 	struct device *dev;
+ 
+@@ -503,14 +493,7 @@ struct tegra_emc {
+ 
+ 	struct icc_provider provider;
+ 
+-	/*
+-	 * There are multiple sources in the EMC driver which could request
+-	 * a min/max clock rate, these rates are contained in this array.
+-	 */
+-	struct emc_rate_request requested_rate[EMC_RATE_TYPE_MAX];
+-
+-	/* protect shared rate-change code path */
+-	struct mutex rate_lock;
++	struct tegra_emc_rate_requests reqs;
+ };
+ 
+ /* Timing change sequence functions */
+@@ -1041,83 +1024,6 @@ tegra124_emc_find_node_by_ram_code(struct device_node *node, u32 ram_code)
+ 	return NULL;
+ }
+ 
+-static void tegra124_emc_rate_requests_init(struct tegra_emc *emc)
+-{
+-	unsigned int i;
+-
+-	for (i = 0; i < EMC_RATE_TYPE_MAX; i++) {
+-		emc->requested_rate[i].min_rate = 0;
+-		emc->requested_rate[i].max_rate = ULONG_MAX;
+-	}
+-}
+-
+-static int emc_request_rate(struct tegra_emc *emc,
+-			    unsigned long new_min_rate,
+-			    unsigned long new_max_rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = emc->requested_rate;
+-	unsigned long min_rate = 0, max_rate = ULONG_MAX;
+-	unsigned int i;
+-	int err;
+-
+-	/* select minimum and maximum rates among the requested rates */
+-	for (i = 0; i < EMC_RATE_TYPE_MAX; i++, req++) {
+-		if (i == type) {
+-			min_rate = max(new_min_rate, min_rate);
+-			max_rate = min(new_max_rate, max_rate);
+-		} else {
+-			min_rate = max(req->min_rate, min_rate);
+-			max_rate = min(req->max_rate, max_rate);
+-		}
+-	}
+-
+-	if (min_rate > max_rate) {
+-		dev_err_ratelimited(emc->dev, "%s: type %u: out of range: %lu %lu\n",
+-				    __func__, type, min_rate, max_rate);
+-		return -ERANGE;
+-	}
+-
+-	/*
+-	 * EMC rate-changes should go via OPP API because it manages voltage
+-	 * changes.
+-	 */
+-	err = dev_pm_opp_set_rate(emc->dev, min_rate);
+-	if (err)
+-		return err;
+-
+-	emc->requested_rate[type].min_rate = new_min_rate;
+-	emc->requested_rate[type].max_rate = new_max_rate;
+-
+-	return 0;
+-}
+-
+-static int emc_set_min_rate(struct tegra_emc *emc, unsigned long rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = &emc->requested_rate[type];
+-	int ret;
+-
+-	mutex_lock(&emc->rate_lock);
+-	ret = emc_request_rate(emc, rate, req->max_rate, type);
+-	mutex_unlock(&emc->rate_lock);
+-
+-	return ret;
+-}
+-
+-static int emc_set_max_rate(struct tegra_emc *emc, unsigned long rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = &emc->requested_rate[type];
+-	int ret;
+-
+-	mutex_lock(&emc->rate_lock);
+-	ret = emc_request_rate(emc, req->min_rate, rate, type);
+-	mutex_unlock(&emc->rate_lock);
+-
+-	return ret;
+-}
+-
+ /*
+  * debugfs interface
+  *
+@@ -1190,7 +1096,7 @@ static int tegra124_emc_debug_min_rate_set(void *data, u64 rate)
+ 	if (!tegra124_emc_validate_rate(emc, rate))
+ 		return -EINVAL;
+ 
+-	err = emc_set_min_rate(emc, rate, EMC_RATE_DEBUG);
++	err = tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEBUG);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -1220,7 +1126,7 @@ static int tegra124_emc_debug_max_rate_set(void *data, u64 rate)
+ 	if (!tegra124_emc_validate_rate(emc, rate))
+ 		return -EINVAL;
+ 
+-	err = emc_set_max_rate(emc, rate, EMC_RATE_DEBUG);
++	err = tegra_emc_set_max_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEBUG);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -1327,7 +1233,7 @@ static int emc_icc_set(struct icc_node *src, struct icc_node *dst)
+ 	do_div(rate, ddr * dram_data_bus_width_bytes);
+ 	rate = min_t(u64, rate, U32_MAX);
+ 
+-	err = emc_set_min_rate(emc, rate, EMC_RATE_ICC);
++	err = tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_ICC);
+ 	if (err)
+ 		return err;
+ 
+@@ -1441,7 +1347,6 @@ static int tegra124_emc_probe(struct platform_device *pdev)
+ 	if (!emc)
+ 		return -ENOMEM;
+ 
+-	mutex_init(&emc->rate_lock);
+ 	emc->dev = &pdev->dev;
+ 
+ 	emc->regs = devm_platform_ioremap_resource(pdev, 0);
+@@ -1487,7 +1392,7 @@ static int tegra124_emc_probe(struct platform_device *pdev)
+ 	if (err)
+ 		return err;
+ 
+-	tegra124_emc_rate_requests_init(emc);
++	tegra_emc_rate_requests_init(&emc->reqs, &pdev->dev);
+ 
+ 	if (IS_ENABLED(CONFIG_DEBUG_FS))
+ 		emc_debugfs_init(&pdev->dev, emc);
+diff --git a/drivers/memory/tegra/tegra20-emc.c b/drivers/memory/tegra/tegra20-emc.c
+index a1fadefee7fdbd..1d564b80e2bb99 100644
+--- a/drivers/memory/tegra/tegra20-emc.c
++++ b/drivers/memory/tegra/tegra20-emc.c
+@@ -32,6 +32,7 @@
+ #include "../of_memory.h"
+ 
+ #include "mc.h"
++#include "tegra-emc-common.h"
+ 
+ #define EMC_INTSTATUS				0x000
+ #define EMC_INTMASK				0x004
+@@ -182,18 +183,6 @@ struct emc_timing {
+ 	u32 data[ARRAY_SIZE(emc_timing_registers)];
+ };
+ 
+-enum emc_rate_request_type {
+-	EMC_RATE_DEVFREQ,
+-	EMC_RATE_DEBUG,
+-	EMC_RATE_ICC,
+-	EMC_RATE_TYPE_MAX,
+-};
+-
+-struct emc_rate_request {
+-	unsigned long min_rate;
+-	unsigned long max_rate;
+-};
+-
+ struct tegra_emc {
+ 	struct device *dev;
+ 	struct tegra_mc *mc;
+@@ -212,14 +201,7 @@ struct tegra_emc {
+ 		unsigned long max_rate;
+ 	} debugfs;
+ 
+-	/*
+-	 * There are multiple sources in the EMC driver which could request
+-	 * a min/max clock rate, these rates are contained in this array.
+-	 */
+-	struct emc_rate_request requested_rate[EMC_RATE_TYPE_MAX];
+-
+-	/* protect shared rate-change code path */
+-	struct mutex rate_lock;
++	struct tegra_emc_rate_requests reqs;
+ 
+ 	struct devfreq_simple_ondemand_data ondemand_data;
+ 
+@@ -710,83 +692,6 @@ static long emc_round_rate(unsigned long rate,
+ 	return timing->rate;
+ }
+ 
+-static void tegra20_emc_rate_requests_init(struct tegra_emc *emc)
+-{
+-	unsigned int i;
+-
+-	for (i = 0; i < EMC_RATE_TYPE_MAX; i++) {
+-		emc->requested_rate[i].min_rate = 0;
+-		emc->requested_rate[i].max_rate = ULONG_MAX;
+-	}
+-}
+-
+-static int emc_request_rate(struct tegra_emc *emc,
+-			    unsigned long new_min_rate,
+-			    unsigned long new_max_rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = emc->requested_rate;
+-	unsigned long min_rate = 0, max_rate = ULONG_MAX;
+-	unsigned int i;
+-	int err;
+-
+-	/* select minimum and maximum rates among the requested rates */
+-	for (i = 0; i < EMC_RATE_TYPE_MAX; i++, req++) {
+-		if (i == type) {
+-			min_rate = max(new_min_rate, min_rate);
+-			max_rate = min(new_max_rate, max_rate);
+-		} else {
+-			min_rate = max(req->min_rate, min_rate);
+-			max_rate = min(req->max_rate, max_rate);
+-		}
+-	}
+-
+-	if (min_rate > max_rate) {
+-		dev_err_ratelimited(emc->dev, "%s: type %u: out of range: %lu %lu\n",
+-				    __func__, type, min_rate, max_rate);
+-		return -ERANGE;
+-	}
+-
+-	/*
+-	 * EMC rate-changes should go via OPP API because it manages voltage
+-	 * changes.
+-	 */
+-	err = dev_pm_opp_set_rate(emc->dev, min_rate);
+-	if (err)
+-		return err;
+-
+-	emc->requested_rate[type].min_rate = new_min_rate;
+-	emc->requested_rate[type].max_rate = new_max_rate;
+-
+-	return 0;
+-}
+-
+-static int emc_set_min_rate(struct tegra_emc *emc, unsigned long rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = &emc->requested_rate[type];
+-	int ret;
+-
+-	mutex_lock(&emc->rate_lock);
+-	ret = emc_request_rate(emc, rate, req->max_rate, type);
+-	mutex_unlock(&emc->rate_lock);
+-
+-	return ret;
+-}
+-
+-static int emc_set_max_rate(struct tegra_emc *emc, unsigned long rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = &emc->requested_rate[type];
+-	int ret;
+-
+-	mutex_lock(&emc->rate_lock);
+-	ret = emc_request_rate(emc, req->min_rate, rate, type);
+-	mutex_unlock(&emc->rate_lock);
+-
+-	return ret;
+-}
+-
+ /*
+  * debugfs interface
+  *
+@@ -857,7 +762,7 @@ static int tegra20_emc_debug_min_rate_set(void *data, u64 rate)
+ 	if (!tegra20_emc_validate_rate(emc, rate))
+ 		return -EINVAL;
+ 
+-	err = emc_set_min_rate(emc, rate, EMC_RATE_DEBUG);
++	err = tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEBUG);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -887,7 +792,7 @@ static int tegra20_emc_debug_max_rate_set(void *data, u64 rate)
+ 	if (!tegra20_emc_validate_rate(emc, rate))
+ 		return -EINVAL;
+ 
+-	err = emc_set_max_rate(emc, rate, EMC_RATE_DEBUG);
++	err = tegra_emc_set_max_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEBUG);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -993,7 +898,7 @@ static int emc_icc_set(struct icc_node *src, struct icc_node *dst)
+ 	do_div(rate, dram_data_bus_width_bytes);
+ 	rate = min_t(u64, rate, U32_MAX);
+ 
+-	err = emc_set_min_rate(emc, rate, EMC_RATE_ICC);
++	err = tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_ICC);
+ 	if (err)
+ 		return err;
+ 
+@@ -1111,7 +1016,7 @@ static int tegra20_emc_devfreq_target(struct device *dev, unsigned long *freq,
+ 	rate = dev_pm_opp_get_freq(opp);
+ 	dev_pm_opp_put(opp);
+ 
+-	return emc_set_min_rate(emc, rate, EMC_RATE_DEVFREQ);
++	return tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEVFREQ);
+ }
+ 
+ static int tegra20_emc_devfreq_get_dev_status(struct device *dev,
+@@ -1190,7 +1095,6 @@ static int tegra20_emc_probe(struct platform_device *pdev)
+ 	if (!emc)
+ 		return -ENOMEM;
+ 
+-	mutex_init(&emc->rate_lock);
+ 	emc->clk_nb.notifier_call = tegra20_emc_clk_change_notify;
+ 	emc->dev = &pdev->dev;
+ 
+@@ -1228,7 +1132,7 @@ static int tegra20_emc_probe(struct platform_device *pdev)
+ 		return err;
+ 
+ 	platform_set_drvdata(pdev, emc);
+-	tegra20_emc_rate_requests_init(emc);
++	tegra_emc_rate_requests_init(&emc->reqs, &pdev->dev);
+ 	tegra20_emc_debugfs_init(emc);
+ 	tegra20_emc_interconnect_init(emc);
+ 	tegra20_emc_devfreq_init(emc);
+diff --git a/drivers/memory/tegra/tegra30-emc.c b/drivers/memory/tegra/tegra30-emc.c
+index 5812c8cd6ce4fc..c1eacd66ce49fd 100644
+--- a/drivers/memory/tegra/tegra30-emc.c
++++ b/drivers/memory/tegra/tegra30-emc.c
+@@ -36,6 +36,7 @@
+ #include "../of_memory.h"
+ 
+ #include "mc.h"
++#include "tegra-emc-common.h"
+ 
+ #define EMC_INTSTATUS				0x000
+ #define EMC_INTMASK				0x004
+@@ -341,17 +342,6 @@ struct emc_timing {
+ 	bool emc_cfg_dyn_self_ref;
+ };
+ 
+-enum emc_rate_request_type {
+-	EMC_RATE_DEBUG,
+-	EMC_RATE_ICC,
+-	EMC_RATE_TYPE_MAX,
+-};
+-
+-struct emc_rate_request {
+-	unsigned long min_rate;
+-	unsigned long max_rate;
+-};
+-
+ struct tegra_emc {
+ 	struct device *dev;
+ 	struct tegra_mc *mc;
+@@ -383,14 +373,7 @@ struct tegra_emc {
+ 		unsigned long max_rate;
+ 	} debugfs;
+ 
+-	/*
+-	 * There are multiple sources in the EMC driver which could request
+-	 * a min/max clock rate, these rates are contained in this array.
+-	 */
+-	struct emc_rate_request requested_rate[EMC_RATE_TYPE_MAX];
+-
+-	/* protect shared rate-change code path */
+-	struct mutex rate_lock;
++	struct tegra_emc_rate_requests reqs;
+ 
+ 	bool mrr_error;
+ };
+@@ -1228,83 +1211,6 @@ static long emc_round_rate(unsigned long rate,
+ 	return timing->rate;
+ }
+ 
+-static void tegra30_emc_rate_requests_init(struct tegra_emc *emc)
+-{
+-	unsigned int i;
+-
+-	for (i = 0; i < EMC_RATE_TYPE_MAX; i++) {
+-		emc->requested_rate[i].min_rate = 0;
+-		emc->requested_rate[i].max_rate = ULONG_MAX;
+-	}
+-}
+-
+-static int emc_request_rate(struct tegra_emc *emc,
+-			    unsigned long new_min_rate,
+-			    unsigned long new_max_rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = emc->requested_rate;
+-	unsigned long min_rate = 0, max_rate = ULONG_MAX;
+-	unsigned int i;
+-	int err;
+-
+-	/* select minimum and maximum rates among the requested rates */
+-	for (i = 0; i < EMC_RATE_TYPE_MAX; i++, req++) {
+-		if (i == type) {
+-			min_rate = max(new_min_rate, min_rate);
+-			max_rate = min(new_max_rate, max_rate);
+-		} else {
+-			min_rate = max(req->min_rate, min_rate);
+-			max_rate = min(req->max_rate, max_rate);
+-		}
+-	}
+-
+-	if (min_rate > max_rate) {
+-		dev_err_ratelimited(emc->dev, "%s: type %u: out of range: %lu %lu\n",
+-				    __func__, type, min_rate, max_rate);
+-		return -ERANGE;
+-	}
+-
+-	/*
+-	 * EMC rate-changes should go via OPP API because it manages voltage
+-	 * changes.
+-	 */
+-	err = dev_pm_opp_set_rate(emc->dev, min_rate);
+-	if (err)
+-		return err;
+-
+-	emc->requested_rate[type].min_rate = new_min_rate;
+-	emc->requested_rate[type].max_rate = new_max_rate;
+-
+-	return 0;
+-}
+-
+-static int emc_set_min_rate(struct tegra_emc *emc, unsigned long rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = &emc->requested_rate[type];
+-	int ret;
+-
+-	mutex_lock(&emc->rate_lock);
+-	ret = emc_request_rate(emc, rate, req->max_rate, type);
+-	mutex_unlock(&emc->rate_lock);
+-
+-	return ret;
+-}
+-
+-static int emc_set_max_rate(struct tegra_emc *emc, unsigned long rate,
+-			    enum emc_rate_request_type type)
+-{
+-	struct emc_rate_request *req = &emc->requested_rate[type];
+-	int ret;
+-
+-	mutex_lock(&emc->rate_lock);
+-	ret = emc_request_rate(emc, req->min_rate, rate, type);
+-	mutex_unlock(&emc->rate_lock);
+-
+-	return ret;
+-}
+-
+ /*
+  * debugfs interface
+  *
+@@ -1375,7 +1281,7 @@ static int tegra30_emc_debug_min_rate_set(void *data, u64 rate)
+ 	if (!tegra30_emc_validate_rate(emc, rate))
+ 		return -EINVAL;
+ 
+-	err = emc_set_min_rate(emc, rate, EMC_RATE_DEBUG);
++	err = tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEBUG);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -1405,7 +1311,7 @@ static int tegra30_emc_debug_max_rate_set(void *data, u64 rate)
+ 	if (!tegra30_emc_validate_rate(emc, rate))
+ 		return -EINVAL;
+ 
+-	err = emc_set_max_rate(emc, rate, EMC_RATE_DEBUG);
++	err = tegra_emc_set_max_rate(&emc->reqs, rate, TEGRA_EMC_RATE_DEBUG);
+ 	if (err < 0)
+ 		return err;
+ 
+@@ -1511,7 +1417,7 @@ static int emc_icc_set(struct icc_node *src, struct icc_node *dst)
+ 	do_div(rate, ddr * dram_data_bus_width_bytes);
+ 	rate = min_t(u64, rate, U32_MAX);
+ 
+-	err = emc_set_min_rate(emc, rate, EMC_RATE_ICC);
++	err = tegra_emc_set_min_rate(&emc->reqs, rate, TEGRA_EMC_RATE_ICC);
+ 	if (err)
+ 		return err;
+ 
+@@ -1622,7 +1528,6 @@ static int tegra30_emc_probe(struct platform_device *pdev)
+ 	if (IS_ERR(emc->mc))
+ 		return PTR_ERR(emc->mc);
+ 
+-	mutex_init(&emc->rate_lock);
+ 	emc->clk_nb.notifier_call = emc_clk_change_notify;
+ 	emc->dev = &pdev->dev;
+ 
+@@ -1664,7 +1569,7 @@ static int tegra30_emc_probe(struct platform_device *pdev)
+ 		return err;
+ 
+ 	platform_set_drvdata(pdev, emc);
+-	tegra30_emc_rate_requests_init(emc);
++	tegra_emc_rate_requests_init(&emc->reqs, &pdev->dev);
+ 	tegra30_emc_debugfs_init(emc);
+ 	tegra30_emc_interconnect_init(emc);
+ 
+-- 
+cgit 1.3.1-korg
+

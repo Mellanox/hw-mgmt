@@ -1,0 +1,23 @@
+From 7ddca4500140053ab0d0fba4f30f9bdcf66985d0 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Tue, 6 May 2025 15:31:15 +0200
+Subject: [PATCH 0259/0797] soc/tegra: Add Tegra264 APBMISC compatible string
+
+Link: https://lore.kernel.org/r/20250506133118.1011777-9-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/soc/tegra/fuse/tegra-apbmisc.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/soc/tegra/fuse/tegra-apbmisc.c b/drivers/soc/tegra/fuse/tegra-apbmisc.c
+index e2ca5d55fd312..0ce94fdc536fb 100644
+--- a/drivers/soc/tegra/fuse/tegra-apbmisc.c
++++ b/drivers/soc/tegra/fuse/tegra-apbmisc.c
+@@ -128,6 +128,7 @@ static const struct of_device_id apbmisc_match[] __initconst = {
+ 	{ .compatible = "nvidia,tegra186-misc", },
+ 	{ .compatible = "nvidia,tegra194-misc", },
+ 	{ .compatible = "nvidia,tegra234-misc", },
++	{ .compatible = "nvidia,tegra264-misc", },
+ 	{},
+ };
+ 

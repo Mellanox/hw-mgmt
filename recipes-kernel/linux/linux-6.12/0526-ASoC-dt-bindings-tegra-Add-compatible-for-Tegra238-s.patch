@@ -1,0 +1,32 @@
+From a8df7892a9f42b2e2d5851f8835c734bd7fe8ad4 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Mon, 2 Mar 2026 14:23:22 +0530
+Subject: [PATCH 0526/0797] ASoC: dt-bindings: tegra: Add compatible for Tegra238 sound card
+
+Tegra238 requires different PLLA and PLLA_OUT0 clock rates compared to
+other Tegra platforms. Add Tegra238 compatible string to the APE
+tegra-audio-graph-card bindings.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Acked-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Link: https://patch.msgid.link/20260302085323.3139571-2-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml         | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml
+index da89523ccf5f86..92bc3ef56f2c3b 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-graph-card.yaml
+@@ -23,6 +23,7 @@ properties:
+     enum:
+       - nvidia,tegra210-audio-graph-card
+       - nvidia,tegra186-audio-graph-card
++      - nvidia,tegra238-audio-graph-card
+       - nvidia,tegra264-audio-graph-card
+ 
+   clocks:
+-- 
+cgit 1.3.1-korg
+

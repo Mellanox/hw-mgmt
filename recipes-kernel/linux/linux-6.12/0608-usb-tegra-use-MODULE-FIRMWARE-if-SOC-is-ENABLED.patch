@@ -1,0 +1,58 @@
+From 448f428a4b54bb589a6da1f23edcb941098e2953 Mon Sep 17 00:00:00 2001
+From: Nicolas Chauvet <kwizart@gmail.com>
+Date: Mon, 23 Mar 2026 15:02:48 +0100
+Subject: [PATCH 0608/0797] usb: tegra: use MODULE_FIRMWARE if SOC is ENABLED
+
+This allows to reduce the size of the initramfs by only selecting
+the related firmware when a given SOC is enabled.
+
+Signed-off-by: Nicolas Chauvet <kwizart@gmail.com>
+Link: https://patch.msgid.link/20260323140249.173603-1-kwizart@gmail.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/host/xhci-tegra.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/usb/host/xhci-tegra.c b/drivers/usb/host/xhci-tegra.c
+index ed4b11f8d298e2..d2214d309e9650 100644
+--- a/drivers/usb/host/xhci-tegra.c
++++ b/drivers/usb/host/xhci-tegra.c
+@@ -2562,7 +2562,9 @@ static const struct tegra_xusb_soc tegra124_soc = {
+ 		.smi_intr = XUSB_CFG_ARU_SMI_INTR,
+ 	},
+ };
++#if IS_ENABLED(CONFIG_ARCH_TEGRA_124_SOC) || IS_ENABLED(CONFIG_ARCH_TEGRA_132_SOC)
+ MODULE_FIRMWARE("nvidia/tegra124/xusb.bin");
++#endif
+ 
+ static const char * const tegra210_supply_names[] = {
+ 	"dvddio-pex",
+@@ -2600,11 +2602,15 @@ static const struct tegra_xusb_soc tegra210_soc = {
+ 		.smi_intr = XUSB_CFG_ARU_SMI_INTR,
+ 	},
+ };
++#if IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)
+ MODULE_FIRMWARE("nvidia/tegra210/xusb.bin");
++#endif
+ 
+ static const char * const tegra186_supply_names[] = {
+ };
++#if IS_ENABLED(CONFIG_ARCH_TEGRA_186_SOC)
+ MODULE_FIRMWARE("nvidia/tegra186/xusb.bin");
++#endif
+ 
+ static const struct tegra_xusb_phy_type tegra186_phy_types[] = {
+ 	{ .name = "usb3", .num = 3, },
+@@ -2677,7 +2683,9 @@ static const struct tegra_xusb_soc tegra194_soc = {
+ 	},
+ 	.lpm_support = true,
+ };
++#if IS_ENABLED(CONFIG_ARCH_TEGRA_194_SOC)
+ MODULE_FIRMWARE("nvidia/tegra194/xusb.bin");
++#endif
+ 
+ static const struct tegra_xusb_soc_ops tegra234_ops = {
+ 	.mbox_reg_readl = &bar2_readl,
+-- 
+cgit 1.3.1-korg
+

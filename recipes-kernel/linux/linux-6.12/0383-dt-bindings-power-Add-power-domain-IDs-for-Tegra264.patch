@@ -1,0 +1,48 @@
+From 25937d399be2ee9852103a41aaca42d91b140d79 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Thu, 9 Oct 2025 18:10:39 +0200
+Subject: [PATCH 0383/0797] dt-bindings: power: Add power domain IDs for Tegra264
+
+Add the set of power domain IDs available on the Tegra264 SoC so that
+they can be used in device tree files.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ include/dt-bindings/power/nvidia,tegra264-bpmp.h | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+ create mode 100644 include/dt-bindings/power/nvidia,tegra264-bpmp.h
+
+diff --git a/include/dt-bindings/power/nvidia,tegra264-bpmp.h b/include/dt-bindings/power/nvidia,tegra264-bpmp.h
+new file mode 100644
+index 00000000000000..2eef4a2a02b01e
+--- /dev/null
++++ b/include/dt-bindings/power/nvidia,tegra264-bpmp.h
+@@ -0,0 +1,24 @@
++/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)  */
++/* Copyright (c) 2022-2024, NVIDIA CORPORATION.  All rights reserved. */
++
++#ifndef DT_BINDINGS_POWER_NVIDIA_TEGRA264_BPMP_H
++#define DT_BINDINGS_POWER_NVIDIA_TEGRA264_BPMP_H
++
++#define TEGRA264_POWER_DOMAIN_DISP	1
++#define TEGRA264_POWER_DOMAIN_AUD	2
++/* reserved 3:9 */
++#define TEGRA264_POWER_DOMAIN_XUSB_SS	10
++#define TEGRA264_POWER_DOMAIN_XUSB_DEV	11
++#define TEGRA264_POWER_DOMAIN_XUSB_HOST	12
++#define TEGRA264_POWER_DOMAIN_MGBE0	13
++#define TEGRA264_POWER_DOMAIN_MGBE1	14
++#define TEGRA264_POWER_DOMAIN_MGBE2	15
++#define TEGRA264_POWER_DOMAIN_MGBE3	16
++#define TEGRA264_POWER_DOMAIN_VI	17
++#define TEGRA264_POWER_DOMAIN_VIC	18
++#define TEGRA264_POWER_DOMAIN_ISP0	19
++#define TEGRA264_POWER_DOMAIN_ISP1	20
++#define TEGRA264_POWER_DOMAIN_PVA0	21
++#define TEGRA264_POWER_DOMAIN_GPU	22
++
++#endif /* DT_BINDINGS_POWER_NVIDIA_TEGRA264_BPMP_H */
+-- 
+cgit 1.3.1-korg
+

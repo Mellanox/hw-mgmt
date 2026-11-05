@@ -1,0 +1,85 @@
+From 00d6070ec02c55731c7655b3227edd8b84bbcdbc Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 1 Apr 2026 11:24:57 +0000
+Subject: [PATCH 0609/0797] ASoC: tegra: Add error logging in tegra210_admaif driver
+
+Log errors in the Tegra210 ADMAIF probe and runtime callback paths.
+Drop redundant dev_err() at tegra_isomgr_adma_register() call site
+since it already logs errors internally.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260401112500.4076861-2-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_admaif.c | 22 ++++++++++------------
+ 1 file changed, 10 insertions(+), 12 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_admaif.c b/sound/soc/tegra/tegra210_admaif.c
+index 0976779d29f286..b6a3db8fce08c0 100644
+--- a/sound/soc/tegra/tegra210_admaif.c
++++ b/sound/soc/tegra/tegra210_admaif.c
+@@ -408,6 +408,7 @@ static int tegra_admaif_start(struct snd_soc_dai *dai, int direction)
+ 		reg = CH_RX_REG(TEGRA_ADMAIF_RX_ENABLE, dai->id);
+ 		break;
+ 	default:
++		dev_err(dai->dev, "invalid stream direction: %d\n", direction);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -441,6 +442,7 @@ static int tegra_admaif_stop(struct snd_soc_dai *dai, int direction)
+ 		reset_reg = CH_RX_REG(TEGRA_ADMAIF_RX_SOFT_RESET, dai->id);
+ 		break;
+ 	default:
++		dev_err(dai->dev, "invalid stream direction: %d\n", direction);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -489,6 +491,7 @@ static int tegra_admaif_trigger(struct snd_pcm_substream *substream, int cmd,
+ 	case SNDRV_PCM_TRIGGER_SUSPEND:
+ 		return tegra_admaif_stop(dai, substream->stream);
+ 	default:
++		dev_err(dai->dev, "invalid trigger command: %d\n", cmd);
+ 		return -EINVAL;
+ 	}
+ }
+@@ -958,18 +961,15 @@ static int tegra_admaif_probe(struct platform_device *pdev)
+ 
+ 	admaif->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
+ 					       admaif->soc_data->regmap_conf);
+-	if (IS_ERR(admaif->regmap)) {
+-		dev_err(&pdev->dev, "regmap init failed\n");
+-		return PTR_ERR(admaif->regmap);
+-	}
++	if (IS_ERR(admaif->regmap))
++		return dev_err_probe(&pdev->dev, PTR_ERR(admaif->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(admaif->regmap, true);
+ 
+ 	err = tegra_isomgr_adma_register(&pdev->dev);
+-	if (err) {
+-		dev_err(&pdev->dev, "Failed to add interconnect path\n");
++	if (err)
+ 		return err;
+-	}
+ 
+ 	regmap_update_bits(admaif->regmap, admaif->soc_data->global_base +
+ 			   TEGRA_ADMAIF_GLOBAL_ENABLE, 1, 1);
+@@ -1009,11 +1009,9 @@ static int tegra_admaif_probe(struct platform_device *pdev)
+ 					      admaif->soc_data->cmpnt,
+ 					      admaif->soc_data->dais,
+ 					      admaif->soc_data->num_ch);
+-	if (err) {
+-		dev_err(&pdev->dev,
+-			"can't register ADMAIF component, err: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(&pdev->dev, err,
++				     "can't register ADMAIF component\n");
+ 
+ 	pm_runtime_enable(&pdev->dev);
+ 
+-- 
+cgit 1.3.1-korg
+

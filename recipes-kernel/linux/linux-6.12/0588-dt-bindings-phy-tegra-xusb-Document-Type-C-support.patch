@@ -1,0 +1,123 @@
+From d4e0199bb5545acdfe5ce9d8046f4f35c95d6b8a Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 23 Feb 2026 15:32:56 +0100
+Subject: [PATCH 0588/0797] dt-bindings: phy: tegra-xusb: Document Type C support
+
+Each XUSB PHY can be hooked up to a Type C controller via a port
+property, so document this in the bindings accordingly.
+
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../bindings/phy/nvidia,tegra194-xusb-padctl.yaml  | 39 +++++++++++++++++++++-
+ 1 file changed, 38 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/phy/nvidia,tegra194-xusb-padctl.yaml b/Documentation/devicetree/bindings/phy/nvidia,tegra194-xusb-padctl.yaml
+index 6e339839962876..d8de900a4fcee0 100644
+--- a/Documentation/devicetree/bindings/phy/nvidia,tegra194-xusb-padctl.yaml
++++ b/Documentation/devicetree/bindings/phy/nvidia,tegra194-xusb-padctl.yaml
+@@ -230,6 +230,10 @@ properties:
+           connector:
+             type: object
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+           mode:
+             description: A string that determines the mode in which to
+               run the port.
+@@ -256,7 +260,12 @@ properties:
+               voltage.
+ 
+         dependencies:
+-          usb-role-switch: [ connector ]
++          usb-role-switch:
++            oneOf:
++              - required:
++                  - connector
++              - required:
++                  - port
+ 
+       usb2-1:
+         type: object
+@@ -268,6 +277,10 @@ properties:
+           connector:
+             type: object
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+           mode:
+             description: A string that determines the mode in which to
+               run the port.
+@@ -306,6 +319,10 @@ properties:
+           connector:
+             type: object
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+           mode:
+             description: A string that determines the mode in which to
+               run the port.
+@@ -344,6 +361,10 @@ properties:
+           connector:
+             type: object
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+           mode:
+             description: A string that determines the mode in which to
+               run the port.
+@@ -405,6 +426,10 @@ properties:
+             description: A phandle to the regulator supplying the VBUS
+               voltage.
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+       usb3-1:
+         type: object
+         additionalProperties: false
+@@ -438,6 +463,10 @@ properties:
+             description: A phandle to the regulator supplying the VBUS
+               voltage.
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+       usb3-2:
+         type: object
+         additionalProperties: false
+@@ -471,6 +500,10 @@ properties:
+             description: A phandle to the regulator supplying the VBUS
+               voltage.
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+       usb3-3:
+         type: object
+         additionalProperties: false
+@@ -504,6 +537,10 @@ properties:
+             description: A phandle to the regulator supplying the VBUS
+               voltage.
+ 
++          port:
++            description: connection to a USB Type C controller
++            $ref: /schemas/graph.yaml#/properties/port
++
+ additionalProperties: false
+ 
+ required:
+-- 
+cgit 1.3.1-korg
+

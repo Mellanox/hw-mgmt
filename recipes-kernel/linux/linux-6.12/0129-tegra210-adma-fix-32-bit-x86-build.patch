@@ -1,0 +1,88 @@
+From d440148418f4816b4973ec6723bf63821793a0a7 Mon Sep 17 00:00:00 2001
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Sat, 15 Feb 2025 09:28:55 -0800
+Subject: [PATCH 0129/0797] tegra210-adma: fix 32-bit x86 build
+
+The Tegra210 Audio DMA controller driver did a plain divide:
+
+	page_no = (res_page->start - res_base->start) / cdata->ch_base_offset;
+
+which causes problems on 32-bit x86 configurations that have 64-bit
+resource sizes:
+
+  x86_64-linux-ld: drivers/dma/tegra210-adma.o: in function `tegra_adma_probe':
+  tegra210-adma.c:(.text+0x1322): undefined reference to `__udivdi3'
+
+because gcc doesn't generate the trivial code for a 64-by-32 divide,
+turning it into a function call to do a full 64-by-64 divide.  And the
+kernel intentionally doesn't provide that helper function, because 99%
+of the time all you want is the narrower version.
+
+Of course, tegra210 is a 64-bit architecture and the 32-bit x86 build is
+purely for build testing, so this really is just about build coverage
+failure.
+
+But build coverage is good.
+
+Side note: div_u64() would be suboptimal if you actually have a 32-bit
+resource_t, so our "helper" for divides are admittedly making it harder
+than it should be to generate good code for all the possible cases.
+
+At some point, I'll consider 32-bit x86 so entirely legacy that I can't
+find it in myself to care any more, and we'll just add the __udivdi3
+library function.
+
+But for now, the right thing to do is to use "div_u64()" to show that
+you know that you are doing the simpler divide with a 32-bit number.
+And the build error enforces that.
+
+While fixing the build issue, also check for division-by-zero, and for
+overflow.  Which hopefully cannot happen on real production hardware,
+but the value of 'ch_base_offset' can definitely be zero in other
+places.
+
+Reported-by: Guenter Roeck <linux@roeck-us.net>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ drivers/dma/tegra210-adma.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/dma/tegra210-adma.c b/drivers/dma/tegra210-adma.c
+index 6896da8ac7ef6b..5c6a5b35898732 100644
+--- a/drivers/dma/tegra210-adma.c
++++ b/drivers/dma/tegra210-adma.c
+@@ -887,7 +887,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
+ 	const struct tegra_adma_chip_data *cdata;
+ 	struct tegra_adma *tdma;
+ 	struct resource *res_page, *res_base;
+-	int ret, i, page_no;
++	int ret, i;
+ 
+ 	cdata = of_device_get_match_data(&pdev->dev);
+ 	if (!cdata) {
+@@ -914,9 +914,20 @@ static int tegra_adma_probe(struct platform_device *pdev)
+ 
+ 		res_base = platform_get_resource_byname(pdev, IORESOURCE_MEM, "global");
+ 		if (res_base) {
+-			page_no = (res_page->start - res_base->start) / cdata->ch_base_offset;
+-			if (page_no <= 0)
++			resource_size_t page_offset, page_no;
++			unsigned int ch_base_offset;
++
++			if (res_page->start < res_base->start)
++				return -EINVAL;
++			page_offset = res_page->start - res_base->start;
++			ch_base_offset = cdata->ch_base_offset;
++			if (!ch_base_offset)
+ 				return -EINVAL;
++
++			page_no = div_u64(page_offset, ch_base_offset);
++			if (!page_no || page_no > INT_MAX)
++				return -EINVAL;
++
+ 			tdma->ch_page_no = page_no - 1;
+ 			tdma->base_addr = devm_ioremap_resource(&pdev->dev, res_base);
+ 			if (IS_ERR(tdma->base_addr))
+-- 
+cgit 1.3.1-korg
+

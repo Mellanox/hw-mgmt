@@ -1,0 +1,151 @@
+From d01e4f1e7aa8833f549ac61a0bbcdc395533269b Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Thu, 10 Jul 2025 01:13:59 +0200
+Subject: [PATCH 0285/0797] arm64: tegra: Add p3971-0089+p3834-0008 support
+
+The P3971-0089+P3834-0008 is an engineering reference platform for the
+Tegra264 SoC.
+
+Link: https://lore.kernel.org/r/20250709231401.3767130-3-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/Makefile                |  2 ++
+ .../arm64/boot/dts/nvidia/tegra264-p3834-0008.dtsi |  7 +++++
+ arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi     | 30 ++++++++++++++++++++++
+ .../dts/nvidia/tegra264-p3971-0089+p3834-0008.dts  | 11 ++++++++
+ .../boot/dts/nvidia/tegra264-p3971-0089+p3834.dtsi | 14 ++++++++++
+ .../arm64/boot/dts/nvidia/tegra264-p3971-0089.dtsi |  3 +++
+ arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi     |  4 +++
+ 7 files changed, 71 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/nvidia/tegra264-p3834-0008.dtsi
+ create mode 100644 arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+ create mode 100644 arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834-0008.dts
+ create mode 100644 arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834.dtsi
+ create mode 100644 arch/arm64/boot/dts/nvidia/tegra264-p3971-0089.dtsi
+ create mode 100644 arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi
+
+diff --git a/arch/arm64/boot/dts/nvidia/Makefile b/arch/arm64/boot/dts/nvidia/Makefile
+index 0fbb8a494dba50..171e08c94d5a21 100644
+--- a/arch/arm64/boot/dts/nvidia/Makefile
++++ b/arch/arm64/boot/dts/nvidia/Makefile
+@@ -12,6 +12,7 @@ DTC_FLAGS_tegra234-p3737-0000+p3701-0000 := -@
+ DTC_FLAGS_tegra234-p3740-0002+p3701-0008 := -@
+ DTC_FLAGS_tegra234-p3768-0000+p3767-0000 := -@
+ DTC_FLAGS_tegra234-p3768-0000+p3767-0005 := -@
++DTC_FLAGS_tegra264-p3971-0089+p3834-0008 := -@
+ 
+ dtb-$(CONFIG_ARCH_TEGRA_132_SOC) += tegra132-norrin.dtb
+ dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p2371-0000.dtb
+@@ -31,3 +32,4 @@ dtb-$(CONFIG_ARCH_TEGRA_234_SOC) += tegra234-p3737-0000+p3701-0008.dtb
+ dtb-$(CONFIG_ARCH_TEGRA_234_SOC) += tegra234-p3740-0002+p3701-0008.dtb
+ dtb-$(CONFIG_ARCH_TEGRA_234_SOC) += tegra234-p3768-0000+p3767-0000.dtb
+ dtb-$(CONFIG_ARCH_TEGRA_234_SOC) += tegra234-p3768-0000+p3767-0005.dtb
++dtb-$(CONFIG_ARCH_TEGRA_264_SOC) += tegra264-p3971-0089+p3834-0008.dtb
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3834-0008.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3834-0008.dtsi
+new file mode 100644
+index 00000000000000..94ace678474978
+--- /dev/null
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3834-0008.dtsi
+@@ -0,0 +1,7 @@
++// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
++
++#include "tegra264-p3834.dtsi"
++
++/ {
++	compatible = "nvidia,p3834-0008", "nvidia,tegra264";
++};
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+new file mode 100644
+index 00000000000000..06795c82427ad1
+--- /dev/null
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+@@ -0,0 +1,30 @@
++// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
++
++#include "tegra264.dtsi"
++
++/ {
++	compatible = "nvidia,p3834", "nvidia,tegra264";
++
++	aliases {
++	};
++
++	bus@0 {
++		serial@c4e0000 {
++			status = "okay";
++		};
++
++		serial@c5a0000 {
++			status = "okay";
++		};
++	};
++
++	bus@8100000000 {
++		iommu@5000000 {
++			status = "okay";
++		};
++
++		iommu@6000000 {
++			status = "okay";
++		};
++	};
++};
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834-0008.dts b/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834-0008.dts
+new file mode 100644
+index 00000000000000..3a6f4b7e6b7560
+--- /dev/null
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834-0008.dts
+@@ -0,0 +1,11 @@
++// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
++/dts-v1/;
++
++// module files must be included first
++#include "tegra264-p3834-0008.dtsi"
++#include "tegra264-p3971-0089+p3834.dtsi"
++
++/ {
++	model = "NVIDIA P3971-0089+P3834-0008 Engineering Reference Platform";
++	compatible = "nvidia,p3971-0089+p3834-0008", "nvidia,p3834-0008", "nvidia,tegra264";
++};
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834.dtsi
+new file mode 100644
+index 00000000000000..46cfa8f1da1cc9
+--- /dev/null
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089+p3834.dtsi
+@@ -0,0 +1,14 @@
++// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
++
++#include "tegra264-p3971-0089.dtsi"
++
++/ {
++	aliases {
++		serial0 = &{/bus@0/serial@c4e0000};
++		serial1 = &{/bus@0/serial@c5a0000};
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++};
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089.dtsi
+new file mode 100644
+index 00000000000000..e8576cf2a0b68e
+--- /dev/null
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3971-0089.dtsi
+@@ -0,0 +1,3 @@
++// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
++
++#include "tegra264-p3971.dtsi"
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi
+new file mode 100644
+index 00000000000000..6b6259b7310fb1
+--- /dev/null
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi
+@@ -0,0 +1,4 @@
++// SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
++
++/ {
++};
+-- 
+cgit 1.3.1-korg
+

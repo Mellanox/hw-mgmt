@@ -1,0 +1,30 @@
+From bb8c97571db58e149a820dfca44ba2d960182247 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Wed, 7 May 2025 16:37:55 +0200
+Subject: [PATCH 0277/0797] dt-bindings: dma: Add Tegra264 compatible string
+
+Document the compatible string used for the GPCDMA controller on
+Tegra264.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250507143802.1230919-2-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml b/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml
+index a790e56878447e..0dabe9bbb219ba 100644
+--- a/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml
++++ b/Documentation/devicetree/bindings/dma/nvidia,tegra186-gpc-dma.yaml
+@@ -24,6 +24,7 @@ properties:
+       - const: nvidia,tegra186-gpcdma
+       - items:
+           - enum:
++              - nvidia,tegra264-gpcdma
+               - nvidia,tegra234-gpcdma
+               - nvidia,tegra194-gpcdma
+           - const: nvidia,tegra186-gpcdma
+-- 
+cgit 1.3.1-korg
+

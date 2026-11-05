@@ -1,0 +1,69 @@
+From 961e69a5dc78491f6c8402c6016c5d6e3c1f11f7 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sat, 16 Aug 2025 01:03:21 -0500
+Subject: [PATCH 0427/0797] arm64: tegra: Enable NVDEC and NVENC on Tegra210
+
+The other engines are already enabled, finish filling out the media
+engine nodes and power domains.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210.dtsi | 28 ++++++++++++++++++++++++++--
+ 1 file changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210.dtsi b/arch/arm64/boot/dts/nvidia/tegra210.dtsi
+index ba0b52e4aec90d..96b6b9bc0a7f8c 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210.dtsi
+@@ -299,13 +299,25 @@
+ 		nvdec@54480000 {
+ 			compatible = "nvidia,tegra210-nvdec";
+ 			reg = <0x0 0x54480000 0x0 0x00040000>;
+-			status = "disabled";
++			clocks = <&tegra_car TEGRA210_CLK_NVDEC>;
++			clock-names = "nvdec";
++			resets = <&tegra_car 194>;
++			reset-names = "nvdec";
++
++			iommus = <&mc TEGRA_SWGROUP_NVDEC>;
++			power-domains = <&pd_nvdec>;
+ 		};
+ 
+ 		nvenc@544c0000 {
+ 			compatible = "nvidia,tegra210-nvenc";
+ 			reg = <0x0 0x544c0000 0x0 0x00040000>;
+-			status = "disabled";
++			clocks = <&tegra_car TEGRA210_CLK_NVENC>;
++			clock-names = "nvenc";
++			resets = <&tegra_car 219>;
++			reset-names = "nvenc";
++
++			iommus = <&mc TEGRA_SWGROUP_NVENC>;
++			power-domains = <&pd_nvenc>;
+ 		};
+ 
+ 		tsec@54500000 {
+@@ -932,6 +944,18 @@
+ 				#power-domain-cells = <0>;
+ 			};
+ 
++			pd_nvenc: mpe {
++				clocks = <&tegra_car TEGRA210_CLK_NVENC>;
++				resets = <&tegra_car 219>;
++				#power-domain-cells = <0>;
++			};
++
++			pd_nvdec: nvdec {
++				clocks = <&tegra_car TEGRA210_CLK_NVDEC>;
++				resets = <&tegra_car 194>;
++				#power-domain-cells = <0>;
++			};
++
+ 			pd_sor: sor {
+ 				clocks = <&tegra_car TEGRA210_CLK_SOR0>,
+ 					 <&tegra_car TEGRA210_CLK_SOR1>,
+-- 
+cgit 1.3.1-korg
+

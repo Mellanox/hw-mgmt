@@ -1,0 +1,82 @@
+From 7cfd76f086c640119f4c5201115cf73488cabdcb Mon Sep 17 00:00:00 2001
+From: Francesco Dolcini <francesco.dolcini@toradex.com>
+Date: Thu, 10 Apr 2025 08:39:19 +0200
+Subject: [PATCH 0215/0797] ARM: tegra: apalis-eval: Remove pcie-switch node
+
+The compatible "plx,pex8605" does not exist, there is no DT binding for
+it and there was never a driver matching this compatible, remove it.
+
+Signed-off-by: Francesco Dolcini <francesco.dolcini@toradex.com>
+Link: https://lore.kernel.org/r/20250410063919.11199-1-francesco@dolcini.it
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra124-apalis-eval.dts      | 5 -----
+ arch/arm/boot/dts/nvidia/tegra124-apalis-v1.2-eval.dts | 5 -----
+ arch/arm/boot/dts/nvidia/tegra30-apalis-eval.dts       | 5 -----
+ arch/arm/boot/dts/nvidia/tegra30-apalis-v1.1-eval.dts  | 5 -----
+ 4 files changed, 20 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra124-apalis-eval.dts b/arch/arm/boot/dts/nvidia/tegra124-apalis-eval.dts
+index 0f3debeb294b7..1aa7265554d99 100644
+--- a/arch/arm/boot/dts/nvidia/tegra124-apalis-eval.dts
++++ b/arch/arm/boot/dts/nvidia/tegra124-apalis-eval.dts
+@@ -84,11 +84,6 @@
+ 		status = "okay";
+ 		clock-frequency = <400000>;
+ 
+-		pcie-switch@58 {
+-			compatible = "plx,pex8605";
+-			reg = <0x58>;
+-		};
+-
+ 		/* M41T0M6 real time clock on carrier board */
+ 		rtc@68 {
+ 			compatible = "st,m41t0";
+diff --git a/arch/arm/boot/dts/nvidia/tegra124-apalis-v1.2-eval.dts b/arch/arm/boot/dts/nvidia/tegra124-apalis-v1.2-eval.dts
+index d13b8d25ca6a9..23158bb821731 100644
+--- a/arch/arm/boot/dts/nvidia/tegra124-apalis-v1.2-eval.dts
++++ b/arch/arm/boot/dts/nvidia/tegra124-apalis-v1.2-eval.dts
+@@ -85,11 +85,6 @@
+ 		status = "okay";
+ 		clock-frequency = <400000>;
+ 
+-		pcie-switch@58 {
+-			compatible = "plx,pex8605";
+-			reg = <0x58>;
+-		};
+-
+ 		/* M41T0M6 real time clock on carrier board */
+ 		rtc@68 {
+ 			compatible = "st,m41t0";
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-apalis-eval.dts b/arch/arm/boot/dts/nvidia/tegra30-apalis-eval.dts
+index fc284155cd764..ccb9f29c5de38 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-apalis-eval.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-apalis-eval.dts
+@@ -91,11 +91,6 @@
+ 		status = "okay";
+ 		clock-frequency = <400000>;
+ 
+-		pcie-switch@58 {
+-			compatible = "plx,pex8605";
+-			reg = <0x58>;
+-		};
+-
+ 		/* M41T0M6 real time clock on carrier board */
+ 		rtc@68 {
+ 			compatible = "st,m41t0";
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-apalis-v1.1-eval.dts b/arch/arm/boot/dts/nvidia/tegra30-apalis-v1.1-eval.dts
+index 9d08e2b094b41..bc353324df438 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-apalis-v1.1-eval.dts
++++ b/arch/arm/boot/dts/nvidia/tegra30-apalis-v1.1-eval.dts
+@@ -92,11 +92,6 @@
+ 		status = "okay";
+ 		clock-frequency = <400000>;
+ 
+-		pcie-switch@58 {
+-			compatible = "plx,pex8605";
+-			reg = <0x58>;
+-		};
+-
+ 		/* M41T0M6 real time clock on carrier board */
+ 		rtc@68 {
+ 			compatible = "st,m41t0";

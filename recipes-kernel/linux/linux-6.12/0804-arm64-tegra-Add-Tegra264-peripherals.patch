@@ -1,0 +1,370 @@
+From d51928a36fa4 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 22 Jun 2026 15:57:41 +0900
+Subject: [PATCH] arm64: tegra: Add Tegra264 peripherals
+
+Add the Tegra264 pinctrl, GTE, Host1x/VIC, PWM and PCIe root-port nodes.
+Enable GPCDMA on P3834 and the PWM fan on P4071.
+
+Upstream commits:
+2863b8f38f5e arm64: tegra: Add GTE nodes for Tegra264
+a112f2f5171d arm64: tegra: Add pinctrl nodes for Tegra264
+d51928a36fa4 arm64: tegra: Add Host1x and VIC on Tegra264
+dd3b6f7adcc5 arm64: tegra: Add PWM controllers on Tegra264
+b86eaddf467a arm64: tegra: Add PCIe root ports on Tegra264
+
+---
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+index 7e2c3e66c..58cd81bc3 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+@@ -9,6 +9,10 @@ aliases {
+ 	};
+ 
+ 	bus@0 {
++		dma-controller@8400000 {
++			status = "okay";
++		};
++
+ 		serial@c4e0000 {
+ 			status = "okay";
+ 		};
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p4071-0000+p3834.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p4071-0000+p3834.dtsi
+index 45f8df9bb..4550e843f 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264-p4071-0000+p3834.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p4071-0000+p3834.dtsi
+@@ -9,4 +9,17 @@ aliases {
+ 	chosen {
+ 		stdout-path = "serial0:115200n8";
+ 	};
++
++	bus@0 {
++		pwm@c6a0000 {
++			status = "okay";
++		};
++	};
++
++	fan: pwm-fan {
++		compatible = "pwm-fan";
++		cooling-levels = <77 102 140 192 255>;
++		pwms = <&pwm4 0 40000>;
++		#cooling-cells = <2>;
++	};
+ };
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264.dtsi b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+index bcbf0a558..8c65b0f96 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+@@ -50,6 +50,15 @@ timer@8000000 {
+ 			status = "disabled";
+ 		};
+ 
++		hte_lic: hardware-timestamp@8380000 {
++			compatible = "nvidia,tegra264-gte-lic";
++			reg = <0x0 0x08380000 0x0 0x10000>;
++			interrupts = <GIC_SPI 0x00000268 IRQ_TYPE_LEVEL_HIGH>;
++			nvidia,int-threshold = <1>;
++			#timestamp-cells = <1>;
++			status = "disabled";
++		};
++
+ 		aconnect@9000000 {
+ 			compatible = "nvidia,tegra264-aconnect",
+ 					"nvidia,tegra210-aconnect";
+@@ -3267,6 +3276,16 @@ hsp_top: hsp@8800000 {
+ 			#mbox-cells = <2>;
+ 		};
+ 
++		hte_aon: hardware-timestamp@c2b0000 {
++			compatible = "nvidia,tegra264-gte-aon";
++			reg = <0x0 0x0c2b0000 0x0 0x10000>;
++			interrupts = <GIC_SPI 0x00000226 IRQ_TYPE_LEVEL_HIGH>;
++			nvidia,int-threshold = <1>;
++			#timestamp-cells = <1>;
++			nvidia,gpio-controller = <&gpio_aon>;
++			status = "disabled";
++		};
++
+ 		rtc: rtc@c2c0000 {
+ 			compatible = "nvidia,tegra264-rtc", "nvidia,tegra20-rtc";
+ 			reg = <0x0 0x0c2c0000 0x0 0x10000>;
+@@ -3336,6 +3355,23 @@ i2c3: i2c@c610000 {
+ 			status = "disabled";
+ 		};
+ 
++		pwm4: pwm@c6a0000 {
++			compatible = "nvidia,tegra264-pwm";
++			reg = <0x0 0xc6a0000 0x0 0x10000>;
++			status = "disabled";
++
++			clocks = <&bpmp TEGRA264_CLK_PWM4>;
++			resets = <&bpmp TEGRA264_RESET_PWM4>;
++			reset-names = "pwm";
++
++			#pwm-cells = <2>;
++		};
++
++		pinmux_aon: pinmux@c7a2000 {
++			compatible = "nvidia,tegra264-pinmux-aon";
++			reg = <0x0 0x0c7a2000 0x0 0x2000>;
++		};
++
+ 		pmc: pmc@c800000 {
+ 			compatible = "nvidia,tegra264-pmc";
+ 			reg = <0x0 0x0c800000 0x0 0x100000>,
+@@ -3540,6 +3576,21 @@ pci@c000000 {
+ 
+ 			nvidia,bpmp = <&bpmp 0>;
+ 			status = "disabled";
++
++			pcie@0 {
++				device_type = "pci";
++				compatible = "pciclass,0604";
++				reg = <0x0 0x0 0x0 0x0 0x0>;
++				bus-range = <0x01 0xff>;
++				#address-cells = <3>;
++				#size-cells = <2>;
++				ranges;
++			};
++		};
++
++		pinmux_main: pinmux@c281000 {
++			compatible = "nvidia,tegra264-pinmux-main";
++			reg = <0x00 0x0c281000 0x0 0xc000>;
+ 		};
+ 
+ 		gpio_main: gpio@c300000 {
+@@ -3631,6 +3682,66 @@ i2c16: i2c@c430000 {
+ 			status = "disabled";
+ 		};
+ 
++		pwm2: pwm@c5e0000 {
++			compatible = "nvidia,tegra264-pwm";
++			reg = <0x0 0xc5e0000 0x0 0x10000>;
++			status = "disabled";
++
++			clocks = <&bpmp TEGRA264_CLK_PWM2>;
++			resets = <&bpmp TEGRA264_RESET_PWM2>;
++			reset-names = "pwm";
++
++			#pwm-cells = <2>;
++		};
++
++		pwm3: pwm@c5f0000 {
++			compatible = "nvidia,tegra264-pwm";
++			reg = <0x0 0xc5f0000 0x0 0x10000>;
++			status = "disabled";
++
++			clocks = <&bpmp TEGRA264_CLK_PWM3>;
++			resets = <&bpmp TEGRA264_RESET_PWM3>;
++			reset-names = "pwm";
++
++			#pwm-cells = <2>;
++		};
++
++		pwm5: pwm@c600000 {
++			compatible = "nvidia,tegra264-pwm";
++			reg = <0x0 0xc600000 0x0 0x10000>;
++			status = "disabled";
++
++			clocks = <&bpmp TEGRA264_CLK_PWM5>;
++			resets = <&bpmp TEGRA264_RESET_PWM5>;
++			reset-names = "pwm";
++
++			#pwm-cells = <2>;
++		};
++
++		pwm9: pwm@c610000 {
++			compatible = "nvidia,tegra264-pwm";
++			reg = <0x0 0xc610000 0x0 0x10000>;
++			status = "disabled";
++
++			clocks = <&bpmp TEGRA264_CLK_PWM9>;
++			resets = <&bpmp TEGRA264_RESET_PWM9>;
++			reset-names = "pwm";
++
++			#pwm-cells = <2>;
++		};
++
++		pwm10: pwm@c620000 {
++			compatible = "nvidia,tegra264-pwm";
++			reg = <0x0 0xc620000 0x0 0x10000>;
++			status = "disabled";
++
++			clocks = <&bpmp TEGRA264_CLK_PWM10>;
++			resets = <&bpmp TEGRA264_RESET_PWM10>;
++			reset-names = "pwm";
++
++			#pwm-cells = <2>;
++		};
++
+ 		i2c0: i2c@c630000 {
+ 			compatible = "nvidia,tegra264-i2c";
+ 			reg = <0x00 0x0c630000 0x0 0x10000>;
+@@ -3807,6 +3918,69 @@ its: msi-controller@40000 {
+ 		};
+ 	};
+ 
++	/* VISION MMIO */
++	bus@8180000000 {
++		compatible = "simple-bus";
++		#address-cells = <2>;
++		#size-cells = <2>;
++
++		ranges = <0x000 0x00000000 0x81 0x80000000 0x00 0x10000000>, /* MMIO (256 MiB) */
++			 <0x100 0x00000000 0x00 0x20000000 0x00 0x40000000>, /* non-prefetchable memory (32-bit) */
++			 <0x200 0x00000000 0xa8 0x80000000 0x57 0x80000000>; /* I/O, ECAM, prefetchable memory (64-bit) */
++
++		host1x@1200000 {
++			compatible = "nvidia,tegra264-host1x";
++			reg = <0x0 0x1200000 0x0 0x10000>,
++			      <0x0 0x1210000 0x0 0x10000>,
++			      <0x0 0x1240000 0x0 0x10000>;
++			reg-names = "common", "hypervisor", "vm";
++			interrupts = <GIC_SPI 327 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 331 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>,
++				     <GIC_SPI 325 IRQ_TYPE_LEVEL_HIGH>;
++			interrupt-names = "syncpt0", "syncpt1", "syncpt2", "syncpt3", "syncpt4",
++					  "syncpt5", "syncpt6", "syncpt7", "host1x";
++			clocks = <&bpmp TEGRA264_CLK_HOST1X>;
++			clock-names = "host1x";
++
++			#address-cells = <2>;
++			#size-cells = <2>;
++
++			ranges = <0x000 0x00000000 0x00 0x08000000 0x00 0x01000000>,
++				 <0x000 0x02800000 0x00 0x0a800000 0x00 0x00800000>;
++
++			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HOST1XR &emc>;
++			interconnect-names = "dma-mem";
++			iommus = <&smmu1 TEGRA264_SID_HOST1X>;
++			dma-coherent;
++
++			/* Context isolation domains */
++			iommu-map = <0 &smmu1 (TEGRA264_SID_VIC + 1) 16>;
++
++			vic@50000 {
++				compatible = "nvidia,tegra264-vic";
++				reg = <0x0 0x50000 0x0 0x40000>;
++				interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
++				clocks = <&bpmp TEGRA264_CLK_VIC>;
++				clock-names = "vic";
++				resets = <&bpmp TEGRA264_RESET_VIC>;
++				reset-names = "vic";
++				power-domains = <&bpmp TEGRA264_POWER_DOMAIN_VIC>;
++				interconnects = <&mc TEGRA264_MEMORY_CLIENT_VICR &emc>,
++						<&mc TEGRA264_MEMORY_CLIENT_VICW &emc>;
++				interconnect-names = "dma-mem", "write";
++
++				iommus = <&smmu1 TEGRA264_SID_VIC>;
++				dma-coherent;
++			};
++		};
++	};
++
+ 	/* DISP_USB MMIO */
+ 	bus@8800000000 {
+ 		compatible = "simple-bus";
+@@ -3862,6 +4036,11 @@ bus@a800000000 {
+ 			 <0x00 0x20000000 0x00 0x20000000 0x00 0x60000000>, /* non-prefetchable memory (32-bit, 1536 GiB) */
+ 			 <0xa8 0x80000000 0xa8 0x80000000 0x57 0x80000000>; /* I/O, ECAM, prefetchable memory (64-bit) */
+ 
++		pinmux_uphy: pinmux@82e0000 {
++			compatible = "nvidia,tegra264-pinmux-uphy";
++			reg = <0x00 0x082e0000 0x0 0x4000>;
++		};
++
+ 		gpio_uphy: gpio@8300000 {
+ 			compatible = "nvidia,tegra264-gpio-uphy";
+ 			reg = <0x00 0x08300000 0x0 0x2000>,
+@@ -3920,6 +4099,16 @@ pci@8400000 {
+ 
+ 			nvidia,bpmp = <&bpmp 1>;
+ 			status = "disabled";
++
++			pcie@0 {
++				device_type = "pci";
++				compatible = "pciclass,0604";
++				reg = <0x0 0x0 0x0 0x0 0x0>;
++				bus-range = <0x01 0xff>;
++				#address-cells = <3>;
++				#size-cells = <2>;
++				ranges;
++			};
+ 		};
+ 
+ 		pci@8420000 {
+@@ -3952,6 +4141,16 @@ pci@8420000 {
+ 
+ 			nvidia,bpmp = <&bpmp 2>;
+ 			status = "disabled";
++
++			pcie@0 {
++				device_type = "pci";
++				compatible = "pciclass,0604";
++				reg = <0x0 0x0 0x0 0x0 0x0>;
++				bus-range = <0x01 0xff>;
++				#address-cells = <3>;
++				#size-cells = <2>;
++				ranges;
++			};
+ 		};
+ 
+ 		pci@8440000 {
+@@ -3984,6 +4183,16 @@ pci@8440000 {
+ 
+ 			nvidia,bpmp = <&bpmp 3>;
+ 			status = "disabled";
++
++			pcie@0 {
++				device_type = "pci";
++				compatible = "pciclass,0604";
++				reg = <0x0 0x0 0x0 0x0 0x0>;
++				bus-range = <0x01 0xff>;
++				#address-cells = <3>;
++				#size-cells = <2>;
++				ranges;
++			};
+ 		};
+ 
+ 		pci@8460000 {
+@@ -4016,6 +4225,16 @@ pci@8460000 {
+ 
+ 			nvidia,bpmp = <&bpmp 4>;
+ 			status = "disabled";
++
++			pcie@0 {
++				device_type = "pci";
++				compatible = "pciclass,0604";
++				reg = <0x0 0x0 0x0 0x0 0x0>;
++				bus-range = <0x01 0xff>;
++				#address-cells = <3>;
++				#size-cells = <2>;
++				ranges;
++			};
+ 		};
+ 
+ 		pci@8480000 {
+@@ -4048,6 +4267,16 @@ pci@8480000 {
+ 
+ 			nvidia,bpmp = <&bpmp 5>;
+ 			status = "disabled";
++
++			pcie@0 {
++				device_type = "pci";
++				compatible = "pciclass,0604";
++				reg = <0x0 0x0 0x0 0x0 0x0>;
++				bus-range = <0x01 0xff>;
++				#address-cells = <3>;
++				#size-cells = <2>;
++				ranges;
++			};
+ 		};
+ 	};
+ 

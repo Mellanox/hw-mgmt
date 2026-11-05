@@ -1,0 +1,88 @@
+From 5f726aeb505c9e5dde87530c78a11b88a44b9edd Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 3 Feb 2025 16:30:24 +0100
+Subject: [PATCH 0707/0797] PCI: tegra: Explicitly specify PMC instance to use
+
+Currently the kernel relies on a global variable to reference the PMC
+context. Use an explicit lookup for the PMC and pass that to the public
+PMC APIs.
+
+Acked-by: Manivannan Sadhasivam <mani@kernel.org>
+Acked-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/pci/controller/pci-tegra.c | 19 ++++++++++++++-----
+ 1 file changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/pci/controller/pci-tegra.c b/drivers/pci/controller/pci-tegra.c
+index 512309763d1fbf..229c695344767e 100644
+--- a/drivers/pci/controller/pci-tegra.c
++++ b/drivers/pci/controller/pci-tegra.c
+@@ -340,6 +340,8 @@ struct tegra_pcie {
+ 	struct reset_control *afi_rst;
+ 	struct reset_control *pcie_xrst;
+ 
++	struct tegra_pmc *pmc;
++
+ 	bool legacy_phy;
+ 	struct phy *phy;
+ 
+@@ -1165,7 +1167,7 @@ static void tegra_pcie_power_off(struct tegra_pcie *pcie)
+ 	clk_disable_unprepare(pcie->afi_clk);
+ 
+ 	if (!dev->pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_PCIE);
++		tegra_pmc_powergate_power_off(pcie->pmc, TEGRA_POWERGATE_PCIE);
+ 
+ 	err = regulator_bulk_disable(pcie->num_supplies, pcie->supplies);
+ 	if (err < 0)
+@@ -1183,7 +1185,7 @@ static int tegra_pcie_power_on(struct tegra_pcie *pcie)
+ 	reset_control_assert(pcie->pex_rst);
+ 
+ 	if (!dev->pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_PCIE);
++		tegra_pmc_powergate_power_off(pcie->pmc, TEGRA_POWERGATE_PCIE);
+ 
+ 	/* enable regulators */
+ 	err = regulator_bulk_enable(pcie->num_supplies, pcie->supplies);
+@@ -1191,12 +1193,14 @@ static int tegra_pcie_power_on(struct tegra_pcie *pcie)
+ 		dev_err(dev, "failed to enable regulators: %d\n", err);
+ 
+ 	if (!dev->pm_domain) {
+-		err = tegra_powergate_power_on(TEGRA_POWERGATE_PCIE);
++		err = tegra_pmc_powergate_power_on(pcie->pmc,
++						   TEGRA_POWERGATE_PCIE);
+ 		if (err) {
+ 			dev_err(dev, "failed to power ungate: %d\n", err);
+ 			goto regulator_disable;
+ 		}
+-		err = tegra_powergate_remove_clamping(TEGRA_POWERGATE_PCIE);
++		err = tegra_pmc_powergate_remove_clamping(pcie->pmc,
++							  TEGRA_POWERGATE_PCIE);
+ 		if (err) {
+ 			dev_err(dev, "failed to remove clamp: %d\n", err);
+ 			goto powergate;
+@@ -1234,7 +1238,7 @@ disable_afi_clk:
+ 	clk_disable_unprepare(pcie->afi_clk);
+ powergate:
+ 	if (!dev->pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_PCIE);
++		tegra_pmc_powergate_power_off(pcie->pmc, TEGRA_POWERGATE_PCIE);
+ regulator_disable:
+ 	regulator_bulk_disable(pcie->num_supplies, pcie->supplies);
+ 
+@@ -1432,6 +1436,11 @@ static int tegra_pcie_get_resources(struct tegra_pcie *pcie)
+ 		return err;
+ 	}
+ 
++	pcie->pmc = devm_tegra_pmc_get(dev);
++	if (IS_ERR(pcie->pmc))
++		return dev_err_probe(dev, PTR_ERR(pcie->pmc),
++				     "failed to get PMC\n");
++
+ 	if (soc->program_uphy) {
+ 		err = tegra_pcie_phys_get(pcie);
+ 		if (err < 0) {
+-- 
+cgit 1.3.1-korg
+

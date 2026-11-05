@@ -1,0 +1,47 @@
+From 9295f238a52a566f45f9b1752bebd93b4c2d83a2 Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Mon, 18 May 2026 17:10:10 +0530
+Subject: [PATCH 0748/0797] i2c: tegra: use dmaengine_get_dma_device() for DMA buffer allocation
+
+Use dmaengine_get_dma_device() to obtain the correct struct device
+pointer for dma_alloc_coherent() instead of directly dereferencing
+chan->device->dev.
+
+The dmaengine_get_dma_device() helper checks whether the DMA channel
+has a per-channel DMA device (chan->dev->chan_dma_dev) and returns it
+when available, falling back to the controller device otherwise. On
+platforms where the DMA controller sits behind an IOMMU with
+per-channel IOVA spaces (e.g. Tegra264 GPC DMA), the per-channel
+device carries the correct DMA mapping context. Using the controller
+device directly would allocate DMA buffers against the wrong IOMMU
+domain, leading to SMMU faults at runtime.
+
+On platforms without per-channel DMA devices the helper returns the
+same pointer as before, so there is no change in behavior for existing
+hardware.
+
+Assisted-by: Cursor:claude-4.6-opus
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Andi Shyti <andi.shyti@kernel.org>
+Link: https://lore.kernel.org/r/20260518114013.62065-2-akhilrajeev@nvidia.com
+---
+ drivers/i2c/busses/i2c-tegra.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-tegra.c b/drivers/i2c/busses/i2c-tegra.c
+index 3e9327e3750a51..a6859059a2e886 100644
+--- a/drivers/i2c/busses/i2c-tegra.c
++++ b/drivers/i2c/busses/i2c-tegra.c
+@@ -712,7 +712,7 @@ static int tegra_i2c_init_dma(struct tegra_i2c_dev *i2c_dev)
+ 		goto err_out;
+ 	}
+ 
+-	i2c_dev->dma_dev = i2c_dev->dma_chan->device->dev;
++	i2c_dev->dma_dev = dmaengine_get_dma_device(i2c_dev->dma_chan);
+ 	i2c_dev->dma_buf_size = i2c_dev->hw->quirks->max_write_len +
+ 				I2C_PACKET_HEADER_SIZE;
+ 
+-- 
+cgit 1.3.1-korg
+

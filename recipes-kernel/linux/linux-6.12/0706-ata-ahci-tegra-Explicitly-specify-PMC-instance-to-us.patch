@@ -1,0 +1,211 @@
+From 64e609f9299d457a88dec0bce68b42a434a78502 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 3 Feb 2025 16:25:29 +0100
+Subject: [PATCH 0706/0797] ata: ahci_tegra: Explicitly specify PMC instance to use
+
+Currently the kernel relies on a global variable to reference the PMC
+context. Use an explicit lookup for the PMC and pass that to the public
+PMC APIs.
+
+Acked-by: Damien Le Moal <dlemoal@kernel.org>
+Acked-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/ata/ahci_tegra.c       | 17 ++++++++++++-----
+ drivers/soc/tegra/pmc.c        | 48 +++++++++++++++++++++++++++++++++++++++++
+ include/soc/tegra/pmc.h        | 44 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 104 insertions(+), 5 deletions(-)
+
+diff --git a/include/soc/tegra/pmc.h b/include/soc/tegra/pmc.h
+index 00000000000000..11111111111111 100644
+--- a/include/soc/tegra/pmc.h
++++ b/include/soc/tegra/pmc.h
+@@ -10,12 +10,15 @@
+ #ifndef __SOC_TEGRA_PMC_H__
+ #define __SOC_TEGRA_PMC_H__
+ 
++#include <linux/err.h>
+ #include <linux/reboot.h>
+ 
+ #include <soc/tegra/pm.h>
+ 
+ struct clk;
+ struct reset_control;
++struct device;
++struct tegra_pmc;
+ 
+ bool tegra_pmc_cpu_is_powered(unsigned int cpuid);
+ int tegra_pmc_cpu_power_on(unsigned int cpuid);
+@@ -157,6 +160,16 @@
+ int tegra_powergate_sequence_power_up(unsigned int id, struct clk *clk,
+ 				      struct reset_control *rst);
+ 
++struct tegra_pmc *devm_tegra_pmc_get(struct device *dev);
++int tegra_pmc_powergate_power_on(struct tegra_pmc *pmc, unsigned int id);
++int tegra_pmc_powergate_power_off(struct tegra_pmc *pmc, unsigned int id);
++int tegra_pmc_powergate_remove_clamping(struct tegra_pmc *pmc, unsigned int id);
++
++/* Must be called with clk disabled, and returns with clk enabled */
++int tegra_pmc_powergate_sequence_power_up(struct tegra_pmc *pmc,
++					  unsigned int id, struct clk *clk,
++					  struct reset_control *rst);
++
+ int tegra_io_pad_power_enable(enum tegra_io_pad id);
+ int tegra_io_pad_power_disable(enum tegra_io_pad id);
+ 
+@@ -187,6 +200,37 @@
+ {
+ 	return -ENOSYS;
+ }
++
++static inline struct tegra_pmc *devm_tegra_pmc_get(struct device *dev)
++{
++	return ERR_PTR(-ENOSYS);
++}
++
++static inline int
++tegra_pmc_powergate_power_on(struct tegra_pmc *pmc, unsigned int id)
++{
++	return -ENOSYS;
++}
++
++static inline int
++tegra_pmc_powergate_power_off(struct tegra_pmc *pmc, unsigned int id)
++{
++	return -ENOSYS;
++}
++
++static inline int
++tegra_pmc_powergate_remove_clamping(struct tegra_pmc *pmc, unsigned int id)
++{
++	return -ENOSYS;
++}
++
++static inline int
++tegra_pmc_powergate_sequence_power_up(struct tegra_pmc *pmc, unsigned int id,
++				      struct clk *clk,
++				      struct reset_control *rst)
++{
++	return -ENOSYS;
++}
+ 
+ static inline int tegra_io_pad_power_enable(enum tegra_io_pad id)
+ {
+diff --git a/drivers/soc/tegra/pmc.c b/drivers/soc/tegra/pmc.c
+index 00000000000000..11111111111111 100644
+--- a/drivers/soc/tegra/pmc.c
++++ b/drivers/soc/tegra/pmc.c
+@@ -1037,6 +1037,54 @@
+ }
+ EXPORT_SYMBOL(tegra_powergate_sequence_power_up);
+ 
++struct tegra_pmc *devm_tegra_pmc_get(struct device *dev)
++{
++	if (!dev)
++		return ERR_PTR(-EINVAL);
++
++	return pmc;
++}
++EXPORT_SYMBOL(devm_tegra_pmc_get);
++
++int tegra_pmc_powergate_power_on(struct tegra_pmc *pmc_dev, unsigned int id)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_power_on(id);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_power_on);
++
++int tegra_pmc_powergate_power_off(struct tegra_pmc *pmc_dev, unsigned int id)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_power_off(id);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_power_off);
++
++int tegra_pmc_powergate_remove_clamping(struct tegra_pmc *pmc_dev,
++					unsigned int id)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_remove_clamping(id);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_remove_clamping);
++
++int tegra_pmc_powergate_sequence_power_up(struct tegra_pmc *pmc_dev,
++					  unsigned int id, struct clk *clk,
++					  struct reset_control *rst)
++{
++	if (!pmc_dev)
++		return -EINVAL;
++
++	return tegra_powergate_sequence_power_up(id, clk, rst);
++}
++EXPORT_SYMBOL(tegra_pmc_powergate_sequence_power_up);
++
+ /**
+  * tegra_get_cpu_powergate_id() - convert from CPU ID to partition ID
+  * @pmc: power management controller
+diff --git a/drivers/ata/ahci_tegra.c b/drivers/ata/ahci_tegra.c
+index 44584eed637442..554f05e09f9833 100644
+--- a/drivers/ata/ahci_tegra.c
++++ b/drivers/ata/ahci_tegra.c
+@@ -175,6 +175,7 @@ struct tegra_ahci_priv {
+ 	struct reset_control	   *sata_cold_rst;
+ 	/* Needs special handling, cannot use ahci_platform */
+ 	struct clk		   *sata_clk;
++	struct tegra_pmc	   *pmc;
+ 	struct regulator_bulk_data *supplies;
+ 	const struct tegra_ahci_soc *soc;
+ };
+@@ -246,9 +247,10 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
+ 		return ret;
+ 
+ 	if (!tegra->pdev->dev.pm_domain) {
+-		ret = tegra_powergate_sequence_power_up(TEGRA_POWERGATE_SATA,
+-							tegra->sata_clk,
+-							tegra->sata_rst);
++		ret = tegra_pmc_powergate_sequence_power_up(tegra->pmc,
++							    TEGRA_POWERGATE_SATA,
++							    tegra->sata_clk,
++							    tegra->sata_rst);
+ 		if (ret)
+ 			goto disable_regulators;
+ 	}
+@@ -269,7 +271,7 @@ disable_power:
+ 	clk_disable_unprepare(tegra->sata_clk);
+ 
+ 	if (!tegra->pdev->dev.pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_SATA);
++		tegra_pmc_powergate_power_off(tegra->pmc, TEGRA_POWERGATE_SATA);
+ 
+ disable_regulators:
+ 	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
+@@ -289,7 +291,7 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv)
+ 
+ 	clk_disable_unprepare(tegra->sata_clk);
+ 	if (!tegra->pdev->dev.pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_SATA);
++		tegra_pmc_powergate_power_off(tegra->pmc, TEGRA_POWERGATE_SATA);
+ 
+ 	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
+ }
+@@ -571,6 +573,11 @@ static int tegra_ahci_probe(struct platform_device *pdev)
+ 		return PTR_ERR(tegra->sata_clk);
+ 	}
+ 
++	tegra->pmc = devm_tegra_pmc_get(&pdev->dev);
++	if (IS_ERR(tegra->pmc))
++		return dev_err_probe(&pdev->dev, PTR_ERR(tegra->pmc),
++				     "failed to get PMC\n");
++
+ 	tegra->supplies = devm_kcalloc(&pdev->dev,
+ 				       tegra->soc->num_supplies,
+ 				       sizeof(*tegra->supplies), GFP_KERNEL);
+-- 
+cgit 1.3.1-korg
+

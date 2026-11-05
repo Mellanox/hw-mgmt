@@ -1,0 +1,50 @@
+From 1bc17c67194716f53037685b7059a22cc1a911b2 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Tue, 3 Mar 2026 15:32:49 +0530
+Subject: [PATCH 0534/0797] ASoC: tegra: Add support for Tegra238 soundcard
+
+Tegra238 platforms use different clock rates for plla and
+plla_out0 clocks. Add Tegra238 support in the Tegra
+sound card driver to apply specific clock configurations.
+
+Signed-off-by: Aditya Bavanari <abavanari@nvidia.com>
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20260303100249.3214529-3-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra_audio_graph_card.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/sound/soc/tegra/tegra_audio_graph_card.c b/sound/soc/tegra/tegra_audio_graph_card.c
+index 94b5ab77649b36..ea10e6e8a9fe78 100644
+--- a/sound/soc/tegra/tegra_audio_graph_card.c
++++ b/sound/soc/tegra/tegra_audio_graph_card.c
+@@ -231,6 +231,15 @@ static const struct tegra_audio_cdata tegra186_data = {
+ 	.plla_out0_rates[x11_RATE] = 45158400,
+ };
+ 
++static const struct tegra_audio_cdata tegra238_data = {
++	/* PLLA */
++	.plla_rates[x8_RATE] = 1277952000,
++	.plla_rates[x11_RATE] = 1264435200,
++	/* PLLA_OUT0 */
++	.plla_out0_rates[x8_RATE] = 49152000,
++	.plla_out0_rates[x11_RATE] = 45158400,
++};
++
+ static const struct tegra_audio_cdata tegra264_data = {
+ 	/* PLLA1 */
+ 	.plla_rates[x8_RATE] = 983040000,
+@@ -245,6 +254,8 @@ static const struct of_device_id graph_of_tegra_match[] = {
+ 	  .data = &tegra210_data },
+ 	{ .compatible = "nvidia,tegra186-audio-graph-card",
+ 	  .data = &tegra186_data },
++	{ .compatible = "nvidia,tegra238-audio-graph-card",
++	  .data = &tegra238_data },
+ 	{ .compatible = "nvidia,tegra264-audio-graph-card",
+ 	  .data = &tegra264_data },
+ 	{},
+-- 
+cgit 1.3.1-korg
+

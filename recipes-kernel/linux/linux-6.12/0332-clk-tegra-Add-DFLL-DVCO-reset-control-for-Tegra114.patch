@@ -1,0 +1,113 @@
+From 8e7bd526e83673c2b4931163311cca49796657f8 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Fri, 29 Aug 2025 15:22:32 +0300
+Subject: [PATCH 0332/0797] clk: tegra: Add DFLL DVCO reset control for Tegra114
+
+The DVCO present in the DFLL IP block has a separate reset line, exposed
+via the CAR IP block.  This reset line is asserted upon SoC reset.
+Unless something (such as the DFLL driver) deasserts this line, the DVCO
+will not oscillate, although reads and writes to the DFLL IP block will
+complete.
+
+Based on a3c83ff2 ("clk: tegra: Add DFLL DVCO reset control for Tegra124")
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/clk/tegra/clk-tegra114.c | 30 ++++++++++++++++++++++++++----
+ drivers/clk/tegra/clk.h          |  2 --
+ 2 files changed, 26 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/clk/tegra/clk-tegra114.c b/drivers/clk/tegra/clk-tegra114.c
+index 73303458e88667..6c8e053311c35e 100644
+--- a/drivers/clk/tegra/clk-tegra114.c
++++ b/drivers/clk/tegra/clk-tegra114.c
+@@ -11,6 +11,7 @@
+ #include <linux/export.h>
+ #include <linux/clk/tegra.h>
+ #include <dt-bindings/clock/tegra114-car.h>
++#include <dt-bindings/reset/nvidia,tegra114-car.h>
+ 
+ #include "clk.h"
+ #include "clk-id.h"
+@@ -1272,7 +1273,7 @@ EXPORT_SYMBOL(tegra114_clock_tune_cpu_trimmers_init);
+  *
+  * Assert the reset line of the DFLL's DVCO.  No return value.
+  */
+-void tegra114_clock_assert_dfll_dvco_reset(void)
++static void tegra114_clock_assert_dfll_dvco_reset(void)
+ {
+ 	u32 v;
+ 
+@@ -1281,7 +1282,6 @@ void tegra114_clock_assert_dfll_dvco_reset(void)
+ 	writel_relaxed(v, clk_base + RST_DFLL_DVCO);
+ 	tegra114_car_barrier();
+ }
+-EXPORT_SYMBOL(tegra114_clock_assert_dfll_dvco_reset);
+ 
+ /**
+  * tegra114_clock_deassert_dfll_dvco_reset - deassert the DFLL's DVCO reset
+@@ -1289,7 +1289,7 @@ EXPORT_SYMBOL(tegra114_clock_assert_dfll_dvco_reset);
+  * Deassert the reset line of the DFLL's DVCO, allowing the DVCO to
+  * operate.  No return value.
+  */
+-void tegra114_clock_deassert_dfll_dvco_reset(void)
++static void tegra114_clock_deassert_dfll_dvco_reset(void)
+ {
+ 	u32 v;
+ 
+@@ -1298,7 +1298,26 @@ void tegra114_clock_deassert_dfll_dvco_reset(void)
+ 	writel_relaxed(v, clk_base + RST_DFLL_DVCO);
+ 	tegra114_car_barrier();
+ }
+-EXPORT_SYMBOL(tegra114_clock_deassert_dfll_dvco_reset);
++
++static int tegra114_reset_assert(unsigned long id)
++{
++	if (id == TEGRA114_RST_DFLL_DVCO)
++		tegra114_clock_assert_dfll_dvco_reset();
++	else
++		return -EINVAL;
++
++	return 0;
++}
++
++static int tegra114_reset_deassert(unsigned long id)
++{
++	if (id == TEGRA114_RST_DFLL_DVCO)
++		tegra114_clock_deassert_dfll_dvco_reset();
++	else
++		return -EINVAL;
++
++	return 0;
++}
+ 
+ static void __init tegra114_clock_init(struct device_node *np)
+ {
+@@ -1344,6 +1363,9 @@ static void __init tegra114_clock_init(struct device_node *np)
+ 	tegra_super_clk_gen4_init(clk_base, pmc_base, tegra114_clks,
+ 					&pll_x_params);
+ 
++	tegra_init_special_resets(1, tegra114_reset_assert,
++				  tegra114_reset_deassert);
++
+ 	tegra_add_of_provider(np, of_clk_src_onecell_get);
+ 	tegra_register_devclks(devclks, ARRAY_SIZE(devclks));
+ 
+diff --git a/drivers/clk/tegra/clk.h b/drivers/clk/tegra/clk.h
+index 9ea839af14bcdd..73efd2ff37c98b 100644
+--- a/drivers/clk/tegra/clk.h
++++ b/drivers/clk/tegra/clk.h
+@@ -897,8 +897,6 @@ static inline bool tegra124_clk_emc_driver_available(struct clk_hw *emc_hw)
+ void tegra114_clock_tune_cpu_trimmers_high(void);
+ void tegra114_clock_tune_cpu_trimmers_low(void);
+ void tegra114_clock_tune_cpu_trimmers_init(void);
+-void tegra114_clock_assert_dfll_dvco_reset(void);
+-void tegra114_clock_deassert_dfll_dvco_reset(void);
+ 
+ typedef void (*tegra_clk_apply_init_table_func)(void);
+ extern tegra_clk_apply_init_table_func tegra_clk_apply_init_table;
+-- 
+cgit 1.3.1-korg
+

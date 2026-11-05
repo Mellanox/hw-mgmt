@@ -1,0 +1,31 @@
+From 801d26487f34d6d7561668082c0276ac5e0767f4 Mon Sep 17 00:00:00 2001
+From: Xichao Zhao <zhao.xichao@vivo.com>
+Date: Tue, 19 Aug 2025 19:00:59 +0800
+Subject: [PATCH 0382/0797] staging: media: tegra-video: Remove the use of dev_err_probe()
+
+The dev_err_probe() doesn't do anything when error is '-ENOMEM'.
+Therefore, remove the useless call to dev_err_probe(), and just
+return the value instead.
+
+Signed-off-by: Xichao Zhao <zhao.xichao@vivo.com>
+Signed-off-by: Hans Verkuil <hverkuil+cisco@kernel.org>
+---
+ drivers/staging/media/tegra-video/tegra20.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/media/tegra-video/tegra20.c b/drivers/staging/media/tegra-video/tegra20.c
+index 1473f1b1f20343..aa9ff7fec4f9c5 100644
+--- a/drivers/staging/media/tegra-video/tegra20.c
++++ b/drivers/staging/media/tegra-video/tegra20.c
+@@ -255,7 +255,7 @@ static int tegra20_channel_host1x_syncpt_init(struct tegra_vi_channel *chan)
+ 
+ 	out_sp = host1x_syncpt_request(&vi->client, HOST1X_SYNCPT_CLIENT_MANAGED);
+ 	if (!out_sp)
+-		return dev_err_probe(vi->dev, -ENOMEM, "failed to request syncpoint\n");
++		return -ENOMEM;
+ 
+ 	chan->mw_ack_sp[0] = out_sp;
+ 
+-- 
+cgit 1.3.1-korg
+

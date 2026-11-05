@@ -1,0 +1,65 @@
+From 323a6e370af56c550255aeeb9264d1f493d878a9 Mon Sep 17 00:00:00 2001
+From: Vidya Sagar <vidyas@nvidia.com>
+Date: Wed, 25 Mar 2026 00:39:54 +0530
+Subject: [PATCH 0633/0797] PCI: tegra194: Remove IRQF_ONESHOT flag during Endpoint interrupt registration
+
+The Tegra PCIe Endpoint controller has a single interrupt line that is
+shared between multiple interrupt sources:
+
+  1. PCIe link state events (link up, hot reset done)
+  2. Configuration space events (Bus Master Enable changes)
+  3. DMA completion events
+
+The interrupt is currently registered with IRQF_ONESHOT, which keeps the
+interrupt line masked until the threaded handler completes. That blocks
+processing of DMA completion events (and other sources) while the
+threaded handler runs.
+
+Removing IRQF_ONESHOT is safe for the following reasons:
+
+1. The hard IRQ handler (tegra_pcie_ep_hard_irq) properly acknowledges and
+   clears all interrupt status bits in hardware before returning. This
+   prevents interrupt storms and ensures the interrupt controller can
+   re-enable the interrupt line immediately.
+
+2. The follow-up commit adds handling in the hard IRQ for DMA completion
+   events. Dropping IRQF_ONESHOT is required so the line is unmasked
+   after the hard IRQ returns and those events can be serviced without
+   being blocked by the threaded handler.
+
+3. The threaded handler (tegra_pcie_ep_irq_thread) only processes link-up
+   notifications and LTR message sending. These operations don't conflict
+   with DMA interrupt processing and don't require the interrupt line to
+   remain masked.
+
+This change enables both DMA driver and Endpoint controller driver to share
+the interrupt line without blocking each other.
+
+Signed-off-by: Vidya Sagar <vidyas@nvidia.com>
+Signed-off-by: Manikanta Maddireddy <mmaddireddy@nvidia.com>
+Signed-off-by: Manivannan Sadhasivam <mani@kernel.org>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Tested-by: Jon Hunter <jonathanh@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Reviewed-by: Vidya Sagar <vidyas@nvidia.com>
+Link: https://patch.msgid.link/20260324191000.1095768-4-mmaddireddy@nvidia.com
+---
+ drivers/pci/controller/dwc/pcie-tegra194.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/controller/dwc/pcie-tegra194.c b/drivers/pci/controller/dwc/pcie-tegra194.c
+index 7f74d72a21dd3d..91b3953f780aa5 100644
+--- a/drivers/pci/controller/dwc/pcie-tegra194.c
++++ b/drivers/pci/controller/dwc/pcie-tegra194.c
+@@ -2245,7 +2245,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
+ 		ret = devm_request_threaded_irq(dev, pp->irq,
+ 						tegra_pcie_ep_hard_irq,
+ 						tegra_pcie_ep_irq_thread,
+-						IRQF_SHARED | IRQF_ONESHOT,
++						IRQF_SHARED,
+ 						"tegra-pcie-ep-intr", pcie);
+ 		if (ret) {
+ 			dev_err(dev, "Failed to request IRQ %d: %d\n", pp->irq,
+-- 
+cgit 1.3.1-korg
+

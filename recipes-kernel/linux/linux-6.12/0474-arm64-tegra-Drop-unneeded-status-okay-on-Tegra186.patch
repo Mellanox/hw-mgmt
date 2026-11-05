@@ -1,0 +1,39 @@
+From 6e71a4b88752a6dbab17d410bb10880fba2c890a Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Thu, 15 Jan 2026 19:48:41 +0100
+Subject: [PATCH 0474/0797] arm64: tegra: Drop unneeded status=okay on Tegra186
+
+Device nodes are enabled by default and this DTSI file does not include
+anything else, thus it is impossible that nodes were disabled before and
+need to be re-enabled.  Adding redundant status=okay is just confusing
+and suggests some other code flow.  Verified with dtx_diff.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra186.dtsi | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186.dtsi b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+index b006304519096a..705af0373a0901 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+@@ -120,7 +120,6 @@
+ 		iommus = <&smmu TEGRA186_SID_GPCDMA_0>;
+ 		dma-coherent;
+ 		dma-channel-mask = <0xfffffffe>;
+-		status = "okay";
+ 	};
+ 
+ 	aconnect@2900000 {
+@@ -608,7 +607,6 @@
+ 			     <GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>,
+ 			     <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>,
+ 			     <GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>;
+-		status = "okay";
+ 	};
+ 
+ 	uarta: serial@3100000 {
+-- 
+cgit 1.3.1-korg
+

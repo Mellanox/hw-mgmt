@@ -1,0 +1,49 @@
+From be09645037b43dffb2efe3c1b6c408ce0ed70c1c Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 23 Feb 2026 08:54:59 +0200
+Subject: [PATCH 0597/0797] dt-bindings: display: tegra: Document Tegra20 HDMI port
+
+Tegra HDMI can be modeled using an OF graph. Reflect this in the
+bindings.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../bindings/display/tegra/nvidia,tegra20-hdmi.yaml         | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-hdmi.yaml b/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-hdmi.yaml
+index f77197e4869f71..b4bf2662780b7a 100644
+--- a/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-hdmi.yaml
++++ b/Documentation/devicetree/bindings/display/tegra/nvidia,tegra20-hdmi.yaml
+@@ -82,6 +82,10 @@ properties:
+     description: phandle of a display panel
+     $ref: /schemas/types.yaml#/definitions/phandle
+ 
++  port:
++    description: HDMI output port for connection to HDMI connector or bridge
++    $ref: /schemas/graph.yaml#/properties/port
++
+   "#sound-dai-cells":
+     const: 0
+ 
+@@ -97,8 +101,13 @@ required:
+   - reset-names
+   - pll-supply
+   - vdd-supply
+-  - nvidia,ddc-i2c-bus
+-  - nvidia,hpd-gpio
++
++anyOf:
++  - required:
++      - nvidia,ddc-i2c-bus
++      - nvidia,hpd-gpio
++  - required:
++      - port
+ 
+ examples:
+   - |
+-- 
+cgit 1.3.1-korg
+

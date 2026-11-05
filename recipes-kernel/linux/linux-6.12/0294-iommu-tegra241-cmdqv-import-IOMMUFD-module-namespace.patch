@@ -1,0 +1,35 @@
+From 601b1d0d9395c711383452bd0d47037afbbb4bcf Mon Sep 17 00:00:00 2001
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Mon, 14 Jul 2025 22:57:38 +0200
+Subject: [PATCH 0294/0797] iommu/tegra241-cmdqv: import IOMMUFD module namespace
+
+The tegra variant of smmu-v3 now uses the iommufd mmap interface but
+is missing the corresponding import:
+
+ERROR: modpost: module arm_smmu_v3 uses symbol _iommufd_object_depend from namespace IOMMUFD, but does not import it.
+ERROR: modpost: module arm_smmu_v3 uses symbol iommufd_viommu_report_event from namespace IOMMUFD, but does not import it.
+ERROR: modpost: module arm_smmu_v3 uses symbol _iommufd_destroy_mmap from namespace IOMMUFD, but does not import it.
+ERROR: modpost: module arm_smmu_v3 uses symbol _iommufd_object_undepend from namespace IOMMUFD, but does not import it.
+ERROR: modpost: module arm_smmu_v3 uses symbol _iommufd_alloc_mmap from namespace IOMMUFD, but does not import it.
+
+Fixes: b135de24cfc0 ("iommu/tegra241-cmdqv: Add user-space use support")
+Link: https://patch.msgid.link/r/20250714205747.3475772-1-arnd@kernel.org
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Jason Gunthorpe <jgg@nvidia.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+index d5d43a1c770829..eb90af5093d89b 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
++++ b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+@@ -1329,3 +1329,5 @@ deinit_vintf:
+ 	tegra241_cmdqv_deinit_vintf(cmdqv, vintf->idx);
+ 	return ret;
+ }
++
++MODULE_IMPORT_NS("IOMMUFD");
+-- 
+cgit 1.3.1-korg
+

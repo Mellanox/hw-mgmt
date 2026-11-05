@@ -1,0 +1,58 @@
+From d354e47f6464bddd777916f3939bafa1673156c7 Mon Sep 17 00:00:00 2001
+From: Suneel Garapati <suneelg@nvidia.com>
+Date: Wed, 8 Apr 2026 21:24:11 +0000
+Subject: [PATCH 0644/0797] dt-bindings: timestamp: Add Tegra264 support
+
+Add timestamp provider support for the Tegra264 in devicetree
+bindings. Tegra264 has two generic timestamping engines (GTE)
+which are the always-on GTE (AON) and legacy interrupt
+controller (LIC) GTE.
+'nvidia,slices' property is deprecated and hence not allowed for
+Tegra264.
+
+Signed-off-by: Suneel Garapati <suneelg@nvidia.com>
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Signed-off-by: Dipen Patel <dipenp@nvidia.com>
+---
+ .../devicetree/bindings/timestamp/nvidia,tegra194-hte.yaml | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/timestamp/nvidia,tegra194-hte.yaml b/Documentation/devicetree/bindings/timestamp/nvidia,tegra194-hte.yaml
+index 456797967adc39..a96d6cd2389552 100644
+--- a/Documentation/devicetree/bindings/timestamp/nvidia,tegra194-hte.yaml
++++ b/Documentation/devicetree/bindings/timestamp/nvidia,tegra194-hte.yaml
+@@ -25,6 +25,8 @@ properties:
+       - nvidia,tegra194-gte-lic
+       - nvidia,tegra234-gte-aon
+       - nvidia,tegra234-gte-lic
++      - nvidia,tegra264-gte-aon
++      - nvidia,tegra264-gte-lic
+ 
+   reg:
+     maxItems: 1
+@@ -112,10 +114,22 @@ allOf:
+           contains:
+             enum:
+               - nvidia,tegra234-gte-aon
++              - nvidia,tegra264-gte-aon
+     then:
+       required:
+         - nvidia,gpio-controller
+ 
++  - if:
++      properties:
++        compatible:
++          contains:
++            enum:
++              - nvidia,tegra264-gte-aon
++              - nvidia,tegra264-gte-lic
++    then:
++      properties:
++        nvidia,slices: false
++
+ additionalProperties: false
+ 
+ examples:
+-- 
+cgit 1.3.1-korg
+

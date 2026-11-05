@@ -1,0 +1,84 @@
+From 8911ee2543663588480d762184e00331cc2f008f Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Tue, 4 Nov 2025 14:22:04 +0100
+Subject: [PATCH 0405/0797] arm64: tegra: Move HDA into the correct bus
+
+HDA is part of the DISP_USB bus, so move it into that and drop the
+address prefix accordingly.
+
+Acked-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi |  4 +++-
+ arch/arm64/boot/dts/nvidia/tegra264.dtsi       | 32 +++++++++++++-------------
+ 2 files changed, 19 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi
+index 1fcfac2066aedc..b1bd4ee7aee308 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3971.dtsi
+@@ -29,8 +29,10 @@
+ 				status = "okay";
+ 			};
+ 		};
++	};
+ 
+-		hda@88090b0000 {
++	bus@8800000000 {
++		hda@90b0000 {
+ 			nvidia,model = "NVIDIA Jetson Thor AGX HDA";
+ 			status = "okay";
+ 		};
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264.dtsi b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+index c66ea12ef5a3df..f137565da80489 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+@@ -3347,22 +3347,6 @@
+ 			#interrupt-cells = <2>;
+ 			interrupt-controller;
+ 		};
+-
+-		hda@88090b0000 {
+-			compatible = "nvidia,tegra264-hda";
+-			reg = <0x88 0x90b0000 0x0 0x10000>;
+-			interrupts = <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>;
+-			clocks = <&bpmp TEGRA264_CLK_AZA_2XBIT>;
+-			clock-names = "hda";
+-			resets = <&bpmp TEGRA264_RESET_HDA>,
+-				 <&bpmp TEGRA264_RESET_HDACODEC>;
+-			reset-names = "hda", "hda2codec_2x";
+-			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HDAR &emc>,
+-					<&mc TEGRA264_MEMORY_CLIENT_HDAW &emc>;
+-			interconnect-names = "dma-mem", "write";
+-			iommus = <&smmu3 TEGRA264_SID_HDA>;
+-			status = "disabled";
+-		};
+ 	};
+ 
+ 	/* TOP_MMIO */
+@@ -3716,6 +3700,22 @@
+ 			#iommu-cells = <1>;
+ 			dma-coherent;
+ 		};
++
++		hda@90b0000 {
++			compatible = "nvidia,tegra264-hda";
++			reg = <0x0 0x90b0000 0x0 0x10000>;
++			interrupts = <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&bpmp TEGRA264_CLK_AZA_2XBIT>;
++			clock-names = "hda";
++			resets = <&bpmp TEGRA264_RESET_HDA>,
++				 <&bpmp TEGRA264_RESET_HDACODEC>;
++			reset-names = "hda", "hda2codec_2x";
++			interconnects = <&mc TEGRA264_MEMORY_CLIENT_HDAR &emc>,
++					<&mc TEGRA264_MEMORY_CLIENT_HDAW &emc>;
++			interconnect-names = "dma-mem", "write";
++			iommus = <&smmu3 TEGRA264_SID_HDA>;
++			status = "disabled";
++		};
+ 	};
+ 
+ 	/* UPHY MMIO */
+-- 
+cgit 1.3.1-korg
+

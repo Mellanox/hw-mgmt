@@ -1,0 +1,48 @@
+From a7abf50d3bbd8b8e79259e47a2a76953ccd903e3 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 2 Feb 2026 10:05:24 +0200
+Subject: [PATCH 0510/0797] usb: phy: tegra: return error value from utmi_wait_register
+
+Return exact error value from utmi_wait_register during HSIC power on.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://patch.msgid.link/20260202080526.23487-3-clamor95@gmail.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/phy/phy-tegra-usb.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/usb/phy/phy-tegra-usb.c b/drivers/usb/phy/phy-tegra-usb.c
+index 3a7a74f01d1ce6..6173b240c3ea6b 100644
+--- a/drivers/usb/phy/phy-tegra-usb.c
++++ b/drivers/usb/phy/phy-tegra-usb.c
+@@ -891,6 +891,7 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
+ 	struct tegra_utmip_config *config = phy->config;
+ 	void __iomem *base = phy->regs;
+ 	u32 val;
++	int err = 0;
+ 
+ 	val = tegra_hsic_readl(phy, UHSIC_PADS_CFG1);
+ 	val &= ~(UHSIC_PD_BG | UHSIC_PD_TX | UHSIC_PD_TRK | UHSIC_PD_RX |
+@@ -984,12 +985,14 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
+ 	val |= UHSIC_TX_RTUNE(phy->soc_config->uhsic_tx_rtune);
+ 	tegra_hsic_writel(phy, UHSIC_PADS_CFG0, val);
+ 
+-	if (utmi_wait_register(base + USB_SUSP_CTRL, USB_PHY_CLK_VALID,
+-			       USB_PHY_CLK_VALID))
++	err = utmi_wait_register(base + USB_SUSP_CTRL, USB_PHY_CLK_VALID,
++				 USB_PHY_CLK_VALID);
++
++	if (err)
+ 		dev_err(phy->u_phy.dev,
+ 			"Timeout waiting for PHY to stabilize on enable (HSIC)\n");
+ 
+-	return 0;
++	return err;
+ }
+ 
+ static int uhsic_phy_power_off(struct tegra_usb_phy *phy)
+-- 
+cgit 1.3.1-korg
+

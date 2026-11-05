@@ -1,0 +1,32 @@
+From bed2f5b4de6c6fd8f8928f6373ad92e8795c370f Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Sat, 21 Mar 2026 00:43:28 +0100
+Subject: [PATCH 0604/0797] dt-bindings: arm: tegra: Document Jetson AGX Thor DevKit
+
+The Jetson AGX Thor Developer Kit uses the same module (P3834) as the
+P3971 reference platform but a slightly different carrier board (P4071).
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra.yaml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 07e225a4d69b02..033a63f6c06879 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -313,5 +313,10 @@ properties:
+           - const: nvidia,p3971-0089+p3834-0008
+           - const: nvidia,p3834-0008
+           - const: nvidia,tegra264
++      - description: Jetson AGX Thor Developer Kit
++        items:
++          - const: nvidia,p4071-0000+p3834-0008
++          - const: nvidia,p3834-0008
++          - const: nvidia,tegra264
+ 
+ additionalProperties: true
+-- 
+cgit 1.3.1-korg
+

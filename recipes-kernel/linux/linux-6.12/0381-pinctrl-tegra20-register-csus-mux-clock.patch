@@ -1,0 +1,54 @@
+From e1106d624cd72d7b526b2181ec9d30d431e6c559 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Wed, 8 Oct 2025 10:30:23 +0300
+Subject: [PATCH 0381/0797] pinctrl: tegra20: register csus_mux clock
+
+Add csus_mux for further use as the csus clock parent, similar to how the
+cdev1 and cdev2 muxes are utilized. Additionally, constify the cdev parent
+name lists to resolve checkpatch warnings.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+---
+ drivers/pinctrl/tegra/pinctrl-tegra20.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pinctrl/tegra/pinctrl-tegra20.c b/drivers/pinctrl/tegra/pinctrl-tegra20.c
+index 737fc2000f66b9..1a1758fd7defe8 100644
+--- a/drivers/pinctrl/tegra/pinctrl-tegra20.c
++++ b/drivers/pinctrl/tegra/pinctrl-tegra20.c
+@@ -2222,14 +2222,18 @@ static const struct tegra_pinctrl_soc_data tegra20_pinctrl = {
+ 	.drvtype_in_mux = false,
+ };
+ 
+-static const char *cdev1_parents[] = {
++static const char * const cdev1_parents[] = {
+ 	"dev1_osc_div", "pll_a_out0", "pll_m_out1", "audio",
+ };
+ 
+-static const char *cdev2_parents[] = {
++static const char * const cdev2_parents[] = {
+ 	"dev2_osc_div", "hclk", "pclk", "pll_p_out4",
+ };
+ 
++static const char * const csus_parents[] = {
++	"pll_c_out1", "pll_p_out2", "pll_p_out3", "vi_sensor",
++};
++
+ static void tegra20_pinctrl_register_clock_muxes(struct platform_device *pdev)
+ {
+ 	struct tegra_pmx *pmx = platform_get_drvdata(pdev);
+@@ -2239,6 +2243,9 @@ static void tegra20_pinctrl_register_clock_muxes(struct platform_device *pdev)
+ 
+ 	clk_register_mux(NULL, "cdev2_mux", cdev2_parents, 4, 0,
+ 			 pmx->regs[1] + 0x8, 4, 2, CLK_MUX_READ_ONLY, NULL);
++
++	clk_register_mux(NULL, "csus_mux", csus_parents, 4, 0,
++			 pmx->regs[1] + 0x8, 6, 2, CLK_MUX_READ_ONLY, NULL);
+ }
+ 
+ static int tegra20_pinctrl_probe(struct platform_device *pdev)
+-- 
+cgit 1.3.1-korg
+

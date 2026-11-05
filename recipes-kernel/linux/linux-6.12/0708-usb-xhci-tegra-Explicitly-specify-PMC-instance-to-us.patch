@@ -1,0 +1,103 @@
+From 258cff9857918615897bd5b57c588dc13c0058b6 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 3 Feb 2025 16:31:14 +0100
+Subject: [PATCH 0708/0797] usb: xhci: tegra: Explicitly specify PMC instance to use
+
+Currently the kernel relies on a global variable to reference the PMC
+context. Use an explicit lookup for the PMC and pass that to the public
+PMC APIs.
+
+Acked-by: Mathias Nyman <mathias.nyman@linux.intel.com>
+Acked-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/usb/host/xhci-tegra.c | 38 ++++++++++++++++++++++++++------------
+ 1 file changed, 26 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/usb/host/xhci-tegra.c b/drivers/usb/host/xhci-tegra.c
+index d2214d309e9650..122b711929ef1c 100644
+--- a/drivers/usb/host/xhci-tegra.c
++++ b/drivers/usb/host/xhci-tegra.c
+@@ -292,6 +292,7 @@ struct tegra_xusb {
+ 	struct reset_control *host_rst;
+ 	struct reset_control *ss_rst;
+ 
++	struct tegra_pmc *pmc;
+ 	struct device *genpd_dev_host;
+ 	struct device *genpd_dev_ss;
+ 	bool use_genpd;
+@@ -1188,20 +1189,23 @@ static int tegra_xusb_unpowergate_partitions(struct tegra_xusb *tegra)
+ 			return rc;
+ 		}
+ 	} else {
+-		rc = tegra_powergate_sequence_power_up(TEGRA_POWERGATE_XUSBA,
+-							tegra->ss_clk,
+-							tegra->ss_rst);
++		rc = tegra_pmc_powergate_sequence_power_up(tegra->pmc,
++							   TEGRA_POWERGATE_XUSBA,
++							   tegra->ss_clk,
++							   tegra->ss_rst);
+ 		if (rc < 0) {
+ 			dev_err(dev, "failed to enable XUSB SS partition\n");
+ 			return rc;
+ 		}
+ 
+-		rc = tegra_powergate_sequence_power_up(TEGRA_POWERGATE_XUSBC,
+-							tegra->host_clk,
+-							tegra->host_rst);
++		rc = tegra_pmc_powergate_sequence_power_up(tegra->pmc,
++							   TEGRA_POWERGATE_XUSBC,
++							   tegra->host_clk,
++							   tegra->host_rst);
+ 		if (rc < 0) {
+ 			dev_err(dev, "failed to enable XUSB Host partition\n");
+-			tegra_powergate_power_off(TEGRA_POWERGATE_XUSBA);
++			tegra_pmc_powergate_power_off(tegra->pmc,
++						      TEGRA_POWERGATE_XUSBA);
+ 			return rc;
+ 		}
+ 	}
+@@ -1228,18 +1232,21 @@ static int tegra_xusb_powergate_partitions(struct tegra_xusb *tegra)
+ 			return rc;
+ 		}
+ 	} else {
+-		rc = tegra_powergate_power_off(TEGRA_POWERGATE_XUSBC);
++		rc = tegra_pmc_powergate_power_off(tegra->pmc,
++						   TEGRA_POWERGATE_XUSBC);
+ 		if (rc < 0) {
+ 			dev_err(dev, "failed to disable XUSB Host partition\n");
+ 			return rc;
+ 		}
+ 
+-		rc = tegra_powergate_power_off(TEGRA_POWERGATE_XUSBA);
++		rc = tegra_pmc_powergate_power_off(tegra->pmc,
++						   TEGRA_POWERGATE_XUSBA);
+ 		if (rc < 0) {
+ 			dev_err(dev, "failed to disable XUSB SS partition\n");
+-			tegra_powergate_sequence_power_up(TEGRA_POWERGATE_XUSBC,
+-							  tegra->host_clk,
+-							  tegra->host_rst);
++			tegra_pmc_powergate_sequence_power_up(tegra->pmc,
++							      TEGRA_POWERGATE_XUSBC,
++							      tegra->host_clk,
++							      tegra->host_rst);
+ 			return rc;
+ 		}
+ 	}
+@@ -1733,6 +1740,13 @@ static int tegra_xusb_probe(struct platform_device *pdev)
+ 				err);
+ 			goto put_padctl;
+ 		}
++
++		tegra->pmc = devm_tegra_pmc_get(&pdev->dev);
++		if (IS_ERR(tegra->pmc)) {
++			err = dev_err_probe(&pdev->dev, PTR_ERR(tegra->pmc),
++					    "failed to get PMC\n");
++			goto put_padctl;
++		}
+ 	} else {
+ 		err = tegra_xusb_powerdomain_init(&pdev->dev, tegra);
+ 		if (err)
+-- 
+cgit 1.3.1-korg
+

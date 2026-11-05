@@ -1,0 +1,28 @@
+From 9d64c6ae2d6f9284a8475d02291580457be7bc28 Mon Sep 17 00:00:00 2001
+From: Chen Ni <nichen@iscas.ac.cn>
+Date: Mon, 7 Apr 2025 12:07:12 +0800
+Subject: [PATCH 0180/0797] serial: tegra-utc: Remove unneeded semicolon
+
+Remove unnecessary semicolons reported by Coccinelle/coccicheck and the
+semantic patch at scripts/coccinelle/misc/semicolon.cocci.
+
+Signed-off-by: Chen Ni <nichen@iscas.ac.cn>
+Link: https://lore.kernel.org/r/20250407040712.2577607-1-nichen@iscas.ac.cn
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/tty/serial/tegra-utc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/tty/serial/tegra-utc.c b/drivers/tty/serial/tegra-utc.c
+index 39b14fe813c94..0c70d3e7b9b94 100644
+--- a/drivers/tty/serial/tegra-utc.c
++++ b/drivers/tty/serial/tegra-utc.c
+@@ -434,7 +434,7 @@ static void tegra_utc_console_write_atomic(struct console *cons, struct nbcon_wr
+ 
+ 		outbuf += burst_size;
+ 		len -= burst_size;
+-	};
++	}
+ 
+ 	nbcon_exit_unsafe(wctxt);
+ }

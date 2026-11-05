@@ -1,0 +1,164 @@
+From fe57d0ac48350be4b5c069c37665279e6c35d7b7 Mon Sep 17 00:00:00 2001
+From: Ashish Mhetre <amhetre@nvidia.com>
+Date: Tue, 13 Jan 2026 05:49:35 +0000
+Subject: [PATCH 0473/0797] arm64: tegra: Add nodes for CMDQV
+
+The Command Queue Virtualization (CMDQV) hardware is part of the
+SMMUv3 implementation on NVIDIA Tegra SoCs. It assists in
+virtualizing the command queue for the SMMU.
+
+Update SMMU compatible strings to use nvidia,tegra264-smmu to enable
+CMDQV support. Add device tree nodes for the CMDQV hardware and enable
+them on the tegra264-p3834 platform where SMMUs are enabled. Each SMMU
+instance is paired with its corresponding CMDQV instance via the
+nvidia,cmdqv property.
+
+Acked-by: Nicolin Chen <nicolinc@nvidia.com>
+Signed-off-by: Ashish Mhetre <amhetre@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi |  8 +++++
+ arch/arm64/boot/dts/nvidia/tegra264.dtsi       | 50 +++++++++++++++++++++++---
+ 2 files changed, 53 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi b/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+index 06795c82427ad1..7e2c3e66c2abfa 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264-p3834.dtsi
+@@ -23,8 +23,16 @@
+ 			status = "okay";
+ 		};
+ 
++		cmdqv@5200000 {
++			status = "okay";
++		};
++
+ 		iommu@6000000 {
+ 			status = "okay";
+ 		};
++
++		cmdqv@6200000 {
++			status = "okay";
++		};
+ 	};
+ };
+diff --git a/arch/arm64/boot/dts/nvidia/tegra264.dtsi b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+index 732b86db301a39..b8068ee52b3209 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra264.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra264.dtsi
+@@ -3361,7 +3361,7 @@
+ 			 <0x02 0x00000000 0xd0 0x00000000 0x08 0x80000000>; /* ECAM, prefetchable memory, I/O */
+ 
+ 		smmu1: iommu@5000000 {
+-			compatible = "arm,smmu-v3";
++			compatible = "nvidia,tegra264-smmu", "arm,smmu-v3";
+ 			reg = <0x00 0x5000000 0x0 0x200000>;
+ 			interrupts = <GIC_SPI 12 IRQ_TYPE_EDGE_RISING>,
+ 				     <GIC_SPI 13 IRQ_TYPE_EDGE_RISING>;
+@@ -3370,10 +3370,18 @@
+ 
+ 			#iommu-cells = <1>;
+ 			dma-coherent;
++			nvidia,cmdqv = <&cmdqv1>;
++		};
++
++		cmdqv1: cmdqv@5200000 {
++			compatible = "nvidia,tegra264-cmdqv";
++			reg = <0x00 0x5200000 0x0 0x830000>;
++			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
++			status = "disabled";
+ 		};
+ 
+ 		smmu2: iommu@6000000 {
+-			compatible = "arm,smmu-v3";
++			compatible = "nvidia,tegra264-smmu", "arm,smmu-v3";
+ 			reg = <0x00 0x6000000 0x0 0x200000>;
+ 			interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE_RISING>,
+ 				     <GIC_SPI 2 IRQ_TYPE_EDGE_RISING>;
+@@ -3382,6 +3390,14 @@
+ 
+ 			#iommu-cells = <1>;
+ 			dma-coherent;
++			nvidia,cmdqv = <&cmdqv2>;
++		};
++
++		cmdqv2: cmdqv@6200000 {
++			compatible = "nvidia,tegra264-cmdqv";
++			reg = <0x00 0x6200000 0x0 0x830000>;
++			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
++			status = "disabled";
+ 		};
+ 
+ 		mc: memory-controller@8020000 {
+@@ -3438,7 +3454,7 @@
+ 		};
+ 
+ 		smmu0: iommu@a000000 {
+-			compatible = "arm,smmu-v3";
++			compatible = "nvidia,tegra264-smmu", "arm,smmu-v3";
+ 			reg = <0x00 0xa000000 0x0 0x200000>;
+ 			interrupts = <GIC_SPI 21 IRQ_TYPE_EDGE_RISING>,
+ 				     <GIC_SPI 22 IRQ_TYPE_EDGE_RISING>;
+@@ -3447,10 +3463,18 @@
+ 
+ 			#iommu-cells = <1>;
+ 			dma-coherent;
++			nvidia,cmdqv = <&cmdqv0>;
++		};
++
++		cmdqv0: cmdqv@a200000 {
++			compatible = "nvidia,tegra264-cmdqv";
++			reg = <0x00 0xa200000 0x0 0x830000>;
++			interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
++			status = "disabled";
+ 		};
+ 
+ 		smmu4: iommu@b000000 {
+-			compatible = "arm,smmu-v3";
++			compatible = "nvidia,tegra264-smmu", "arm,smmu-v3";
+ 			reg = <0x00 0xb000000 0x0 0x200000>;
+ 			interrupts = <GIC_SPI 30 IRQ_TYPE_EDGE_RISING>,
+ 				     <GIC_SPI 31 IRQ_TYPE_EDGE_RISING>;
+@@ -3459,6 +3483,14 @@
+ 
+ 			#iommu-cells = <1>;
+ 			dma-coherent;
++			nvidia,cmdqv = <&cmdqv4>;
++		};
++
++		cmdqv4: cmdqv@b200000 {
++			compatible = "nvidia,tegra264-cmdqv";
++			reg = <0x00 0xb200000 0x0 0x830000>;
++			interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
++			status = "disabled";
+ 		};
+ 
+ 		i2c14: i2c@c410000 {
+@@ -3691,7 +3723,7 @@
+ 		ranges = <0x00 0x00000000 0x88 0x00000000 0x01 0x00000000>;
+ 
+ 		smmu3: iommu@6000000 {
+-			compatible = "arm,smmu-v3";
++			compatible = "nvidia,tegra264-smmu", "arm,smmu-v3";
+ 			reg = <0x00 0x6000000 0x0 0x200000>;
+ 			interrupts = <GIC_SPI 225 IRQ_TYPE_EDGE_RISING>,
+ 				     <GIC_SPI 226 IRQ_TYPE_EDGE_RISING>;
+@@ -3700,6 +3732,14 @@
+ 
+ 			#iommu-cells = <1>;
+ 			dma-coherent;
++			nvidia,cmdqv = <&cmdqv3>;
++		};
++
++		cmdqv3: cmdqv@6200000 {
++			compatible = "nvidia,tegra264-cmdqv";
++			reg = <0x00 0x6200000 0x0 0x830000>;
++			interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
++			status = "disabled";
+ 		};
+ 
+ 		hda@90b0000 {
+-- 
+cgit 1.3.1-korg
+

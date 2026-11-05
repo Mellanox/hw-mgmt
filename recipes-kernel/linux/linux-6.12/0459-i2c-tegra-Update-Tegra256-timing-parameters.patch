@@ -1,0 +1,53 @@
+From 81d4c5350f0148543bd4541a6d1fb06d9c835aeb Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Tue, 18 Nov 2025 19:36:17 +0530
+Subject: [PATCH 0459/0797] i2c: tegra: Update Tegra256 timing parameters
+
+Update the timing parameters of Tegra256 so that the signals are complaint
+with the I2C specification for SCL low time.
+
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Signed-off-by: Wolfram Sang <wsa+renesas@sang-engineering.com>
+---
+ drivers/i2c/busses/i2c-tegra.c | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-tegra.c b/drivers/i2c/busses/i2c-tegra.c
+index c0382c9a043084..470d0d32d5712b 100644
+--- a/drivers/i2c/busses/i2c-tegra.c
++++ b/drivers/i2c/busses/i2c-tegra.c
+@@ -1684,7 +1684,7 @@ static const struct tegra_i2c_hw_feature tegra256_i2c_hw = {
+ 	.clk_divisor_hs_mode = 7,
+ 	.clk_divisor_std_mode = 0x7a,
+ 	.clk_divisor_fast_mode = 0x40,
+-	.clk_divisor_fast_plus_mode = 0x19,
++	.clk_divisor_fast_plus_mode = 0x14,
+ 	.has_config_load_reg = true,
+ 	.has_multi_master_mode = true,
+ 	.has_slcg_override_reg = true,
+@@ -1695,14 +1695,13 @@ static const struct tegra_i2c_hw_feature tegra256_i2c_hw = {
+ 	.has_apb_dma = false,
+ 	.tlow_std_mode = 0x8,
+ 	.thigh_std_mode = 0x7,
+-	.tlow_fast_mode = 0x3,
+-	.thigh_fast_mode = 0x3,
+-	.tlow_fastplus_mode = 0x3,
+-	.thigh_fastplus_mode = 0x3,
++	.tlow_fast_mode = 0x4,
++	.thigh_fast_mode = 0x2,
++	.tlow_fastplus_mode = 0x4,
++	.thigh_fastplus_mode = 0x4,
+ 	.setup_hold_time_std_mode = 0x08080808,
+-	.setup_hold_time_fast_mode = 0x02020202,
+-	.setup_hold_time_fastplus_mode = 0x02020202,
+-	.setup_hold_time_hs_mode = 0x090909,
++	.setup_hold_time_fast_mode = 0x04010101,
++	.setup_hold_time_fastplus_mode = 0x04020202,
+ 	.has_interface_timing_reg = true,
+ };
+ 
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,47 @@
+From 51f10c527a63dc4a71bce4b40fc53eee78bbbd52 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 23 Feb 2026 15:33:04 +0100
+Subject: [PATCH 0598/0797] arm64: tegra: Fix snps,blen properties
+
+The snps,blen property of stmmac-axi-config nodes needs to have 7
+entries in total, with unsupported burst lengths listed as 0.
+
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra234.dtsi | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra234.dtsi b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+index 850c473235e367..04a95b6658caaa 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra234.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra234.dtsi
+@@ -3621,7 +3621,7 @@
+ 			snps,axi-config = <&mgbe0_axi_setup>;
+ 
+ 			mgbe0_axi_setup: stmmac-axi-config {
+-				snps,blen = <256 128 64 32>;
++				snps,blen = <256 128 64 32 0 0 0>;
+ 				snps,rd_osr_lmt = <63>;
+ 				snps,wr_osr_lmt = <63>;
+ 			};
+@@ -3663,7 +3663,7 @@
+ 			snps,axi-config = <&mgbe1_axi_setup>;
+ 
+ 			mgbe1_axi_setup: stmmac-axi-config {
+-				snps,blen = <256 128 64 32>;
++				snps,blen = <256 128 64 32 0 0 0>;
+ 				snps,rd_osr_lmt = <63>;
+ 				snps,wr_osr_lmt = <63>;
+ 			};
+@@ -3705,7 +3705,7 @@
+ 			snps,axi-config = <&mgbe2_axi_setup>;
+ 
+ 			mgbe2_axi_setup: stmmac-axi-config {
+-				snps,blen = <256 128 64 32>;
++				snps,blen = <256 128 64 32 0 0 0>;
+ 				snps,rd_osr_lmt = <63>;
+ 				snps,wr_osr_lmt = <63>;
+ 			};
+-- 
+cgit 1.3.1-korg
+

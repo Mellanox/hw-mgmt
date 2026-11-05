@@ -1,0 +1,35 @@
+From c3ce114d81e39cd83f7bf9c5c46020bb7695b017 Mon Sep 17 00:00:00 2001
+From: Sumit Gupta <sumitg@nvidia.com>
+Date: Mon, 18 May 2026 18:13:04 +0530
+Subject: [PATCH 0691/0797] memory: tegra264: Skip clients without bpmp_id or type
+
+Some MC clients are present in tegra264_mc_clients[] only for
+fault-log naming and have no .bpmp_id or .type assigned. Skip
+forwarding bandwidth requests to BPMP for such clients in
+tegra264_mc_icc_set().
+
+Signed-off-by: Sumit Gupta <sumitg@nvidia.com>
+Link: https://patch.msgid.link/20260518124306.2071481-2-sumitg@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+---
+ drivers/memory/tegra/tegra264.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/memory/tegra/tegra264.c b/drivers/memory/tegra/tegra264.c
+index e43ef14da1ee73..e6289084172556 100644
+--- a/drivers/memory/tegra/tegra264.c
++++ b/drivers/memory/tegra/tegra264.c
+@@ -262,6 +262,10 @@ static int tegra264_mc_icc_set(struct icc_node *src, struct icc_node *dst)
+ 		return -ENOENT;
+ 	}
+ 
++	/* Skip forwarding bw requests to BPMP from clients without bpmp_id/type. */
++	if (pclient->type == TEGRA_ICC_NONE || !pclient->bpmp_id)
++		return 0;
++
+ 	if (pclient->type == TEGRA_ICC_NISO)
+ 		bwmgr_req.bwmgr_calc_set_req.niso_bw = src->avg_bw;
+ 	else
+-- 
+cgit 1.3.1-korg
+

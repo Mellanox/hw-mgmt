@@ -1,0 +1,60 @@
+From e897e86711b28f815fbbe542fe87a66b39123d1e Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Wed, 22 Oct 2025 17:20:31 +0300
+Subject: [PATCH 0488/0797] clk: tegra30: Add CSI pad clock gates
+
+Tegra30 has CSI pad bits in both PLLD and PLLD2 clocks that are required
+for the correct work of the CSI block. Add CSI pad A and pad B clock gates
+with PLLD/PLLD2 parents, respectively. Add a plld2 spinlock, like one plld
+uses, to prevent simultaneous access since both the PLLDx and CSIx_PAD
+clocks use the same registers
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Tested-by: Luca Ceresoli <luca.ceresoli@bootlin.com> # tegra20, parallel camera
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/clk/tegra/clk-tegra30.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/clk/tegra/clk-tegra30.c b/drivers/clk/tegra/clk-tegra30.c
+index ca738bc64615e1..61fe527ee6c13a 100644
+--- a/drivers/clk/tegra/clk-tegra30.c
++++ b/drivers/clk/tegra/clk-tegra30.c
+@@ -154,6 +154,7 @@ static unsigned long input_freq;
+ 
+ static DEFINE_SPINLOCK(cml_lock);
+ static DEFINE_SPINLOCK(pll_d_lock);
++static DEFINE_SPINLOCK(pll_d2_lock);
+ 
+ #define TEGRA_INIT_DATA_MUX(_name, _parents, _offset,	\
+ 			    _clk_num, _gate_flags, _clk_id)	\
+@@ -859,7 +860,7 @@ static void __init tegra30_pll_init(void)
+ 
+ 	/* PLLD2 */
+ 	clk = tegra_clk_register_pll("pll_d2", "pll_ref", clk_base, pmc_base, 0,
+-			    &pll_d2_params, NULL);
++			    &pll_d2_params, &pll_d2_lock);
+ 	clks[TEGRA30_CLK_PLL_D2] = clk;
+ 
+ 	/* PLLD2_OUT0 */
+@@ -1008,6 +1009,16 @@ static void __init tegra30_periph_clk_init(void)
+ 				    0, 48, periph_clk_enb_refcnt);
+ 	clks[TEGRA30_CLK_DSIA] = clk;
+ 
++	/* csia_pad */
++	clk = clk_register_gate(NULL, "csia_pad", "pll_d", CLK_SET_RATE_PARENT,
++				clk_base + PLLD_BASE, 26, 0, &pll_d_lock);
++	clks[TEGRA30_CLK_CSIA_PAD] = clk;
++
++	/* csib_pad */
++	clk = clk_register_gate(NULL, "csib_pad", "pll_d2", CLK_SET_RATE_PARENT,
++				clk_base + PLLD2_BASE, 26, 0, &pll_d2_lock);
++	clks[TEGRA30_CLK_CSIB_PAD] = clk;
++
+ 	/* csus */
+ 	clk = tegra_clk_register_periph_gate("csus", "vi_sensor", 0,
+ 					     clk_base, 0, TEGRA30_CLK_CSUS,
+-- 
+cgit 1.3.1-korg
+

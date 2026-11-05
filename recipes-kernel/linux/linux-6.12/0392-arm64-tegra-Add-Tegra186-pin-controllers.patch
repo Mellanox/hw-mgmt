@@ -1,0 +1,51 @@
+From 700c48a438f3bd686b6fb066ad5b14fd13ba0cf9 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Tue, 12 Aug 2025 16:24:42 -0500
+Subject: [PATCH 0392/0797] arm64: tegra: Add Tegra186 pin controllers
+
+Add the device tree nodes for the MAIN and AON pin controllers found on
+the Tegra186 family of SoCs.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra186.dtsi | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186.dtsi b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+index 5778c93af3e6e7..66fdcec17073a0 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+@@ -36,6 +36,12 @@
+ 		interrupt-controller;
+ 		#gpio-cells = <2>;
+ 		gpio-controller;
++		gpio-ranges = <&pinmux 0 0 140>;
++	};
++
++	pinmux: pinmux@2430000 {
++		compatible = "nvidia,tegra186-pinmux";
++		reg = <0x0 0x2430000 0x0 0x15000>;
+ 	};
+ 
+ 	ethernet@2490000 {
+@@ -1274,10 +1280,16 @@
+ 		interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
+ 		gpio-controller;
+ 		#gpio-cells = <2>;
++		gpio-ranges = <&pinmux_aon 0 0 47>;
+ 		interrupt-controller;
+ 		#interrupt-cells = <2>;
+ 	};
+ 
++	pinmux_aon: pinmux@c300000 {
++		compatible = "nvidia,tegra186-pinmux-aon";
++		reg = <0x0 0xc300000 0x0 0x4000>;
++	};
++
+ 	pwm4: pwm@c340000 {
+ 		compatible = "nvidia,tegra186-pwm";
+ 		reg = <0x0 0xc340000 0x0 0x10000>;
+-- 
+cgit 1.3.1-korg
+

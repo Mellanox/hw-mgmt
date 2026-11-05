@@ -1,0 +1,54 @@
+From bf5ef3ce42da98c59d820dfdd9513ff210622f32 Mon Sep 17 00:00:00 2001
+From: Kartik Rajput <kkartik@nvidia.com>
+Date: Fri, 24 Oct 2025 12:19:52 +0530
+Subject: [PATCH 0447/0797] rtc: tegra: Replace deprecated SIMPLE_DEV_PM_OPS
+
+Replace deprecated SIMPLE_DEV_PM_OPS with DEFINE_SIMPLE_DEV_PM_OPS macro
+and use pm_sleep_ptr() to initialize pm_ops. This also allows us to drop
+the checks for CONFIG_PM_SLEEP.
+
+Suggested-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Signed-off-by: Kartik Rajput <kkartik@nvidia.com>
+Reviewed-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20251024064952.775883-3-kkartik@nvidia.com
+Signed-off-by: Alexandre Belloni <alexandre.belloni@bootlin.com>
+---
+ drivers/rtc/rtc-tegra.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/rtc/rtc-tegra.c b/drivers/rtc/rtc-tegra.c
+index 9e4e9c88178f3d..528e32b7d101c2 100644
+--- a/drivers/rtc/rtc-tegra.c
++++ b/drivers/rtc/rtc-tegra.c
+@@ -340,7 +340,6 @@ static int tegra_rtc_probe(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
+-#ifdef CONFIG_PM_SLEEP
+ static int tegra_rtc_suspend(struct device *dev)
+ {
+ 	struct tegra_rtc_info *info = dev_get_drvdata(dev);
+@@ -378,9 +377,8 @@ static int tegra_rtc_resume(struct device *dev)
+ 
+ 	return 0;
+ }
+-#endif
+ 
+-static SIMPLE_DEV_PM_OPS(tegra_rtc_pm_ops, tegra_rtc_suspend, tegra_rtc_resume);
++static DEFINE_SIMPLE_DEV_PM_OPS(tegra_rtc_pm_ops, tegra_rtc_suspend, tegra_rtc_resume);
+ 
+ static void tegra_rtc_shutdown(struct platform_device *pdev)
+ {
+@@ -395,7 +393,7 @@ static struct platform_driver tegra_rtc_driver = {
+ 		.name = "tegra_rtc",
+ 		.of_match_table = tegra_rtc_dt_match,
+ 		.acpi_match_table = tegra_rtc_acpi_match,
+-		.pm = &tegra_rtc_pm_ops,
++		.pm = pm_sleep_ptr(&tegra_rtc_pm_ops),
+ 	},
+ };
+ module_platform_driver(tegra_rtc_driver);
+-- 
+cgit 1.3.1-korg
+

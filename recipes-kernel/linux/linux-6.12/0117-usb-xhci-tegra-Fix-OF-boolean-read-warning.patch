@@ -1,0 +1,42 @@
+From 983e375849fe4fd987cab94d940ba2af6f9e7a71 Mon Sep 17 00:00:00 2001
+From: Jon Hunter <jonathanh@nvidia.com>
+Date: Thu, 16 Jan 2025 15:38:29 +0000
+Subject: [PATCH 0117/0797] usb: xhci: tegra: Fix OF boolean read warning
+
+After commit c141ecc3cecd ("of: Warn when of_property_read_bool() is
+used on non-boolean properties") was added, the following warning is
+observed for the Tegra XHCI driver ...
+
+ OF: /bus@0/usb@3610000: Read of boolean property 'power-domains' with
+     a value.
+
+Previously, of_property_read_bool() was used to determine if a property
+was present but has now been replaced by of_property_present(). The
+warning is meant to prevent new users but this user existed before the
+change was made. Fix this by updating the Tegra XHCI driver to use
+of_property_present() function to determine if the 'power-domains'
+property is present.
+
+Signed-off-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://lore.kernel.org/r/20250116153829.477360-1-jonathanh@nvidia.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/host/xhci-tegra.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/usb/host/xhci-tegra.c b/drivers/usb/host/xhci-tegra.c
+index a51ce71a6a77eb..22dc86fb525473 100644
+--- a/drivers/usb/host/xhci-tegra.c
++++ b/drivers/usb/host/xhci-tegra.c
+@@ -1668,7 +1668,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
+ 		goto put_padctl;
+ 	}
+ 
+-	if (!of_property_read_bool(pdev->dev.of_node, "power-domains")) {
++	if (!of_property_present(pdev->dev.of_node, "power-domains")) {
+ 		tegra->host_rst = devm_reset_control_get(&pdev->dev,
+ 							 "xusb_host");
+ 		if (IS_ERR(tegra->host_rst)) {
+-- 
+cgit 1.3.1-korg
+

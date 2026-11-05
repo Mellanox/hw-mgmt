@@ -1,0 +1,107 @@
+From 01f11ffdfd909e870c3863af60875e8de328790a Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Thu, 1 May 2025 17:32:23 -0500
+Subject: [PATCH 0207/0797] arm64: tegra: Enable PWM fan on the Jetson TX1 Devkit
+
+This is based on 6f78a94, which enabled added the fan and thermal zones
+for the Jetson Nano Devkit. The fan and thermal characteristics of the
+two devkits are similar, so using the same configuration.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250501-tx1-therm-v2-1-abdb1922c001@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../arm64/boot/dts/nvidia/tegra210-p2597.dtsi | 75 +++++++++++++++++++
+ 1 file changed, 75 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi b/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi
+index 83ed6ac2a8d8f..584461f3a6196 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra210-p2597.dtsi
+@@ -1623,6 +1623,18 @@
+ 		};
+ 	};
+ 
++	fan: pwm-fan {
++		compatible = "pwm-fan";
++		pwms = <&pwm 3 45334>;
++		fan-supply = <&vdd_fan>;
++		interrupt-parent = <&gpio>;
++		interrupts = <TEGRA_GPIO(K, 7) IRQ_TYPE_EDGE_RISING>;
++
++		/* cooling level (0, 1, 2, 3) - pwm inverted */
++		cooling-levels = <255 128 64 0>;
++		#cooling-cells = <2>;
++	};
++
+ 	vdd_sys_mux: regulator-vdd-sys-mux {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "VDD_SYS_MUX";
+@@ -1778,4 +1790,67 @@
+ 		enable-active-high;
+ 		vin-supply = <&vdd_5v0_sys>;
+ 	};
++
++	vdd_fan: regulator-vdd-fan {
++		compatible = "regulator-fixed";
++		regulator-name = "VDD_FAN";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&exp1 4 GPIO_ACTIVE_LOW>;
++		vin-supply = <&vdd_5v0_sys>;
++
++		regulator-enable-ramp-delay = <284>;
++	};
++
++	thermal-zones {
++		cpu-thermal {
++			trips {
++				cpu_trip_critical: critical {
++					temperature = <96500>;
++					hysteresis = <0>;
++					type = "critical";
++				};
++
++				cpu_trip_hot: hot {
++					temperature = <70000>;
++					hysteresis = <2000>;
++					type = "hot";
++				};
++
++				cpu_trip_active: active {
++					temperature = <50000>;
++					hysteresis = <2000>;
++					type = "active";
++				};
++
++				cpu_trip_passive: passive {
++					temperature = <30000>;
++					hysteresis = <2000>;
++					type = "passive";
++				};
++			};
++
++			cooling-maps {
++				map0 {
++					cooling-device = <&fan 3 3>;
++					trip = <&cpu_trip_critical>;
++				};
++
++				map1 {
++					cooling-device = <&fan 2 2>;
++					trip = <&cpu_trip_hot>;
++				};
++
++				map2 {
++					cooling-device = <&fan 1 1>;
++					trip = <&cpu_trip_active>;
++				};
++
++				map3 {
++					cooling-device = <&fan 0 0>;
++					trip = <&cpu_trip_passive>;
++				};
++			};
++		};
++	};
+ };
