@@ -1148,6 +1148,12 @@ done
 exit 0
 EOF
 	chmod 0755 "$STUB"
+	# The collector refuses a path in "tool" and looks the name
+	# up on PATH. The stub stays in $WORK; direct calls and the
+	# helper subshells (they prepend $SHIM_DIR and keep this
+	# PATH) both find it by basename.
+	PATH="$WORK:$PATH"
+	export PATH
 
 	# "*" matches any model through the config fnmatch fallback,
 	# so the holder works on every target. timeout_sec is the
@@ -1162,7 +1168,7 @@ EOF
     "LockTest": {
       "models": {
         "*": {
-          "tool": "$STUB",
+          "tool": "stub-vendor-tool.sh",
           "args": ["{device}"],
           "device_form": "controller",
           "timeout_sec": $LOCK_WAIT_SEC
