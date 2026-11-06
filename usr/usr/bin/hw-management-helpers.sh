@@ -2131,7 +2131,10 @@ _hw_mgmt_reset_attr_is_set()
 }
 
 # Cold power-cycle: recovery is another reboot, not MFSC PWM.
-# Warm reboot: COMEX/CPU reset (Linux reboot) or reset_platform.
+# Warm reboot: software reset (Linux reboot/kexec), COMEX/CPU reset, or
+# reset_platform. SPC1 ASIC-fan systems (MSN2700B, MSN2100, MSN2410) latch
+# reset_sw_reset for reboot and kexec; they do not expose reset_from_comex
+# or reset_platform.
 is_spc1_warm_reboot()
 {
 	local cold
@@ -2146,6 +2149,7 @@ is_spc1_warm_reboot()
 		fi
 	done
 
+	_hw_mgmt_reset_attr_is_set reset_sw_reset && return 0
 	_hw_mgmt_reset_attr_is_set reset_from_comex && return 0
 	_hw_mgmt_reset_attr_is_set reset_platform && return 0
 	return 1
@@ -2270,8 +2274,8 @@ set_asic_pwm_speed_safe()
 # not created (SPC1 PWM comes from ASIC hwmon). Thermal control never
 # latches emergency and never calls write_pwm_mlxreg(), so ASIC PWM stays
 # at the HW default (~60%). Program MFSC via mlxreg for the failed ASIC.
-# Scope: SPC1 after a warm (COMEX/CPU) reboot only. Cold reboot recovery
-# is another reboot; other platforms must not get these register writes.
+# Scope: SPC1 after a warm (software/COMEX/CPU) reboot only. Cold reboot
+# recovery is another reboot; other platforms must not get these writes.
 # Do not skip on pwm_control and do not use the sysfs PWM path.
 # $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
 # $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
