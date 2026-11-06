@@ -441,10 +441,66 @@ is_spc1_warm_reboot; echo PLAT:$?
     assert "PLAT:0" in result.stdout
 
 
+def test_spc1_warm_reboot_accepts_reset_sw_reset(tmp_path):
+    """reboot/kexec on MSN2700B/MSN2100/MSN2410 latch only reset_sw_reset."""
+    script = _helpers_preamble(
+        tmp_path, reset_attrs={"reset_sw_reset": "1"}
+    ) + """
+is_spc1_warm_reboot; echo SW:$?
+echo 0 > "$system_path/reset_sw_reset"
+is_spc1_warm_reboot; echo NONE:$?
+echo 1 > "$system_path/reset_sw_reset"
+echo 1 > "$system_path/reset_aux_pwr_or_ref"
+is_spc1_warm_reboot; echo COLD:$?
+"""
+    result = _run_bash(script, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "SW:0" in result.stdout
+    assert "NONE:1" in result.stdout
+    assert "COLD:1" in result.stdout
+
+
+def test_non_spc1_reset_sw_reset_is_not_warm(tmp_path):
+    script = _helpers_preamble(
+        tmp_path,
+        board="VMOD0010",
+        product="MSN3700",
+        reset_attrs={"reset_sw_reset": "1"},
+    ) + """
+is_spc1_warm_reboot; echo RC:$?
+"""
+    result = _run_bash(script, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
 def test_spc1_cold_reset_skips_pwm_fallback(tmp_path):
     result, mlxreg_log = _run_pwm_fail_helper(
         tmp_path,
         reset_attrs={"reset_aux_pwr_or_ref": "1", "reset_from_comex": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    assert not mlxreg_log.exists()
+
+
+def test_reset_sw_reset_programs_mfsc(tmp_path):
+    """Reboot-latched reset_sw_reset must run the chipup PWM fallback."""
+    result, mlxreg_log = _run_pwm_fail_helper(
+        tmp_path,
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+    args = mlxreg_log.read_text()
+    assert "--reg_name MFSC" in args
+    assert "pwm_duty_cycle=0xff" in args
+
+
+def test_cold_reset_sw_reset_skips_pwm_fallback(tmp_path):
+    result, mlxreg_log = _run_pwm_fail_helper(
+        tmp_path,
+        reset_attrs={"reset_sw_reset": "1", "reset_aux_pwr_or_ref": "1"},
     )
     assert result.returncode == 0, result.stderr
     assert "RC:1" in result.stdout
