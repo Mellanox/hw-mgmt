@@ -157,6 +157,8 @@ class CONST:
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     TEMP_NA_VAL = 255
+    MODULE_MIN_OFFSET_DEF = -20000
+    MODULE_MAX_OFFSET_DEF = 0
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -1553,8 +1555,8 @@ class thermal_module_sensor(system_device):
 
         self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
         self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
-        self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
-        self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        self.val_min_offset = self.sensors_config.get("val_min_offset", CONST.MODULE_MIN_OFFSET_DEF)
+        self.val_max_offset = self.sensors_config.get("val_max_offset", CONST.MODULE_MAX_OFFSET_DEF)
 
         self.eeprom_data_timestamp = None
         self.refresh_attr()
