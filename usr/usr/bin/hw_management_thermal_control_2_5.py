@@ -164,6 +164,8 @@ class CONST:
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     MODULE_MAX_COOLING_LVL = 960
     TEMP_NA_VAL = 255
+    MODULE_MIN_OFFSET_DEF = -20000
+    MODULE_MAX_OFFSET_DEF = 0
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -1897,8 +1899,8 @@ class thermal_module_sensor(system_device):
         self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         # taking default values for val_min_offset and val_max_offset
-        self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
-        self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        self.val_min_offset = self.sensors_config.get("val_min_offset", CONST.MODULE_MIN_OFFSET_DEF)
+        self.val_max_offset = self.sensors_config.get("val_max_offset", CONST.MODULE_MAX_OFFSET_DEF)
 
         # Tmax_crit should be used if module reported Tmax > Tmax_crit
         # So Tmax should be never bigger than Tmax_crit. (Optional parameter)
@@ -2039,8 +2041,8 @@ class thermal_module_sensor(system_device):
                 self.log.info("{}: no custom config found, using default values".format(self.name))
                 self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
                 self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
-                self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
-                self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+                self.val_min_offset = self.sensors_config.get("val_min_offset", CONST.MODULE_MIN_OFFSET_DEF)
+                self.val_max_offset = self.sensors_config.get("val_max_offset", CONST.MODULE_MAX_OFFSET_DEF)
             self.log.info("{}: pwm_min: {}, pwm_max: {}, val_min_offset: {}, val_max_offset: {}".format(self.name,
                                                                                                         self.pwm_min,
                                                                                                         self.pwm_max,
