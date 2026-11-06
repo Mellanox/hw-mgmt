@@ -60,8 +60,11 @@ from hw_management_lib import RepeatedTimer as RepeatedTimer
 from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
 import json
 import re
-import psutil
 import threading
+try:
+    import psutil
+except ImportError:  # psutil is optional: only used for memory/thread diagnostics
+    psutil = None
 
 #############################
 # Global const
@@ -296,7 +299,7 @@ SENSOR_DEF_CONFIG = {
                          "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 5, "val_hcrit": 150000,  "poll_time": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
@@ -4259,7 +4262,10 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Init Nvidia thermal control v.{}".format(VERSION))
         self.log.notice("*" * 40)
 
-        self.process = psutil.Process(os.getpid())
+        if psutil is not None:
+            self.process = psutil.Process(os.getpid())
+        else:
+            self.log.warning("python3-psutil is not installed: memory usage reports are disabled")
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
         # Set initial PWM to maximum
