@@ -4020,7 +4020,7 @@ class ThermalManagement(hw_management_file_op):
         self.pwm_timestamp_array[0] = current_milli_time()
 
         for drwr_idx in range(1, self.fan_drwr_num + 1):
-            fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
+            fan_obj = self._get_dev_obj(r"drwr{}(:|$)".format(drwr_idx))
             if fan_obj:
                 fan_obj.set_pwm(pwm_val, force)
 
@@ -4715,7 +4715,8 @@ class ThermalManagement(hw_management_file_op):
         self.attention_fans = []
         if self.attention_fans_lst:
             for fan_drwr_name in self.attention_fans_lst:
-                fan_drwr_obj = self._get_dev_obj(fan_drwr_name)
+                # Match the full device name: "drwr1" must not match "drwr10:..."
+                fan_drwr_obj = self._get_dev_obj(r"{}(:|$)".format(re.escape(fan_drwr_name)))
                 if not fan_drwr_obj:
                     self.log.warn("Dev name {} missing in system_config".format(fan_drwr_name))
                     continue
