@@ -586,20 +586,51 @@ def get_dict_val_by_path(dict_in, path):
 
 
 # ----------------------------------------------------------------------
-def g_get_range_val(line, in_value):
+def g_get_range_val(line, in_value, clamp=True):
     """
-    @summary: Searching range which is match to input val and returning corresponding output value
-    @param line: dict with temp ranges and output values
+    @summary: Searching range which is match to input value and returning corresponding output value.
+            If clamp is True:
+            if input value lower than lowest range - return lowest range value
+            if input value higher than highest range - return highest range value
+            Input value falling into a gap between ranges always returns None.
+    @param line: dict with temp ranges and output values (range bounds may be negative)
         Example: {"-127:20":30, "21:25":40 , "26:30":50, "31:120":60},
-    @param val: input value
-    @return: output value
+    @param in_value: input value (converted to int, fractional part is truncated)
+    @param clamp: clamp out-of-bounds input to the lowest/highest range (default True)
+    @return: tuple (output value, range min, range max).
+            (None, None, None) if input value is not a valid integer, the table is empty/malformed,
+            or no range matches. For clamped values range min and range max are both the violated boundary.
     """
+    try:
+        in_value = int(in_value)
+    except (ValueError, TypeError):
+        return None, None, None
+    if not line:
+        return None, None, None
+
+    lowest = None   # (min, val) of the range with lowest min
+    highest = None  # (max, val) of the range with highest max
     for key, val in line.items():
-        val_range = key.split(":")
-        val_min = int(val_range[0])
-        val_max = int(val_range[1])
+        # 1. split range and get min and max values (negative bounds are allowed)
+        try:
+            val_min, val_max = (int(x) for x in key.split(":"))
+        except (ValueError, TypeError, AttributeError):
+            return None, None, None
+        # 2. check if input value is in range
         if val_min <= in_value <= val_max:
             return val, val_min, val_max
+        # 3. save lowest and highest range values
+        if lowest is None or val_min < lowest[0]:
+            lowest = (val_min, val)
+        if highest is None or val_max > highest[0]:
+            highest = (val_max, val)
+
+    if clamp:
+        if in_value < lowest[0]:
+            return lowest[1], lowest[0], lowest[0]
+        if in_value > highest[0]:
+            return highest[1], highest[0], highest[0]
+
     return None, None, None
 
 
@@ -619,6 +650,11 @@ def g_get_dmin(thermal_table, temp, path):
         return CONST.PWM_MIN
     # get current range
     dmin, _, _ = g_get_range_val(line, round(temp))
+    if dmin is None:
+        # no matching range (gap/malformed table) - fall back to the highest cooling level
+        dmin, _, _ = g_get_range_val(line, 100)
+        if dmin is None:
+            return CONST.PWM_MIN
     return float(dmin)
 
 # ----------------------------------------------------------------------
