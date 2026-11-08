@@ -298,6 +298,34 @@ def test_hw_management_is_never_pulled_in_by_the_login():
     assert "--no-block" in guard
 
 
+def test_repeated_starts_of_hw_management_are_never_refused():
+    """The login does not restart itself, and is started anew on every start of
+    hw-management.service, so a rate limit would only refuse those starts and
+    report them as failures."""
+    unit = LOGIN_UNIT.read_text()
+
+    assert not re.search(r"^Restart=", unit, re.MULTILINE)
+    assert _setting(unit, "StartLimitIntervalSec") == 0
+    assert "StartLimitBurst=" not in unit
+
+
+def test_add_events_replayed_by_hw_management_leave_the_interface_alone():
+    """hw-management.sh runs "udevadm trigger --action=add" on every start, which
+    pulls the interface unit in again. Remaining active turns those starts into
+    no-ops, the binding to the device lets the interface coming back run it
+    again, and without Restart= a rate limit would only refuse starts."""
+    unit = (ROOT / "debian" / "hw-management-ifupdown@.service").read_text()
+    hw_management = (BIN / "hw-management.sh").read_text()
+
+    assert "udevadm trigger --action=add" in hw_management
+    assert "Type=oneshot" in unit
+    assert "RemainAfterExit=yes" in unit
+    assert "BindsTo=sys-subsystem-net-devices-%i.device" in unit
+    assert not re.search(r"^Restart=", unit, re.MULTILINE)
+    assert _setting(unit, "StartLimitIntervalSec") == 0
+    assert "StartLimitBurst=" not in unit
+
+
 def test_login_is_ordered_after_the_interface_and_reached_from_both_paths():
     """Ordering only on the interface unit, which UDEV activates: pulling it in
     would start it where the interface never shows up and its BindsTo= on the
