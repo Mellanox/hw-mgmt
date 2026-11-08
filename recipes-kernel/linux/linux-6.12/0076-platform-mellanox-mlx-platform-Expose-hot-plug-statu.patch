@@ -1,0 +1,125 @@
+From: Michael Shych <michaelsh@nvidia.com>
+Subject: [PATCH] platform: mellanox: mlx-platform: Expose hot-plug status and
+ event registers
+
+Systems equipped with the V3000 COM-Express board, like SN4700-A1 (system
+class VMOD0010, SKU HI202), do not route the switch board CPLD interrupt
+to the host CPU. The 'mlxreg-hotplug' driver probes and arms the per-item
+event masks as usual, but its interrupt handler never runs - the
+'mlxreg-hotplug' line in /proc/interrupts stays at zero - so PSU, FAN and
+power cable insertion and removal are only observed once, while
+hw-management is initialized and samples the presence bits.
+
+The CPLD itself keeps working: the presence registers follow the hardware
+and the event registers latch every transition, since the per-item event
+masks are armed by the hot-plug driver. What is missing is a way to read
+and acknowledge them from user space, so that the lost hot-plug events can
+be replayed by a poller.
+
+Expose the three pairs of registers behind the PSU, power cable and FAN
+hot-plug items through 'mlxreg-io':
+
+  psu_status 0x58 / psu_event 0x59   PSU presence,          0 - present
+  pwr_status 0x64 / pwr_event 0x65   power cable / DC ok,   1 - good
+  fan_status 0x88 / fan_event 0x89   FAN presence,          0 - present
+
+All six are already readable and volatile, and the event ones are already
+writeable in the regmap configuration, so no regmap change is needed. The
+status registers are read-only, the event registers are writeable, since
+an event is cleared by writing zero to its bit.
+
+Keep the attributes out of the systems which do not need them. Writing the
+event registers from user space races with the hot-plug interrupt handler,
+which acknowledges the very same registers, so the attributes are exposed
+only on the boards which do not deliver the interrupt - the same SKU list
+introduced for the reset cause fix. The attributes are appended at the end
+of the next generation attribute array and the default platform data stops
+short of them, so that the affected systems can take the full array through
+their own platform data, without a second copy of it.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 59 +++++++++++++++++++++++-
+ 1 file changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index f3210c4..0460599 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -5687,9 +5687,64 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.bit = GENMASK(7, 0),
+ 		.mode = 0444,
+ 	},
++	/*
++	 * Packed presence and event registers behind the PSU, power cable and
++	 * FAN hot-plug items, exposed only on the systems listed in
++	 * 'mlxplat_v3000_comex_sku'. Keep them last in the array, everybody
++	 * else gets it trimmed by MLXPLAT_CPLD_NG_REGS_IO_V3000_NUM entries.
++	 */
++	{
++		.label = "psu_status",
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "psu_event",
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_EVENT_OFFSET,
++		.mask = GENMASK(7, 0),
++		.bit = 1,
++		.mode = 0644,
++	},
++	{
++		.label = "pwr_status",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "pwr_event",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_EVENT_OFFSET,
++		.mask = GENMASK(7, 0),
++		.bit = 1,
++		.mode = 0644,
++	},
++	{
++		.label = "fan_status",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "fan_event",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET,
++		.mask = GENMASK(7, 0),
++		.bit = 1,
++		.mode = 0644,
++	},
+ };
+ 
++/* Number of trailing hot-plug mirror attributes in the array above. */
++#define MLXPLAT_CPLD_NG_REGS_IO_V3000_NUM	6
++
+ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
++		.data = mlxplat_mlxcpld_default_ng_regs_io_data,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data) -
++			   MLXPLAT_CPLD_NG_REGS_IO_V3000_NUM,
++};
++
++/* Same attributes, with the hot-plug mirror registers included. */
++static struct mlxreg_core_platform_data mlxplat_v3000_comex_regs_io_data = {
+ 		.data = mlxplat_mlxcpld_default_ng_regs_io_data,
+ 		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data),
+ };
+@@ -9575,8 +9630,10 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+ 	} else {
+ 		mlxplat_hotplug = &mlxplat_mlxcpld_ext_data;
+ 		mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
+-		if (mlxplat_v3000_comex_matched(sku))
++		if (mlxplat_v3000_comex_matched(sku)) {
++			mlxplat_regs_io = &mlxplat_v3000_comex_regs_io_data;
+ 			mlxplat_v3000_comex_regs_io_fixup();
++		}
+ 	}
+ 
+ 	mlxplat_hotplug->deferred_nr =

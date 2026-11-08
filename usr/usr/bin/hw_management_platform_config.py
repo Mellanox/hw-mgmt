@@ -73,7 +73,55 @@ PLATFORM_CONFIG = {
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 54}},
     ],
-    "HI122|HI156|HI184|HI198|HI202|MSN4700": [
+    "HI122|HI156|HI184|HI198|MSN4700": [
+        {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 32}},
+    ],
+    # SN4700-A1. Same as the rest of the SN4700 family, plus the software
+    # hot-plug handlers: the V3000 COMEx board does not route the CPLD
+    # interrupt to the CPU, so mlxreg-hotplug never gets one and PSU, power
+    # cable and FAN events have to be picked up from the CPLD registers.
+    "HI202": [
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["psu1", "psu2"],
+                "_event_reg": "psu_event",
+                "_status_reg": "psu_status",
+                "_inversed": True,
+                "_mask": "00000011",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+            },
+         },
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["pwr1", "pwr2"],
+                "_event_reg": "pwr_event",
+                "_status_reg": "pwr_status",
+                "_inversed": False,
+                "_mask": "00000011",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+            },
+         },
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["fan1", "fan2", "fan3", "fan4", "fan5", "fan6"],
+                "_event_reg": "fan_event",
+                "_status_reg": "fan_status",
+                "_inversed": True,
+                "_mask": "00111111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+            },
+         },
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 32}},
