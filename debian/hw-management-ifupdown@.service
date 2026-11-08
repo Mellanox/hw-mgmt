@@ -13,11 +13,20 @@ After=networking.service
 BindsTo=sys-subsystem-net-devices-%i.device
 After=sys-subsystem-net-devices-%i.device
 
-StartLimitIntervalSec=300
-StartLimitBurst=5
+# No rate limit: the unit has no Restart=, so every start of it comes from the
+# interface appearing or from "udevadm trigger --action=add", which
+# hw-management.sh runs on every start and which pulls the unit in again. A
+# limit would only refuse those and log them as failures once hw-management is
+# cycled a few times, as tests do.
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
+# Stay active once the interface has been handled, so the add events replayed by
+# hw-management.sh find the unit running and neither run ifup again nor restart
+# the login. BindsTo= stops the unit when the interface goes away, so the next
+# time it appears runs all of it again.
+RemainAfterExit=yes
 ExecStart=/usr/bin/hw-management-ifupdown.sh %i
 # Once the interface has been handled, log in to the BMC on it. A restart, as a
 # login that is already running - started at boot, or before the BMC reset that
