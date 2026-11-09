@@ -427,15 +427,19 @@ def _run_allowed_cmd(cmd, args=None, timeout=3.0):
     return retcode, ret_str
 
 
-def run_power_button_event(argv, val):
+def run_graceful_pwr_off_event(argv, val):
     """
-    @summary: Handle power button and graceful power-off events
+    @summary: Handle graceful power-off requests signalled by the CPLD
+
+    The BMC sets cpu_shutdown_req both from its front panel power button
+    interrupt handler and on a GracefulPwrOff Redfish command. The CPU cannot
+    tell the two apart, so both are reported to the NOS as a graceful_pwr_off
+    event.
+
     @param argv: Unused argument list (for interface compatibility)
-    @param val: Event value (1=pressed/triggered, 0=released/cleared)
+    @param val: Event value (1=triggered, 0=cleared)
     """
-    event_args = ["hotplug-event"]
-    _run_allowed_cmd("/usr/bin/hw-management-chassis-events.sh", event_args + ["POWER_BUTTON", val])
-    _run_allowed_cmd("/usr/bin/hw-management-chassis-events.sh", event_args + ["GRACEFUL_PWR_OFF", val])
+    _run_allowed_cmd("/usr/bin/hw-management-chassis-events.sh", ["hotplug-event", "GRACEFUL_PWR_OFF", val])
     if str(val) == "1":
         _run_allowed_cmd("logger", [
             "-t", "hw-management-peripheral-updater",

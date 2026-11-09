@@ -363,6 +363,8 @@ HI186 uses `nvsw_host_spc6_hid186_regs_io`):
 | `system/pwr_cycle` / `pwr_down` | Power control | WO |
 | `system/aux_pwr_cycle` | Aux power cycle | WO |
 | `system/graceful_pwr_off` | Graceful power off | RW |
+| `system/cpu_shutdown_req` | Graceful shutdown request from CPLD | RO |
+| `system/cpu_power_off_ready` | NOS shutdown complete, ready to power off | RW |
 | `system/cpld1_version` ... `cpld4_version` | CPLD versions | RO |
 | `system/cpu_erot_present` | CPU eRoT presence | RO |
 | `system/cpu_mctp_ready` | MCTP ready | RO |
@@ -432,14 +434,20 @@ Duplicate `system/jtag_enable` may also exist under `system/`.
 | `events/fan1` .. `events/fan5` | Fan drawer hot-plug | 0=removed, 1=inserted |
 | `events/psu1` .. `events/psu4` | PSU module hot-plug | 0=removed, 1=inserted |
 | `events/pwr1` .. `events/pwr4` | AC input hot-plug | 0=unplugged, 1=plugged |
+| `events/graceful_pwr_off` | Graceful power off request | 0=normal, 1=requested |
 
 **Note:** `events/pwr<N>` reflects AC power presence
 (`NVSW_REG_PWR_OFFSET` bits in kernel), not a power-board hot-plug event.
 HI186 has **no** `events/pdb*` or `events/leakage*`.
 
+`events/graceful_pwr_off` is raised when `system/cpu_shutdown_req` changes.
+The BMC sets that bit both from its front panel power button interrupt handler
+and on a `GracefulPwrOff` Redfish command, so both arrive as this one event.
+HI186 has no `events/power_button`.
+
 Platform monitoring (`hw_management_platform_config.py` SKU **HI186**) polls
-mlxreg-io `fan1`..`fan5`, `psu1`..`psu4`, `pwr1`..`pwr4`, and ASIC chip-up
-status.
+mlxreg-io `fan1`..`fan5`, `psu1`..`psu4`, `pwr1`..`pwr4`,
+`system/cpu_shutdown_req`, and ASIC chip-up status.
 
 ### Hot-plug Event Register Handling
 
