@@ -1,16 +1,15 @@
 # What changed in this revision
 
-Rev. 3.2.14, October 2026. Revisions through 3.2.13 are in the
+Rev. 3.2.15, November 2026. Revisions through 3.2.14 are in the
 [user manual changelog](CHANGELOG_User_Manual.md).
 
-- [Management PHY Reset](#management-phy-reset). `$bsp_path/system/sgmii_phy2_reset` (eth0) and
-  `$bsp_path/system/sgmii_phy_reset` (eth1) reset the PHY of one CPU management port. N51XX_LD,
-  N6100_LD, N6300_LD, SN6600, SN6600_LD, SN6800_LD and SN6810_LD have both nodes. SN5640 and SN5610
-  have the eth0 node only.
-- [Management PHY Recovery Helper](#management-phy-recovery-helper). `hw-management-phy-recover.sh`
-  resets the PHY of one port with the sequence that fits the port, waits for the hw-management
-  service, writes optional PHY snapshot lines to the trace log, and returns exit codes 0 to 4 for
-  the NOS.
+- [Graceful Power Off Event](#graceful-power-off-event). `$bsp_path/events/graceful_pwr_off` is the
+  single event raised when the BMC sets `$bsp_path/system/cpu_shutdown_req`, whether it did so from
+  its front panel power button interrupt handler or on a `GracefulPwrOff` Redfish command. SN6600,
+  SN6600_LD, SN6800_LD and SN6810_LD now have the node, and the platforms signalled this way no
+  longer have [`events/power_button`](#power-button-event-events).
+- [CPU Shut Down Request](#cpu-shut-down-request). The node is read only on the host and the BMC
+  raises it towards the CPU, not the other way round.
 
 # Introduction
 
@@ -2199,10 +2198,11 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/graceful\_pwr\_off}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Graceful power off event status. Indicates when the system is performing a graceful shutdown sequence.} \\
-Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (normal), 1 (graceful shutdown)} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Graceful power off request. hw-mgmt raises this event when \texttt{\small system/cpu\_shutdown\_req} changes value. The BMC sets that bit both from its front panel power button interrupt handler and on a \texttt{\small GracefulPwrOff} Redfish command, and the CPU cannot tell the two apart, so both are reported here. The NOS performs its shutdown sequence and then notifies the BMC through \hyperref[cpu-power-off-ready]{\texttt{\small system/cpu\_power\_off\_ready}}.} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (normal), 1 (graceful shutdown requested)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+Platforms & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Systems whose power events are signalled through the CPLD: N5100\_LD, N5110\_LD, N5112\_LD (HI162, HI166, HI167, HI169, HI170, HI176, HI177), N6100\_LD (HI180), N6300\_LD (HI185), SN6600 (HI186), SN6600\_LD (HI193), SN6810\_LD (HI183) and SN6800\_LD (HI187, HI188)} \\
 Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/graceful\_pwr\_off}} \\
 \bottomrule
 \end{tabular}
@@ -2219,10 +2219,11 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/events/power\_button}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Power button event status. Indicates when the system power button has been pressed.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Power button event status. Indicates when the system power button has been pressed. Raised from the mlxreg-hotplug power button interrupt.} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (not pressed), 1 (pressed)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
+Platforms & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Only systems where the front panel button raises an interrupt towards the host (HI152, HI159). Where that interrupt is handled by the BMC, which then sets \texttt{\small cpu\_shutdown\_req}, a press is reported as \hyperref[graceful-power-off-event]{\texttt{\small events/graceful\_pwr\_off}} instead and this node is not created} \\
 Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/power\_button}} \\
 \bottomrule
 \end{tabular}
@@ -4516,12 +4517,11 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpu\_shutdown\_req}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{CPU initiated shutdown request signal. This attribute is used by the CPU to request a system shutdown sequence.\newline On liquid-cooled platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node (not \texttt{\small events/graceful\_pwr\_off}) and invokes \texttt{\small run\_power\_button\_event} when the value changes. Platforms with this entry in the current tree include HI162, HI166–HI170, HI176, HI177, HI180, HI185 (N6300\_LD), and others listed in \texttt{\small PLATFORM\_CONFIG}.} \\
-Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Shutdown request raised towards the CPU. The BMC sets this bit, both from its front panel power button interrupt handler and on a \texttt{\small GracefulPwrOff} Redfish command.\newline On platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node and invokes \texttt{\small run\_graceful\_pwr\_off\_event} when the value changes, which raises \hyperref[graceful-power-off-event]{\texttt{\small events/graceful\_pwr\_off}} for the NOS. Platforms with this entry are HI162, HI166, HI167, HI169, HI170, HI176, HI177, HI180, HI185, HI186, HI193, HI183, HI187 and HI188, as listed in \texttt{\small PLATFORM\_CONFIG}.} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (no request), 1 (shutdown requested)} \\
+Access & \multicolumn{3}{p{0.735\linewidth}}{Read only on the host. The BMC side of the node is read/write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
-\multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
- & request & Integer & 0/1 \\
-Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set CPU shutdown request: \texttt{\small echo 1 \textgreater{} \$bsp\_path/system/cpu\_shutdown\_req}} \\
+Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/system/cpu\_shutdown\_req}} \\
 \bottomrule
 \end{tabular}
 \end{minipage}

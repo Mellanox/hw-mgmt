@@ -2645,7 +2645,7 @@ n51xxld_specific()
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
 	if [ $max_tachos -ne 0 ]; then
 		echo 33000 > $config_path/fan_max_speed
@@ -2724,7 +2724,7 @@ n61xxld_specific()
 	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
 	named_busses+=(${n61xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
@@ -2925,11 +2925,13 @@ sn66xx_specific()
     echo 0 > $config_path/i2c_bus_offset
 	echo $cpld_num > $config_path/cpld_num
 	health_events_count=0
+	pwr_events_count=1
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=5
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
@@ -2966,12 +2968,14 @@ sn68xxld_specific()
 	asic_control=0
 	max_tachos=0
 	health_events_count=0
+	pwr_events_count=1
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=5
 	named_busses+=(${sn68xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$sn68xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
@@ -3253,8 +3257,8 @@ create_event_files()
 	if [ $pwr_events_count -ne 0 ]; then
 		if [ -f "$power_events_file" ]; then
 			declare -a power_events="($(< $power_events_file))"
-			for ((i=0; i<=pwr_events_count; i+=1)); do
-				check_n_init $events_path/${power_events[$i]} 0
+			for power_event in "${power_events[@]}"; do
+				check_n_init $events_path/"$power_event" 0
 			done
 		else
 			check_n_init $events_path/power_button 0

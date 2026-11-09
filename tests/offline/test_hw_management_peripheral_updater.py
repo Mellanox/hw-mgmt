@@ -720,17 +720,17 @@ class TestRedfishFunctions(unittest.TestCase):
 class TestUtilityFunctions(unittest.TestCase):
     """Test utility functions in peripheral_updater"""
 
-    def test_run_power_button_event(self):
-        """Test run_power_button_event executes commands"""
+    def test_run_graceful_pwr_off_event(self):
+        """Test run_graceful_pwr_off_event executes commands"""
         import hw_management_peripheral_updater as peripheral_module
 
         with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
-            peripheral_module.run_power_button_event(None, "1")
+            peripheral_module.run_graceful_pwr_off_event(None, "1")
 
-        self.assertEqual(mock_cmd.call_count, 3)
+        self.assertEqual(mock_cmd.call_count, 2)
         mock_cmd.assert_any_call(
             "/usr/bin/hw-management-chassis-events.sh",
-            ["hotplug-event", "POWER_BUTTON", "1"],
+            ["hotplug-event", "GRACEFUL_PWR_OFF", "1"],
             timeout=3.0,
         )
         mock_cmd.assert_any_call(
@@ -740,14 +740,14 @@ class TestUtilityFunctions(unittest.TestCase):
             timeout=3.0,
         )
 
-    def test_run_power_button_event_released(self):
-        """Test run_power_button_event when released (value=0)"""
+    def test_run_graceful_pwr_off_event_cleared(self):
+        """Test run_graceful_pwr_off_event when cleared (value=0)"""
         import hw_management_peripheral_updater as peripheral_module
 
         with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
-            peripheral_module.run_power_button_event(None, "0")
+            peripheral_module.run_graceful_pwr_off_event(None, "0")
 
-        self.assertEqual(mock_cmd.call_count, 2)
+        self.assertEqual(mock_cmd.call_count, 1)
         commands = [call[0][0] for call in mock_cmd.call_args_list]
         self.assertNotIn("logger", commands)
 
