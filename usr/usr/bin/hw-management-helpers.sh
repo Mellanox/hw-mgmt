@@ -44,7 +44,11 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
 			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
 			 "vdd_cpu_alert" "vddq_alert")
-l1_power_events=("power_button graceful_pwr_off")
+# Power events reported through the CPLD cpu_shutdown_req bit. The BMC sets
+# that bit both from its front panel power button interrupt handler and on a
+# GracefulPwrOff Redfish command, so both are reported as a single
+# graceful_pwr_off event.
+cpld_power_events=("graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
