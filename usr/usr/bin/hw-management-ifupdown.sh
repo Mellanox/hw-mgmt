@@ -135,9 +135,13 @@ if [ ! -e /etc/network/interfaces ]; then
 	exit 0
 fi
 
+# A NOS may render /etc/network/interfaces long after the interface shows up.
+# SONiC writes it from interfaces-config.service, which runs tens of seconds
+# after the networking service this unit is ordered after, and only then
+# restarts networking. Leave the interface to the NOS instead of failing.
 if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
-	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
-	exit 1
+	log_info "Interface $INTERFACE is not defined in /etc/network/interfaces"
+	exit 0
 fi
 
 # ifup output is otherwise lost, as UDEV discards the output of RUN programs
