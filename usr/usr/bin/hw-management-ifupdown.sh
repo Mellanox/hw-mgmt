@@ -146,22 +146,27 @@ log_interface_state()
 	return 0
 }
 
-# Check if /etc/network/interfaces exists
+# Check if /etc/network/interfaces exists. A NOS that configures its interfaces
+# by other means has nothing for us to do here.
 if [ ! -e /etc/network/interfaces ]; then
-	log_err "/etc/network/interfaces is missing"
-	exit 1
+	log_info "/etc/network/interfaces is missing"
+	exit 0
 fi
 
-# Check if interface exists
+# Check if interface exists. It may have gone away again between the UDEV event
+# that pulled this unit in and the unit being started.
 if [ ! -d "/sys/class/net/$INTERFACE" ]; then
-	log_err "Interface $INTERFACE does not exist"
-	exit 1
+	log_info "Interface $INTERFACE does not exist"
+	exit 0
 fi
 
-# Check if interface is defined in /etc/network/interfaces
+# Check if interface is defined in /etc/network/interfaces. A NOS may render that
+# file long after the interface shows up - SONiC does it from interfaces-config
+# service, which runs well after the networking service this unit is ordered
+# after - so leave the interface to the NOS instead of failing the unit.
 if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
-	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
-	exit 1
+	log_info "Interface $INTERFACE is not defined in /etc/network/interfaces"
+	exit 0
 fi
 
 # ifup output is otherwise lost, as UDEV discards the output of RUN programs
