@@ -1,0 +1,60 @@
+From 1d83e3823b14c292d055b8f58c0daf9339a55dfe Mon Sep 17 00:00:00 2001
+From: Nadav Hugi <nhugi@nvidia.com>
+Date: Mon, 19 Oct 2026 19:29:32 +0300
+Subject: [PATCH] platform/mellanox: nvsw-host-spc6: Add the management PHY
+ reset attributes
+
+Expose the CPU management PHY reset bits of register 0x2517 as
+"sgmii_phy2_reset" (eth0, bit 5) and "sgmii_phy_reset" (eth1, bit 4)
+in the SPC6 and SN6600 register tables.
+
+Signed-off-by: Nadav Hugi <nhugi@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-host-spc6.c | 24 ++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
+index ef5b035ff..25c07a783 100644
+--- a/drivers/platform/mellanox/nvsw-host-spc6.c
++++ b/drivers/platform/mellanox/nvsw-host-spc6.c
+@@ -394,6 +394,18 @@ static struct mlxreg_core_data nvsw_host_spc6_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0644,
+ 	},
++	{
++		.label = "sgmii_phy2_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
++		.label = "sgmii_phy_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0644,
++	},
+ 	{
+ 		.label = "reset_long_pb",
+ 		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
+@@ -642,6 +654,18 @@ static struct mlxreg_core_data nvsw_host_spc6_hid186_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(3),
+ 		.mode = 0644,
+ 	},
++	{
++		.label = "sgmii_phy2_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
++		.label = "sgmii_phy_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0644,
++	},
+ 	{
+ 		.label = "reset_long_pb",
+ 		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
+-- 
+2.47.3
+

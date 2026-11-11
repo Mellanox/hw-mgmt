@@ -1,36 +1,7 @@
 #!/bin/bash
-##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 hw_management_path=/var/run/hw-management
 environment_path=$hw_management_path/environment
@@ -73,7 +44,11 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
 			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
 			 "vdd_cpu_alert" "vddq_alert")
-l1_power_events=("power_button graceful_pwr_off")
+# Power events reported through the CPLD cpu_shutdown_req bit. The BMC sets
+# that bit both from its front panel power button interrupt handler and on a
+# GracefulPwrOff Redfish command, so both are reported as a single
+# graceful_pwr_off event.
+cpld_power_events=("graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
@@ -86,6 +61,14 @@ asic_chipup_status=/run/.asic_chipup_completed
 # TC run state across hw-management stop/start. Outside $hw_management_path
 # (removed on stop). Keep in sync with hw-management-tc.service.
 tc_state_file="/var/run/.hw-management-tc-state"
+# Set by hw-management-start-post.sh for a SKU whose label tree is built at run
+# time instead of extracted from a ui_tree archive. Tells
+# hw-management-sysfs-monitor.sh to publish config/labels_ready once the tree
+# has settled. Outside $hw_management_path (removed on stop).
+labels_pending_file="/var/run/.hw-management-labels-pending"
+labels_maker_script="hw-management-labels-maker.sh"
+# Cap on the drain of the makers still in flight when the tree settles.
+labels_maker_timeout=30
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -222,12 +205,21 @@ show_hw_info()
 		CPLD_IOREG_RANGE=256
 	fi
 
+	# 1. Get the cpldreg dump
 	io_dump=$(iorw -b 0x2500 -r -l  $CPLD_IOREG_RANGE | expand)
+
+	# 2. Add extra reg dump [0x203d, 0x20f4] x86 only
+	if [ "$arch" = "x86_64" ]; then
+		extra_dump1=$(iorw -b 0x203d -r -l 1 | expand)
+		extra_dump2=$(iorw -b 0x20f4 -r -l 1 | expand)
+		io_dump="$io_dump"$'\n'"$extra_dump1"$'\n'"$extra_dump2"
+	fi
+
 	log_info "== cpld reg dump start =="
     echo "$io_dump" | logger
 	log_info "== cpld reg dump end =="
-		
-	# Append the new cpldreg dump entry
+
+	# 1. Append the new cpldreg dump entry
  	timestamp=$(date +"%d_%m_%y %H:%M:%S")
 	echo "====== $timestamp cpldreg dump ======" >> "$cpldreg_log_file"
 	echo "$io_dump" >> "$cpldreg_log_file"
@@ -235,7 +227,8 @@ show_hw_info()
 	echo "" >> "$cpldreg_log_file"
 
 	N_REC=100
-	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / 16 + 4)))
+	MSG_LINES=$(echo "$io_dump" | wc -l)
+	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / $MSG_LINES + 4)))
 	tail -n $dump_max_lines "$cpldreg_log_file" > "${cpldreg_log_file}.tmp" && mv "${cpldreg_log_file}.tmp" "$cpldreg_log_file"
 }
 
@@ -339,7 +332,6 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI169" ] ||
         [ "$ui_tree_sku" = "HI170" ] || 
         [ "$ui_tree_sku" = "HI173" ] ||
-        [ "$ui_tree_sku" = "HI174" ] ||
         [ "$ui_tree_sku" = "HI175" ] ||
         [ "$ui_tree_sku" = "HI176" ] ||
         [ "$ui_tree_sku" = "HI177" ] ||
@@ -355,6 +347,40 @@ check_labels_enabled()
     return 1
 }
 
+# Wait for the hw-management-labels-maker.sh instances spawned by check_n_link
+# to finish. Returns 1 if any of them is still running after the timeout.
+wait_labels_maker_done()
+{
+    local waited=0
+
+    while pgrep -f "$labels_maker_script" > /dev/null 2>&1; do
+        if [ "$waited" -ge "$labels_maker_timeout" ]; then
+            return 1
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+    return 0
+}
+
+# Publish config/labels_ready for a SKU whose label tree is built at run time.
+# Called from hw-management-sysfs-monitor.sh once the tree has settled: a maker
+# is spawned from check_n_link, which is also what refreshes the monitor
+# timestamps, so by then every maker has been spawned and only the ones still
+# in flight have to be drained. No-op when hw-management-start-post.sh
+# extracted a ui_tree archive and published the indicator itself.
+publish_labels_ready()
+{
+    [ -f "$labels_pending_file" ] || return 0
+
+    if ! wait_labels_maker_done; then
+        log_err "Label tree is still being built after ${labels_maker_timeout}s"
+    fi
+    rm -f "$labels_pending_file"
+    echo 1 > "$config_path"/labels_ready
+    log_info "Labels data base is ready"
+}
+
 # This function checks if the platform is having BSP emulation support.
 # return 0 if supported, 1 otherwise.
 check_if_simx_supported_platform()
@@ -362,7 +388,7 @@ check_if_simx_supported_platform()
 	case $vm_sku in
 		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|\
 		HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI183|\
-		HI185|HI186|HI187|HI193|HI194|HI199|HI200|HI201)
+		HI185|HI186|HI187|HI193|HI194|HI199|HI200|HI201|HI203)
 			return 0
 			;;
 
@@ -430,23 +456,73 @@ check_bmc_is_supported()
 	esac
 }
 
-# This function checks if the host NOS is SONiC.
-# On SONiC, SONiC itself owns CPU<->BMC communication, so hw-management must
-# skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
-# polling). On any other host OS the behavior is unchanged.
-# Returns 0 if the host runs SONiC, 1 otherwise (single source of truth:
-# hw_management_sonic_check.py).
-check_host_os_is_sonic()
+# Returns 0 if is_redfish_disabled is True, 1 otherwise.
+check_host_os_is_redfish_disabled()
 {
-	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
+	print_function_call "$0" "${FUNCNAME[0]}" "Checking host OS Redfish disabled started"
+	local result=$(/usr/bin/hw_management_feature.py --get is_redfish_disabled)
+	print_function_call "$0" "${FUNCNAME[0]}" "Checking host OS Redfish disabled result: $result"
+	if [ "$result" == "True" ]; then
+		return 0
+	else
+		return 1
+	fi
 }
 
-# Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
-# Requires SONiC plus a host-side contract file (same well-known paths as on the BMC).
+# Returns 0 if is_usb0_managed_by_nos is True and a usb0 contract file exists.
 check_host_usb0_managed_by_nos()
 {
-	check_host_os_is_sonic || return 1
+	print_function_call "$0" "${FUNCNAME[0]}" "Checking host USB0 managed by NOS started"
+	local result
+	result=$(/usr/bin/hw_management_feature.py --get is_usb0_managed_by_nos)
+	print_function_call "$0" "${FUNCNAME[0]}" "Checking host USB0 managed by NOS result: $result"
+	if [ "$result" != "True" ]; then
+		return 1
+	fi
 	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
+}
+
+# hw-management-sysfs-monitor.service owns the sysfs ready file, the hw-mgmt
+# tree dump, the post fixup hook, the i2c trace teardown and config/labels_ready.
+# systemd pulls it in after hw-management.service, but "hw-management.sh restart"
+# and a manual start run do_start on their own, outside any systemd job, so
+# nothing re-runs the monitor and the labels handoff never completes. Start it
+# from here in that case. Only while hw-management.service is already active:
+# during its ExecStart the unit reads "activating" and systemd starts the
+# monitor itself, and when the unit is inactive the monitor Requires= would drag
+# it in. --no-block because the monitor ExecStart returns only once the tree has
+# settled.
+start_sysfs_monitor_if_needed()
+{
+    print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+    [ "$(systemctl is-active hw-management.service 2>/dev/null)" = "active" ] || return 0
+    systemctl is-active --quiet hw-management-sysfs-monitor.service 2>/dev/null && return 0
+
+    log_info "Starting sysfs monitor to complete hw-management initialization"
+    systemctl start --no-block hw-management-sysfs-monitor.service 2>/dev/null
+}
+
+# hw-management-bmc-login.service logs in to the BMC over Redfish, which also
+# provisions the NOS account there. systemd pulls it in after
+# hw-management.service, so the same reasoning as for the sysfs monitor above
+# applies: a "hw-management.sh restart" or a manual start runs do_start outside
+# any systemd job, and nothing would log in then.
+#
+# Unlike the monitor, this is not restricted to an active hw-management.service.
+# A start after "systemctl stop hw-management.service" initializes the hardware
+# while leaving that unit inactive, and the login has to happen on that path as
+# well; the login unit has no Requires= on it, so starting it there initializes
+# nothing a second time. --no-block because during the ExecStart of
+# hw-management.service the login is ordered after the very unit we are running
+# under, so a blocking start would wait for its own caller.
+start_bmc_login_if_needed()
+{
+    print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+    check_bmc_is_supported || return 0
+    systemctl is-active --quiet hw-management-bmc-login.service 2>/dev/null && return 0
+
+    log_info "Starting BMC Redfish login"
+    systemctl start --no-block hw-management-bmc-login.service 2>/dev/null
 }
 
 # This function create or cleans sysfs monitor helper files.
@@ -1383,7 +1459,7 @@ I2C_TRACE_LOG="/var/log/hw-mgmt-i2c-trace.log"
 I2C_TRACE_BUF_SIZE_KB=1024
 start_i2c_trace() {
 	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
-		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c trace events"
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not enabled in kernel"
 		return
 	fi
 
@@ -1408,14 +1484,17 @@ start_i2c_trace() {
 	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter  2>/dev/null || true
 	# enable (start)i2c trace
 	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
-	print_function_call "$0" "${FUNCNAME[0]}" "started"
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	echo "Trace "`date '+%Y-%m-%d %H:%M:%S'`" start" >> "$I2C_TRACE_LOG"
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	print_function_call "$0" "${FUNCNAME[0]}" "start"
 }
 
 # Stop i2c trace
 stop_i2c_trace() {
 	# check if i2c trace available
 	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
-		print_function_call "$0" "${FUNCNAME[0]}" "skip: no i2c enable"
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: not enabled in kernel"
 		return
 	fi
 	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
@@ -1429,7 +1508,11 @@ stop_i2c_trace() {
 	cat "$KERN_TRACE_FS"/trace >> "$I2C_TRACE_LOG"
 	# clear i2c trace buffer
 	echo 0 > "$KERN_TRACE_FS"/trace
-	print_function_call "$0" "${FUNCNAME[0]}" "stopped saved:$I2C_TRACE_LOG"
+	print_function_call "$0" "${FUNCNAME[0]}" "stop, saved:$I2C_TRACE_LOG"
+
+	echo "================================================" >> "$I2C_TRACE_LOG"
+	echo "Trace "`date '+%Y-%m-%d %H:%M:%S'`" end" >> "$I2C_TRACE_LOG"
+	echo "================================================" >> "$I2C_TRACE_LOG"
 }
 
 # Snapshot the boot-wide (top-level) I2C trace buffer into the trace log, tagged
@@ -1537,6 +1620,82 @@ stop_chipup_i2c_trace() {
 		rmdir "$CHIPUP_I2C_TRACE_INSTANCE" 2>/dev/null || true
 	fi
 	CHIPUP_TRACE_DIR=""
+}
+
+# PSU VPD I2C tracer.
+#
+# PSU VPD reads run from udev and can overlap the boot-wide tracer and a chipup
+# tracer. Each read gets its own ftrace instance (instances/hwmgmt_psu_<name>_<pid>)
+# so start/stop never change the top-level events/i2c enable, filter, or buffer.
+# There is no top-level fallback: if instances are unavailable the read is not
+# traced, rather than taking a tracer another path still owns.
+#
+# start_psu_vpd_i2c_trace stores the instance directory in PSU_VPD_TRACE_DIR
+# (empty when tracing was not started). stop_psu_vpd_i2c_trace dumps that buffer
+# to I2C_TRACE_LOG and removes the instance.
+# $1 - PSU name, used in the instance directory name.
+# $2 - I2C adapter number. Only this adapter is recorded (adapter_nr==bus).
+PSU_VPD_TRACE_DIR=""
+
+start_psu_vpd_i2c_trace() {
+	local psu_name="$1"
+	local bus="$2"
+	local tag instance
+
+	PSU_VPD_TRACE_DIR=""
+
+	if [ ! -d "$KERN_TRACE_FS/instances" ]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: no trace instances psu:$psu_name"
+		return
+	fi
+	if [[ ! "$bus" =~ ^[0-9]+$ ]]; then
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: bad bus psu:$psu_name bus:$bus"
+		return
+	fi
+
+	tag=$(printf '%s' "$psu_name" | tr -c '[:alnum:]' '_')
+	instance="$KERN_TRACE_FS/instances/hwmgmt_psu_${tag}_$$"
+	if ! mkdir -p "$instance" 2>/dev/null || [ ! -d "$instance/events/i2c" ]; then
+		rmdir "$instance" 2>/dev/null || true
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: instance failed psu:$psu_name"
+		return
+	fi
+
+	echo 0 > "$instance"/events/i2c/enable 2>/dev/null
+	echo 0 > "$instance"/trace 2>/dev/null
+	# Bound the ring buffer size (per-CPU), same cap as the boot-wide tracer.
+	echo "$I2C_TRACE_BUF_SIZE_KB" > "$instance"/buffer_size_kb 2>/dev/null || true
+	echo "adapter_nr==$bus" > "$instance"/events/i2c/filter 2>/dev/null || true
+	if ! echo 1 > "$instance"/events/i2c/enable 2>/dev/null; then
+		rmdir "$instance" 2>/dev/null || true
+		print_function_call "$0" "${FUNCNAME[0]}" "skip: enable failed psu:$psu_name"
+		return
+	fi
+	PSU_VPD_TRACE_DIR="$instance"
+	print_function_call "$0" "${FUNCNAME[0]}" "started psu:$psu_name bus:$bus dir:$instance"
+}
+
+# Dump the PSU VPD instance buffer into the I2C trace log and remove the instance.
+# A flock on the log keeps concurrent PSU reads from interleaving lines.
+# $1 - reason written into the log banner (PSU name, bus, result).
+stop_psu_vpd_i2c_trace() {
+	local reason="${1:-psu vpd}"
+
+	[ -n "$PSU_VPD_TRACE_DIR" ] || return
+	print_function_call "$0" "${FUNCNAME[0]}" "dir:$PSU_VPD_TRACE_DIR reason:$reason"
+	echo 0 > "$PSU_VPD_TRACE_DIR"/events/i2c/enable 2>/dev/null
+	(
+		/usr/bin/flock -x 9 || true
+		echo "================================================" >&9
+		echo "PSU VPD $(date '+%Y-%m-%d %H:%M:%S') ${reason}" >&9
+		echo "================================================" >&9
+		cat "$PSU_VPD_TRACE_DIR"/trace >&9 2>/dev/null
+		echo "================================================" >&9
+		echo "PSU VPD $(date '+%Y-%m-%d %H:%M:%S') end" >&9
+		echo "================================================" >&9
+	) 9>>"$I2C_TRACE_LOG"
+	rmdir "$PSU_VPD_TRACE_DIR" 2>/dev/null || true
+	PSU_VPD_TRACE_DIR=""
 }
 
 # Print function trace to the log file(s)
@@ -1923,40 +2082,123 @@ get_asic_mlxreg_dev()
 	return 1
 }
 
-# After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
-# typically missing, so thermal control never latches emergency and never
-# calls write_pwm_mlxreg(). Force PWM 100% here:
-# - thermal/pwm1 if it still exists (CPLD or leftover ASIC hwmon)
-# - otherwise MFSC via mlxreg for the failed ASIC when tc_config enables
-#   ASIC PWM control
-# $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
-# $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
-set_asic_pwm_full_speed_on_chipup_fail()
+# True for Spectrum-1 chassis (mlxsw_minimal I2C ASIC). Matches check_system().
+is_spc1_system()
 {
-	local asic_index
-	local explicit_dev="$2"
-	local pwm_link="$thermal_path/pwm1"
-	local tc_cfg="$config_path/tc_config.json"
-	local mt_dev=""
-	local mlxreg_rc=0
-	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+	local bt product cpu
 
-	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
-	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index dev:$explicit_dev"
+	[ -f "$board_type_file" ] && bt=$(< "$board_type_file") || bt="Unknown"
+	case $bt in
+	VMOD0001|VMOD0002|VMOD0003|VMOD0004|VMOD0009|VMOD0014)
+		return 0
+		;;
+	esac
 
-	if [ -e "$pwm_link" ]; then
-		echo 255 > "$pwm_link"
-		log_info "Set PWM to maximum speed via sysfs after chipup failure."
+	[ -f "$pn_file" ] && product=$(< "$pn_file") || product=""
+	case $product in
+	MSN27002|MSB78002|MSN24102|MSN274*|MSN21*|MSN24*|MSN27*|MSB*|MSX*|MSN201*|SN2201*)
+		return 0
+		;;
+	esac
+
+	if [ -f "$config_path/cpu_type" ] && \
+	   grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor 2>/dev/null; then
+		cpu=$(< "$config_path/cpu_type")
+		case $cpu in
+		"$IVB_CPU"|"$RNG_CPU")
+			return 0
+			;;
+		esac
+	fi
+	return 1
+}
+
+# Read a mlxreg-io reset_* attribute from $system_path or the hwmon source.
+# Chipup can race regio udev linking into $system_path.
+_hw_mgmt_reset_attr_is_set()
+{
+	local name="$1"
+	local f
+
+	if [ -e "$system_path/$name" ] && \
+	   [ "$(cat "$system_path/$name" 2>/dev/null)" = "1" ]; then
 		return 0
 	fi
 
-	if [ ! -f "$tc_cfg" ] || ! grep -q '"pwm_control"[[:space:]]*:[[:space:]]*true' "$tc_cfg"; then
-		log_info "Chipup failed and PWM sysfs is missing; ASIC PWM control is not configured."
+	for f in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/"$name"; do
+		[ -e "$f" ] || continue
+		if [ "$(cat "$f" 2>/dev/null)" = "1" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# Cold power-cycle: recovery is another reboot, not MFSC PWM.
+# Warm reboot: software reset (Linux reboot/kexec), COMEX/CPU reset, or
+# reset_platform. SPC1 ASIC-fan systems (MSN2700B, MSN2100, MSN2410) latch
+# reset_sw_reset for reboot and kexec; they do not expose reset_from_comex
+# or reset_platform.
+is_spc1_warm_reboot()
+{
+	local cold
+
+	is_spc1_system || return 1
+
+	for cold in reset_aux_pwr_or_ref reset_aux_pwr_or_fu \
+		    reset_aux_pwr_or_reload reset_long_pb reset_long_pwr_pb \
+		    reset_ac_pwr_fail; do
+		if _hw_mgmt_reset_attr_is_set "$cold"; then
+			return 1
+		fi
+	done
+
+	_hw_mgmt_reset_attr_is_set reset_sw_reset && return 0
+	_hw_mgmt_reset_attr_is_set reset_from_comex && return 0
+	_hw_mgmt_reset_attr_is_set reset_platform && return 0
+	return 1
+}
+
+# Write PWM via mlxreg MFSC (direct ASIC register access).
+# Same command as thermal write_pwm_mlxreg(): mlxreg -d DEV --reg_name MFSC
+# --indexes pwm=0x0 --set pwm_duty_cycle=<hex>.
+# Confirm with a finite "y" stream. Unbounded "yes |" hits SIGPIPE when mlxreg
+# closes stdin and logs "yes: standard output: Broken pipe".
+# $1: ASIC index (0- or 1-based; 0 means first ASIC)
+# $2: PWM duty cycle 0-255 (decimal or 0xNN). 255/0xff is 100%.
+#     Scale matches sysfs pwm1 and MFSC, not thermal-control percent 0-100.
+# $3: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+write_pwm_mlxreg()
+{
+	local asic_index
+	local pwm_in="$2"
+	local explicit_dev="$3"
+	local mt_dev=""
+	local mlxreg_rc=0
+	local pwm_dec pwm_hex
+	local mst_devdir="${HW_MGMT_MST_DEVDIR:-/dev/mst}"
+
+	asic_index=$(_hw_mgmt_normalize_asic_index "$1")
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"asic:$asic_index pwm:$pwm_in dev:$explicit_dev"
+
+	if [[ "$pwm_in" =~ ^0[xX][0-9A-Fa-f]+$ ]]; then
+		pwm_dec=$((pwm_in))
+	elif [[ "$pwm_in" =~ ^[0-9]+$ ]]; then
+		pwm_dec=$((10#$pwm_in))
+	else
+		log_err "Invalid PWM duty cycle for mlxreg write: '$pwm_in'."
 		return 1
 	fi
 
+	if [ "$pwm_dec" -lt 0 ] || [ "$pwm_dec" -gt 255 ]; then
+		log_err "PWM duty cycle out of range (0-255) for mlxreg write: $pwm_in."
+		return 1
+	fi
+	pwm_hex=$(printf "0x%x" "$pwm_dec")
+
 	if ! command -v mlxreg >/dev/null 2>&1; then
-		log_err "mlxreg is not available; cannot set PWM after chipup failure."
+		log_err "mlxreg is not available; cannot set PWM."
 		return 1
 	fi
 
@@ -1968,26 +2210,89 @@ set_asic_pwm_full_speed_on_chipup_fail()
 
 	mt_dev=$(get_asic_mlxreg_dev "$1" "$explicit_dev")
 	if [ -z "$mt_dev" ]; then
-		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM after chipup failure."
+		log_err "ASIC $asic_index mst/PCI device is not available; cannot set PWM."
 		return 1
 	fi
 
-	# mlxreg prompts for confirmation; same pattern as thermal write_pwm_mlxreg().
+	# check if mlxreg is available
+	if ! command -v mlxreg >/dev/null 2>&1; then
+		log_err "mlxreg is not available; cannot set PWM."
+		return 1
+	fi
+
+	# mlxreg prompts for confirmation. Do not use unbounded "yes":
+	# mlxreg closes stdin after the first answer and "yes" logs Broken pipe.
 	if command -v timeout >/dev/null 2>&1; then
-		yes | timeout 3 mlxreg -d "$mt_dev" --reg_name MFSC \
-			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+		printf 'y\ny\ny\n' | timeout 5 mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle="$pwm_hex" >/dev/null 2>&1
 		mlxreg_rc=$?
 	else
-		yes | mlxreg -d "$mt_dev" --reg_name MFSC \
-			--indexes pwm=0x0 --set pwm_duty_cycle=0xff >/dev/null 2>&1
+		printf 'y\ny\ny\n' | mlxreg -d "$mt_dev" --reg_name MFSC \
+			--indexes pwm=0x0 --set pwm_duty_cycle="$pwm_hex" >/dev/null 2>&1
 		mlxreg_rc=$?
 	fi
 
 	if [ "$mlxreg_rc" -ne 0 ]; then
-		log_err "Failed to set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev rc=$mlxreg_rc)."
+		log_err "Failed to set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
 		return 1
 	fi
 
-	log_info "Set PWM to maximum speed via mlxreg after chipup failure (asic=$asic_index dev=$mt_dev)."
+	log_info "Set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex)."
 	return 0
+}
+
+# Set ASIC PWM speed for ASIC controlled systems
+# If PWM controlled by ASIC - set it with mlxreg tool. 
+# If PWM controlled by CPLD - do nothing
+# $1 - ASIC index
+# $2 - PWM speed (0-255)
+set_asic_pwm_speed_safe()
+{
+	local asic_index="$1"
+	local pwm_speed="$2"
+	print_function_call "$0" "${FUNCNAME[0]}" "asic:$asic_index"
+	
+	# check if PWM controlled by ASIC.
+	# if config/cooling_name == "mlxsw" then PWM controlled by ASIC
+	[ -f "$config_path/cooling_name" ] || return 0
+	local cooling_name=$(< "$config_path/cooling_name")
+	if [ "$cooling_name" == "mlxsw" ]; then
+		# PWM controlled by ASIC
+		print_function_call "$0" "${FUNCNAME[0]}" "PWM controlled by ASIC, set pwm to $pwm_speed via mlxreg"
+		write_pwm_mlxreg "$asic_index" "$pwm_speed"
+		return_code=$?
+		if [ $return_code -ne 0 ]; then
+			print_function_call "$0" "${FUNCNAME[0]}" "Failed to set PWM via mlxreg (asic=$asic_index pwm=$pwm_speed). Trying to set via sysfs as last chance"
+			if [ -e "$thermal_path/pwm1" ]; then
+				echo "$pwm_speed" > "$thermal_path/pwm1"
+			else
+				print_function_call "$0" "${FUNCNAME[0]}" "PWM sysfs is missing; ASIC PWM control is not configured."
+				return 1
+			fi
+		fi
+	fi
+	return 0
+}
+
+# After mlxsw_minimal chipup has failed, thermal/asic and thermal/pwm1 are
+# not created (SPC1 PWM comes from ASIC hwmon). Thermal control never
+# latches emergency and never calls write_pwm_mlxreg(), so ASIC PWM stays
+# at the HW default (~60%). Program MFSC via mlxreg for the failed ASIC.
+# Scope: SPC1 after a warm (software/COMEX/CPU) reboot only. Cold reboot
+# recovery is another reboot; other platforms must not get these writes.
+# Do not skip on pwm_control and do not use the sysfs PWM path.
+# $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
+# $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path
+set_asic_pwm_full_speed_on_chipup_fail()
+{
+	local explicit_dev="$2"
+
+	if ! is_spc1_warm_reboot; then
+		log_info "Skip PWM fallback after chipup failure: not SPC1 warm reboot."
+		return 1
+	fi
+
+	print_function_call "$0" "${FUNCNAME[0]}" \
+		"asic:$(_hw_mgmt_normalize_asic_index "$1") dev:$explicit_dev"
+	write_pwm_mlxreg "$1" 0xff "$explicit_dev"
 }

@@ -1,0 +1,111 @@
+From b7044eecefce0ae1be106912cddbfeed4eecb9a3 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Thu, 5 Nov 2026 07:48:08 +0200
+Subject: platform: mellanox: nvsw-host-nvl6: Introduce cpu power cycle
+
+This patch add the following:
+ - Introduce a new cpld attribute that is used to
+   trigger a cpu only power cycle. NVMe will also
+   be power cycled. Asic will remain powered on if
+   the perst_en signal is asserted before triggerring
+   cpu_pwr_cycle
+ - Changes the default watchdog action to cpu_pwr_cycle
+   instead of cpu reset.
+
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-core.c      |  3 +++
+ drivers/platform/mellanox/nvsw-host-nvl6.c | 14 ++++++++++----
+ drivers/platform/mellanox/nvsw.h           |  2 ++
+ 3 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
+index b07a1f95a..d3e4b0496 100644
+--- a/drivers/platform/mellanox/nvsw-core.c
++++ b/drivers/platform/mellanox/nvsw-core.c
+@@ -34,6 +34,7 @@ static bool nvsw_writeable_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_GP7_OFFSET:
+ 	case NVSW_REG_PWM_CONTROL_OFFSET:
+ 	case NVSW_REG_RESET_GP2_OFFSET:
++	case NVSW_REG_RESET_GP3_OFFSET:
+ 	case NVSW_REG_GP4_OFFSET:
+ 	case NVSW_REG_GP5_OFFSET:
+ 	case NVSW_REG_GP6_OFFSET:
+@@ -150,6 +151,7 @@ static bool nvsw_readable_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_CPLD7_PN_OFFSET:
+ 	case NVSW_REG_CPLD7_PN1_OFFSET:
+ 	case NVSW_REG_RESET_GP2_OFFSET:
++	case NVSW_REG_RESET_GP3_OFFSET:
+ 	case NVSW_REG_GP0_RO_OFFSET:
+ 	case NVSW_REG_GP1_RO_OFFSET:
+ 	case NVSW_REG_GP4_RO_OFFSET:
+@@ -336,6 +338,7 @@ static bool nvsw_volatile_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_CPLD7_PN_OFFSET:
+ 	case NVSW_REG_CPLD7_PN1_OFFSET:
+ 	case NVSW_REG_RESET_GP2_OFFSET:
++	case NVSW_REG_RESET_GP3_OFFSET:
+ 	case NVSW_REG_GP0_RO_OFFSET:
+ 	case NVSW_REG_GP1_RO_OFFSET:
+ 	case NVSW_REG_GPCOM0_OFFSET:
+diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
+index aeaffcf2b..b76ef0904 100644
+--- a/drivers/platform/mellanox/nvsw-host-nvl6.c
++++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
+@@ -199,6 +199,12 @@ static struct mlxreg_core_data nvsw_host_nvl6_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0244,
+ 	},
++	{
++		.label = "cpu_pwr_cycle",
++		.reg = NVSW_REG_RESET_GP3_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0244,
++	},
+ 	{
+ 		.label = "pwr_down",
+ 		.reg = NVSW_REG_GP1_OFFSET,
+@@ -517,8 +523,8 @@ static struct mlxreg_core_data nvsw_host_nvl6_wd_main_regs[] = {
+ 	{
+ 		.label = "action",
+ 		.reg = NVSW_REG_WD2_ACT_OFFSET,
+-		.mask = NVSW_WD_RESET_ACT_MASK,
+-		.bit = 0,
++		.mask = NVSW_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
+ 	},
+ 	{
+ 		.label = "timeout",
+@@ -534,8 +540,8 @@ static struct mlxreg_core_data nvsw_host_nvl6_wd_main_regs[] = {
+ 	{
+ 		.label = "ping",
+ 		.reg = NVSW_REG_WD2_ACT_OFFSET,
+-		.mask = NVSW_WD_RESET_ACT_MASK,
+-		.bit = 0,
++		.mask = NVSW_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
+ 	},
+ 	{
+ 		.label = "reset",
+diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
+index 061570133..c2b670796 100644
+--- a/drivers/platform/mellanox/nvsw.h
++++ b/drivers/platform/mellanox/nvsw.h
+@@ -30,6 +30,7 @@
+ #define NVSW_REG_PG2_MASK_OFFSET	0x2516
+ #define NVSW_REG_RESET_GP1_OFFSET	0x2517
+ #define NVSW_REG_RESET_GP2_OFFSET	0x2519
++#define NVSW_REG_RESET_GP3_OFFSET	0x251b
+ #define NVSW_REG_RESET_CAUSE_OFFSET	0x251d
+ #define NVSW_REG_RESET_CAUSE1_OFFSET	0x251e
+ #define NVSW_REG_RESET_CAUSE2_OFFSET	0x251f
+@@ -239,6 +240,7 @@
+ #define NVSW_MASTER_MASK		BIT(5)
+ #define NVSW_FU_CAP_MASK		GENMASK(1, 0)
+ #define NVSW_WD_RESET_ACT_MASK		GENMASK(7, 1)
++#define NVSW_WD_CPU_PWR_CYCLE_MASK	(GENMASK(7, 0) & ~BIT(1))
+ #define NVSW_WD_FAN_ACT_MASK		(GENMASK(7, 0) & ~BIT(4))
+ #define NVSW_WD_TYPE2_TO_MASK		0
+ #define NVSW_WD3_DFLT_TIMEOUT		600
+-- 
+2.47.3
+

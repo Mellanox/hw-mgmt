@@ -1,38 +1,7 @@
 #!/usr/bin/python
-# pylint: disable=line-too-long
-# pylint: disable=C0103
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 """
 Created on Oct 01, 2022
@@ -154,6 +123,8 @@ class CONST:
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     TEMP_NA_VAL = 255
+    MODULE_MIN_OFFSET_DEF = -20000
+    MODULE_MAX_OFFSET_DEF = 0
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -300,7 +271,7 @@ SENSOR_DEF_CONFIG = {
                          "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 5, "val_hcrit": 150000,  "poll_time": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
@@ -511,24 +482,56 @@ def get_dict_val_by_path(dict_in, path):
 
 
 # ----------------------------------------------------------------------
-def g_get_range_val(line, in_value):
+def g_get_range_val(line, in_value, clamp=True):
     """
-    @summary: Searching range which is match to input val and returning corresponding output value
-    @param line: dict with temp ranges and output values
+    @summary: Searching range which is match to input value and returning corresponding output value.
+            If clamp is True:
+            if input value lower than lowest range - return lowest range value
+            if input value higher than highest range - return highest range value
+            Input value falling into a gap between ranges always returns None.
+    @param line: dict with temp ranges and output values (range bounds may be negative)
         Example: {"-127:20":30, "21:25":40 , "26:30":50, "31:120":60},
-    @param val: input value
-    @return: output value
+    @param in_value: input value (converted to int, fractional part is truncated)
+    @param clamp: clamp out-of-bounds input to the lowest/highest range (default True)
+    @return: tuple (output value, range min, range max).
+            (None, None, None) if input value is not a valid integer, the table is empty/malformed,
+            or no range matches. For clamped values range min and range max are both the violated boundary.
     """
+    try:
+        in_value = int(in_value)
+    except (ValueError, TypeError):
+        return None, None, None
+    if not line:
+        return None, None, None
+
+    lowest = None   # (min, val) of the range with lowest min
+    highest = None  # (max, val) of the range with highest max
     for key, val in line.items():
-        val_range = key.split(":")
-        val_min = int(val_range[0])
-        val_max = int(val_range[1])
+        # 1. split range and get min and max values (negative bounds are allowed)
+        try:
+            val_min, val_max = (int(x) for x in key.split(":"))
+        except (ValueError, TypeError, AttributeError):
+            return None, None, None
+        # 2. check if input value is in range
         if val_min <= in_value <= val_max:
             return val, val_min, val_max
+        # 3. save lowest and highest range values
+        if lowest is None or val_min < lowest[0]:
+            lowest = (val_min, val)
+        if highest is None or val_max > highest[0]:
+            highest = (val_max, val)
+
+    if clamp:
+        if in_value < lowest[0]:
+            return lowest[1], lowest[0], lowest[0]
+        if in_value > highest[0]:
+            return highest[1], highest[0], highest[0]
+
     return None, None, None
 
-
 # ----------------------------------------------------------------------
+
+
 def g_get_dmin(thermal_table, temp, path, interpolated=False):
     """
     @summary: Searching PWM value in dmin table based on input temperature
@@ -545,7 +548,7 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
         return CONST.PWM_MIN
     # get current range
     dmin, range_min, range_max = g_get_range_val(line, temp)
-    if not dmin:
+    if dmin is None:
         dmin, _, _ = g_get_range_val(line, 100)
         return dmin
 
@@ -553,7 +556,7 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
         return dmin
 
     # get range of next step
-    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1)
+    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1, clamp=False)
     # reached maximum range
     if dmin_next is None:
         return dmin
@@ -1563,8 +1566,8 @@ class thermal_module_sensor(system_device):
 
         self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
         self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
-        self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
-        self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        self.val_min_offset = self.sensors_config.get("val_min_offset", CONST.MODULE_MIN_OFFSET_DEF)
+        self.val_max_offset = self.sensors_config.get("val_max_offset", CONST.MODULE_MAX_OFFSET_DEF)
 
         self.eeprom_data_timestamp = None
         self.refresh_attr()
@@ -3647,7 +3650,7 @@ class ThermalManagement(hw_management_file_op):
             self.log.warn("Missing PWM link {}".format(pwm_val))
             return
         for drwr_idx in range(1, self.fan_drwr_num + 1):
-            fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
+            fan_obj = self._get_dev_obj(r"drwr{}(:|$)".format(drwr_idx))
             if fan_obj:
                 fan_obj.set_pwm(pwm_val, force)
 
@@ -4291,7 +4294,8 @@ class ThermalManagement(hw_management_file_op):
         self.attention_fans = []
         if self.attention_fans_lst:
             for fan_drwr_name in self.attention_fans_lst:
-                fan_drwr_obj = self._get_dev_obj(fan_drwr_name)
+                # Match the full device name: "drwr1" must not match "drwr10:..."
+                fan_drwr_obj = self._get_dev_obj(r"{}(:|$)".format(re.escape(fan_drwr_name)))
                 if not fan_drwr_obj:
                     self.log.warn("Dev name {} missing in system_config".format(fan_drwr_name))
                     continue

@@ -1,4 +1,4 @@
-From ee88d64eb31b5dbaeccf0c7f107632da2b2fbd50 Mon Sep 17 00:00:00 2001
+From 2f35dd32fa14b7e13e5e3bcf8dddf287fa989e8e Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Mon, 18 May 2026 15:08:45 +0300
 Subject: [PATCH] platform: mellanox: Add support for new SN6600 Nvidia system
@@ -16,12 +16,12 @@ Reviewed-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/platform/mellanox/nvsw-core.c      |  53 ++
- drivers/platform/mellanox/nvsw-host-spc6.c | 597 ++++++++++++++++++++-
- drivers/platform/mellanox/nvsw.h           |  21 +
- 3 files changed, 669 insertions(+), 2 deletions(-)
+ drivers/platform/mellanox/nvsw-host-spc6.c | 613 ++++++++++++++++++++-
+ drivers/platform/mellanox/nvsw.h           |  22 +
+ 3 files changed, 686 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
-index e4418f2d3511..ff50b95e3af5 100644
+index f3c48adf..faa4a883 100644
 --- a/drivers/platform/mellanox/nvsw-core.c
 +++ b/drivers/platform/mellanox/nvsw-core.c
 @@ -43,6 +43,9 @@ static bool nvsw_writeable_reg(struct device *dev, unsigned int reg)
@@ -149,18 +149,20 @@ index e4418f2d3511..ff50b95e3af5 100644
  	case NVSW_REG_FAN_DRW_CAP_OFFSET:
  	case NVSW_REG_TACHO_SPEED_OFFSET:
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
-index 0b77196474ab..ef5b035ff64d 100644
+index 0b771964..76e6f1ac 100644
 --- a/drivers/platform/mellanox/nvsw-host-spc6.c
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -56,6 +56,7 @@ static struct mlxcpld_mux_plat_data *nvsw_host_mux_data[NVSW_MUX_MAX];
+@@ -56,7 +56,9 @@ static struct mlxcpld_mux_plat_data *nvsw_host_mux_data[NVSW_MUX_MAX];
  static struct i2c_board_info *nvsw_host_mux_brdinfo;
  static struct mlxreg_core_platform_data *nvsw_led_data;
  static struct mlxreg_core_platform_data *nvsw_regs_io_data;
 +static struct mlxreg_core_platform_data *nvsw_fan_data;
  static struct mlxreg_core_platform_data *nvsw_wd_data[NVSW_WD_MAX];
++static int (*nvsw_host_spc6_set_reg_default)(struct regmap *regmap);
  static int mux_num;
  static enum nvsw_core_hid_type nvsw_host_hid;
-@@ -557,6 +558,365 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_regs_io = {
+ static struct platform_device *nvsw_host_dev;
+@@ -557,6 +559,365 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_regs_io = {
  	.counter = ARRAY_SIZE(nvsw_host_spc6_regs_io_data),
  };
  
@@ -526,7 +528,7 @@ index 0b77196474ab..ef5b035ff64d 100644
  /* Platform led data */
  static struct mlxreg_core_data nvsw_host_spc6_lc_led_data[] = {
  	{
-@@ -591,6 +951,121 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_lc_led = {
+@@ -591,6 +952,121 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_lc_led = {
  	.counter = ARRAY_SIZE(nvsw_host_spc6_lc_led_data),
  };
  
@@ -648,7 +650,7 @@ index 0b77196474ab..ef5b035ff64d 100644
  /* Watchdog platform data */
  static struct mlxreg_core_data nvsw_host_spc6_wd_main_regs[] = {
  	{
-@@ -665,6 +1140,105 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_wd_set[] = {
+@@ -665,6 +1141,105 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_wd_set[] = {
  	},
  };
  
@@ -754,8 +756,23 @@ index 0b77196474ab..ef5b035ff64d 100644
  /* Mux init/exit callbacks. */
  static int nvsw_host_spc6_mux_topology_init(struct nvsw_core *nvsw_core)
  {
-@@ -710,16 +1284,27 @@ static void nvsw_host_spc6_mux_topology_exit(struct nvsw_core *nvsw_core)
+@@ -708,18 +1283,43 @@ static void nvsw_host_spc6_mux_topology_exit(struct nvsw_core *nvsw_core)
+ 	}
+ }
  
++/* Callback to set initial values for specific registers. */
++static int nvsw_host_spc6_hid186_set_reg_default(struct regmap *regmap)
++{
++       u32 regval;
++       int err;
++
++       err = regmap_read(regmap, NVSW_REG_GP0_OFFSET, &regval);
++       if (err)
++               return err;
++
++       return regmap_write(regmap, NVSW_REG_GP0_OFFSET, regval & ~NVSW_CPLD_FAN_CONTROL_EN_MASK);
++}
++
  static int __init nvsw_host_dmi_spc6_switch_matched(const struct dmi_system_id *dmi)
  {
 +	const char *sku;
@@ -776,6 +793,7 @@ index 0b77196474ab..ef5b035ff64d 100644
 +		nvsw_regs_io_data = &nvsw_host_spc6_hid186_regs_io;
 +		nvsw_fan_data = &nvsw_host_spc6_hid186_fan_data;
 +		nvsw_led_data = &nvsw_host_spc6_hid186_led;
++		nvsw_host_spc6_set_reg_default = nvsw_host_spc6_hid186_set_reg_default;
 +	} else {
 +		nvsw_regs_io_data = &nvsw_host_spc6_regs_io;
 +		nvsw_led_data = &nvsw_host_spc6_lc_led;
@@ -784,7 +802,7 @@ index 0b77196474ab..ef5b035ff64d 100644
  	for (i = 0; i < ARRAY_SIZE(nvsw_host_spc6_wd_set); i++)
  		nvsw_wd_data[i] = &nvsw_host_spc6_wd_set[i];
  
-@@ -734,6 +1319,13 @@ static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
+@@ -734,6 +1334,13 @@ static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
  		},
  	},
@@ -798,16 +816,19 @@ index 0b77196474ab..ef5b035ff64d 100644
  	{
  		.callback = nvsw_host_dmi_spc6_switch_matched,
  		.matches = {
-@@ -817,6 +1409,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
+@@ -817,8 +1424,10 @@ static int nvsw_host_probe(struct platform_device *pdev)
  		nvsw_core->wd_data[i] = nvsw_wd_data[i];
  	nvsw_core->regio_data = nvsw_regs_io_data;
  	nvsw_core->led_data = nvsw_led_data;
 +	nvsw_core->fan_data = nvsw_fan_data;
  	nvsw_core->mux_init = nvsw_host_spc6_mux_topology_init;
  	nvsw_core->mux_exit = nvsw_host_spc6_mux_topology_exit;
++	nvsw_core->set_reg_default = nvsw_host_spc6_set_reg_default;
  	platform_set_drvdata(pdev, nvsw_core);
+ 
+ 	err = nvsw_core_init(nvsw_core);
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
-index c81eeb330228..5eec06538d26 100644
+index c81eeb33..b449003c 100644
 --- a/drivers/platform/mellanox/nvsw.h
 +++ b/drivers/platform/mellanox/nvsw.h
 @@ -38,6 +38,9 @@
@@ -872,6 +893,14 @@ index c81eeb330228..5eec06538d26 100644
  #define NVSW_REG_MIN			0x2500
  #define NVSW_REG_MAX			0x26ff
  
+@@ -233,6 +254,7 @@
+ #define NVSW_I2C_CAP_BIT		0x04
+ #define NVSW_I2C_CAP_MASK		GENMASK(5, NVSW_I2C_CAP_BIT)
+ #define NVSW_I2C_TRAN_END_L		BIT(5)
++#define NVSW_CPLD_FAN_CONTROL_EN_MASK          BIT(0)
+ 
+ #define NVSW_NR_NONE			-1
+ #define NVSW_MUX_MAX			2
 -- 
-2.34.1
+2.47.3
 

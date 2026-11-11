@@ -357,7 +357,7 @@ index 1f7d945..b97f71e 100644
  		.label = "leakage_status_clear",
  		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(3),
-@@ -8269,6 +8529,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8281,6 +8541,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_VER_OFFSET:
@@ -365,7 +365,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -8281,6 +8542,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8293,6 +8554,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN1_OFFSET:
@@ -373,7 +373,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -8403,7 +8665,6 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8415,7 +8677,6 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_WD3_TMR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD3_TLEFT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET:
@@ -381,7 +381,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_I2C_CH1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_I2C_CH2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_I2C_CH3_OFFSET:
-@@ -8413,6 +8674,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8425,6 +8686,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
@@ -389,7 +389,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -8467,6 +8729,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8479,6 +8741,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_VER_OFFSET:
@@ -397,7 +397,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -8479,6 +8742,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8491,6 +8754,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN1_OFFSET:
@@ -405,7 +405,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -8600,6 +8864,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8612,6 +8876,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
@@ -413,7 +413,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9409,6 +9674,27 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -9421,6 +9686,27 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -441,7 +441,7 @@ index 1f7d945..b97f71e 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9688,6 +9974,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9700,6 +9986,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
  	{

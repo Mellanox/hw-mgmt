@@ -1,14 +1,13 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Ensure U-Boot ethaddr has a valid BMC MAC.
 #
 # A valid ethaddr is authoritative. The BMC FRU MAC is only a fallback when
 # ethaddr is empty or invalid. After selecting the MAC, apply it to the running
 # eth0 interface too so the current boot is fixed without waiting for a reboot.
-################################################################################
 
 EEPROM_BMC="/var/run/hw-management/eeprom/eeprom_bmc"
 EEPROM_BMC_FALLBACK="/sys/bus/i2c/devices/4-0050/eeprom"

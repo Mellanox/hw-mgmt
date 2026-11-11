@@ -1,36 +1,7 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 ### BEGIN INIT INFO
 # Provides: hw-management
@@ -2282,7 +2253,6 @@ sn5600d_specific()
 	psu_count=0
 	echo 7 > $config_path/fan_drwr_num
 	echo 4 > $config_path/cpld_num
-	echo 0 > "$config_path"/labels_ready
 	lm_sensors_config="$lm_sensors_configs_path/sn5600d_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn5600d.json"
 	named_busses+=(${sn5600_named_busses[@]})
@@ -2728,7 +2698,7 @@ n51xxld_specific()
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
 	if [ $max_tachos -ne 0 ]; then
 		echo 33000 > $config_path/fan_max_speed
@@ -2807,7 +2777,7 @@ n61xxld_specific()
 	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
 	named_busses+=(${n61xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
@@ -2845,7 +2815,13 @@ sn5640_specific()
 	psu_count=4
 	minimal_unsupported=1
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	# Kernels 5.10 and 6.1 carry a backported mp2891 driver which reports
+	# PMBUS_READ_PIN on rail 1 only, shifting the power attribute numbering.
+	if [[ $(uname -r) == 5.10.* || $(uname -r) == 6.1.* ]]; then
+		lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors_6.1.conf"
+	else
+		lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	fi
 
 	case $sku in
 		HI172)	# SN5610 (HI172)
@@ -2863,7 +2839,6 @@ sn5640_specific()
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
-	echo 0 > "$config_path"/labels_ready
 }
 
 sn58xxld_specific()
@@ -3003,11 +2978,13 @@ sn66xx_specific()
     echo 0 > $config_path/i2c_bus_offset
 	echo $cpld_num > $config_path/cpld_num
 	health_events_count=0
+	pwr_events_count=1
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=5
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
@@ -3044,12 +3021,14 @@ sn68xxld_specific()
 	asic_control=0
 	max_tachos=0
 	health_events_count=0
+	pwr_events_count=1
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=5
 	named_busses+=(${sn68xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$sn68xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
@@ -3076,26 +3055,6 @@ check_system_write_i2c_defaults()
 {
 	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default || return 1
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu || return 1
-}
-
-check_system_bmc_redfish_login()
-{
-	# Obtain/rotate the BMC password and log in over Redfish only on platforms
-	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
-	# CPU<->BMC communication, so hw-management must not drive this flow.
-	if check_bmc_is_supported && ! check_host_os_is_sonic; then
-		pushd /usr/bin
-		for ((i=1; i<=5; i++)); do
-			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
-			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
-				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
-				break
-			fi
-			echo "Pinging BMC failed, i=$i"
-			sleep 3
-		done
-		popd
-	fi
 }
 
 check_system_json()
@@ -3294,7 +3253,6 @@ check_system()
 		print_function_call "$0" "${FUNCNAME[0]}" "no json, using check_system_internal"
 		check_system_internal || return 1
 	fi
-	check_system_bmc_redfish_login || true
 }
 
 create_event_files()
@@ -3352,8 +3310,8 @@ create_event_files()
 	if [ $pwr_events_count -ne 0 ]; then
 		if [ -f "$power_events_file" ]; then
 			declare -a power_events="($(< $power_events_file))"
-			for ((i=0; i<=pwr_events_count; i+=1)); do
-				check_n_init $events_path/${power_events[$i]} 0
+			for power_event in "${power_events[@]}"; do
+				check_n_init $events_path/"$power_event" 0
 			done
 		else
 			check_n_init $events_path/power_button 0
@@ -3833,7 +3791,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI187)
+	HI187|HI188)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
@@ -4387,17 +4345,9 @@ do_chip_up_down()
 	0)
 		lock_service_state_change
 
-		# If FAN PWM is controllded by ASIC - set it to 100%
-		pwm_link=$thermal_path/pwm1
-		if [ -L ${pwm_link} ] && [ -e ${pwm_link} ];
-		then
-			pwm_src=$(readlink -f ${pwm_link})
-			asic_i2c_add=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-"$asic_i2c_bus"/"$asic_i2c_bus"-"$i2c_asic_addr_name"
-			if [[ "$pwm_src" == *"$asic_i2c_add"* ]]; then
-				echo  255 > $pwm_link
-				log_info "Set PWM to maximum speed prior fan driver removing."
-			fi
-		fi
+		# Try to set PWM to 100% for ASIC-PWM. 
+		print_function_call "$0" "do_chip_up_down" "Try to set PWM to 255 for ASIC-PWM-controlled system $asic_index"
+		set_asic_pwm_speed_safe "$asic_index" 255
 
 		chipup_delay=$(< $config_path/chipup_delay)
 		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
@@ -4541,7 +4491,7 @@ case $ACTION in
 		# TEMPORARY hw-management mockup values for SIMX
 		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
 						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
-						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
+						   "$sku" == "HI200" -o "$sku" == "HI201" -o "$sku" == "HI203" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
@@ -4625,12 +4575,14 @@ case $ACTION in
 			done
 			stop_chipup_i2c_trace
 			log_info "chipup failed for ASIC $asic_index"
-			# thermal/pwm1 and thermal/asic are not created when
-			# mlxsw_minimal probe fails, so TC will not enforce
-			# full speed. Set PWM 100% on the ASIC that failed
-			# chipup via sysfs or mlxreg MFSC. Pass $3 (PCI path
-			# from sxcore) so index 0 still resolves a target.
-			set_asic_pwm_full_speed_on_chipup_fail "$asic_index" "$3"
+			# PWM 100% fallback is only for SPC1 after a warm
+			# (software/COMEX/CPU) reboot. Cold reboot recovery is
+			# another reboot; other chipup paths must not write MFSC.
+			# Pass $3 (PCI path from sxcore) so index 0 still
+			# resolves a target.
+			if is_spc1_warm_reboot; then
+				set_asic_pwm_full_speed_on_chipup_fail "$asic_index" "$3"
+			fi
 		fi
 	;;
 	chipdown)
@@ -4664,7 +4616,7 @@ case $ACTION in
 		# TEMPORARY hw-management mockup values for SIMX
 		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
 						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
-						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
+						   "$sku" == "HI200" -o "$sku" == "HI201" -o "$sku" == "HI203" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0

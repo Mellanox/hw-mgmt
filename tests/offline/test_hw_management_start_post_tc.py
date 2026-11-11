@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Unit tests for hw-management-start-post.sh TC service logic
 # (commit f9f543b4c6b5dd42caac5d0c1b8e4aa559566b8d, Bug 4929286).
 #
 # Verifies: TC is not auto-enabled on non-SimX; SimX paths set enable/disable
 # flags; deferred cmd_line matches reload/start/stop combinations.
-################################################################################
 
 import os
 import subprocess

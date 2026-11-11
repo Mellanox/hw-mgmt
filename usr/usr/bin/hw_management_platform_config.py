@@ -1,37 +1,7 @@
 #!/usr/bin/python
-# pylint: disable=line-too-long
-########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 """
 Platform Hardware Configuration Module
@@ -53,10 +23,10 @@ VERSION = "1.0.0"
 PLATFORM_CONFIG = {
     "def": [
         {'fin': '/var/run/hw-management/config/thermal_enforced_full_spped', 'fn': 'run_cmd', 'poll': 5, 'ts': 0,
-         'arg': ['if [[ -f /var/run/hw-management/config/thermal_enforced_full_spped && $(</var/run/hw-management/config/thermal_enforced_full_spped) == "1" ]]; then /usr/bin/hw-management-user-dump; fi']},
+         'arg': ['/usr/bin/hw-management-user-dump']},
     ],
     "test": [
-        {'fin': '/tmp/power_button_clr', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/tmp/graceful_pwr_off_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
     ],
     "HI112|HI116|HI136|MSN3700|MSN3700C": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
@@ -173,7 +143,7 @@ PLATFORM_CONFIG = {
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 36}},
@@ -188,7 +158,7 @@ PLATFORM_CONFIG = {
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 36}},
@@ -206,7 +176,7 @@ PLATFORM_CONFIG = {
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 24}},
     ],
     "HI176": [
-        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
@@ -214,7 +184,7 @@ PLATFORM_CONFIG = {
         {'fin': None, 'fn': 'redfish_get_sensor', 'arg': ['/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP', 'bmc', 1000], 'poll': 30, 'ts': 0},
     ],
     "HI177": [
-        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}}},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}}},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
@@ -230,14 +200,14 @@ PLATFORM_CONFIG = {
     "HI180": [
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
     ],
     "HI181": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
-    "HI182|HI187|HI188": [
+    "HI182": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}"], "poll": 2, "ts": 0},
@@ -245,14 +215,24 @@ PLATFORM_CONFIG = {
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage5", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE5 {arg1}"], "poll": 2, "ts": 0},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
     ],
+    "HI187|HI188": [
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}"], "poll": 2, "ts": 0},
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"], "poll": 2, "ts": 0},
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage5", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE5 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
+    ],
     "HI185": [
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
     ],
     "HI193|HI183": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
     "HI186": [
@@ -295,6 +275,7 @@ PLATFORM_CONFIG = {
                 "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
             },
          },
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 64}},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},

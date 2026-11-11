@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+#
+# Restarted by hw-management-bmc-events.sh on CPLD host power events. udev
+# kills processes forked from a RUN handler once the event is handled, so the
+# bind-retry loop runs here. Static unit, not enabled.
+[Unit]
+Description=Sync host-power-domain I2C devices with host power state
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hw-management-bmc-host-i2c-devices.sh sync
+SyslogIdentifier=hw-management-bmc-host-i2c

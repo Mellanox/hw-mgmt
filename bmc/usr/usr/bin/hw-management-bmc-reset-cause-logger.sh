@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# SPDX-License-Identifier: BSD-3-Clause
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # BMC Reset Cause Logger
 # Logs BMC reset/boot cause on every boot for debugging unexpected reboots

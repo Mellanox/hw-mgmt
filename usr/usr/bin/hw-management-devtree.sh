@@ -1,36 +1,7 @@
 #!/bin/bash
-################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 devtr_verb_display=0
 devtree_codes_file=
@@ -711,16 +682,16 @@ declare -A sn66xxld_swb_alternatives=( \
 	["xdpe1a2g7_5"]="xdpe1a2g7b 0x66 15 voltmon6" \
 	["xdpe1a2g7_6"]="xdpe1a2g7b 0x67 15 voltmon7" \
 	["xdpe1a2g7_7"]="xdpe1a2g7b 0x6a 15 voltmon8" \
-	["xdpe1a2g7_8"]="xdpe1a2g7b 0x61 16 voltmon9" \
-	["xdpe1a2g7_9"]="xdpe1a2g7b 0x62 16 voltmon10" \
-	["xdpe1a2g7_10"]="xdpe1a2g7b 0x63 16 voltmon11" \
-	["xdpe1a2g7_11"]="xdpe1a2g7b 0x64 16 voltmon12" \
-	["xdpe1a2g7_12"]="xdpe1a2g7b 0x65 16 voltmon13" \
-	["xdpe1a2g7_13"]="xdpe1a2g7b 0x66 16 voltmon14" \
-	["xdpe1a2g7_14"]="xdpe1a2g7b 0x67 16 voltmon15" \
-	["xdpe1a2g7_15"]="xdpe1a2g7b 0x68 16 voltmon16" \
-	["xdpe1a2g7_16"]="xdpe1a2g7b 0x69 16 voltmon17" \
-	["xdpe1a2g7_17"]="xdpe1a2g7b 0x6a 16 voltmon18" \
+	["xdpe1a2g7_8"]="xdpe1a2g7b 0x60 16 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7b 0x61 16 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7b 0x62 16 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7b 0x63 16 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7b 0x64 16 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7b 0x65 16 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7b 0x66 16 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7b 0x67 16 voltmon16" \
+	["xdpe1a2g7_16"]="xdpe1a2g7b 0x68 16 voltmon17" \
+	["xdpe1a2g7_17"]="xdpe1a2g7b 0x69 16 voltmon18" \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
@@ -744,9 +715,6 @@ declare -A sn66xx_swb_alternatives=( \
 	["mp29816_15"]="mp29816 0x60 16 voltmon16" \
 	["mp29816_16"]="mp29816 0x67 16 voltmon17" \
 	["mp29816_17"]="mp29816 0x68 16 voltmon18" \
-	["tmp102_0"]="tmp102 0x48 24 port_amb" \
-	["adt75_0"]="adt75 0x48 24 port_amb" \
-	["stts751_0"]="stts751 0x48 24 port_amb" \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
@@ -771,22 +739,22 @@ declare -A sn68xxld_swb_alternatives=( \
 	["mp29816_13"]="mp29816 0x6d 15 voltmon14" \
 	["mp29816_14"]="mp29816 0x6e 15 voltmon15" \
 	["mp29816_15"]="mp29816 0x6f 15 voltmon16" \
-	["xdpe1a2g7_0"]="xdpe1a2g7 0x60 15 voltmon1" \
-	["xdpe1a2g7_1"]="xdpe1a2g7 0x61 15 voltmon2" \
-	["xdpe1a2g7_2"]="xdpe1a2g7 0x62 15 voltmon3" \
-	["xdpe1a2g7_3"]="xdpe1a2g7 0x63 15 voltmon4" \
-	["xdpe1a2g7_4"]="xdpe1a2g7 0x64 15 voltmon5" \
-	["xdpe1a2g7_5"]="xdpe1a2g7 0x65 15 voltmon6" \
-	["xdpe1a2g7_6"]="xdpe1a2g7 0x66 15 voltmon7" \
-	["xdpe1a2g7_7"]="xdpe1a2g7 0x67 15 voltmon8" \
-	["xdpe1a2g7_8"]="xdpe1a2g7 0x68 15 voltmon9" \
-	["xdpe1a2g7_9"]="xdpe1a2g7 0x69 15 voltmon10" \
-	["xdpe1a2g7_10"]="xdpe1a2g7 0x6a 15 voltmon11" \
-	["xdpe1a2g7_11"]="xdpe1a2g7 0x6b 15 voltmon12" \
-	["xdpe1a2g7_12"]="xdpe1a2g7 0x6c 15 voltmon13" \
-	["xdpe1a2g7_13"]="xdpe1a2g7 0x6d 15 voltmon14" \
-	["xdpe1a2g7_14"]="xdpe1a2g7 0x6e 15 voltmon15" \
-	["xdpe1a2g7_15"]="xdpe1a2g7 0x6f 15 voltmon16" \
+	["xdpe1a2g7_0"]="xdpe1a2g7b 0x60 15 voltmon1" \
+	["xdpe1a2g7_1"]="xdpe1a2g7b 0x61 15 voltmon2" \
+	["xdpe1a2g7_2"]="xdpe1a2g7b 0x62 15 voltmon3" \
+	["xdpe1a2g7_3"]="xdpe1a2g7b 0x63 15 voltmon4" \
+	["xdpe1a2g7_4"]="xdpe1a2g7b 0x64 15 voltmon5" \
+	["xdpe1a2g7_5"]="xdpe1a2g7b 0x65 15 voltmon6" \
+	["xdpe1a2g7_6"]="xdpe1a2g7b 0x66 15 voltmon7" \
+	["xdpe1a2g7_7"]="xdpe1a2g7b 0x67 15 voltmon8" \
+	["xdpe1a2g7_8"]="xdpe1a2g7b 0x68 15 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7b 0x69 15 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7b 0x6a 15 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7b 0x6b 15 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7b 0x6c 15 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7b 0x6d 15 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7b 0x6e 15 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7b 0x6f 15 voltmon16" \
 )
 
 # SN68XX_LD switch board BOM variant S*...Rj*10Rn*3Rj*3... trailing mp29816 remap
@@ -802,20 +770,15 @@ declare -A sn66xxld_port_alternatives=( \
 	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
-	["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-	["adt75_0"]="adt75 0x4a 7 port_amb" \
-	["stts751_0"]="stts751 0x4a 7 port_amb" \
 )
 
-# Devices located on SN66XX (AC) port board
+# Devices reported under the SN66XX (AC) port board BOM section. The AC system
+# has no port board, its OSFP cages sit on the switch board, so the section
+# carries the OOB board ambient sensor only.
 declare -A sn66xx_port_alternatives=( \
-	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
-	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
-	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
-	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
-	["tmp102_0"]="tmp102 0x48 26 port_amb" \
-	["adt75_0"]="adt75 0x48 26 port_amb" \
-	["stts751_0"]="stts751 0x48 26 port_amb" \
+	["tmp102_0"]="tmp102 0x48 17 port_amb" \
+	["adt75_0"]="adt75 0x48 17 port_amb" \
+	["stts751_0"]="stts751 0x48 17 port_amb" \
 )
 
 # Devices located on SN66XX_LD power board

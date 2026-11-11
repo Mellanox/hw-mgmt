@@ -1,12 +1,6 @@
 {
     "devices": [
         {
-            "bus": 15,
-            "address": "0x4c",
-            "driver": "sbtsi",
-            "description": "CPU temperature sensor interface"
-        },
-        {
             "bus": 0,
             "address": "0x50",
             "driver": "24c512",
