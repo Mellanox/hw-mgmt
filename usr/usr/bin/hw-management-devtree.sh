@@ -662,12 +662,12 @@ declare -A n6350ld_swb_alternatives=( \
 	["mp29816_1"]="mp29816 0x68 8 voltmon2" \
 	["mp29816_2"]="mp29816 0x6c 8 voltmon3" \
 	["mp29816_3"]="mp29816 0x69 8 voltmon4" \
-	["mp29816_4"]="mp29816 0x6d 8 voltmon5" \
+	["mp29816_4"]="mp29816 0x6a 8 voltmon5" \
 	["mp29816-6x_0"]="mp29816 0x66 8 voltmon1" \
 	["mp29816-6x_1"]="mp29816 0x68 8 voltmon2" \
 	["mp29816-6x_2"]="mp29816 0x6c 8 voltmon3" \
 	["mp29816-6x_3"]="mp29816 0x69 8 voltmon4" \
-	["mp29816-6x_4"]="mp29816 0x6d 8 voltmon5" \
+	["mp29816-6x_4"]="mp29816 0x6a 8 voltmon5" \
 	["24c512_0"]="24c512 0x51 14 swb_info" \
 )
 
