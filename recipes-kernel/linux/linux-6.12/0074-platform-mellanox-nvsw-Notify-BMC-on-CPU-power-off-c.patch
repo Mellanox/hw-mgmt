@@ -1,0 +1,173 @@
+From 5c3ff66cd358de1bd234659a070ef8754d43ff3d Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Wed, 11 Nov 2026 21:06:52 +0200
+Subject: platform: mellanox: nvsw: Notify BMC on CPU power off completion
+
+On NVL6 and SPC6 systems the BMC owns the CPU power rails and keeps them
+up until the CPU reports that it has completed its power off sequence.
+Without that report the BMC removes the power only after a 20 second
+delay, so a software initiated power off takes longer than it needs to.
+
+Report completion from a power off prepare handler. Power off handlers
+may not sleep while reaching the CPLD goes over I2C, and by the time the
+prepare stage runs devices have already been shut down, so the CPU is as
+ready to lose power as it is going to be. Halt is deliberately not
+covered, because the only hook it reaches runs before device shutdown.
+
+The handler is registered only when the host driver asks for it through
+the new cpu_pwr_off_notify field, set for N6100_LD and N6300_LD (NVL6)
+and for SN6600_LD, SN6800_LD and SN6810_LD (SPC6).
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-core.c      | 44 ++++++++++++++++++++++
+ drivers/platform/mellanox/nvsw-host-l1.c   |  1 +
+ drivers/platform/mellanox/nvsw-host-spc6.c |  1 +
+ drivers/platform/mellanox/nvsw.h           |  7 ++++
+ 4 files changed, 53 insertions(+)
+
+diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
+index 1bd2dfc622ce..d600b452d46a 100644
+--- a/drivers/platform/mellanox/nvsw-core.c
++++ b/drivers/platform/mellanox/nvsw-core.c
+@@ -13,6 +13,7 @@
+ #include <linux/of_irq.h>
+ #include <linux/platform_data/mlxreg.h>
+ #include <linux/platform_device.h>
++#include <linux/reboot.h>
+ #include <linux/regmap.h>
+ #include "nvsw.h"
+ 
+@@ -679,8 +680,31 @@ static int nvsw_core_regmap_init(struct nvsw_core *nvsw_core)
+ 	return 0;
+ }
+ 
++/*
++ * The BMC owns the CPU power rails and keeps them up until the CPU reports
++ * that it has completed its power off sequence. Once the report is made the
++ * BMC removes the power, so there is nothing left for the CPU to wait for.
++ *
++ * This runs from the power off prepare stage rather than from a power off
++ * handler, because power off handlers are not allowed to sleep while reaching
++ * the CPLD over I2C is.
++ */
++static int nvsw_core_poweroff_prepare(struct sys_off_data *data)
++{
++	struct nvsw_core *nvsw_core = data->cb_data;
++	int err;
++
++	err = regmap_set_bits(nvsw_core->regmap, NVSW_REG_GP0_OFFSET,
++			      NVSW_GP0_CPU_PWR_OFF_RDY_MASK);
++	if (err)
++		dev_err(nvsw_core->dev, "Failed to report CPU power off ready\n");
++
++	return NOTIFY_DONE;
++}
++
+ int nvsw_core_init(struct nvsw_core *nvsw_core)
+ {
++	struct sys_off_handler *sys_off;
+ 	int err;
+ 
+ 	err = nvsw_core_regmap_init(nvsw_core);
+@@ -695,7 +719,25 @@ int nvsw_core_init(struct nvsw_core *nvsw_core)
+ 	if (err)
+ 		goto nvsw_core_platform_init_fail;
+ 
++	if (nvsw_core->cpu_pwr_off_notify) {
++		/*
++		 * Not device managed: on I2C systems the regmap dies with
++		 * the client, which the host driver removes before platform
++		 * devres runs.
++		 */
++		sys_off = register_sys_off_handler(SYS_OFF_MODE_POWER_OFF_PREPARE,
++						   SYS_OFF_PRIO_DEFAULT,
++						   nvsw_core_poweroff_prepare, nvsw_core);
++		if (IS_ERR(sys_off)) {
++			err = PTR_ERR(sys_off);
++			goto nvsw_core_pwr_off_notify_fail;
++		}
++		nvsw_core->sys_off = sys_off;
++	}
++
+ 	return 0;
++nvsw_core_pwr_off_notify_fail:
++	nvsw_core_platform_exit(nvsw_core);
+ nvsw_core_platform_init_fail:
+ 	nvsw_core_mux_topology_exit(nvsw_core);
+ nvsw_core_mux_topology_init_fail:
+@@ -705,6 +747,8 @@ EXPORT_SYMBOL(nvsw_core_init);
+ 
+ void nvsw_core_exit(struct nvsw_core *nvsw_core)
+ {
++	if (nvsw_core->cpu_pwr_off_notify)
++		unregister_sys_off_handler(nvsw_core->sys_off);
+ 	nvsw_core_platform_exit(nvsw_core);
+ 	nvsw_core_mux_topology_exit(nvsw_core);
+ 	if (nvsw_core->set_reg_default)
+diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
+index da2ec9d25e20..e2401c655411 100644
+--- a/drivers/platform/mellanox/nvsw-host-l1.c
++++ b/drivers/platform/mellanox/nvsw-host-l1.c
+@@ -687,6 +687,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
+ 		nvsw_core->wd_data[i] = nvsw_wd_data[i];
+ 	nvsw_core->regio_data = nvsw_regs_io_data;
+ 	nvsw_core->led_data = nvsw_led_data;
++	nvsw_core->cpu_pwr_off_notify = true;
+ 	nvsw_core->port_map = nvsw_host_l1_port_map;
+ 	nvsw_core->mux_init = nvsw_host_l1_mux_topology_init;
+ 	nvsw_core->mux_exit = nvsw_host_l1_mux_topology_exit;
+diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
+index 0df8d0f116ee..2a48da2f3937 100644
+--- a/drivers/platform/mellanox/nvsw-host-spc6.c
++++ b/drivers/platform/mellanox/nvsw-host-spc6.c
+@@ -839,6 +839,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
+ 		nvsw_core->wd_data[i] = nvsw_wd_data[i];
+ 	nvsw_core->regio_data = nvsw_regs_io_data;
+ 	nvsw_core->led_data = nvsw_led_data;
++	nvsw_core->cpu_pwr_off_notify = true;
+ 	nvsw_core->mux_init = nvsw_host_spc6_mux_topology_init;
+ 	nvsw_core->mux_exit = nvsw_host_spc6_mux_topology_exit;
+ 	platform_set_drvdata(pdev, nvsw_core);
+diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
+index b45b5df54d3c..8d734562e2aa 100644
+--- a/drivers/platform/mellanox/nvsw.h
++++ b/drivers/platform/mellanox/nvsw.h
+@@ -8,6 +8,8 @@
+ #ifndef __NVSW_H__
+ #define __NVSW_H__
+ 
++#include <linux/reboot.h>
++
+ /* I2C bus IO offsets */
+ #define NVSW_REG_CPLD1_VER_OFFSET	0x2500
+ #define NVSW_REG_CPLD2_VER_OFFSET	0x2501
+@@ -219,6 +221,7 @@
+ #define NVSW_UID_PUSH_BUTTON_MASK	BIT(7)
+ #define NVSW_RTC_MASK			BIT(0)
+ #define NVSW_HOT_SWAP_ALERT_MASK	BIT(1)
++#define NVSW_GP0_CPU_PWR_OFF_RDY_MASK	BIT(6)
+ #define NVSW_LED_LO_NIBBLE_MASK		GENMASK(7, 4)
+ #define NVSW_LED_HI_NIBBLE_MASK		GENMASK(3, 0)
+ #define NVSW_UART_SEL_MASK		GENMASK(7, 6)
+@@ -285,6 +288,8 @@ enum nvsw_core_regmap_type {
+  * @mux_exit: mux de-initialization callback;
+  * @mux: mux devices;
+  * @mux_num: number of mux device;
++ * @cpu_pwr_off_notify: notify BMC on completion of CPU power off sequence;
++ * @sys_off: power off prepare handler reporting CPU power off ready;
+  */
+ struct nvsw_core {
+ 	enum nvsw_core_hid_type hid;
+@@ -309,6 +314,8 @@ struct nvsw_core {
+ 	void (*mux_exit)(struct nvsw_core *nvsw_core);
+ 	struct platform_device *mux[NVSW_MUX_MAX];
+ 	u32 mux_num;
++	bool cpu_pwr_off_notify;
++	struct sys_off_handler *sys_off;
+ };
+ 
+ /* Platform core init/exit functions. */
+-- 
+2.34.1
+
