@@ -1,36 +1,7 @@
 #!/bin/bash
-##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 # hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
@@ -110,20 +81,33 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI179|HI180|HI185)
+	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI173|HI175|HI176|HI177|HI178|HI179|HI180|HI185)
 		ui_tree_archive_file="$(get_ui_tree_archive_file)"
 		if [ -e "$ui_tree_archive_file" ]; then
 			# Extract the ui_tree archive to /var/run/hw-management
 			tar xfz "$ui_tree_archive_file" -C "$hw_management_path"
+			rm -f "$labels_pending_file"
 			echo 1 > "$config_path"/labels_ready
 			log_info "Labels data base is ready"
 		else
-		    hw-management-label-init-complete.sh &
+			# No archive for this SKU: the tree is built link by link by the
+			# makers that check_n_link spawns. Hand the indicator over to
+			# hw-management-sysfs-monitor.sh, which already waits for the very
+			# event that completes the tree.
+			echo 0 > "$config_path"/labels_ready
+			touch "$labels_pending_file"
 		fi
 		;;
 	*)
 		# Do nothing
 esac
+
+# Make sure a monitor is around to pick the handoff up, and to produce the rest
+# of what it owns, on a start that systemd did not drive.
+start_sysfs_monitor_if_needed
+
+# Same for the login to the BMC, which systemd otherwise drives on its own.
+start_bmc_login_if_needed
 
 # Check if TC service is enabled (unit enabled at boot) and if it is currently running.
 tc_is_enabled=0

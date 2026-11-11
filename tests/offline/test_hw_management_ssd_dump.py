@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-#
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 """Offline tests for hw-management-ssd-dump.py."""
 
@@ -14,17 +12,18 @@ import stat
 import subprocess
 import tarfile
 import textwrap
+import time
 
 import pytest
 
-SCRIPT = os.path.join(
-    os.path.dirname(__file__),
-    "..",
-    "..",
-    "usr",
-    "usr",
-    "bin",
-    "hw-management-ssd-dump.py",
+BIN_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "..", "usr", "usr", "bin"
+)
+SCRIPT = os.path.join(BIN_DIR, "hw-management-ssd-dump.py")
+COLLECT_SH = os.path.join(BIN_DIR, "hw-management-ssd-dump-collect.sh")
+GENERATE_DUMP_SH = os.path.join(BIN_DIR, "hw-management-generate-dump.sh")
+LOCK_TEST_SH = os.path.join(
+    os.path.dirname(__file__), "..", "hardware", "ssd_dump_lock_test.sh"
 )
 
 
@@ -38,6 +37,40 @@ def load_mod():
 @pytest.fixture
 def ssd():
     return load_mod()
+
+
+@pytest.fixture
+def enforce_tool_dir():
+    """Leave check_tool_dir in place for this test.
+
+    Other tests look tools up under tmp_path, which the user owns.
+    The autouse fixture below skips that check unless a test asks for
+    this fixture.
+    """
+    return None
+
+
+@pytest.fixture(autouse=True)
+def _allow_user_tool_dirs(request, monkeypatch):
+    if "ssd" not in request.fixturenames:
+        return
+    if "enforce_tool_dir" in request.fixturenames:
+        return
+    ssd = request.getfixturevalue("ssd")
+    monkeypatch.setattr(ssd, "check_tool_dir", lambda path: None)
+
+
+@pytest.fixture(autouse=True)
+def lock_in_tmp(ssd, tmp_path, monkeypatch):
+    """Give every test a lock file of its own.
+
+    /run belongs to root, so without this an ordinary user
+    running the suite could not take the lock, and a collect
+    refuses rather than running a second vendor tool instance.
+    The tests that are about the lock override this again.
+    """
+    monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd-dump.lock"))
+    monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
 
 
 def write_json(path, obj):
@@ -301,20 +334,107 @@ class TestCreatedFiles:
 
 
 class TestStatusFormat:
+    def test_field_order_is_config_vendor_then_command(self, ssd):
+        text = ssd.format_status_fields(
+            {
+                "cmd": "/usr/local/sbin/virtium_nvme_dump_v2 /dev/nvme0",
+                "config": "/usr/share/ssd-dump-tools/ssd-dump-config.json",
+                "device": "/dev/nvme0",
+                "device_form": "controller",
+                "device_in": "/dev/nvme0",
+                "files": "nandlog.bin (1 in total, 6M)",
+                "free_mb": "2342",
+                "fw": "CE00A474",
+                "json_model": "VTPM24CEXI080-BM110006",
+                "locked": "yes",
+                "lock_warning": "busy",
+                "min_free_mb": "64",
+                "model": "Virtium VTPM24CEXI080-BM110006",
+                "outdir": "/var/log/ssd-dump",
+                "part": "VTPM24CEXI080-BM110006",
+                "reason": "kept when set",
+                "stage_from": "/usr/share/hw-management-tools/smi",
+                "status": "ok",
+                "timeout_sec": "90",
+                "tool": "virtium_nvme_dump_v2",
+                "tool_path": "/usr/local/sbin/virtium_nvme_dump_v2",
+                "tool_rc": "0",
+                "uid_warning": "not root",
+                "vendor": "Virtium",
+                "verify": "yes",
+                "warning": "tool missing",
+                "zz_extra": "kept",
+            }
+        )
+        assert "tool_path:" not in text
+        names = [
+            line.split(":", 1)[0]
+            for line in text.splitlines()
+            if line
+        ]
+        assert names == [
+            "config",
+            "min_free_mb",
+            "free_mb",
+            "device_form",
+            "device",
+            "device_in",
+            "stage_from",
+            "vendor",
+            "json_model",
+            "model",
+            "part",
+            "fw",
+            "tool",
+            "cmd",
+            "timeout_sec",
+            "outdir",
+            "files",
+            "tool_rc",
+            "verify",
+            "reason",
+            "warning",
+            "uid_warning",
+            "lock_warning",
+            "locked",
+            "zz_extra",
+            "status",
+        ]
+
     def test_ok_omits_warning_ends_with_status(self, ssd):
         text = ssd.format_status_fields({"status": "ok", "warning": "", "part": "X"})
         assert "warning:" not in text
-        assert text.strip().endswith("Status: Ok / succeeded")
+        assert text.strip().endswith("status: ok")
+        assert text.count("\nstatus:") == 1
 
     def test_skipped_ends_with_status_skipped(self, ssd):
-        text = ssd.format_status_fields({"status": "skipped", "warning": ""})
+        text = ssd.format_status_fields(
+            {
+                "status": "skipped",
+                "warning": "",
+                "reason": "no NVMe controller found",
+            }
+        )
         assert "warning:" not in text
-        assert text.strip().endswith("Status: skipped")
+        assert "reason: no NVMe controller found" in text
+        assert text.strip().endswith("status: skipped")
+        assert text.count("\nstatus:") == 1
+        hidden = ssd.format_status_fields(
+            {
+                "status": "skipped",
+                "warning": "",
+                "reason": "no NVMe controller found",
+            },
+            skip_warning=True,
+            skip_status_line=True,
+        )
+        assert "reason:" not in hidden
+        assert "status:" not in hidden
         assert ssd.completion_message({"status": "skipped"}) == (
             "SSD dump tool skipped"
         )
         assert ssd.completion_message(
-            {"status": "skipped", "warning": "no NVMe controller found"}
+            {"status": "skipped", "reason": "no NVMe controller found"}
         ) == (
             "SSD dump tool skipped: no NVMe controller found"
         )
@@ -333,7 +453,8 @@ class TestStatusFormat:
             {"status": "warning", "warning": "tool missing"}
         )
         assert "warning: tool missing" in text
-        assert text.strip().endswith("Status: error")
+        assert text.strip().endswith("status: warning")
+        assert text.count("\nstatus:") == 1
 
     def test_skip_warning_omits_reason(self, ssd):
         text = ssd.format_status_fields(
@@ -341,8 +462,7 @@ class TestStatusFormat:
             skip_warning=True,
         )
         assert "warning:" not in text
-        assert "status: warning" in text
-        assert text.strip().endswith("Status: error")
+        assert text.strip().endswith("status: warning")
 
     def test_skip_status_line(self, ssd):
         text = ssd.format_status_fields(
@@ -351,8 +471,7 @@ class TestStatusFormat:
             skip_status_line=True,
         )
         assert "warning:" not in text
-        assert "Status:" not in text
-        assert "status: warning" in text
+        assert "status:" not in text
         assert "verify: yes" in text
 
 
@@ -715,6 +834,142 @@ class TestFindTool:
                 {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
             )
 
+    def _exe(self, path):
+        path.write_text("#!/bin/sh\n")
+        os.chmod(str(path), 0o755)
+        return path
+
+    def test_absolute_path_refused_even_if_executable(self, ssd, tmp_path, monkeypatch):
+        # A config "tool" set to any executable path must not run as root.
+        exe = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(tmp_path))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.find_tool(str(exe))
+
+    def test_relative_path_refused(self, ssd, tmp_path, monkeypatch):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.find_tool("bin/virtium_nvme_dump_v2")
+
+    def test_resolve_refuses_absolute_primary_even_if_alt_valid(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        # The bad primary must not silently fall back to a good alt.
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "vtFA_RTK_5766_v2")
+        exe = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.resolve_tool({"tool": str(exe), "tool_alt": "vtFA_RTK_5766_v2"})
+
+    def test_resolve_refuses_absolute_alt_even_if_primary_valid(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        exe = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.resolve_tool({"tool": "virtium_nvme_dump_v2", "tool_alt": str(exe)})
+
+    def _stat_as_root(self, ssd, monkeypatch, directory, mode, uid=0):
+        real_stat = ssd.os.stat
+        target = os.path.abspath(str(directory))
+
+        def _stat(path, *args, **kwargs):
+            st = real_stat(path, *args, **kwargs)
+            if os.path.abspath(path) != target:
+                return st
+            return os.stat_result((
+                stat.S_IFDIR | mode,
+                st.st_ino,
+                st.st_dev,
+                st.st_nlink,
+                uid,
+                0,
+                st.st_size,
+                st.st_atime,
+                st.st_mtime,
+                st.st_ctime,
+            ))
+
+        monkeypatch.setattr(ssd.os, "stat", _stat)
+
+    def test_user_owned_dir_refused(self, ssd, tmp_path, monkeypatch, enforce_tool_dir):
+        # Mock the owner. A real mkdir is root-owned when pytest runs as
+        # root, and check_tool_dir() would then accept mode 0755.
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o755, uid=1000)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_world_writable_dir_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # /var/tmp is this case: the caller prepends it and plants the name.
+        bin_dir = tmp_path / "var-tmp"
+        bin_dir.mkdir()
+        os.chmod(str(bin_dir), 0o777)
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_symlink_in_writable_dir_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "var-tmp"
+        bin_dir.mkdir()
+        os.chmod(str(bin_dir), 0o777)
+        target = self._exe(tmp_path / "real-tool")
+        os.symlink(str(target), str(bin_dir / "virtium_nvme_dump_v2"))
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_root_owned_dir_accepted(self, ssd, tmp_path, monkeypatch, enforce_tool_dir):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        exe = self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o755)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(exe)
+
+    def test_root_owned_group_writable_dir_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o775)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_resolve_does_not_fall_through_a_writable_dir(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bad = tmp_path / "bad"
+        good = tmp_path / "good"
+        bad.mkdir()
+        good.mkdir()
+        os.chmod(str(bad), 0o777)
+        self._exe(bad / "virtium_nvme_dump_v2")
+        self._exe(good / "vtFA_RTK_5766_v2")
+        monkeypatch.setenv("PATH", "%s%s%s" % (bad, os.pathsep, good))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.resolve_tool(
+                {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
+            )
+
 
 def _dev_stat(mode):
     return os.stat_result((mode, 0, 0, 0, 0, 0, 0, 0, 0, 0))
@@ -787,7 +1042,838 @@ class TestResolveDevice:
         assert ssd.resolve_device(None, cfg) == "/dev/nvme1"
 
 
+class TestLock:
+    def test_second_acquire_refused(self, ssd, tmp_path, monkeypatch):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        first = ssd.DumpLock()
+        first.acquire()
+        assert first.fd is not None
+        with pytest.raises(ssd.DumpLocked) as exc:
+            ssd.DumpLock().acquire()
+        assert "already running" in str(exc.value)
+        # DumpError subclass: existing handlers still see a warning.
+        assert isinstance(exc.value, ssd.DumpError)
+        first.release()
+
+    def test_refusal_names_holder_pid(self, ssd, tmp_path, monkeypatch):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        holder = ssd.DumpLock()
+        holder.acquire()
+        with pytest.raises(ssd.DumpLocked) as exc:
+            ssd.DumpLock().acquire()
+        assert "pid %d" % os.getpid() in str(exc.value)
+        holder.release()
+        # Released lock must not keep advertising a stale pid.
+        assert ssd.DumpLock().holder_pid() == ""
+
+    def test_release_allows_reacquire(self, ssd, tmp_path, monkeypatch):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        first = ssd.DumpLock()
+        first.acquire()
+        first.release()
+        second = ssd.DumpLock()
+        second.acquire()
+        assert second.fd is not None
+        second.release()
+
+    def test_env_held_skips_lock(self, ssd, tmp_path, monkeypatch):
+        """generate-dump helper holds it; a second flock would deadlock."""
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        held = ssd.DumpLock()
+        held.acquire()
+        # What the helper passes down: the claim and the
+        # descriptor it holds the lock on.
+        monkeypatch.setenv(ssd.LOCK_ENV, "1")
+        monkeypatch.setenv(ssd.LOCK_FD_ENV, str(held.fd))
+        inner = ssd.DumpLock()
+        assert inner.acquire() is None
+        assert inner.fd is None
+        held.release()
+
+    def test_env_held_is_checked_not_trusted(self, ssd, tmp_path, monkeypatch):
+        """A stray variable must not buy an unlocked collect."""
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.setenv(ssd.LOCK_ENV, "1")
+        lock = ssd.DumpLock()
+        assert lock.acquire() is None
+        # Nothing held it, so this run locked for itself.
+        assert lock.fd is not None
+        monkeypatch.delenv(ssd.LOCK_ENV)
+        other = ssd.DumpLock()
+        with pytest.raises(ssd.DumpLocked):
+            other.acquire()
+        lock.release()
+
+    def test_an_unrelated_holder_is_not_the_caller(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        # The lock being taken is not proof that this run is the
+        # one holding it. Waving that through would collect
+        # alongside a collection in progress and remove its work
+        # directory, which is the whole thing the lock prevents.
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        holder = ssd.DumpLock()
+        holder.acquire()
+        mine = os.open(ssd.LOCK_PATH, os.O_RDWR)
+        monkeypatch.setenv(ssd.LOCK_ENV, "1")
+        monkeypatch.setenv(ssd.LOCK_FD_ENV, str(mine))
+        try:
+            with pytest.raises(ssd.DumpLocked):
+                ssd.DumpLock().acquire()
+        finally:
+            os.close(mine)
+            holder.release()
+
+    def test_lock_file_is_owner_only(self, ssd, tmp_path, monkeypatch):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        fd = os.open(ssd.LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o644)
+        os.close(fd)
+        lock = ssd.DumpLock()
+        assert lock.acquire() is None
+        try:
+            mode = os.stat(ssd.LOCK_PATH).st_mode & 0o777
+            assert mode == 0o600
+        finally:
+            lock.release()
+
+    def test_a_descriptor_on_another_file_is_not_the_lock(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        other = tmp_path / "elsewhere"
+        other.write_text("")
+        fd = os.open(str(other), os.O_RDWR)
+        monkeypatch.setenv(ssd.LOCK_ENV, "1")
+        monkeypatch.setenv(ssd.LOCK_FD_ENV, str(fd))
+        lock = ssd.DumpLock()
+        try:
+            assert lock.acquire() is None
+            assert lock.fd is not None
+        finally:
+            os.close(fd)
+            lock.release()
+
+    def test_an_unopened_descriptor_is_not_the_lock(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.setenv(ssd.LOCK_ENV, "1")
+        for value in ("", "nine", "-1", "4096"):
+            monkeypatch.setenv(ssd.LOCK_FD_ENV, value)
+            lock = ssd.DumpLock()
+            assert lock.acquire() is None
+            assert lock.fd is not None
+            lock.release()
+
+    def test_env_held_cannot_rescue_an_unusable_lock(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        # The claim cannot be checked here, so it is not taken:
+        # the caller gets the usual refusal reason instead.
+        monkeypatch.setattr(
+            ssd, "LOCK_PATH", str(tmp_path / "nodir" / "ssd.lock")
+        )
+        monkeypatch.setenv(ssd.LOCK_ENV, "1")
+        lock = ssd.DumpLock()
+        assert "cannot create lock" in lock.acquire()
+        assert lock.fd is None
+
+    def test_locked_rc_is_distinct(self, ssd):
+        assert ssd.RC_LOCKED not in (ssd.RC_OK, ssd.RC_WARNING)
+        # 2 is argparse usage; do not collide with it.
+        assert ssd.RC_LOCKED != 2
+
+    def test_unusable_lock_path_is_warning_only(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        seen = []
+        monkeypatch.setattr(
+            ssd.syslog, "syslog", lambda pri, msg: seen.append((pri, msg))
+        )
+        lock = ssd.DumpLock(path=str(tmp_path / "missing" / "ssd.lock"))
+        lock.acquire()
+        assert lock.fd is None
+        assert len(seen) == 1
+
+    def test_lock_permission_denied_is_silent(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        """A permission denial is not a syslog warning.
+
+        Root can create a file in a mode 0500 directory, so the
+        open itself is what fails here.
+        """
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        seen = []
+        monkeypatch.setattr(
+            ssd.syslog, "syslog", lambda pri, msg: seen.append((pri, msg))
+        )
+
+        def denied(*_a, **_k):
+            raise OSError(ssd.errno.EACCES, "Permission denied")
+
+        monkeypatch.setattr(ssd.os, "open", denied)
+        lock = ssd.DumpLock(path=str(tmp_path / "ssd.lock"))
+        reason = lock.acquire()
+        assert lock.fd is None
+        assert "cannot create lock" in reason
+        assert seen == []
+
+
+class TestCompletionMessage:
+    def test_succeeded_only_for_collect(self, ssd):
+        assert ssd.completion_message({"status": "ok"}) == ssd.MSG_SUCCEEDED
+
+    def test_verify_does_not_say_succeeded(self, ssd):
+        msg = ssd.completion_message({"status": "ok", "verify": "yes"})
+        assert msg == "SSD dump tool verify passed"
+        assert ssd.MSG_SUCCEEDED not in msg
+
+    def test_verify_failure_is_verify_wording(self, ssd):
+        msg = ssd.completion_message(
+            {"status": "warning", "verify": "yes", "warning": "no tool"}
+        )
+        assert msg == "SSD dump tool verify failed: no tool"
+
+    def test_locked_has_busy_wording(self, ssd):
+        msg = ssd.completion_message(
+            {
+                "status": "warning",
+                "locked": "yes",
+                "warning": "another SSD dump collection is already running",
+            }
+        )
+        assert msg.startswith(ssd.MSG_BUSY)
+        assert "failed" not in msg
+        assert ssd.MSG_SUCCEEDED not in msg
+
+
+class TestHelperConstants:
+    """The helper duplicates a few collector values in shell.
+
+    It waits for a busy lock up to the vendor budget in the JSON,
+    so it needs the config path and the budget cap. Nothing can
+    import them into /bin/sh, so pin them here instead.
+    """
+
+    def _assign(self, text, name):
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith(name + "="):
+                return line.split("=", 1)[1]
+        raise AssertionError("no %s= in the helper" % name)
+
+    @pytest.fixture
+    def helper(self):
+        with open(COLLECT_SH) as f:
+            return f.read()
+
+    def test_helper_config_path_matches_collector(self, ssd, helper):
+        value = self._assign(helper, "SSD_DUMP_CONFIG")
+        assert value == "${SSD_DUMP_CONFIG:-%s}" % ssd.DEFAULT_CONFIG
+
+    def test_helper_wait_cap_matches_json_max(self, ssd, helper):
+        cap = int(self._assign(helper, "LOCK_WAIT_CAP"))
+        assert cap == ssd.TIMEOUT_SEC_JSON_MAX
+
+    def test_helper_polls_every_two_seconds(self, helper):
+        assert int(self._assign(helper, "LOCK_POLL_SEC")) == 2
+
+    def test_helper_status_name_matches_collector(self, ssd, helper):
+        assert self._assign(helper, "STATUS_NAME") == ssd.STATUS_NAME
+
+    def test_helper_passes_the_descriptor_it_locked(self, ssd, helper):
+        # The collector checks the claim against this
+        # descriptor, so the two sides have to agree on which
+        # one it is and on the lock living there.
+        assert self._assign(helper, ssd.LOCK_FD_ENV) == "9"
+        assert 'exec 9>> "$LOCK_FILE"' in helper
+        assert 'chmod 600 "$LOCK_FILE"' in helper
+        assert "umask 077" in helper
+        assert '"$FLOCK" -n -x 9' in helper
+        assert "export %s %s" % (ssd.LOCK_ENV, ssd.LOCK_FD_ENV) in helper
+
+    def _wait_sec(self, helper, tmp_path, cfg_text):
+        """Run the helper's read_lock_wait_sec on one config."""
+        body = helper.split("read_lock_wait_sec() {", 1)[1]
+        body = "read_lock_wait_sec() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+        cfg = tmp_path / "cfg.json"
+        cfg.write_text(cfg_text)
+        # The config path arrives as an argument: --basetemp may
+        # put it somewhere with a space in it, and interpolating
+        # that into the script would test the quoting instead of
+        # the wait budget.
+        script = textwrap.dedent(
+            """
+            LOCK_POLL_SEC=%s
+            LOCK_WAIT_CAP=%s
+            SSD_DUMP_CONFIG="$1"
+            %s
+            read_lock_wait_sec
+            """
+        ) % (
+            self._assign(helper, "LOCK_POLL_SEC"),
+            self._assign(helper, "LOCK_WAIT_CAP"),
+            body,
+        )
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(cfg)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+        return int(out.stdout.strip())
+
+    def test_wait_budget_is_the_largest_timeout(self, helper, tmp_path):
+        obj = virtium_cfg("vtFA")
+        obj["defaults"]["timeout_sec"] = 30
+        obj["vendors"]["Virtium"]["models"][
+            "VTPM24CEXI080-BM110006"
+        ]["timeout_sec"] = 45
+        assert self._wait_sec(helper, tmp_path, json.dumps(obj)) == 45
+
+    def test_short_wait_budget_is_honoured_not_capped(self, helper, tmp_path):
+        # The shortest configured budget must not become the
+        # longest wait: round it up to one poll, no further.
+        obj = virtium_cfg("vtFA")
+        obj["defaults"]["timeout_sec"] = 1
+        obj["vendors"]["Virtium"]["models"][
+            "VTPM24CEXI080-BM110006"
+        ]["timeout_sec"] = 1
+        poll = int(self._assign(helper, "LOCK_POLL_SEC"))
+        assert self._wait_sec(helper, tmp_path, json.dumps(obj)) == poll
+
+    def test_unknown_wait_budget_falls_back_to_the_cap(self, helper, tmp_path):
+        cap = int(self._assign(helper, "LOCK_WAIT_CAP"))
+        # No timeout_sec anywhere, and a config that is not JSON.
+        assert self._wait_sec(helper, tmp_path, '{"vendors": {}}') == cap
+        assert self._wait_sec(helper, tmp_path, "not json") == cap
+
+    def test_long_wait_budget_is_capped(self, helper, tmp_path):
+        cap = int(self._assign(helper, "LOCK_WAIT_CAP"))
+        obj = virtium_cfg("vtFA")
+        obj["defaults"]["timeout_sec"] = cap * 10
+        assert self._wait_sec(helper, tmp_path, json.dumps(obj)) == cap
+
+    def test_generate_dump_budget_covers_every_phase(self, ssd, helper):
+        # dump_cmd must outlast every bound the helper sets for
+        # itself, or the phase that overruns is the copy: it is
+        # last, so it would be cut short and pack a truncated
+        # SSD section with nothing to say so. A reuse that spends
+        # its whole budget and then fails counts: the collect it
+        # falls back to still has to fit.
+        cap = int(self._assign(helper, "LOCK_WAIT_CAP"))
+        collect = int(self._assign(helper, "SSD_TOOL_TIMEOUT"))
+        kill_after = int(self._assign(helper, "SSD_TOOL_KILL_AFTER"))
+        copy = 2 * int(self._assign(helper, "SSD_COPY_TIMEOUT"))
+        with open(GENERATE_DUMP_SH) as f:
+            text = f.read()
+        hook = [
+            line
+            for line in text.splitlines()
+            if "ssd-dump-collect.log" in line
+        ]
+        assert len(hook) == 1
+        budget = int(hook[0].split('"')[-2])
+        assert budget >= cap + collect + kill_after + copy
+
+    def test_copy_phase_is_bounded(self, helper):
+        # Every step that writes DUMP_FOLDER runs under a
+        # timeout: its own for the copy that ends a collect, and
+        # what is left of the shared budget for each of the four
+        # reuse steps, two per source, since reading a source
+        # costs time as surely as copying it.
+        copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
+        assert copy > 0
+        assert helper.count('timeout "$SSD_COPY_TIMEOUT"') == 1
+        assert helper.count('timeout "$_left"') == 1
+        assert helper.count("within_reuse_budget ") == 4
+
+    def _reuse_left(self, helper, started, now=1000000):
+        """Run the helper's reuse_budget_left on one start time."""
+        body = helper.split("reuse_budget_left() {", 1)[1]
+        body = "reuse_budget_left() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+        script = (
+            "SSD_COPY_TIMEOUT=%s\n"
+            "date() { echo %s; }\n"
+            "%s"
+            'reuse_budget_left "$1"\n'
+        ) % (
+            self._assign(helper, "SSD_COPY_TIMEOUT"),
+            int(now),
+            body,
+        )
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(started)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+        return int(out.stdout.strip())
+
+    def test_a_fresh_reuse_phase_has_the_whole_budget(self, helper):
+        copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
+        assert self._reuse_left(helper, 1000000) == copy
+
+    def test_a_second_reuse_source_gets_only_the_remainder(self, helper):
+        # A slice per source, plus the collect a failed reuse
+        # falls back to, would run past what dump_cmd allows.
+        copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
+        left = self._reuse_left(helper, 1000000 - copy // 2)
+        assert 0 < left <= copy - copy // 2
+
+    def test_a_spent_budget_reads_as_zero(self, helper):
+        # Zero stops reuse; passing it to timeout would mean no
+        # limit at all.
+        copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
+        assert self._reuse_left(helper, 1000000 - copy) == 0
+        assert self._reuse_left(helper, 1000000 - 10 * copy) == 0
+
+    def test_an_unusable_start_time_stops_reuse(self, helper):
+        assert self._reuse_left(helper, "") == 0
+        assert self._reuse_left(helper, "later") == 0
+
+    def _newer_than_wait(self, helper, tmp_path, mtime, started):
+        """Run the helper's newer_than_wait on one timestamp."""
+        body = helper.split("newer_than_wait() {", 1)[1]
+        body = "newer_than_wait() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+        result = tmp_path / "ssd-dump.tar.gz"
+        result.write_text("")
+        os.utime(str(result), (mtime, mtime))
+        script = 'lock_wait_started="$1"\n%snewer_than_wait "$2"\n' % body
+        return subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(started), str(result)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ).returncode == 0
+
+    def test_a_dump_finished_during_the_wait_is_newer(self, helper, tmp_path):
+        started = int(time.time())
+        assert self._newer_than_wait(helper, tmp_path, started + 1, started)
+
+    def test_a_dump_from_the_second_the_wait_began_is_not(
+        self, helper, tmp_path
+    ):
+        # mtime is whole seconds, so a dump somebody else
+        # finished just before the wait reads as equal to its
+        # start. Equal is not newer: it was not collected for us.
+        started = int(time.time())
+        assert not self._newer_than_wait(helper, tmp_path, started, started)
+        assert not self._newer_than_wait(helper, tmp_path, started - 1, started)
+        assert not self._newer_than_wait(
+            helper, tmp_path, started - 3600, started
+        )
+
+    def test_an_unusable_timestamp_is_not_newer(self, helper, tmp_path):
+        started = int(time.time())
+        assert not self._newer_than_wait(helper, tmp_path, started + 1, "")
+        assert not self._newer_than_wait(
+            helper, tmp_path, started + 1, "recently"
+        )
+
+    def _within_budget(self, helper, tmp_path, started):
+        """Run one step of a reuse phase that began at started."""
+        out = []
+        for name in ("reuse_budget_left", "within_reuse_budget"):
+            body = helper.split(name + "() {", 1)[1]
+            out.append(name + "() {" + body.split("\n}\n", 1)[0] + "\n}\n")
+        script = 'SSD_COPY_TIMEOUT=%s\n_reuse_started="$1"\n%s' % (
+            self._assign(helper, "SSD_COPY_TIMEOUT"),
+            "".join(out),
+        ) + 'within_reuse_budget touch "$2"\n'
+        done = tmp_path / "step-ran"
+        rc = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(started), str(done)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ).returncode
+        return rc, done.exists()
+
+    def test_a_reuse_step_runs_while_the_budget_lasts(self, helper, tmp_path):
+        rc, ran = self._within_budget(helper, tmp_path, int(time.time()))
+        assert (rc, ran) == (0, True)
+
+    def test_a_reuse_step_is_not_started_once_it_is_spent(
+        self, helper, tmp_path
+    ):
+        # Reading a source is a step like any other, so a probe
+        # that spends the phase stops the copy behind it rather
+        # than running unbounded or with timeout 0.
+        copy = int(self._assign(helper, "SSD_COPY_TIMEOUT"))
+        rc, ran = self._within_budget(
+            helper, tmp_path, int(time.time()) - copy
+        )
+        assert (rc, ran) == (1, False)
+
+    def test_flock_is_looked_up_not_hardcoded(self, helper):
+        # A flock outside /usr/bin must not read as "no flock",
+        # which now means refusing to collect. Comments may still
+        # name the usual path.
+        code = [
+            line
+            for line in helper.splitlines()
+            if not line.lstrip().startswith("#")
+        ]
+        assert "/usr/bin/flock" not in "\n".join(code)
+        assert self._assign(helper, "FLOCK") == "$(command -v flock 2>/dev/null)"
+
+    def _collected_dump(self, helper, status):
+        """Run the helper's collected_dump on one status file."""
+        body = helper.split("collected_dump() {", 1)[1]
+        body = "collected_dump() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+        out = subprocess.run(
+            ["/bin/sh", "-c", body + '\ncollected_dump "$1"\n', "sh", status],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return out.returncode == 0
+
+    def test_a_collected_dump_may_be_reused(self, helper):
+        assert self._collected_dump(helper, "files: 3\nstatus: ok\n")
+
+    def test_a_verify_result_is_not_a_dump(self, helper):
+        # Verify passes its checks without reading the SSD and
+        # still reports status: ok in the default location, so
+        # reusing one would pack a status file into the system
+        # dump as the current SSD state.
+        assert not self._collected_dump(
+            helper, "status: ok\nverify: yes\n"
+        )
+
+    def test_a_failed_leftover_is_not_reused(self, helper):
+        assert not self._collected_dump(
+            helper, "status: warning\nwarning: vendor tool exit 1\n"
+        )
+
+    def test_the_status_must_be_its_own_line(self, helper):
+        assert not self._collected_dump(
+            helper, "status: warning\nwarning: no status: ok anywhere\n"
+        )
+
+
+class TestLockTestScript:
+    """The on-target test moves the operator's dumps aside.
+
+    It has to put them back, and it must never delete what it
+    never saved, so the save and restore pair is checked here
+    rather than only by running the test on a target.
+    """
+
+    @pytest.fixture
+    def funcs(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        out = []
+        for name in ("save_path", "restore_path"):
+            body = text.split(name + "() {", 1)[1]
+            out.append(name + "() {" + body.split("\n}\n", 1)[0] + "\n}\n")
+        return "die() { exit 1; }\n" + "".join(out)
+
+    def _run(self, funcs, tmp_path, name, script):
+        """Run script with $1 as $BACKUP and $2 as the live path.
+
+        Both arrive as arguments: --basetemp may put them
+        somewhere with a space in it, and the quoting is not what
+        these tests are about.
+        """
+        backup = tmp_path / "backup"
+        backup.mkdir(exist_ok=True)
+        live = tmp_path / name
+        subprocess.run(
+            [
+                "/bin/sh",
+                "-c",
+                'BACKUP="$1"\n%s%s' % (funcs, script),
+                "sh",
+                str(backup),
+                str(live),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return backup, live
+
+    def test_a_saved_path_comes_back(self, funcs, tmp_path):
+        live = tmp_path / "ssd-dump"
+        live.mkdir()
+        (live / "nandlog_0.bin").write_text("operator data")
+        self._run(
+            funcs, tmp_path, "ssd-dump",
+            'save_path "$2"\nrestore_path "$2"\n',
+        )
+        assert (live / "nandlog_0.bin").read_text() == "operator data"
+
+    def test_an_unsaved_path_is_left_alone(self, funcs, tmp_path):
+        # Cleanup runs on a signal too, so it can reach a path
+        # save_path never got to. Removing it then would destroy
+        # the operator's only copy.
+        live = tmp_path / "hw-mgmt-dump"
+        live.mkdir()
+        (live / "dump.log").write_text("operator data")
+        self._run(funcs, tmp_path, "hw-mgmt-dump", 'restore_path "$2"\n')
+        assert (live / "dump.log").read_text() == "operator data"
+
+    def test_a_save_cut_short_still_comes_back(self, funcs, tmp_path):
+        # A signal can land between the move and the marker. The
+        # saved copy is then the operator's only one, and
+        # cleanup removes $BACKUP on its way out.
+        live = tmp_path / "ssd-dump"
+        live.mkdir()
+        (live / "nandlog_0.bin").write_text("operator data")
+        backup, live = self._run(
+            funcs, tmp_path, "ssd-dump",
+            'save_path "$2"\nrm -f "$1/ssd-dump.taken"\n'
+            'restore_path "$2"\n',
+        )
+        assert (live / "nandlog_0.bin").read_text() == "operator data"
+        assert not list(backup.iterdir())
+
+    def test_a_failed_restore_keeps_the_backup(self, funcs, tmp_path):
+        # A full filesystem makes the move back fail. The saved
+        # copy is then the only complete one, so the caller must
+        # see the failure and keep $BACKUP. Root ignores a mode
+        # 0555 directory, so the move itself is what fails here.
+        live = tmp_path / "ssd-dump"
+        live.mkdir()
+        (live / "nandlog_0.bin").write_text("operator data")
+        backup, live = self._run(
+            funcs, tmp_path, "ssd-dump",
+            'save_path "$2"\n'
+            'mv() { return 1; }\n'
+            'restore_path "$2"\n'
+            'echo $? > "$1/rc"\n',
+        )
+        assert (backup / "rc").read_text().strip() == "1"
+        saved = backup / "ssd-dump.saved" / "nandlog_0.bin"
+        assert saved.read_text() == "operator data"
+        assert not live.exists()
+
+    def test_a_partial_backup_does_not_replace_the_original(
+        self, funcs, tmp_path
+    ):
+        # Both trees exist and neither has a marker, so which one
+        # is complete is unknown. The original stays, and so does
+        # the saved copy.
+        live = tmp_path / "ssd-dump"
+        live.mkdir()
+        (live / "nandlog_0.bin").write_text("operator data")
+        backup, live = self._run(
+            funcs, tmp_path, "ssd-dump",
+            'mkdir -p "$1/ssd-dump.saved"\nrestore_path "$2"\n',
+        )
+        assert (live / "nandlog_0.bin").read_text() == "operator data"
+        assert (backup / "ssd-dump.saved").is_dir()
+
+    def test_a_failed_save_keeps_the_saved_copy(self, funcs, tmp_path):
+        # die is stubbed out, so this covers save_path alone.
+        # A failed mv may already have copied the tree. That
+        # copy is kept; the source is still the operator's.
+        live = tmp_path / "ssd-dump"
+        live.mkdir()
+        (live / "nandlog_0.bin").write_text("operator data")
+        backup, live = self._run(
+            funcs, tmp_path, "ssd-dump",
+            'mv() { mkdir -p "$3"; return 1; }\nsave_path "$2"\n',
+        )
+        assert (live / "nandlog_0.bin").read_text() == "operator data"
+        assert (backup / "ssd-dump.saved").is_dir()
+
+    def test_a_path_that_was_absent_is_not_recreated(self, funcs, tmp_path):
+        _backup, live = self._run(
+            funcs, tmp_path, "ssd-dump",
+            'save_path "$2"\nmkdir -p "$2"\nrestore_path "$2"\n',
+        )
+        assert not live.exists()
+
+    def _cleanup_fn(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("cleanup() {", 1)[1]
+        return "cleanup() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+
+    def test_cleanup_removes_the_blocked_lock_directory(self, tmp_path):
+        # scenario_11's rmdir runs only after the helper returns.
+        # Ctrl-C before that used to leave a directory where the
+        # lock file belongs, and every later collection refused.
+        blocked = tmp_path / "hw-management-ssd-dump.lock"
+        blocked.mkdir()
+        script = (
+            "CLEANED=0\nKEEP_WORK=0\nWORK=\nBACKUP=\n"
+            "kill_holder() { :; }\n"
+            'LOCK_DIR_BLOCK="$1"\n'
+            "%s"
+            "cleanup\n"
+            'if [ -e "$1" ]; then echo still-there; else echo gone; fi\n'
+        ) % self._cleanup_fn()
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(blocked)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert out.stdout.strip() == "gone"
+        assert not blocked.exists()
+
+    def test_cleanup_leaves_a_real_lock_file(self, tmp_path):
+        lock = tmp_path / "hw-management-ssd-dump.lock"
+        lock.write_text("holder\n")
+        script = (
+            "CLEANED=0\nKEEP_WORK=0\nWORK=\nBACKUP=\n"
+            "kill_holder() { :; }\n"
+            "LOCK_DIR_BLOCK=\n"
+            "%s"
+            "cleanup\n"
+        ) % self._cleanup_fn()
+        subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(lock)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert lock.read_text() == "holder\n"
+
+    def _fn(self, name):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split(name + "() {", 1)[1]
+        return name + "() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+
+    def test_scenario_11_blocks_the_lock_before_the_helper(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("scenario_11() {", 1)[1]
+        body = body.split("\n}\n", 1)[0]
+        assert body.index('block_lock_dir "$LOCK_FILE"') < body.index(
+            "run_second"
+        )
+
+    def test_block_lock_dir_registers_while_signals_are_ignored(self):
+        # cleanup only deletes a directory LOCK_DIR_BLOCK already
+        # names. The assignment has to land before INT/TERM can
+        # run again, and only after mkdir has succeeded.
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("block_lock_dir() {", 1)[1]
+        body = body.split("\n}\n", 1)[0]
+        code = "\n".join(
+            line
+            for line in body.splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        assert code.index("trap '' INT TERM") < code.index('mkdir "$1"')
+        assert code.index('mkdir "$1"') < code.index('LOCK_DIR_BLOCK="$1"')
+        assert code.index('LOCK_DIR_BLOCK="$1"') < code.index(
+            'trap "$ON_SIGNAL" INT TERM'
+        )
+        assert "ON_SIGNAL='cleanup; exit 1'" in text
+        assert 'trap "$ON_SIGNAL" INT TERM' in text
+
+    def test_a_signal_during_mkdir_still_records_the_directory(
+        self, tmp_path
+    ):
+        # kill from inside mkdir is the gap: the directory exists,
+        # LOCK_DIR_BLOCK does not yet. The signal is ignored
+        # there, so cleanup runs only after the path is recorded.
+        blocked = tmp_path / "hw-management-ssd-dump.lock"
+        script = (
+            "ON_SIGNAL='cleanup; exit 1'\n"
+            "LOCK_DIR_BLOCK=\n"
+            "CLEANED=0\nKEEP_WORK=0\nWORK=\nBACKUP=\n"
+            "kill_holder() { :; }\n"
+            "%s"
+            "%s"
+            "mkdir() {\n"
+            '\tcommand mkdir "$1"\n'
+            "\tkill -TERM $$\n"
+            "}\n"
+            'block_lock_dir "$1"\n'
+            'echo "rc=$?"\n'
+            'echo "block=$LOCK_DIR_BLOCK"\n'
+            "cleanup\n"
+            'if [ -e "$1" ]; then echo still-there; else echo gone; fi\n'
+        ) % (self._fn("block_lock_dir"), self._cleanup_fn())
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(blocked)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        lines = out.stdout.splitlines()
+        assert lines[0] == "rc=0"
+        assert lines[1] == "block=%s" % blocked
+        assert lines[2] == "gone"
+        assert not blocked.exists()
+
+    def test_block_lock_dir_does_not_claim_a_path_it_did_not_create(
+        self, tmp_path
+    ):
+        lock = tmp_path / "hw-management-ssd-dump.lock"
+        lock.write_text("holder\n")
+        script = (
+            "ON_SIGNAL='cleanup; exit 1'\n"
+            "LOCK_DIR_BLOCK=\n"
+            "cleanup() { :; }\n"
+            "%s"
+            'block_lock_dir "$1"\n'
+            'echo "rc=$?"\n'
+            'echo "block=$LOCK_DIR_BLOCK"\n'
+        ) % self._fn("block_lock_dir")
+        out = subprocess.run(
+            ["/bin/sh", "-c", script, "sh", str(lock)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert out.stdout.splitlines() == ["rc=1", "block="]
+        assert lock.read_text() == "holder\n"
+
+    def test_reuse_scenarios_cross_the_wait_second(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        for name in ("scenario_7", "scenario_9"):
+            body = text.split(name + "() {", 1)[1]
+            body = body.split("\n}\n", 1)[0]
+            assert body.index("wait_past_this_second") < body.index(
+                "release_holder"
+            )
+
+    def test_wait_past_this_second_moves_the_clock(self):
+        with open(LOCK_TEST_SH) as f:
+            text = f.read()
+        body = text.split("wait_past_this_second() {", 1)[1]
+        body = "wait_past_this_second() {" + body.split("\n}\n", 1)[0] + "\n}\n"
+        script = (
+            "NOW=100\n"
+            'date() { echo "$NOW"; }\n'
+            "sleep() { NOW=$((NOW + 1)); }\n"
+            "%s"
+            "wait_past_this_second\n"
+            'echo "$NOW"\n'
+        ) % body
+        out = subprocess.run(
+            ["/bin/sh", "-c", script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+        )
+        assert out.stdout.strip() == "101"
+
+
 class TestEndToEnd:
+    @pytest.fixture(autouse=True)
+    def _fake_tools_on_path(self, tmp_path, monkeypatch):
+        # Configs name tools by bare basename; fake tools live in tmp_path.
+        monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+
     def _nvme(self, ssd, monkeypatch, model="Virtium VTPM24CEXI080-BM110006"):
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -803,7 +1889,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         stale = outdir / "stale.bin"
@@ -836,7 +1922,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
@@ -860,7 +1946,10 @@ class TestEndToEnd:
         captured = capsys.readouterr()
         assert rc != 0
         assert "SSD dump tool succeeded" not in captured.err
-        assert "SSD dump tool failed: cannot write status" in captured.err
+        assert (
+            "SSD dump tool verify failed: cannot write status"
+            in captured.err
+        )
         assert "status: warning" in captured.out
 
     def test_verify_quiet_hides_stdout(
@@ -869,7 +1958,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
@@ -890,7 +1979,9 @@ class TestEndToEnd:
         assert rc == 0
         assert captured.out == ""
         assert "SSD dump tool started" in captured.err
-        assert "SSD dump tool succeeded" in captured.err
+        # Verify creates no archive, so never "succeeded".
+        assert "SSD dump tool verify passed" in captured.err
+        assert ssd.MSG_SUCCEEDED not in captured.err
         assert "SSD dump tool results:" not in captured.err
 
     def test_verify_refuses_dir_symlink(
@@ -952,7 +2043,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         keep = outdir / "keep.bin"
@@ -982,7 +2073,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         self._nvme(ssd, monkeypatch)
@@ -1097,7 +2188,7 @@ class TestEndToEnd:
         err = capsys.readouterr().err
         assert rc != 0
         assert "SSD dump tool started" in err
-        assert "SSD dump tool failed:" in err
+        assert "SSD dump tool verify failed:" in err
         assert "not found on PATH" in err
         assert "WARNING:" not in err
         assert (outdir / "ssd-dump-status.log").is_file()
@@ -1119,6 +2210,9 @@ class TestEndToEnd:
     ):
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
         rc = ssd.main(
             [
                 "--verify",
@@ -1131,17 +2225,22 @@ class TestEndToEnd:
         captured = capsys.readouterr()
         assert rc != 0
         assert captured.err.count("config not found") == 1
-        assert "SSD dump tool failed:" in captured.err
+        assert "SSD dump tool verify failed:" in captured.err
         assert "warning: config not found" not in captured.out
         assert "status: warning" in captured.out
         assert "Status:" not in captured.out
         status = (outdir / "ssd-dump-status.log").read_text()
         assert "warning: config not found" in status
-        assert "Status: error" in status
+        assert status.strip().endswith("status: warning")
         assert not (outdir / "ssd-dump-tool.log").exists()
 
-    def test_collect_config_missing_no_tool_log(self, ssd, tmp_path, capsys):
+    def test_collect_config_missing_no_tool_log(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
         outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
         rc = ssd.main(
             [
                 "--config",
@@ -1157,6 +2256,247 @@ class TestEndToEnd:
         assert not (outdir / "ssd-dump-tool.txt").exists()
         err = capsys.readouterr().err
         assert "SSD dump tool failed:" in err
+
+    def test_config_missing_no_nvme_skips_before_config(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        rc = ssd.main(
+            [
+                "--config",
+                str(tmp_path / "missing.json"),
+                "--outdir",
+                str(outdir),
+            ]
+        )
+        captured = capsys.readouterr()
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc == 0
+        assert "status: skipped" in status
+        assert status.strip().endswith("status: skipped")
+        assert "reason: no NVMe controller found" in status
+        assert "config not found" not in status
+        assert "SSD dump tool skipped: no NVMe controller found" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+        assert not (tmp_path / "ssd-dump.tar.gz").exists()
+
+    def test_verify_config_missing_no_nvme_skips_before_config(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        rc = ssd.main(
+            [
+                "--verify",
+                "--config",
+                str(tmp_path / "missing.json"),
+                "--outdir",
+                str(outdir),
+            ]
+        )
+        captured = capsys.readouterr()
+        assert rc == 0
+        assert "status: skipped" in captured.out
+        assert "SSD dump tool skipped: no NVMe controller found" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+
+    def test_config_missing_explicit_device_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        rc = ssd.main(
+            [
+                "--config",
+                str(tmp_path / "missing.json"),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        assert rc != 0
+        assert "SSD dump tool failed:" in capsys.readouterr().err
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % (tmp_path / "missing.json"))
+        ]
+
+    def _missing_default_config(self, ssd, tmp_path, monkeypatch, installed):
+        missing = tmp_path / "ssd-dump-config.json"
+        monkeypatch.setattr(ssd, "DEFAULT_CONFIG", str(missing))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
+        monkeypatch.setattr(
+            ssd, "ssd_dump_tools_installed", lambda *_a, **_k: installed
+        )
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        return seen
+
+    def test_nvme_without_package_skips(self, ssd, tmp_path, monkeypatch, capsys):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(["--outdir", str(outdir)])
+        captured = capsys.readouterr()
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc == 0
+        assert "status: skipped" in status
+        assert "reason: ssd-dump-tools is not installed" in status
+        assert "config not found" not in status
+        assert "SSD dump tool skipped: ssd-dump-tools is not installed" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+
+    def test_verify_nvme_without_package_skips(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(["--verify", "--outdir", str(outdir)])
+        captured = capsys.readouterr()
+        assert rc == 0
+        assert "status: skipped" in captured.out
+        assert "SSD dump tool skipped: ssd-dump-tools is not installed" in captured.err
+        assert "config not found" not in captured.err
+        assert seen == []
+
+    def test_package_installed_missing_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, True)
+        rc = ssd.main(["--outdir", str(outdir)])
+        err = capsys.readouterr().err
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_explicit_device_missing_default_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(["--outdir", str(outdir), "--device", "/dev/nvme0"])
+        err = capsys.readouterr().err
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert "ssd-dump-tools is not installed" not in err
+        assert "status: warning" in status
+        assert "reason:" not in status
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_verify_explicit_device_missing_default_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(
+            ["--verify", "--outdir", str(outdir), "--device", "/dev/nvme0"]
+        )
+        captured = capsys.readouterr()
+        assert rc != 0
+        assert "SSD dump tool verify failed:" in captured.err
+        assert "config not found" in captured.err
+        assert "ssd-dump-tools is not installed" not in captured.err
+        assert "status: warning" in captured.out
+        assert "reason:" not in captured.out
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def _dpkg_status(self, ssd, monkeypatch, status, rc=0):
+        class Proc(object):
+            returncode = rc
+
+            def communicate(self):
+                return (status, "")
+
+        def fake_popen(argv, **_k):
+            assert argv[:3] == ["dpkg-query", "-W", "-f"]
+            return Proc()
+
+        monkeypatch.setattr(ssd.subprocess, "Popen", fake_popen)
+
+    def test_held_package_counts_as_installed(self, ssd, monkeypatch):
+        self._dpkg_status(ssd, monkeypatch, "hold ok installed")
+        assert ssd.ssd_dump_tools_installed() is True
+        self._dpkg_status(ssd, monkeypatch, "install ok installed")
+        assert ssd.ssd_dump_tools_installed() is True
+        self._dpkg_status(ssd, monkeypatch, "deinstall ok config-files")
+        assert ssd.ssd_dump_tools_installed() is False
+        self._dpkg_status(ssd, monkeypatch, "", rc=1)
+        assert ssd.ssd_dump_tools_installed() is False
+
+    def test_held_package_missing_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        missing = tmp_path / "ssd-dump-config.json"
+        monkeypatch.setattr(ssd, "DEFAULT_CONFIG", str(missing))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        self._dpkg_status(ssd, monkeypatch, "hold ok installed")
+        rc = ssd.main(["--outdir", str(outdir)])
+        err = capsys.readouterr().err
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert "ssd-dump-tools is not installed" not in err
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_verify_held_package_missing_config_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        missing = tmp_path / "ssd-dump-config.json"
+        monkeypatch.setattr(ssd, "DEFAULT_CONFIG", str(missing))
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
+        seen = []
+        monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: seen.append(a))
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
+        self._dpkg_status(ssd, monkeypatch, "hold ok installed")
+        rc = ssd.main(["--verify", "--outdir", str(outdir)])
+        captured = capsys.readouterr()
+        assert rc != 0
+        assert "SSD dump tool verify failed:" in captured.err
+        assert "config not found" in captured.err
+        assert "status: warning" in captured.out
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
 
     def test_missing_tool_writes_status(self, ssd, tmp_path, monkeypatch):
         cfg = tmp_path / "cfg.json"
@@ -1188,7 +2528,7 @@ class TestEndToEnd:
         status = (outdir / "ssd-dump-status.log").read_text()
         assert "not found on PATH" in status
         assert "status: warning" in status
-        assert "Status: error" in status
+        assert status.strip().endswith("status: warning")
         assert any(ln.startswith("warning:") for ln in status.splitlines())
         assert not (outdir / "ssd-dump-tool.log").exists()
         assert not (outdir / "ssd-dump-tool.txt").exists()
@@ -1346,6 +2686,31 @@ class TestEndToEnd:
         assert "timeout_sec" in text
         assert "must be 1..%s" % ssd.TIMEOUT_SEC_JSON_MAX in text
 
+    def test_model_timeout_over_json_max_rejected_by_verify(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        # Per model, not only defaults: either one decides how
+        # long the vendor tool runs under the 195 s wrapper.
+        cfg = tmp_path / "cfg.json"
+        obj = virtium_cfg("vtFA")
+        models = obj["vendors"]["Virtium"]["models"]
+        models["VTPM24CEXI080-BM110006"]["timeout_sec"] = (
+            ssd.TIMEOUT_SEC_JSON_MAX + 1
+        )
+        write_json(cfg, obj)
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        text = "".join(capsys.readouterr())
+        assert rc != 0
+        assert "models.VTPM24CEXI080-BM110006.timeout_sec" in text
+        assert "must be 1..%s" % ssd.TIMEOUT_SEC_JSON_MAX in text
+
+    def test_json_timeout_cap_is_tighter_than_cli(self, ssd):
+        # The JSON budget runs under the generate-dump helper's
+        # timeout of 195 s, so it cannot be raised to the CLI
+        # cap without raising that wrapper and dump_cmd too.
+        assert ssd.TIMEOUT_SEC_JSON_MAX <= ssd.TIMEOUT_SEC_CLI_MAX
+        assert ssd.TIMEOUT_SEC_JSON_MAX == 120
+
     def test_missing_tool_rejected_by_verify(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
@@ -1394,7 +2759,9 @@ class TestEndToEnd:
             "device_form"
         ] = "disk"
         write_json(cfg, obj)
-        monkeypatch.setattr(ssd, "list_nvme_controllers", lambda *_a, **_k: [])
+        monkeypatch.setattr(
+            ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
+        )
         rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
         text = "".join(capsys.readouterr())
         assert rc != 0
@@ -1423,7 +2790,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        obj = virtium_cfg(tool)
+        obj = virtium_cfg(os.path.basename(tool))
         obj["defaults"]["gzip"] = True
         obj["defaults"]["gzip_level"] = 10
         obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"][
@@ -1468,6 +2835,35 @@ class TestEndToEnd:
         assert ei.value.code != 0
         assert "Usage:" in capsys.readouterr().err
 
+    def test_cli_timeout_max_is_ten_minutes(self, ssd):
+        assert ssd.TIMEOUT_SEC_CLI_MAX == 600
+        args = ssd.parse_args(["--timeout", str(ssd.TIMEOUT_SEC_CLI_MAX)])
+        assert args.timeout == ssd.TIMEOUT_SEC_CLI_MAX
+
+    def test_cli_timeout_above_max_rejected(self, ssd, capsys):
+        # --timeout also decides how long the lock is held, so a
+        # value past the cap must not reach the vendor tool.
+        with pytest.raises(SystemExit) as ei:
+            ssd.parse_args(["--timeout", str(ssd.TIMEOUT_SEC_CLI_MAX + 1)])
+        assert ei.value.code == 2
+        err = capsys.readouterr().err
+        assert "1..%s" % ssd.TIMEOUT_SEC_CLI_MAX in err
+        assert "Usage:" in err
+
+    @pytest.mark.parametrize("value", ["10m", "", "6.5", "-1"])
+    def test_cli_timeout_non_integer_rejected(self, ssd, capsys, value):
+        with pytest.raises(SystemExit) as ei:
+            ssd.parse_args(["--timeout", value])
+        assert ei.value.code == 2
+        err = capsys.readouterr().err
+        assert "1..%s" % ssd.TIMEOUT_SEC_CLI_MAX in err
+        assert "_timeout_sec" not in err
+
+    def test_cli_timeout_help_states_the_range(self, ssd, capsys):
+        with pytest.raises(SystemExit):
+            ssd.parse_args(["-h"])
+        assert "1..%s" % ssd.TIMEOUT_SEC_CLI_MAX in capsys.readouterr().out
+
     def test_cli_help_exit_zero(self, ssd, capsys):
         with pytest.raises(SystemExit) as ei:
             ssd.parse_args(["-h"])
@@ -1488,7 +2884,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         stale = outdir / "stale.bin"
@@ -1523,8 +2919,8 @@ class TestEndToEnd:
         status = (outdir / "ssd-dump-status.log").read_text()
         assert rc == 0
         assert "status: skipped" in status
-        assert "Status: skipped" in status
-        assert "warning: no NVMe controller found" in status
+        assert status.strip().endswith("status: skipped")
+        assert "reason: no NVMe controller found" in status
         assert "not enough free space" not in status
         assert seen == []
         assert not (tmp_path / "ssd-dump.tar.gz").exists()
@@ -1534,7 +2930,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -1551,7 +2947,7 @@ class TestEndToEnd:
         status = tar_text(tar_path, "ssd-dump/ssd-dump-status.log")
         assert rc == 0, status
         assert "status: ok" in status
-        assert "Status: Ok / succeeded" in status
+        assert status.strip().endswith("status: ok")
         assert not any(ln.startswith("warning:") for ln in status.splitlines())
         assert "nandlog_64384-1454.bin" in status
         assert not outdir.exists()
@@ -1576,7 +2972,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         tar_path = tmp_path / "ssd-dump.tar.gz"
         tar_path.write_bytes(b"OLD")
@@ -1612,7 +3008,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -1649,7 +3045,7 @@ class TestEndToEnd:
             )
         os.chmod(tool, 0o755)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -1677,7 +3073,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -1708,7 +3104,7 @@ class TestEndToEnd:
         )
         fake_phison_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, phison_cfg(tool))
+        write_json(cfg, phison_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -1749,13 +3145,226 @@ class TestEndToEnd:
         assert "ssd-dump/RD_Dump2_Data_20260907-125506.bin" in names
     # SpellCheck-ignoreBlockEnd
 
+    def test_parallel_collect_refused_keeps_outdir(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        """A busy lock must not rmtree the running collection's dir."""
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
+        outdir = tmp_path / "ssd-dump"
+        outdir.mkdir()
+        inflight = outdir / "nandlog_inflight.bin"
+        inflight.write_text("in progress")
+        status = outdir / "ssd-dump-status.log"
+        status.write_text("status: ok\n")
+        tar_path = tmp_path / "ssd-dump.tar.gz"
+        tar_path.write_bytes(b"PREVIOUS")
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        self._nvme(ssd, monkeypatch)
+        holder = ssd.DumpLock()
+        holder.acquire()
+        try:
+            rc = ssd.main(
+                [
+                    "--config",
+                    str(cfg),
+                    "--outdir",
+                    str(outdir),
+                    "--device",
+                    "/dev/nvme0",
+                ]
+            )
+        finally:
+            holder.release()
+        err = capsys.readouterr().err
+        assert rc == ssd.RC_LOCKED
+        assert rc not in (ssd.RC_OK, ssd.RC_WARNING)
+        # Untouched: dump file, status and the previous archive.
+        assert inflight.read_text() == "in progress"
+        assert status.read_text() == "status: ok\n"
+        assert tar_path.read_bytes() == b"PREVIOUS"
+        assert err.count(ssd.MSG_BUSY) == 1
+        assert "already running" in err
+        assert ssd.MSG_SUCCEEDED not in err
+
+    def test_parallel_verify_reports_running_collection(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
+        outdir = tmp_path / "ssd-dump"
+        outdir.mkdir()
+        status = outdir / "ssd-dump-status.log"
+        status.write_text("status: ok\n")
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        monkeypatch.setattr(ssd, "LOCK_PATH", str(tmp_path / "ssd.lock"))
+        monkeypatch.delenv(ssd.LOCK_ENV, raising=False)
+        self._nvme(ssd, monkeypatch)
+        holder = ssd.DumpLock()
+        holder.acquire()
+        try:
+            rc = ssd.main(
+                [
+                    "--verify",
+                    "--config",
+                    str(cfg),
+                    "--outdir",
+                    str(outdir),
+                    "--device",
+                    "/dev/nvme0",
+                ]
+            )
+        finally:
+            holder.release()
+        captured = capsys.readouterr()
+        assert rc == ssd.RC_LOCKED
+        assert ssd.MSG_BUSY in captured.err
+        assert "already running" in captured.err
+        assert "pid %d" % os.getpid() in captured.err
+        assert "verify passed" not in captured.err
+        # Must not overwrite the running collection's status.
+        assert status.read_text() == "status: ok\n"
+        assert "locked: yes" in captured.out
+
+    def test_collect_refuses_when_the_lock_is_unusable(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        """No lock means no serialization, so do not collect.
+
+        A caller able to write its own --outdir but not /run
+        would otherwise run a second vendor tool instance while
+        a root collection holds the lock.
+        """
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
+        outdir = tmp_path / "ssd-dump"
+        self._nvme(ssd, monkeypatch)
+        monkeypatch.setattr(
+            ssd, "LOCK_PATH", str(tmp_path / "absent" / "ssd.lock")
+        )
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == ssd.RC_WARNING
+        assert "refusing to collect" in err
+        assert ssd.MSG_SUCCEEDED not in err
+        # The vendor tool never ran, so nothing was produced.
+        assert not (tmp_path / "ssd-dump.tar.gz").exists()
+        assert not outdir.exists()
+
+    def test_verify_still_runs_when_the_lock_is_unusable(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        """Verify drives nothing, so it reports and carries on.
+
+        It is the one thing a non-root caller can usefully do,
+        and refusing would take that away.
+        """
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
+        self._nvme(ssd, monkeypatch)
+        monkeypatch.setattr(
+            ssd, "LOCK_PATH", str(tmp_path / "absent" / "ssd.lock")
+        )
+        rc = ssd.main(
+            [
+                "--verify",
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(tmp_path / "ssd-dump"),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        cap = capsys.readouterr()
+        assert rc == ssd.RC_OK
+        assert "verify passed" in cap.err
+        assert "lock_warning: cannot create lock" in cap.out
+
+    def test_succeeded_needs_archive_on_disk(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        """status ok but no tarball must not report succeeded."""
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
+        outdir = tmp_path / "ssd-dump"
+        self._nvme(ssd, monkeypatch)
+        real_pack = ssd.pack_outdir
+
+        def pack_then_drop(path):
+            tar_path = real_pack(path)
+            os.remove(tar_path)
+            return tar_path
+
+        monkeypatch.setattr(ssd, "pack_outdir", pack_then_drop)
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        err = capsys.readouterr().err
+        assert rc == ssd.RC_WARNING
+        assert not (tmp_path / "ssd-dump.tar.gz").exists()
+        assert ssd.MSG_SUCCEEDED not in err
+        assert "SSD dump tool failed: archive not created" in err
+
+    def test_succeeded_only_with_archive_present(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        tool = str(tmp_path / "virtium_nvme_dump_v2")
+        fake_tool(tool)
+        cfg = tmp_path / "cfg.json"
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
+        outdir = tmp_path / "ssd-dump"
+        self._nvme(ssd, monkeypatch)
+        rc = ssd.main(
+            [
+                "--config",
+                str(cfg),
+                "--outdir",
+                str(outdir),
+                "--device",
+                "/dev/nvme0",
+            ]
+        )
+        err = capsys.readouterr().err
+        tar_path = tmp_path / "ssd-dump.tar.gz"
+        assert rc == ssd.RC_OK
+        assert tar_path.is_file() and tar_path.stat().st_size > 0
+        assert ssd.MSG_SUCCEEDED in err
+
     def test_pack_fail_rewrites_status_warning(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         tar_path = tmp_path / "ssd-dump.tar.gz"
         tar_path.write_bytes(b"GOOD")
@@ -1779,7 +3388,7 @@ class TestEndToEnd:
         assert outdir.is_dir()
         status = (outdir / "ssd-dump-status.log").read_text()
         assert "status: warning" in status
-        assert "Status: error" in status
+        assert status.strip().endswith("status: warning")
         assert "cannot pack outdir" in status
         assert not tar_path.exists()
         log = (outdir / "ssd-dump-tool.log").read_text()
@@ -1795,7 +3404,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
 
@@ -1831,7 +3440,7 @@ class TestEndToEnd:
         )
         fake_phison_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, phison_cfg(tool))
+        write_json(cfg, phison_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -1877,7 +3486,7 @@ class TestEndToEnd:
             f.write("#!/bin/sh\necho no nandlog\n")
         os.chmod(tool, os.stat(tool).st_mode | stat.S_IEXEC)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         tar_path = tmp_path / "ssd-dump.tar.gz"
         tar_path.write_bytes(b"GOOD")
@@ -1907,7 +3516,7 @@ class TestEndToEnd:
         fake_smi_tool(tool)
         stage = make_smi_stage(tmp_path / "smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -1956,7 +3565,7 @@ class TestEndToEnd:
         fake_smi_tool(tool)
         stage = make_smi_stage(tmp_path / "smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
@@ -2002,7 +3611,7 @@ class TestEndToEnd:
         fake_smi_tool(tool)
         missing = str(tmp_path / "no-such-smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, missing))
+        write_json(cfg, smi_cfg(os.path.basename(tool), missing))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -2074,7 +3683,7 @@ class TestEndToEnd:
         os.chmod(tool, 0o755)
         stage = make_smi_stage(tmp_path / "smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -2121,7 +3730,7 @@ class TestEndToEnd:
         secret.write_text("x")
         os.symlink(str(secret), os.path.join(stage, "Setting", "link.ini"))
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
         monkeypatch.setattr(
@@ -2169,6 +3778,7 @@ class TestEndToEnd:
 
         def fake_popen(*_a, **k):
             assert k.get("start_new_session") is True
+            assert k.get("preexec_fn") is ssd._vendor_unblock_sigterm
             return FakeProc()
 
         monkeypatch.setattr(ssd.subprocess, "Popen", fake_popen)
@@ -2183,4 +3793,100 @@ class TestEndToEnd:
             logf.close()
         assert killed
         assert killed[0][0] == 4242
+
+    def test_vendor_interrupt_kills_process_group(
+        self, ssd, monkeypatch, tmp_path
+    ):
+        killed = []
+
+        class FakeProc(object):
+            pid = 4242
+            returncode = None
+
+            def communicate(self, timeout=None):
+                raise KeyboardInterrupt()
+
+            def wait(self, timeout=None):
+                return None
+
+        monkeypatch.setattr(
+            ssd.subprocess, "Popen", lambda *_a, **_k: FakeProc()
+        )
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append((pid, sig))
+        )
+        logf = open(os.devnull, "w")
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
+        finally:
+            logf.close()
+        assert killed
+        assert killed[0][0] == 4242
+
+    def test_a_second_interrupt_still_stops_the_vendor(
+        self, ssd, monkeypatch, tmp_path
+    ):
+        killed = []
+        waits = {"n": 0}
+
+        class FakeProc(object):
+            pid = 4242
+            returncode = None
+
+            def communicate(self, timeout=None):
+                raise KeyboardInterrupt()
+
+            def wait(self, timeout=None):
+                waits["n"] += 1
+                if waits["n"] == 1:
+                    raise KeyboardInterrupt()
+                return None
+
+        monkeypatch.setattr(
+            ssd.subprocess, "Popen", lambda *_a, **_k: FakeProc()
+        )
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append(sig)
+        )
+        logf = open(os.devnull, "w")
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
+        finally:
+            logf.close()
+        assert killed == [ssd.signal.SIGTERM, 0, ssd.signal.SIGKILL]
+
+    def test_sigterm_stops_the_vendor_group(self, ssd, monkeypatch):
+        killed = []
+
+        class FakeProc(object):
+            pid = 4242
+
+            def wait(self, timeout=None):
+                return None
+
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append(sig)
+        )
+        ssd._vendor_proc = FakeProc()
+        try:
+            with pytest.raises(SystemExit) as raised:
+                ssd._handle_sigterm(ssd.signal.SIGTERM, None)
+        finally:
+            ssd._vendor_proc = None
+        assert raised.value.code == 128 + ssd.signal.SIGTERM
+        assert killed[0] == ssd.signal.SIGTERM
+
+    def test_main_installs_the_sigterm_handler(self, ssd, monkeypatch):
+        monkeypatch.setattr(ssd, "run_dump", lambda _args: 0)
+        monkeypatch.setattr(ssd.syslog, "openlog", lambda *_a, **_k: None)
+        previous = ssd.signal.signal(ssd.signal.SIGTERM, ssd.signal.SIG_DFL)
+        try:
+            assert ssd.main([]) == 0
+            assert ssd.signal.getsignal(ssd.signal.SIGTERM) == (
+                ssd._handle_sigterm
+            )
+        finally:
+            ssd.signal.signal(ssd.signal.SIGTERM, previous)
     # SpellCheck-ignoreBlockEnd

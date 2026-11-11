@@ -6,36 +6,8 @@ set +o pipefail
 trap 'exit 0' EXIT
 
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 # Inherit system configuration (never fail the udev worker if helpers are missing).
 # shellcheck source=/dev/null
@@ -45,6 +17,9 @@ set +o pipefail
 
 RETRIES=20
 PWR_ATTR_DIR=/sys/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-io/hwmon/hwmon*/
+HOST_I2C_SYNC=/usr/bin/hw-management-bmc-host-i2c-devices.sh
+# Latched CPU_UNEXP_POWER_OFF: the CPLD bit is non-sticky and leaves pwr_down at 0.
+HOST_POWER_LOST_FLAG=/run/hw-management-bmc-host-power-lost
 
 EEPROM_RUN_DIR=/var/run/hw-management/eeprom
 THERMAL_RUN_DIR=/var/run/hw-management/thermal
@@ -88,6 +63,7 @@ grace_off()
 {
     wait_for_cpu_shutdown
     echo 1 > ${PWR_ATTR_DIR}/pwr_down
+    $HOST_I2C_SYNC sync
 }
 
 power_on_by_pwr_button()
@@ -126,6 +102,7 @@ grace_off_by_pwr_button()
 {
     wait_for_cpu_shutdown
     echo 1 > ${PWR_ATTR_DIR}/pwr_button_halt
+    $HOST_I2C_SYNC sync
 
 #    if [ "`systemctl is-active obmc-console-ssh@*.service`" == "active" ]; then
 #        systemctl stop obmc-console-ssh@*.service
@@ -174,6 +151,21 @@ case "${ACTION}" in
 		log_cpld_dump
 		turn_off_host_reset_leds
 		#set_host_powerstate_on
+		exit 0
+		;;
+	"CPU_RESET_DEASSERT"|"CPU_UNEXP_POWER_OFF")
+		log_event "ACTION=${ACTION} EVENT=${EVENT} STATUS=${STATUS}"
+		# Sync host-power-domain I2C devices in a unit: udev kills processes
+		# forked from a RUN handler. restart, not start: a start issued while
+		# the unit runs is merged into it; restart re-runs with current state.
+		if [ "${STATUS}" = "1" ]; then
+			if [ "${EVENT}" = "CPU_UNEXP_POWER_OFF" ]; then
+				touch "$HOST_POWER_LOST_FLAG"
+			else
+				rm -f "$HOST_POWER_LOST_FLAG"
+			fi
+			systemctl restart --no-block hw-management-bmc-host-i2c-sync.service
+		fi
 		exit 0
 		;;
 	"APML_SMB_ALERT")

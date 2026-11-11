@@ -7,7 +7,14 @@ Distribution: Centos
 Group: Converted/utils
 BuildArch: x86_64
 AutoReq: no
-Requires: python3
+Requires: python3 >= 3.7
+# The BMC Redfish client derives its password with the TPM tools, through xxd on
+# legacy platforms, and reaches the BMC with curl. Required by path, as their
+# packages are named differently across distributions: xxd comes with
+# vim-common or on its own, curl as curl or curl-minimal.
+Requires: /usr/bin/tpm2_createprimary
+Requires: /usr/bin/xxd
+Requires: /usr/bin/curl
 
 Provides:      config(hw-management) = %{version}
 Provides:      hw-management = %{version}
@@ -24,12 +31,16 @@ Provides:      hw-management(x86-64) = %{version}
 %systemd_post %{name}.service
 %systemd_post %{name}-tc.service
 %systemd_post %{name}-blacklist-generator.service
+%systemd_post %{name}-bmc-login.service
 systemctl enable %{name}.service
 systemctl enable %{name}-tc.service
 systemctl enable %{name}-blacklist-generator.service
+systemctl enable %{name}-bmc-login.service
 systemctl start %{name}.service
 systemctl start %{name}-tc.service
 systemctl start %{name}-blacklist-generator.service
+# Not started here: hw-management.service pulls the BMC login in, and a start of
+# its own would only cut short a login that is waiting for the BMC.
 
 %preun
 systemctl stop %{name}.service
@@ -40,11 +51,13 @@ systemctl stop %{name}-blacklist-generator.service
 systemctl disable %{name}-blacklist-generator.service
 %systemd_preun %{name}.service
 %systemd_preun %{name}-tc.service
+%systemd_preun %{name}-bmc-login.service
 
 %postun
 %systemd_postun_with_restart %{name}.service
 %systemd_postun_with_restart %{name}-tc.service
 %systemd_postun_with_restart %{name}-blacklist-generator.service
+%systemd_postun %{name}-bmc-login.service
 
 
 %description
@@ -91,6 +104,8 @@ install -m 0644 usr/etc/hw-management-sensors/msn3700_A1_sensors.conf  $RPM_BUIL
 install -m 0644 usr/etc/hw-management-sensors/msn4800_sensors_lc.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/msn4800_sensors_lc.conf
 install -m 0644 usr/etc/hw-management-sensors/sn3750sx_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn3750sx_sensors.conf
 install -m 0644 usr/etc/hw-management-sensors/sn5600_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5600_sensors.conf
+install -m 0644 usr/etc/hw-management-sensors/sn5640_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5640_sensors.conf
+install -m 0644 usr/etc/hw-management-sensors/sn5640_sensors_6.1.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5640_sensors_6.1.conf
 
 install -m 0644 usr/etc/hw-management-thermal/tc_config_default.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_default.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_mqm8700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_mqm8700.json
@@ -113,6 +128,7 @@ install -m 0644 usr/etc/modules-load.d/05-hw-management-modules.conf $RPM_BUILD_
 
 install -m 0644 usr/lib/udev/rules.d/50-hw-management-events.rules $RPM_BUILD_ROOT/lib/udev/rules.d/50-hw-management-events.rules
 install -m 0644 usr/lib/udev/rules.d/51-hw-management-events-modular.rules $RPM_BUILD_ROOT/lib/udev/rules.d/51-hw-management-events-modular.rules
+install -m 0644 usr/lib/udev/rules.d/70-hw-management-bmc.rules $RPM_BUILD_ROOT/lib/udev/rules.d/70-hw-management-bmc.rules
 
 install -m 0755 usr/usr/bin/hw-management-chassis-events.sh $RPM_BUILD_ROOT/usr/bin/hw-management-chassis-events.sh
 install -m 0755 usr/usr/bin/hw-management-check-bios-update.sh $RPM_BUILD_ROOT/usr/bin/hw-management-check-bios-update.sh
@@ -127,6 +143,7 @@ install -m 0755 usr/usr/bin/hw-management-i2c-gpio-expander.sh $RPM_BUILD_ROOT/u
 install -m 0755 usr/usr/bin/hw-management-if-rename.sh $RPM_BUILD_ROOT/usr/bin/hw-management-if-rename.sh
 install -m 0755 usr/usr/bin/hw-management-led-state-conversion.sh $RPM_BUILD_ROOT/usr/bin/hw-management-led-state-conversion.sh
 install -m 0755 usr/usr/bin/hw-management-parse-eeprom.sh $RPM_BUILD_ROOT/usr/bin/hw-management-parse-eeprom.sh
+install -m 0755 usr/usr/bin/hw-management-phy-recover.sh $RPM_BUILD_ROOT/usr/bin/hw-management-phy-recover.sh
 install -m 0755 usr/usr/bin/hw-management-power-helper.sh $RPM_BUILD_ROOT/usr/bin/hw-management-power-helper.sh
 install -m 0755 usr/usr/bin/hw-management-ps-vpd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ps-vpd.sh
 install -m 0755 usr/usr/bin/hw-management-ready.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ready.sh
@@ -136,6 +153,8 @@ install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
 install -m 0755 usr/usr/bin/hw-management.sh $RPM_BUILD_ROOT/usr/bin/hw-management.sh
 install -m 0755 usr/usr/bin/hw_management_nvl_temperature_get.py $RPM_BUILD_ROOT/usr/bin/hw_management_nvl_temperature_get.py
+install -m 0755 usr/usr/bin/hw_management_feature.py $RPM_BUILD_ROOT/usr/bin/hw_management_feature.py
+install -m 0755 usr/usr/bin/hw_management_lib.py $RPM_BUILD_ROOT/usr/bin/hw_management_lib.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_common.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
@@ -144,6 +163,9 @@ install -m 0755 usr/usr/bin/hw_management_thermal_control_2_5.py $RPM_BUILD_ROOT
 install -m 0755 usr/usr/bin/hw_management_thermal_updater.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_updater.py
 install -m 0755 usr/usr/bin/hw_management_independent_mode_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_independent_mode_update.py
 install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_dpu_thermal_update.py
+install -m 0755 usr/usr/bin/hw-management-bmc-login.sh $RPM_BUILD_ROOT/usr/bin/hw-management-bmc-login.sh
+install -m 0755 usr/usr/bin/hw-management-ifupdown.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ifupdown.sh
+install -m 0755 usr/usr/bin/hw_management_redfish_client.py $RPM_BUILD_ROOT/usr/bin/hw_management_redfish_client.py
 install -m 0755 usr/usr/bin/iorw $RPM_BUILD_ROOT/usr/bin/iorw
 install -m 0755 usr/usr/bin/sxd_read_cpld_ver.py $RPM_BUILD_ROOT/usr/bin/sxd_read_cpld_ver.py
 install -m 0755 usr/usr/local/bin/hw-management-process-blacklist.sh $RPM_BUILD_ROOT/usr/local/bin/hw-management-process-blacklist.sh
@@ -151,6 +173,10 @@ install -m 0755 usr/usr/local/bin/hw-management-process-blacklist.sh $RPM_BUILD_
 install -m 0755 debian/hw-management.hw-management.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management.service
 install -m 0755 debian/hw-management.hw-management-tc.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-tc.service
 install -m 0755 debian/hw-management-blacklist-generator.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-blacklist-generator.service
+install -m 0644 debian/hw-management.hw-management-bmc-login.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-bmc-login.service
+# Pulled in by the usb0 device unit through 70-hw-management-bmc.rules, so it is
+# neither enabled nor started from the scriptlets.
+install -m 0644 debian/hw-management-ifupdown@.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-ifupdown@.service
 
 install -m 0644 debian/copyright $RPM_BUILD_ROOT/usr/share/doc/hw-management/copyright
 cp doc/man/hw-management.1 $RPM_BUILD_ROOT/usr/share/man/man1/hw-management.1
@@ -194,6 +220,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-sensors/msn4800_sensors_lc.conf"
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn3750sx_sensors.conf"
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn5600_sensors.conf"
+%config %attr(0644, root, root) "/etc/hw-management-sensors/sn5640_sensors.conf"
+%config %attr(0644, root, root) "/etc/hw-management-sensors/sn5640_sensors_6.1.conf"
 
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_default.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_mqm8700.json"
@@ -223,6 +251,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 #%dir %attr(0755, root, root) "/lib/systemd/system"
 %attr(0644, root, root) "/lib/udev/rules.d/50-hw-management-events.rules"
 %attr(0644, root, root) "/lib/udev/rules.d/51-hw-management-events-modular.rules"
+%attr(0644, root, root) "/lib/udev/rules.d/70-hw-management-bmc.rules"
 #%dir %attr(0755, root, root) "/usr"
 #%dir %attr(0755, root, root) "/usr/bin"
 #%dir %attr(0755, root, root) "/usr/local/bin"
@@ -235,6 +264,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-i2c-gpio-expander.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-led-state-conversion.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-parse-eeprom.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-phy-recover.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-power-helper.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ps-vpd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ready.sh"
@@ -243,6 +273,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
 %attr(0755, root, root) "/usr/bin/hw_management_nvl_temperature_get.py"
+%attr(0755, root, root) "/usr/bin/hw_management_feature.py"
+%attr(0755, root, root) "/usr/bin/hw_management_lib.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_common.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_delta.py"
 %attr(0755, root, root) "/usr/bin/hw_management_psu_fw_update_murata.py"
@@ -258,10 +290,15 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_updater.py"
 %attr(0755, root, root) "/usr/bin/hw_management_independent_mode_update.py"
 %attr(0755, root, root) "/usr/bin/hw_management_dpu_thermal_update.py"
+%attr(0755, root, root) "/usr/bin/hw-management-bmc-login.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-ifupdown.sh"
+%attr(0755, root, root) "/usr/bin/hw_management_redfish_client.py"
 %attr(0755, root, root) "/usr/local/bin/hw-management-process-blacklist.sh"
 %attr(0755, root, root) "/lib/systemd/system/hw-management.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-tc.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-blacklist-generator.service"
+%attr(0644, root, root) "/lib/systemd/system/hw-management-bmc-login.service"
+%attr(0644, root, root) "/lib/systemd/system/hw-management-ifupdown@.service"
 #%dir %attr(0755, root, root) "/usr/share"
 #%dir %attr(0755, root, root) "/usr/share/doc"
 %dir %attr(0755, root, root) "/usr/share/doc/hw-management"

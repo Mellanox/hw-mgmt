@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Test Runner for hw-mgmt
 #
@@ -13,7 +13,6 @@
 #
 # Known issues and bugs are tracked in offline/known_issues_*.py files
 # which are explicitly ignored by CI.
-########################################################################
 
 import sys
 import os
@@ -30,6 +29,7 @@ if sys.version_info < (3, 7):
     sys.exit("ERROR: Python 3.7+ is required. Please install it.")
 
 import argparse
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -587,6 +587,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: Feature Get/Set',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_feature.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Platform Config',
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_platform_config.py', '--tb=short'],
                 'cwd': self.tests_dir
@@ -644,6 +649,16 @@ class TestRunner:
             {
                 'name': 'Pytest: start-post TC flags (Bug 4929286)',
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: BMC Redfish login service',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_bmc_login.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: labels_ready indicator',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_labels_ready.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
@@ -723,6 +738,11 @@ class TestRunner:
 
         for script in validation_scripts:
             name = f"BMC: {script.stem}"
+            # Systemd unit validation can't run on hosts without systemctl
+            # (e.g. minimal CI containers); skip rather than fail.
+            if script.stem == "hw-management-bmc-services-validation" and not shutil.which("systemctl"):
+                print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} {name} (systemctl not available)")
+                continue
             self.run_command(['bash', str(script)], self.bmc_tests_dir, name)
 
         return len(self.failed_tests) == 0

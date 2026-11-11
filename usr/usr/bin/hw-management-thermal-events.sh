@@ -1,37 +1,7 @@
 #!/bin/bash
-
-###########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 
 source hw-management-helpers.sh
 dmi_board_name=$(< "$board_type_file")
@@ -982,13 +952,21 @@ if [ "$1" == "add" ]; then
 		if [ -f $config_path/psu_fan_max ]; then
 			cat $config_path/psu_fan_max > "$thermal_path"/"$psu_name"_fan_max
 		fi
-		# PSU VPD
+		# PSU VPD. Own ftrace instance: do not start/stop the boot-wide tracer.
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
+		print_function_call "$0" "add" "starting $psu_name VPD read i2c trace"
+		start_psu_vpd_i2c_trace "$psu_name" "$bus"
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
-		if [ $? -ne 0 ]; then
+		res=$?
+		stop_psu_vpd_i2c_trace "$psu_name bus:$bus pmbus res:$res"
+		print_function_call "$0" "add" "stopped $psu_name VPD read i2c trace"
+		if [ $res -ne 0 ]; then
 			# PS EEPROM VPD.
+			start_psu_vpd_i2c_trace "$psu_name" "$bus"
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info >> $eeprom_path/"$psu_name"_vpd
-			if [ $? -ne 0 ]; then
+			res=$?
+			stop_psu_vpd_i2c_trace "$psu_name bus:$bus eeprom res:$res"
+			if [ $res -ne 0 ]; then
 				# EEPROM failed.
 				if is_virtual_machine; then
 					if [ -f $vm_vpd_path/psu_vpd ]; then
@@ -1510,8 +1488,8 @@ else
 	fi
 	if [ "$2" == "sxcore" ]; then
 		print_function_call "$0" "remove" "sxcore $4/$5"
-		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 		set_asic_ready "$4/$5" 0
+		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 	fi
 	if [ "$2" == "dpu" ]; then
 		print_function_call "$0" "remove" "dpu $3$4"

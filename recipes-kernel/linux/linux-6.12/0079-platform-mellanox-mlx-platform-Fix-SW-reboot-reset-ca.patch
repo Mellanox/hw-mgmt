@@ -31,10 +31,9 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 48 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index f1b5d7d890a4..f3210c4f7720 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -9508,6 +9508,52 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
+@@ -8219,6 +8219,52 @@ static int __init mlxplat_dmi_comex_matc
  	return mlxplat_register_platform_device();
  }
  
@@ -87,7 +86,7 @@ index f1b5d7d890a4..f3210c4f7720 100644
  static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9529,6 +9575,8 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+@@ -8240,6 +8286,8 @@ static int __init mlxplat_dmi_ng400_matc
  	} else {
  		mlxplat_hotplug = &mlxplat_mlxcpld_ext_data;
  		mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;

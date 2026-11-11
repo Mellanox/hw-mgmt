@@ -1,5 +1,7 @@
 #!/bin/bash
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
 #
 # Simulate mlxreg-hotplug udev "change" rules from 5-hw-management-bmc-events.rules:
 # for each rule, require a matching name under /var/run/hw-management/system, run the
