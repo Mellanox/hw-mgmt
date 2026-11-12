@@ -160,6 +160,7 @@ install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
 install -m 0755 usr/usr/bin/hw_management_thermal_control.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_control.py
 install -m 0755 usr/usr/bin/hw_management_thermal_control_2_5.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_control_2_5.py
+install -m 0755 usr/usr/bin/hw_management_tc_launcher.sh $RPM_BUILD_ROOT/usr/bin/hw_management_tc_launcher.sh
 install -m 0755 usr/usr/bin/hw_management_thermal_updater.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_updater.py
 install -m 0755 usr/usr/bin/hw_management_independent_mode_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_independent_mode_update.py
 install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_dpu_thermal_update.py
@@ -287,6 +288,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-vpd-parser.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control_2_5.py"
+%attr(0755, root, root) "/usr/bin/hw_management_tc_launcher.sh"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_updater.py"
 %attr(0755, root, root) "/usr/bin/hw_management_independent_mode_update.py"
 %attr(0755, root, root) "/usr/bin/hw_management_dpu_thermal_update.py"
