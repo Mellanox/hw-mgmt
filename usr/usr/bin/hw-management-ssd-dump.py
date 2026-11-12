@@ -162,11 +162,17 @@ def skip_without_package(args):
     no NVMe. The default JSON is the package file. Missing that
     file with no dpkg package is a skip, not a warning. An
     explicit --device or --config still goes to require_config,
-    so a missing file there stays a warning. The package
+    so a missing file there stays a warning. --config is noted
+    before the default path is filled in, so naming that same
+    path on the command line is still explicit. The package
     installed and that file missing stays a warning. A default
     JSON that is already on disk is used, dpkg record or not.
     """
-    if args.device or args.config != DEFAULT_CONFIG:
+    if (
+        args.device or
+        getattr(args, "config_explicit", False) or
+        args.config != DEFAULT_CONFIG
+    ):
         return
     if os.path.isfile(args.config):
         return
@@ -912,19 +918,27 @@ def _stop_vendor_group(proc):
 
 
 def _vendor_unblock_sigterm():
-    """Run in the child, before exec. The collector blocks SIGTERM
-    around Popen, and the child inherits that mask."""
-    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
+    """Run in the child, before exec.
+
+    The collector blocks SIGTERM and SIGINT around Popen, and the
+    child inherits that mask. Restore it before exec so the vendor
+    can still be signalled.
+    """
+    signal.pthread_sigmask(
+        signal.SIG_UNBLOCK, {signal.SIGTERM, signal.SIGINT}
+    )
 
 
 def run_vendor_process(cmd, outdir, logf, timeout_sec):
     """New session so timeout can kill vendor children too."""
     global _vendor_proc
     proc = None
-    # SIGTERM between Popen and _vendor_proc would exit with the
-    # vendor still running. Hold the signal until the child is registered.
-    # The child unblocks SIGTERM in preexec so it can still stop normally.
-    blocked = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    # SIGTERM or SIGINT between fork and _vendor_proc would exit
+    # with the vendor still running. Hold both until the child is
+    # registered. The child restores the mask in preexec.
+    blocked = signal.pthread_sigmask(
+        signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT}
+    )
     try:
         proc = subprocess.Popen(
             cmd,
@@ -1226,31 +1240,51 @@ def check_tool_basename(name):
         )
 
 
+def _root_only_writable(path, kind):
+    """Refuse path unless root owns it and nobody else can write it."""
+    try:
+        st = os.stat(path)
+    except OSError as exc:
+        raise DumpError(
+            "SSD dump tool %s not usable: %s (%s)" % (kind, path, exc)
+        )
+    if st.st_uid != 0 or (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+        raise DumpError(
+            "SSD dump tool %s must be writable by root only: %s"
+            % (kind, path)
+        )
+    return st
+
+
 def check_tool_dir(path):
-    """The PATH directory that holds the tool must be writable by root only.
+    """The tool and the directory that holds it must be root-only.
 
     PATH is the caller's. A user can prepend a directory they can write,
     such as /var/tmp, and drop a file or a symlink there with the vendor
-    tool's basename. The collector runs as root, so that file would run
-    as root. Refuse the directory unless root owns it and neither group
-    nor other has the write bit.
+    tool's basename. A symlink in a root-owned directory can also point
+    at a file the user can change. The collector runs as root, so either
+    file would run as root. Refuse the PATH directory, the resolved
+    file, and that file's directory unless root owns them and neither
+    group nor other has the write bit. A vendor symlink whose target is
+    also root-only still passes.
     """
     directory = os.path.dirname(os.path.abspath(path))
-    try:
-        st = os.stat(directory)
-    except OSError as exc:
-        raise DumpError(
-            "SSD dump tool directory not usable: %s (%s)" % (directory, exc)
-        )
-    if (
-        not stat.S_ISDIR(st.st_mode) or
-        st.st_uid != 0 or
-        (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH))
-    ):
+    st = _root_only_writable(directory, "directory")
+    if not stat.S_ISDIR(st.st_mode):
         raise DumpError(
             "SSD dump tool directory must be writable by root only: %s"
             % directory
         )
+    real = os.path.realpath(path)
+    real_dir = os.path.dirname(real)
+    if os.path.abspath(real_dir) != os.path.abspath(directory):
+        st = _root_only_writable(real_dir, "directory")
+        if not stat.S_ISDIR(st.st_mode):
+            raise DumpError(
+                "SSD dump tool directory must be writable by root only: %s"
+                % real_dir
+            )
+    _root_only_writable(real, "file")
 
 
 def find_tool(name):
@@ -1589,6 +1623,9 @@ def run_verify(args):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
+    # Remember an explicit --config before the default path is filled
+    # in. Naming the default path on the command line is still explicit.
+    args.config_explicit = args.config is not None
     args.config = resolve_config_path(args.config)
     signal.signal(signal.SIGTERM, _handle_sigterm)
     try:
