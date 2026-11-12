@@ -879,26 +879,43 @@ class TestFindTool:
         with pytest.raises(ssd.DumpError, match="PATH basename"):
             ssd.resolve_tool({"tool": "virtium_nvme_dump_v2", "tool_alt": str(exe)})
 
-    def _stat_as_root(self, ssd, monkeypatch, directory, mode, uid=0):
+    def _stat_as_root(self, ssd, monkeypatch, directory, mode, uid=0, extra=()):
         real_stat = ssd.os.stat
-        target = os.path.abspath(str(directory))
+        entries = [(os.path.abspath(str(directory)), mode, uid)]
+        for item in extra:
+            entries.append(
+                (os.path.abspath(str(item[0])), item[1], item[2])
+            )
+        by_path = dict((path, (mode_, uid_)) for path, mode_, uid_ in entries)
 
-        def _stat(path, *args, **kwargs):
-            st = real_stat(path, *args, **kwargs)
-            if os.path.abspath(path) != target:
-                return st
+        def _fake(st, mode_, uid_, kind):
             return os.stat_result((
-                stat.S_IFDIR | mode,
+                kind | mode_,
                 st.st_ino,
                 st.st_dev,
                 st.st_nlink,
-                uid,
+                uid_,
                 0,
                 st.st_size,
                 st.st_atime,
                 st.st_mtime,
                 st.st_ctime,
             ))
+
+        def _stat(path, *args, **kwargs):
+            st = real_stat(path, *args, **kwargs)
+            ab = os.path.abspath(path)
+            if ab in by_path:
+                mode_, uid_ = by_path[ab]
+                return _fake(st, mode_, uid_, stat.S_IFDIR)
+            parent = os.path.dirname(ab)
+            if parent in by_path and stat.S_ISREG(st.st_mode):
+                # A root-owned directory's files are root-owned too,
+                # so the test does not depend on who runs pytest.
+                _mode, uid_ = by_path[parent]
+                if uid_ == 0:
+                    return _fake(st, 0o755, 0, stat.S_IFREG)
+            return st
 
         monkeypatch.setattr(ssd.os, "stat", _stat)
 
@@ -955,6 +972,42 @@ class TestFindTool:
         monkeypatch.setenv("PATH", str(bin_dir))
         with pytest.raises(ssd.DumpError, match="writable by root only"):
             ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_symlink_to_user_owned_target_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # The PATH directory is root-only. The name there is a symlink
+        # to a file in a directory the user owns.
+        bin_dir = tmp_path / "bin"
+        home = tmp_path / "home"
+        bin_dir.mkdir()
+        home.mkdir()
+        target = self._exe(home / "real-tool")
+        os.symlink(str(target), str(bin_dir / "virtium_nvme_dump_v2"))
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755, uid=0,
+            extra=((home, 0o755, 1000),),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_symlink_to_root_owned_target_accepted(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        lib_dir = tmp_path / "lib"
+        bin_dir.mkdir()
+        lib_dir.mkdir()
+        target = self._exe(lib_dir / "real-tool")
+        link = bin_dir / "virtium_nvme_dump_v2"
+        os.symlink(str(target), str(link))
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((lib_dir, 0o755, 0),),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(link)
 
     def test_resolve_does_not_fall_through_a_writable_dir(
         self, ssd, tmp_path, monkeypatch, enforce_tool_dir
@@ -2378,6 +2431,50 @@ class TestEndToEnd:
         assert "config not found" not in captured.err
         assert seen == []
 
+    def test_explicit_default_config_missing_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(
+            ["--outdir", str(outdir), "--config", ssd.DEFAULT_CONFIG]
+        )
+        err = capsys.readouterr().err
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert "ssd-dump-tools is not installed" not in err
+        assert "status: warning" in status
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_verify_explicit_default_config_missing_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(
+            [
+                "--verify",
+                "--outdir",
+                str(outdir),
+                "--config",
+                ssd.DEFAULT_CONFIG,
+            ]
+        )
+        captured = capsys.readouterr()
+        assert rc != 0
+        assert "SSD dump tool verify failed:" in captured.err
+        assert "config not found" in captured.err
+        assert "ssd-dump-tools is not installed" not in captured.err
+        assert "status: warning" in captured.out
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
     def test_package_installed_missing_config_stays_warning(
         self, ssd, tmp_path, monkeypatch, capsys
     ):
@@ -3795,6 +3892,37 @@ class TestEndToEnd:
             logf.close()
         assert killed
         assert killed[0][0] == 4242
+
+    def test_vendor_start_blocks_sigint_until_registered(
+        self, ssd, monkeypatch, tmp_path
+    ):
+        ops = []
+
+        def fake_mask(how, mask):
+            ops.append((how, set(mask)))
+            return set()
+
+        def fake_popen(*_a, **k):
+            assert ops
+            assert ops[0][0] == ssd.signal.SIG_BLOCK
+            assert ssd.signal.SIGINT in ops[0][1]
+            assert ssd.signal.SIGTERM in ops[0][1]
+            assert k.get("preexec_fn") is ssd._vendor_unblock_sigterm
+            raise KeyboardInterrupt()
+
+        monkeypatch.setattr(ssd.signal, "pthread_sigmask", fake_mask)
+        monkeypatch.setattr(ssd.subprocess, "Popen", fake_popen)
+        logf = open(os.devnull, "w")
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
+        finally:
+            logf.close()
+        ssd._vendor_unblock_sigterm()
+        how, mask = ops[-1]
+        assert how == ssd.signal.SIG_UNBLOCK
+        assert ssd.signal.SIGINT in mask
+        assert ssd.signal.SIGTERM in mask
 
     def test_vendor_interrupt_kills_process_group(
         self, ssd, monkeypatch, tmp_path
