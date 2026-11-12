@@ -59,7 +59,7 @@ process_blacklist()
 {
 	# Process system specific records.
 	case $SKU in
-	HI180|HI181|HI182|HI183|HI185|HI186|HI187|HI188|HI193|HI198)
+	HI180|HI181|HI182|HI183|HI185|HI186|HI187|HI188|HI193|HI198|HI202)
 		# Prevent various i2c bus drivers from loading before Designware driver
 		# to guarantee the correct i2c bus numbering order
 		ensure_line_exists "blacklist i2c_asf" "$BLACKLIST_FILE"
@@ -73,6 +73,10 @@ process_blacklist()
 
 		# Ensure Designware I2C driver is loaded early
 		add_module_at_beginning "i2c_designware_platform" "$MODULE_LOAD_FILE"
+
+		if [ "$SKU" == "HI198" ]; then
+			ensure_line_exists "blacklist thunderbolt" "$BLACKLIST_FILE"
+		fi
 		;;
 	HI176)
 		# Blacklist Designware, ASF I2C controller drivers and ipmi

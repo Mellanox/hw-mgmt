@@ -796,7 +796,7 @@ set_jtag_gpio()
 			jtag_tms=7
 			jtag_tdo=8
 			case $sku in
-			HI198)
+			HI198|HI202)
 				echo 0x2094 > $config_path/jtag_rw_reg
 				echo 0x2095 > $config_path/jtag_ro_reg
 			;;
@@ -907,31 +907,30 @@ set_jtag_gpio()
 set_gpios()
 {
 	local export_unexport=$1
+	# When set, handle only the GPIO with this name and skip the JTAG GPIOs.
+	local gpio_filter=$2
 	gpiobase=
 
 	case $cpu_type in
 		$BDW_CPU|$CFL_CPU|$DNV_CPU)
-			set_jtag_gpio $1
+			[ -z "$gpio_filter" ] && set_jtag_gpio $1
 			return 1
 			;;
 		$AMD_SNW_CPU)
-			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
 			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
 			;;
 		$AMD_V3000_CPU)
-			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 10 12 23)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
-			if [ "$sku" == "HI198" ]; then
+			if [ "$sku" == "HI198" ] || [ "$sku" == "HI202" ]; then
 				gpio_idx+=(9)
 				gpio_names+=("v3000_lpc_support")
 			fi
 			;;
 		$AMD_FRNG_CPU)
-			set_jtag_gpio $1
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(89 3 12 10)
 			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
@@ -940,6 +939,8 @@ set_gpios()
 			return 1
 			;;
 	esac
+
+	[ -z "$gpio_filter" ] && set_jtag_gpio $1
 
 	for gpiochip in /sys/class/gpio/*; do
 		if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
@@ -955,10 +956,20 @@ set_gpios()
 	fi
 
 	for ((i=0; i<${#gpio_idx[@]}; i+=1)); do
+		if [ -n "$gpio_filter" ] && [ "$gpio_filter" != "${gpio_names[$i]}" ]; then
+			continue
+		fi
 		gpionum=$((gpiobase+${gpio_idx[$i]}))
-		echo $gpionum > /sys/class/gpio/$export_unexport
 		if [ "$export_unexport" == "export" ]; then
+			# A GPIO can be already exported by an earlier partial call.
+			if [ ! -d /sys/class/gpio/gpio$gpionum ]; then
+				echo $gpionum > /sys/class/gpio/export
+			fi
 			check_n_link /sys/class/gpio/gpio$gpionum/value $system_path/"${gpio_names[$i]}"
+		else
+			if [ -d /sys/class/gpio/gpio$gpionum ]; then
+				echo $gpionum > /sys/class/gpio/unexport
+			fi
 		fi
 	done
 }
@@ -1601,6 +1612,45 @@ msn47xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+# SN4700-A1 is SN4700 switch board combined with AMD V3000 COMEX.
+msn4700a1_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		system_ver_str="V0-S*RaRaRaR0RaR0RaT0Ee-F*Tb-O*Tb-C*TlRkRa"
+		devtr_check_smbios_device_description "$system_ver_str" "0" ""
+	fi
+	lm_sensors_config="$lm_sensors_configs_path/sn4700a1_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700_mps.json"
+
+	max_tachos=12
+	minimal_unsupported=1
+
+	# Set according to front fan max.
+	echo 23000 > "$config_path"/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 4800 > "$config_path"/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 23000 > "$config_path"/fan_front_max_speed
+	echo 5400 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits
+	echo 20500 > "$config_path"/fan_rear_max_speed
+	echo 4800 > "$config_path"/fan_rear_min_speed
+
+	echo 23000 > "$config_path"/psu_fan_max
+	echo 4600 > "$config_path"/psu_fan_min
+	echo 3 > "$config_path"/cpld_num
+
+	# PSU I2C bus, addresses are taken from the defaults: 0x59, 0x58.
+	psu1_i2c_bus=4
+	psu2_i2c_bus=4
+
+	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+}
+
 msn4700d_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
@@ -2009,6 +2059,9 @@ msn_spc3_common()
 		;;
 		HI184|HI198)
 			msn4700d_specific
+		;;
+		HI202)
+			msn4700a1_specific
 		;;
 		*)
 			msn47xx_specific
@@ -3590,7 +3643,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184|HI198|HI202)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)
@@ -4114,12 +4167,15 @@ do_start()
 	print_function_call "$0" "${FUNCNAME[0]}" "entering..."
 	# start i2c bus trace recording
 	start_i2c_trace
-	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
 	run_fixup_script pre
 	check_cpu_type
 	print_function_call "$0" "do_start" "cpu_type:$cpu_type"
+	# iorw selects the CPLD bus by this indication, so it must be in place
+	# before the first CPLD access.
+	set_gpios "export" "v3000_lpc_support"
+	show_hw_info
 	pre_devtr_init || {
 		print_function_call "$0" "do_start" "pre_devtr_init failed"
 		exit 1
