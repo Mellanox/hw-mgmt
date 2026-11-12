@@ -97,7 +97,10 @@ class DumpError(Exception):
 
 
 class DumpSkip(Exception):
-    """Skip (no NVMe / no model); exit 0. Reason is in status warning and the skipped line."""
+    """Skip (no NVMe / no model / no package); exit 0.
+
+    The text is the status reason field and the skipped line.
+    """
 
 
 class DumpLocked(DumpError):
@@ -115,6 +118,74 @@ def syslog_warn(msg):
         syslog.syslog(syslog.LOG_WARNING, msg)
     except Exception:
         pass
+
+
+def skip_without_nvme(args):
+    """No controller and no --device: nothing to dump.
+
+    Checked before the JSON. A SATA box has no /dev/nvmeN, so the
+    skip reason is the missing controller whether or not NOS
+    installed ssd-dump-config.json. An explicit --device still
+    falls through to the config check.
+    """
+    if args.device:
+        return
+    if not list_nvme_controllers():
+        raise DumpSkip("no NVMe controller found")
+
+
+def ssd_dump_tools_installed(name="ssd-dump-tools"):
+    """True when dpkg reports the package installed.
+
+    A hold is still installed. dpkg then prints
+    "hold ok installed" instead of "install ok installed".
+    """
+    try:
+        proc = subprocess.Popen(
+            ["dpkg-query", "-W", "-f", "${Status}", name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            universal_newlines=True,
+        )
+        out, _err = proc.communicate()
+    except OSError:
+        return False
+    if proc.returncode != 0:
+        return False
+    return out.strip() in ("install ok installed", "hold ok installed")
+
+
+def skip_without_package(args):
+    """NVMe is present, and NOS never installed ssd-dump-tools.
+
+    After the controller check, so a SATA box still skips for
+    no NVMe. The default JSON is the package file. Missing that
+    file with no dpkg package is a skip, not a warning. An
+    explicit --device or --config still goes to require_config,
+    so a missing file there stays a warning. --config is noted
+    before the default path is filled in, so naming that same
+    path on the command line is still explicit. The package
+    installed and that file missing stays a warning. A default
+    JSON that is already on disk is used, dpkg record or not.
+    """
+    if (
+        args.device or
+        getattr(args, "config_explicit", False) or
+        args.config != DEFAULT_CONFIG
+    ):
+        return
+    if os.path.isfile(args.config):
+        return
+    if ssd_dump_tools_installed():
+        return
+    raise DumpSkip("ssd-dump-tools is not installed")
+
+
+def require_config(args):
+    """The JSON must exist once an NVMe dump was asked for."""
+    if os.path.isfile(args.config):
+        return
+    raise DumpError("config not found: %s" % args.config)
 
 
 def busy_warning(pid, path):
@@ -155,7 +226,7 @@ class DumpLock(object):
             fd = os.open(
                 self.path,
                 os.O_RDWR | os.O_CREAT | os.O_CLOEXEC,
-                0o644,
+                0o600,
             )
         except OSError as exc:
             # Staying quiet on a permission denial keeps a
@@ -164,6 +235,16 @@ class DumpLock(object):
             reason = "cannot create lock %s: %s" % (self.path, exc)
             if exc.errno not in (errno.EACCES, errno.EPERM):
                 syslog_warn(reason)
+            return reason
+        try:
+            # An existing file may be world-readable. Linux allows
+            # LOCK_EX on a file opened read-only, so another user
+            # could hold this lock and block every collection.
+            os.fchmod(fd, 0o600)
+        except OSError as exc:
+            os.close(fd)
+            reason = "cannot restrict lock %s: %s" % (self.path, exc)
+            syslog_warn(reason)
             return reason
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -285,7 +366,7 @@ def completion_message(fields):
             return "SSD dump tool verify failed: %s" % err
         return "SSD dump tool failed: %s" % err
     if status == "skipped":
-        err = (fields.get("warning") or "").strip()
+        err = (fields.get("reason") or "").strip()
         if err:
             return "SSD dump tool skipped: %s" % err
         return "SSD dump tool skipped"
@@ -355,23 +436,71 @@ def write_status(outdir, fields):
     return path
 
 
+# Status lines, in the order a person reads them. status is not
+# here; format_status_fields writes that line last. tool_path is
+# not here: cmd already has the full path.
+# fw follows part. tool stays the line before cmd. stage_from
+# follows the device lines. The reason and warning lines follow
+# tool_rc.
+STATUS_FIELD_ORDER = (
+    "config",
+    "min_free_mb",
+    "free_mb",
+    "device_form",
+    "device",
+    "device_in",
+    "stage_from",
+    "vendor",
+    "json_model",
+    "model",
+    "part",
+    "fw",
+    "tool",
+    "cmd",
+    "timeout_sec",
+    "outdir",
+    "files",
+    "tool_rc",
+    "verify",
+    "reason",
+    "warning",
+    "uid_warning",
+    "lock_warning",
+    "locked",
+)
+
+
+def status_field_keys(fields):
+    """Known lines in STATUS_FIELD_ORDER, then any other key.
+
+    status and tool_path are omitted.
+    """
+    present = set(fields.keys()) - set(("status", "tool_path"))
+    keys = []
+    for name in STATUS_FIELD_ORDER:
+        if name in present:
+            keys.append(name)
+            present.remove(name)
+    keys.extend(sorted(present))
+    return keys
+
+
 def format_status_fields(fields, skip_warning=False, skip_status_line=False):
+    """Field lines, then one status line last.
+
+    Values stay ok, warning, and skipped. skip_status_line omits
+    that line (verify stdout used to hide the old Status trailer).
+    """
     lines = []
-    for key in sorted(fields.keys()):
+    for key in status_field_keys(fields):
         val = fields[key]
-        if key == "warning" and (not val or skip_warning):
+        if key in ("warning", "reason") and (not val or skip_warning):
             continue
         if val is None:
             val = ""
         lines.append("%s: %s\n" % (key, val))
-    if skip_status_line:
-        return "".join(lines)
-    if fields.get("status") == "warning":
-        lines.append("Status: error\n")
-    elif fields.get("status") == "skipped":
-        lines.append("Status: skipped\n")
-    else:
-        lines.append("Status: Ok / succeeded\n")
+    if not skip_status_line:
+        lines.append("status: %s\n" % (fields.get("status") or ""))
     return "".join(lines)
 
 
@@ -719,35 +848,119 @@ def strip_workdir(outdir, keep_dirs, strict=True):
                 raise DumpError("cannot drop staged file %s" % p)
 
 
-def run_vendor_process(cmd, outdir, logf, timeout_sec):
-    """New session so timeout can kill vendor children too."""
-    proc = subprocess.Popen(
-        cmd,
-        cwd=outdir,
-        stdout=logf,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-        start_new_session=True,
-    )
-    try:
-        proc.communicate(timeout=timeout_sec)
-    except subprocess.TimeoutExpired:
+_vendor_proc = None
+
+
+def _handle_sigterm(signum, _frame):
+    """A normal kill must not leave the vendor session running.
+
+    SIGTERM is not turned into an exception, so the cleanup in
+    run_vendor_process would not run. Stop the group first. The
+    SystemExit then lets run_dump release the lock.
+    """
+    proc = _vendor_proc
+    if proc is not None:
+        _stop_vendor_group(proc)
+    raise SystemExit(128 + signum)
+
+
+def _stop_vendor_group(proc):
+    """Stop a vendor session started with start_new_session.
+
+    Ctrl-C and SIGTERM reach the collector only. The vendor
+    process is in its own session, so it keeps running after the
+    lock is released unless this kills it first. A further signal
+    during the stop is ignored until SIGKILL has been tried. A
+    vendor still alive after that is not waited on: holding the
+    lock until it exits would block every later dump.
+    """
+    def _kill(sig):
         try:
-            os.killpg(proc.pid, signal.SIGTERM)
+            os.killpg(proc.pid, sig)
         except OSError:
             pass
+
+    def _wait():
         try:
             proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except OSError:
-                pass
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                pass
+            return False
+        except KeyboardInterrupt:
+            return False
+        return True
+
+    def _group_alive():
+        """True if any process remains in the vendor session."""
+        try:
+            os.killpg(proc.pid, 0)
+        except OSError as exc:
+            if getattr(exc, "errno", None) == errno.ESRCH:
+                return False
+        return True
+
+    saved = []
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            saved.append((sig, signal.signal(sig, signal.SIG_IGN)))
+        except (OSError, ValueError):
+            pass
+    try:
+        _kill(signal.SIGTERM)
+        _wait()
+        # The leader can exit on SIGTERM while a child ignores it.
+        # proc.wait() only reaps the leader, so check the group.
+        if _group_alive():
+            _kill(signal.SIGKILL)
+            _wait()
+    finally:
+        for sig, previous in saved:
+            signal.signal(sig, previous)
+
+
+def _vendor_unblock_sigterm():
+    """Run in the child, before exec.
+
+    The collector blocks SIGTERM and SIGINT around Popen, and the
+    child inherits that mask. Restore it before exec so the vendor
+    can still be signalled.
+    """
+    signal.pthread_sigmask(
+        signal.SIG_UNBLOCK, {signal.SIGTERM, signal.SIGINT}
+    )
+
+
+def run_vendor_process(cmd, outdir, logf, timeout_sec):
+    """New session so timeout can kill vendor children too."""
+    global _vendor_proc
+    proc = None
+    # SIGTERM or SIGINT between fork and _vendor_proc would exit
+    # with the vendor still running. Hold both until the child is
+    # registered. The child restores the mask in preexec.
+    blocked = signal.pthread_sigmask(
+        signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT}
+    )
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=outdir,
+            stdout=logf,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            start_new_session=True,
+            preexec_fn=_vendor_unblock_sigterm,
+        )
+        _vendor_proc = proc
+        signal.pthread_sigmask(signal.SIG_SETMASK, blocked)
+        blocked = None
+        proc.communicate(timeout=timeout_sec)
+    except BaseException:
+        if proc is not None:
+            _stop_vendor_group(proc)
         raise
+    finally:
+        if blocked is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, blocked)
+        _vendor_proc = None
     return proc
 
 
@@ -1015,21 +1228,76 @@ def resolve_device(explicit, cfg=None, dev_dir="/dev"):
     raise DumpSkip("no NVMe model in sysfs")
 
 
+def check_tool_basename(name):
+    """JSON `tool` / `tool_alt` must be a bare name looked up on PATH.
+
+    A path (absolute or relative) would let a config edit run any
+    executable as root, so it is refused before any lookup.
+    """
+    if os.path.sep in name or (os.path.altsep and os.path.altsep in name):
+        raise DumpError(
+            "SSD dump tool must be a PATH basename, not a path: %s" % name
+        )
+
+
+def _root_only_writable(path, kind):
+    """Refuse path unless root owns it and nobody else can write it."""
+    try:
+        st = os.stat(path)
+    except OSError as exc:
+        raise DumpError(
+            "SSD dump tool %s not usable: %s (%s)" % (kind, path, exc)
+        )
+    if st.st_uid != 0 or (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+        raise DumpError(
+            "SSD dump tool %s must be writable by root only: %s"
+            % (kind, path)
+        )
+    return st
+
+
+def check_tool_dir(path):
+    """The tool and the directory that holds it must be root-only.
+
+    PATH is the caller's. A user can prepend a directory they can write,
+    such as /var/tmp, and drop a file or a symlink there with the vendor
+    tool's basename. A symlink in a root-owned directory can also point
+    at a file the user can change. The collector runs as root, so either
+    file would run as root. Refuse the PATH directory, the resolved
+    file, and that file's directory unless root owns them and neither
+    group nor other has the write bit. A vendor symlink whose target is
+    also root-only still passes.
+    """
+    directory = os.path.dirname(os.path.abspath(path))
+    st = _root_only_writable(directory, "directory")
+    if not stat.S_ISDIR(st.st_mode):
+        raise DumpError(
+            "SSD dump tool directory must be writable by root only: %s"
+            % directory
+        )
+    real = os.path.realpath(path)
+    real_dir = os.path.dirname(real)
+    if os.path.abspath(real_dir) != os.path.abspath(directory):
+        st = _root_only_writable(real_dir, "directory")
+        if not stat.S_ISDIR(st.st_mode):
+            raise DumpError(
+                "SSD dump tool directory must be writable by root only: %s"
+                % real_dir
+            )
+    _root_only_writable(real, "file")
+
+
 def find_tool(name):
-    """Locate JSON `tool` on PATH (or as an absolute path).
+    """Locate JSON `tool` on PATH by bare name.
 
     shutil.which() skips non-executable files, so a present but
     chmod -x binary looked like "not found". Search PATH ourselves:
     executable match wins; else a non-executable file -> that warning.
+    The directory of an executable match must be writable by root only.
     """
     if not name:
         raise DumpError("SSD dump tool not found on PATH: %s" % name)
-    if os.path.isabs(name):
-        if os.path.isfile(name):
-            if os.access(name, os.X_OK):
-                return name
-            raise DumpError("SSD dump tool not executable: %s" % name)
-        raise DumpError("SSD dump tool not found on PATH: %s" % name)
+    check_tool_basename(name)
 
     found_nonexec = None
     for d in os.environ.get("PATH", "").split(os.pathsep):
@@ -1039,6 +1307,7 @@ def find_tool(name):
         if not os.path.isfile(p):
             continue
         if os.access(p, os.X_OK):
+            check_tool_dir(p)
             return p
         if found_nonexec is None:
             found_nonexec = p
@@ -1062,13 +1331,22 @@ def resolve_tool(mcfg):
     names = tool_candidates(mcfg)
     if not names:
         raise DumpError("SSD dump tool not found on PATH: ")
+    # Refuse every path-like name up front, so a bad `tool` cannot
+    # quietly fall back to a valid `tool_alt`.
+    for name in names:
+        check_tool_basename(name)
     nonexec = None
     for name in names:
         try:
             return find_tool(name), name
         except DumpError as exc:
-            if "not executable" in str(exc) and nonexec is None:
+            msg = str(exc)
+            if "not found on PATH" in msg:
+                continue
+            if "not executable" in msg and nonexec is None:
                 nonexec = exc
+                continue
+            raise
     if nonexec is not None:
         raise nonexec
     raise DumpError("SSD dump tool not found on PATH: %s" % ", ".join(names))
@@ -1118,7 +1396,6 @@ def run_collect(args, logf, fields):
 
     tool_path, tool = resolve_tool(mcfg)
     fields["tool"] = tool
-    fields["tool_path"] = tool_path
 
     stage_from = mcfg.get("stage_from") or ""
     stage_cfg = mcfg.get("stage_cfg") or "one_button_NV.cfg"
@@ -1291,12 +1568,14 @@ def run_verify(args):
         outdir_ok = True
         if not args.no_tar:
             check_pack_parent(args.outdir)
-        if not os.path.isfile(args.config):
-            raise DumpError("config not found: %s" % args.config)
+        skip_without_nvme(args)
+        skip_without_package(args)
+        require_config(args)
         rc = run_collect(args, logf, fields)
     except DumpSkip as exc:
         fields["status"] = "skipped"
-        fields["warning"] = str(exc)
+        fields["reason"] = str(exc)
+        fields["warning"] = ""
         log_print(logf, "skipped: %s" % exc)
         rc = RC_OK
     except DumpLocked as exc:
@@ -1337,16 +1616,18 @@ def run_verify(args):
     emit_always(completion_message(fields))
     if not args.quiet:
         sys.stdout.write(
-            format_status_fields(
-                fields, skip_warning=True, skip_status_line=True
-            )
+            format_status_fields(fields, skip_warning=True)
         )
     return rc
 
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
+    # Remember an explicit --config before the default path is filled
+    # in. Naming the default path on the command line is still explicit.
+    args.config_explicit = args.config is not None
     args.config = resolve_config_path(args.config)
+    signal.signal(signal.SIGTERM, _handle_sigterm)
     try:
         syslog.openlog(SYSLOG_IDENT, syslog.LOG_PID | syslog.LOG_CONS, syslog.LOG_USER)
     except Exception:
@@ -1410,12 +1691,14 @@ def run_dump(args):
             with open(log_tmp, "w") as logf:
                 log_print(logf, MSG_STARTED, echo=False)
                 try:
-                    if not os.path.isfile(args.config):
-                        raise DumpError("config not found: %s" % args.config)
+                    skip_without_nvme(args)
+                    skip_without_package(args)
+                    require_config(args)
                     rc = run_collect(args, logf, fields)
                 except DumpSkip as exc:
                     fields["status"] = "skipped"
-                    fields["warning"] = str(exc)
+                    fields["reason"] = str(exc)
+                    fields["warning"] = ""
                     log_print(logf, "skipped: %s" % exc)
                     rc = RC_OK
                 except DumpError as exc:
