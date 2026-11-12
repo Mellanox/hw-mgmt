@@ -138,7 +138,8 @@ Package contains the following files, used within the workload:
 
 -  /lib/udev/rules.d/50-hw-management-events.rules: udev rules defining the triggers on which events should be handled. When trigger is matched, rule data is to be passed to the event handler (see below file /usr/bin/hw-management-events.sh).
 
--  /usr/bin/hw_management_thermal_control.py: contains thermal algorithm implementation (TC v2.0).
+-  /usr/bin/hw_management_tc_launcher.sh: starts thermal control. Reads `tc_version` from `tc_config.json` and execs the matching script below.
+ /usr/bin/hw_management_thermal_control.py: contains thermal algorithm implementation (TC v2.0).
  /usr/bin/hw_management_thermal_control_2_5.py: contains thermal algorithm implementation (TC v2.5).
 
 -  /usr/bin/hw-management-chassis-events.sh and /usr/bin/hw-management-thermal-events.sh: handle udev triggers, according to the received data, it creates or destroys symbolic links to sysfs entries. It allows to create system independent entries, and it allows thermal controls to work over this system independent model. Raises signal to thermal control service in case of fast temperature decreasing. It could happen in case one or few very hot port cables have been removed. Sets PS units internal FAN speed to default value when unit is connected to power source.
@@ -7212,7 +7213,7 @@ The hw-management package supports two versions of thermal control:
 ### TC v2.5
 - **Script**: `/usr/bin/hw_management_thermal_control_2_5.py` (script `VERSION` is `2.5.1`)
 - **Service**: `hw-management-tc.service`
-- **Description**: `hw-management.sh` copies the platform thermal JSON to `$config_path/tc_config.json`. `hw-management-start-post.sh` reads `tc_version` from that file. `2.5` and `2.5.*` rewrite the service unit to this script. Any other value keeps the 2.0 script. If the platform sets no thermal config, the copy is `tc_config_not_supported.json`, whose `tc_version` is `2.0`.
+- **Description**: `hw-management.sh` copies the platform thermal JSON to `$config_path/tc_config.json`. `hw-management-tc.service` starts `hw_management_tc_launcher.sh`, which reads `tc_version` from that file and execs this script when the value is `2.5` or `2.5.*`. Any other value, including a missing file, execs the 2.0 script. `hw-management-start-post.sh` runs the launcher with `--describe`, which writes the thermal control version into the unit `Description` as major.minor (`ver 2.5` for TC 2.5, `ver 2.0` otherwise) without starting the service, so `systemctl status` shows the version while the unit is inactive. `ExecStart` is not changed. If the platform sets no thermal config, the copy is `tc_config_not_supported.json`, whose `tc_version` is `2.0`.
 
 Platforms on this branch whose copied config has `"tc_version": "2.5"`:
 
