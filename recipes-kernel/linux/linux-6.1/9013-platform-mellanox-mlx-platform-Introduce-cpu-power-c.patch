@@ -1,0 +1,220 @@
+From 9573403a7801057bca047a852efc4516b0df723e Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Fri, 13 Nov 2026 12:26:45 +0200
+Subject: platform: mellanox: mlx-platform: Introduce cpu power cycle
+
+This patch add the following for XDR systems:
+ - Introduce a new cpld attribute that is used to
+   trigger a cpu only power cycle. NVMe will also
+   be power cycled. Asic will remain powered on if
+   the perst_en signal is asserted before triggerring
+   cpu_pwr_cycle
+ - Changes the default watchdog action to cpu_pwr_cycle
+   instead of cpu reset.
+
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 124 ++++++++++++++++++++++-
+ 1 file changed, 120 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index b0bb74fba..3ecd1c67d 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -398,6 +398,8 @@
+ #define MLXPLAT_CPLD_WD_MAX_DEVS	2
+ #define MLXPLAT_CPLD_DPU_MAX_DEVS	4
+ 
++#define MLXPLAT_CPLD_WD_CPU_PWR_CYCLE_MASK (GENMASK(7, 0) & ~BIT(1))
++
+ #define MLXPLAT_CPLD_LPC_SYSIRQ		17
+ 
+ /* Minimum power required for turning on Ethernet modular system (WATT) */
+@@ -5607,6 +5609,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0200,
+ 	},
++	{
++		.label = "cpu_pwr_cycle",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP3_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0200,
++	},
+ 	{
+ 		.label = "jtag_cap",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FU_CAP_OFFSET,
+@@ -6120,6 +6128,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0200,
+ 	},
++	{
++		.label = "cpu_pwr_cycle",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP3_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0200,
++	},
+ 	{
+ 		.label = "jtag_cap",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FU_CAP_OFFSET,
+@@ -7627,6 +7641,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_l1_scale_out_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(4),
+ 		.mode = 0200,
+ 	},
++	{
++		.label = "cpu_pwr_cycle",
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0200,
++	},
+ 	{
+ 		.label = "bmc_to_cpu_ctrl",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
+@@ -8580,6 +8600,40 @@ static struct mlxreg_core_data mlxplat_mlxcpld_wd_main_regs_type2[] = {
+ 	},
+ };
+ 
++/* XDR switches with watchdog that power cycle cpu instead of
++ * resetting the cpu
++ */
++static struct mlxreg_core_data mlxplat_mlxcpld_xdr_wd_main_regs_type2[] = {
++	{
++		.label = "action",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
++	},
++	{
++		.label = "timeout",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_TYPE2_TO_MASK,
++		.health_cntr = MLXPLAT_CPLD_WD_DFLT_TIMEOUT,
++	},
++	{
++		.label = "timeleft",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_TLEFT_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_TYPE2_TO_MASK,
++	},
++	{
++		.label = "ping",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
++	},
++	{
++		.label = "reset",
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.bit = 6,
++	},
++};
+ static struct mlxreg_core_data mlxplat_mlxcpld_wd_aux_regs_type2[] = {
+ 	{
+ 		.label = "action",
+@@ -8621,6 +8675,21 @@ static struct mlxreg_core_platform_data mlxplat_mlxcpld_wd_set_type2[] = {
+ 	},
+ };
+ 
++static struct mlxreg_core_platform_data mlxplat_mlxcpld_xdr_wd_set_type2[] = {
++	{
++		.data = mlxplat_mlxcpld_xdr_wd_main_regs_type2,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_xdr_wd_main_regs_type2),
++		.version = MLX_WDT_TYPE2,
++		.identity = "mlx-wdt-main",
++	},
++	{
++		.data = mlxplat_mlxcpld_wd_aux_regs_type2,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_wd_aux_regs_type2),
++		.version = MLX_WDT_TYPE2,
++		.identity = "mlx-wdt-aux",
++	},
++};
++
+ /* Watchdog type3: hardware implementation version 3
+  * Can be on all systems. It's differentiated by WD capability bit.
+  * Old systems (MSN2700, MSN2410, MSN2740, MSN2100 and MSN2140)
+@@ -8658,6 +8727,38 @@ static struct mlxreg_core_data mlxplat_mlxcpld_wd_main_regs_type3[] = {
+ 	},
+ };
+ 
++static struct mlxreg_core_data mlxplat_mlxcpld_host_l1_wd_main_regs_type3[] = {
++	{
++		.label = "action",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
++	},
++	{
++		.label = "timeout",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_TYPE2_TO_MASK,
++		.health_cntr = MLXPLAT_CPLD_WD3_DFLT_TIMEOUT,
++	},
++	{
++		.label = "timeleft",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_TYPE2_TO_MASK,
++	},
++	{
++		.label = "ping",
++		.reg = MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET,
++		.mask = MLXPLAT_CPLD_WD_CPU_PWR_CYCLE_MASK,
++		.bit = 1,
++	},
++	{
++		.label = "reset",
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.bit = 6,
++	},
++};
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_wd_aux_regs_type3[] = {
+ 	{
+ 		.label = "action",
+@@ -8699,6 +8800,21 @@ static struct mlxreg_core_platform_data mlxplat_mlxcpld_wd_set_type3[] = {
+ 	},
+ };
+ 
++static struct mlxreg_core_platform_data mlxplat_mlxcpld_host_l1_wd_set_type3[] = {
++	{
++		.data = mlxplat_mlxcpld_host_l1_wd_main_regs_type3,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_host_l1_wd_main_regs_type3),
++		.version = MLX_WDT_TYPE3,
++		.identity = "mlx-wdt-main",
++	},
++	{
++		.data = mlxplat_mlxcpld_wd_aux_regs_type3,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_wd_aux_regs_type3),
++		.version = MLX_WDT_TYPE3,
++		.identity = "mlx-wdt-aux",
++	},
++};
++
+ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+ {
+ 	switch (reg) {
+@@ -10059,8 +10175,8 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
+ 	mlxplat_led = &mlxplat_xdr_led_data;
+ 	mlxplat_fan = &mlxplat_xdr_fan_data;
+-	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
+-		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_xdr_wd_set_type2); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_xdr_wd_set_type2[i];
+ 	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
+ 
+@@ -10134,8 +10250,8 @@ static int __init mlxplat_dmi_l1_scale_out_switch_matched(const struct dmi_syste
+ 		mlxplat_fan = &mlxplat_l1_scale_out_fan_data;
+ 	}
+ 	mlxplat_regs_io = &mlxplat_l1_scale_out_regs_io_data;
+-	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type3); i++)
+-		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type3[i];
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_host_l1_wd_set_type3); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_host_l1_wd_set_type3[i];
+ 	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_l1_scale_out_switch;
+ 	adapter_def_nr = MLXPLAT_CPLD_L1_SCALE_OUT_PHYS_ADAPTER_NR;
+-- 
+2.47.3
+
