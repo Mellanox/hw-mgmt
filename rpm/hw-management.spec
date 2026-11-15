@@ -110,6 +110,7 @@ install -m 0644 usr/etc/hw-management-sensors/sn3750sx_sensors.conf  $RPM_BUILD_
 install -m 0644 usr/etc/hw-management-sensors/sn5600_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5600_sensors.conf
 install -m 0644 usr/etc/hw-management-sensors/sn5640_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5640_sensors.conf
 install -m 0644 usr/etc/hw-management-sensors/sn5640_sensors_6.1.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5640_sensors_6.1.conf
+install -m 0644 usr/etc/hw-management-sensors/n7xxxld_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/n7xxxld_sensors.conf
 
 install -m 0644 usr/etc/hw-management-thermal/tc_config_default.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_default.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_mqm8700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_mqm8700.json
@@ -234,6 +235,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn5600_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/sn5640_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/sn5640_sensors_6.1.conf"
+%config %attr(0644, root, root) "/etc/hw-management-sensors/n7xxxld_sensors.conf"
 
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_default.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_mqm8700.json"
