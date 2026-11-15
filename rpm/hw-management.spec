@@ -15,6 +15,9 @@ Requires: python3 >= 3.7
 Requires: /usr/bin/tpm2_createprimary
 Requires: /usr/bin/xxd
 Requires: /usr/bin/curl
+# The scripts look processes up with pgrep, which comes with procps on some
+# distributions and procps-ng on others.
+Requires: /usr/bin/pgrep
 
 Provides:      config(hw-management) = %{version}
 Provides:      hw-management = %{version}
