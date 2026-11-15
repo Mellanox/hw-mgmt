@@ -13,6 +13,7 @@
 # $labels_pending_file.
 
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -21,6 +22,13 @@ from pathlib import Path
 import pytest
 
 pytestmark = pytest.mark.offline
+
+# wait_labels_maker_done() looks the makers up with pgrep. Where procps is not
+# installed the lookup fails instead of matching nothing, which reads as an idle
+# maker and makes the tests below pass over an untested wait.
+requires_pgrep = pytest.mark.skipif(
+    shutil.which("pgrep") is None, reason="pgrep is not installed (procps)"
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 BIN = ROOT / "usr" / "usr" / "bin"
@@ -67,6 +75,7 @@ def test_no_pending_marker_leaves_indicator_alone(tmp_path):
     assert "Labels data base is ready" not in err
 
 
+@requires_pgrep
 def test_pending_marker_publishes_without_waiting(tmp_path):
     """Nothing left to drain: the indicator is published right away."""
     marker = tmp_path / ".hw-management-labels-pending"
@@ -83,6 +92,7 @@ def test_pending_marker_publishes_without_waiting(tmp_path):
     assert elapsed < 5
 
 
+@requires_pgrep
 def test_publish_waits_for_maker_still_in_flight(tmp_path):
     """A maker spawned by the last check_n_link must finish before publishing."""
     marker = tmp_path / ".hw-management-labels-pending"
@@ -104,6 +114,7 @@ def test_publish_waits_for_maker_still_in_flight(tmp_path):
     assert "ERR" not in err
 
 
+@requires_pgrep
 def test_publish_gives_up_on_a_stuck_maker(tmp_path):
     """A maker that never exits must not hold the indicator back forever."""
     marker = tmp_path / ".hw-management-labels-pending"
