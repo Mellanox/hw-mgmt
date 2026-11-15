@@ -76,6 +76,11 @@ declare -A a2d_arr=( \
 	["b"]="ads1015" \
 )
 
+# Values are the prefixes of the keys of the components in the alternatives
+# arrays. A device that can be used both as a power converter and as a voltage
+# regulator needs distinct prefixes, otherwise its entries collide, as the keys
+# are built from the prefix and the per category index of the component in the
+# SMBIOS BOM string.
 declare -A pwr_conv_arr=( \
 	["0"]="dummy" \
 	["a"]="pmbus" \
@@ -84,6 +89,7 @@ declare -A pwr_conv_arr=( \
 	["d"]="raa228000" \
 	["e"]="mp29502" \
 	["f"]="raa228004" \
+	["g"]="xdpe1a2g7c" \
 )
 
 declare -A hotswap_arr=( \
@@ -1027,6 +1033,11 @@ devtr_bom_load_from_json()
 			continue
 		fi
 		local -n _arr="${section}_alternatives"
+		# A key describes a device and its index in the SMBIOS BOM string, so a
+		# redefined key silently hides the component that was defined before it.
+		if [ -n "${_arr[$key]}" ]; then
+			log_info "SMBIOS BOM info: duplicated key '${key}' in section '${section}', '${_arr[$key]}' replaced by '${spec}'"
+		fi
 		_arr["$key"]="$spec"
 		unset -n _arr
 	done <<< "$output"
@@ -1581,7 +1592,9 @@ devtr_check_board_components()
 	local board_str=$1
 	local board_num=1
 	local board_bus_offset=0
-	local board_pdb_bus_offset=
+	local board_hotswap_bus_offset=
+	local board_pwr_conv_bus_offset=
+	local board_eeprom_bus_offset=
 	local board_vr_num=
 	local board_pwr_conv_num=
 	local board_hotswap_num=
@@ -1589,6 +1602,7 @@ devtr_check_board_components()
 	local board_name_pfx=
 	local board_type=static
 #	local board_addr_offset=0
+	local comp_bus_offset=0
 	local comp_arr
 
 	case $cpu_type in
@@ -1629,11 +1643,26 @@ devtr_check_board_components()
 			if [ -e "$config_path"/swb_brd_bus_offset ]; then
 				board_bus_offset=$(< $config_path/swb_brd_bus_offset)
 			fi
-			if [ -e "$config_path"/swb_brd_pdb_bus_offset ]; then
-				board_pdb_bus_offset=$(< $config_path/swb_brd_pdb_bus_offset)
+			# Hot-swap, power converter and EEPROM devices can be spread over
+			# the switch board busses with their own offsets, different from
+			# the switch board bus offset (e.g on HI194).
+			if [ -e "$config_path"/swb_brd_hotswap_bus_offset ]; then
+				board_hotswap_bus_offset=$(< $config_path/swb_brd_hotswap_bus_offset)
+			fi
+			if [ -e "$config_path"/swb_brd_pwr_conv_bus_offset ]; then
+				board_pwr_conv_bus_offset=$(< $config_path/swb_brd_pwr_conv_bus_offset)
+			fi
+			if [ -e "$config_path"/swb_brd_eeprom_bus_offset ]; then
+				board_eeprom_bus_offset=$(< $config_path/swb_brd_eeprom_bus_offset)
 			fi
 			if [ -e "$config_path"/swb_brd_vr_num ]; then
 				board_vr_num=$(< $config_path/swb_brd_vr_num)
+			fi
+			if [ -e "$config_path"/swb_brd_pwr_conv_num ]; then
+				board_pwr_conv_num=$(< $config_path/swb_brd_pwr_conv_num)
+			fi
+			if [ -e "$config_path"/swb_brd_hotswap_num ]; then
+				board_hotswap_num=$(< $config_path/swb_brd_hotswap_num)
 			fi
 			for key in "${!swb_alternatives[@]}"; do
 				board_alternatives["$key"]="${swb_alternatives["$key"]}"
@@ -1829,6 +1858,8 @@ devtr_check_board_components()
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
 				# SN5600 system has 2 Clock boards. Just EEPROM is accessed on these boards.
+				# HI194 system has 2 switch boards, each with 1 EEPROM
+				comp_bus_offset=${board_eeprom_bus_offset:-$board_bus_offset}
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 # There is no currently address offset. Leave commented just for possible future use
@@ -1836,9 +1867,20 @@ devtr_check_board_components()
 #						curr_component[1]=$((curr_component[1]+board_addr_offset*brd))
 #						curr_component[1]=0x$(echo "obase=16; ${curr_component[1]}"|bc)
 #					fi
-					if [ $board_bus_offset -ne 0 ]; then
-						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
+					if [ $comp_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+comp_bus_offset*brd))
+					fi
+					# EEPROM names have no trailing number to increment per board.
+					# A name prefixed by the board name, e.g swb_info, gets the
+					# board number inserted after this prefix, e.g swb2_info. It
+					# is omitted for the first board, keeping the name of the
+					# systems having a single board.
+					if [ ! -z "${board_name_pfx}" ] && [ $brd -ne 0 ]; then
+						case ${curr_component[3]} in
+						${board_name_pfx}_*)
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]#${board_name_pfx}_}
+							;;
+						esac
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then
@@ -1905,14 +1947,11 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${o_cnt}"
 				# Q3450 system has 2 switch boards, each with 1 power converter
 				# SN5800 system has 4 power boards, each with 1 power converter
+				comp_bus_offset=${board_pwr_conv_bus_offset:-$board_bus_offset}
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					if [ $board_bus_offset -ne 0 ]; then
-						if [ ! -z "$board_pdb_bus_offset" ]; then
-							curr_component[2]=$((curr_component[2]+board_pdb_bus_offset*brd))
-						else
-							curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						fi
+					if [ $comp_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+comp_bus_offset*brd))
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_pwr_conv_num}" ]; then
@@ -1955,14 +1994,11 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${h_cnt}"
 				# Q3450 system has 2 switch boards, each with 1 hot-swap controller
 				# SN5800 system has 4 power boards, each with 1 hot-swap controller
+				comp_bus_offset=${board_hotswap_bus_offset:-$board_bus_offset}
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					if [ $board_bus_offset -ne 0 ]; then
-						if [ ! -z "$board_pdb_bus_offset" ]; then
-							curr_component[2]=$((curr_component[2]+board_pdb_bus_offset*brd))
-						else
-							curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						fi
+					if [ $comp_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+comp_bus_offset*brd))
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_hotswap_num}" ]; then

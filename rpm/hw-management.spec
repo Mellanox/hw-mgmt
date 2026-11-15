@@ -71,6 +71,7 @@ management and thermal control.
 rm -rf $RPM_BUILD_ROOT
 
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-sensors
+mkdir -p $RPM_BUILD_ROOT/etc/hw-management-cfg/HI194
 mkdir -p $RPM_BUILD_ROOT/usr/share/doc/hw-management
 mkdir -p $RPM_BUILD_ROOT/etc/modules.d
 mkdir -p $RPM_BUILD_ROOT/etc/modules-load.d
@@ -126,6 +127,9 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600C.json $RPM_BUILD
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4600.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4700.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn5600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn5600.json
+
+install -m 0644 usr/etc/hw-management-cfg/HI194/devtree.json $RPM_BUILD_ROOT/etc/hw-management-cfg/HI194/devtree.json
+
 install -m 0644 usr/etc/modprobe.d/hw-management.conf $RPM_BUILD_ROOT/etc/modprobe.d/hw-management.conf
 install -m 0644 usr/etc/modules-load.d/05-hw-management-modules.conf $RPM_BUILD_ROOT/etc/modules-load.d/05-hw-management-modules.conf
 
@@ -136,6 +140,7 @@ install -m 0644 usr/lib/udev/rules.d/70-hw-management-bmc.rules $RPM_BUILD_ROOT/
 install -m 0755 usr/usr/bin/hw-management-chassis-events.sh $RPM_BUILD_ROOT/usr/bin/hw-management-chassis-events.sh
 install -m 0755 usr/usr/bin/hw-management-check-bios-update.sh $RPM_BUILD_ROOT/usr/bin/hw-management-check-bios-update.sh
 install -m 0755 usr/usr/bin/hw-management-devtree-check.sh $RPM_BUILD_ROOT/usr/bin/hw-management-devtree-check.sh
+install -m 0755 usr/usr/bin/hw-management-devtree-json-parser.py $RPM_BUILD_ROOT/usr/bin/hw-management-devtree-json-parser.py
 install -m 0755 usr/usr/bin/hw-management-devtree.sh $RPM_BUILD_ROOT/usr/bin/hw-management-devtree.sh
 install -m 0755 usr/usr/bin/hw-management-generate-dump.sh $RPM_BUILD_ROOT/usr/bin/hw-management-generate-dump.sh
 install -m 0755 usr/usr/bin/hw-management-ssd-dump-collect.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ssd-dump-collect.sh
@@ -201,6 +206,9 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 #%dir %attr(0755, root, root) "/etc"
 %dir %attr(0755, root, root) "/etc/hw-management-sensors"
 %dir %attr(0755, root, root) "/etc/hw-management-thermal"
+%dir %attr(0755, root, root) "/etc/hw-management-cfg"
+%dir %attr(0755, root, root) "/etc/hw-management-cfg/HI194"
+%config %attr(0644, root, root) "/etc/hw-management-cfg/HI194/devtree.json"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/e3597_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_rev1_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_sensors.conf"
@@ -286,6 +294,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/sxd_read_cpld_ver.py"
 %attr(0755, root, root) "/usr/bin/hw-management-check-bios-update.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-devtree-check.sh"
+%attr(0755, root, root) "/usr/bin/hw-management-devtree-json-parser.py"
 %attr(0755, root, root) "/usr/bin/hw-management-devtree.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-if-rename.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-vpd-parser.py"
