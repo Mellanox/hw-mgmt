@@ -460,6 +460,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: BMC Redfish login service',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_bmc_login.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Thermal Updater',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_updater.py', '--tb=short'],
                 'cwd': self.tests_dir

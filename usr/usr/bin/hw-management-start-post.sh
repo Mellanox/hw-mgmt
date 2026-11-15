@@ -111,6 +111,10 @@ case $sku in
 		# Do nothing
 esac
 
+# Log in to the BMC on a start that systemd did not drive as well; on one that
+# it does, systemd starts the login on its own.
+start_bmc_login_if_needed
+
 # update Thermal Control service to use correct executable revision
 service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
 if [ -f $service_file_path ]; then
