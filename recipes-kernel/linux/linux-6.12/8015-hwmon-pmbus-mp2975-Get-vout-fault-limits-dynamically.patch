@@ -38,7 +38,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 Link: https://patch.msgid.link/20261105193200.1570996-1-fradensky@nvidia.com
 Signed-off-by: Guenter Roeck <linux@roeck-us.net>
 
-Upstream-Status: Backport [996938a5b5e7, hwmon branch of groeck/linux-staging.git]
+Upstream-Status: Backport [00944852275e]
 ---
  drivers/hwmon/pmbus/mp2975.c | 207 +++++++++++++++++++----------------
  1 file changed, 115 insertions(+), 92 deletions(-)
