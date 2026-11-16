@@ -9,13 +9,17 @@ attempts to attach a component to I2C bus, which is still not created.
 Setting deferred bus parameter will force hot-plug driver to wait
 until the bus is available.
 
+Set the deferred bus parameter for the busbar powered flavour of the
+system too, and fix the main mux error message, which printed the bus
+number of the CPLD device instead of the one of the main mux.
+
 Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/nvsw-sn2201.c | 1 +
- 1 file changed, 1 insertion(+)
+ drivers/platform/mellanox/nvsw-sn2201.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
-index db31c8b..924ad48 100644
+index db31c8b..ee7e988 100644
 --- a/drivers/platform/mellanox/nvsw-sn2201.c
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
 @@ -526,6 +526,7 @@ struct mlxreg_core_hotplug_platform_data nvsw_sn2201_hotplug = {
@@ -26,6 +30,23 @@ index db31c8b..924ad48 100644
  };
  
  static struct mlxreg_core_item nvsw_sn2201_busbar_items[] = {
+@@ -555,6 +556,7 @@ struct mlxreg_core_hotplug_platform_data nvsw_sn2201_busbar_hotplug = {
+ 	.count = ARRAY_SIZE(nvsw_sn2201_busbar_items),
+ 	.cell = NVSW_SN2201_SYS_INT_STATUS_OFFSET,
+ 	.mask = NVSW_SN2201_CPLD_AGGR_BUSBAR_MASK_DEF,
++	.deferred_nr = NVSW_SN2201_2ND_MUX_CH3_NR,
+ };
+ 
+ /* SN2201 static devices. */
+@@ -1181,7 +1183,7 @@ static int nvsw_sn2201_i2c_completion_notify(void *handle, int id)
+ 	if (!nvsw_sn2201->main_mux_devs->adapter) {
+ 		err = -ENODEV;
+ 		dev_err(nvsw_sn2201->dev, "Failed to get adapter for bus %d\n",
+-			nvsw_sn2201->cpld_devs->nr);
++			nvsw_sn2201->main_mux_devs->nr);
+ 		goto i2c_get_adapter_main_fail;
+ 	}
+ 
 -- 
 2.8.4
 

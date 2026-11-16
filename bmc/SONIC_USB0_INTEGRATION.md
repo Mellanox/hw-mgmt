@@ -126,8 +126,14 @@ ip -4 addr show dev usb0
 - May rename the USB NIC to **usb0** (udev), where applicable.
 - On SONiC **with** **`/etc/bmc-network-sonic.conf`** (or alt): **does not** call
   **`ifup usb0`**. Without that file, **ifup** runs (misaligned / static-BMC case).
-- Other interfaces / missing **`/etc/network/interfaces`**: unchanged defensive behavior
-  (**`log_err`** and **exit 1** when **`ifquery`** does not define the interface).
+- When **`ifquery`** does not define the interface, the script logs at **info** level and
+  **exits 0**, leaving the interface to the NOS. A NOS may render
+  **`/etc/network/interfaces`** long after the interface appears — SONiC writes it from
+  **`interfaces-config.service`**, tens of seconds after the networking service the unit
+  is ordered after — so failing there would only report a lost race. **A missing stanza
+  is therefore never reported as a failed service**; look for it in the log instead (see
+  [Host verification](#host-verification)). The same applies to a missing interface and a
+  missing **`/etc/network/interfaces`**. Only a genuine **`ifup`** failure exits 1.
 - Does **not** assign a host **usb0** IP when the NOS contract file is present (SONiC owns it).
 - Drives BMC Redfish login, password rotation, and BMC temperature polling on SONiC.
   **`is_redfish_disabled`** always returns false (Bug 5272044) until the NOS API exists.
@@ -139,6 +145,13 @@ test -f /etc/sonic/sonic_version.yml
 test -f /etc/bmc-network-sonic.conf || test -f /etc/bmc-usb-network.conf
 ip link show usb0
 ip -4 addr show dev usb0
+
+# usb0 left to the NOS because it was not in /etc/network/interfaces yet.
+# Expected on SONiC; a concern only if usb0 has no address above.
+journalctl -t hw-management | grep 'is not defined in /etc/network/interfaces'
+
+# usb0 actually brought up by hw-management.
+journalctl -t hw-management | grep 'ifup usb0 succeeded'
 ```
 
 ---
@@ -179,6 +192,8 @@ BMC, **`ifup`** on the host where **`/etc/network/interfaces`** defines **usb0**
 | **`bmc/usr/usr/bin/hw-management-bmc-ready-common.sh`** | **`usb_net_config()`** |
 | **`usr/usr/bin/hw-management-ifupdown.sh`** | Host **`ifup`** (skips **usb0** when SONiC + contract file) |
 | **`debian/hw-management-ifupdown@.service`** | Runs the above after **`networking.service`**, pulled in by the interface's device unit (**`SYSTEMD_WANTS`** in **`usr/lib/udev/rules.d/70-hw-management-bmc.rules`**) |
+| **`usr/usr/bin/hw-management-bmc-login.sh`** | Host Redfish login, waits for the **usb0** address first |
+| **`debian/hw-management.hw-management-bmc-login.service`** | Runs the above after the **usb0** service, which restarts it once it has handled the interface |
 | **`usr/usr/bin/hw-management-helpers.sh`** | **`check_host_usb0_managed_by_nos()`** |
 | **`usr/usr/bin/hw_management_feature.py`** | Host OS checks (usb0 ownership, Redfish) |
 | **`bmc/README.md`** | Full BMC package and **usb0** documentation |

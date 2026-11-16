@@ -18,11 +18,10 @@ Focus on testing the critical business logic:
 import unittest
 import sys
 import os
-import builtins
 import tempfile
 import shutil
 import importlib.util
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 
 # Add parent directory to path to import the module under test
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../usr/usr/bin'))
@@ -38,7 +37,6 @@ def _ensure_peripheral_dependency_mocks():
     """Mock hard-required imports used at peripheral_updater module load time."""
     lib_mock = MagicMock()
     lib_mock.HW_Mgmt_Logger = MagicMock()
-    lib_mock.exit_wait = MagicMock()
     lib_mock.current_milli_time = MagicMock(return_value=0)
     lib_mock.RepeatedTimer = MagicMock()
     sys.modules["hw_management_lib"] = lib_mock
@@ -53,58 +51,33 @@ def _ensure_peripheral_dependency_mocks():
         sys.modules["psutil"] = MagicMock()
 
 
-def _load_peripheral_updater_module(module_suffix, feature_request_available):
+def _load_peripheral_updater_module(module_suffix):
     """
-    Load peripheral_updater in isolation with controlled feature helper presence.
+    Load peripheral_updater in isolation with a mock feature_request.
 
     @param module_suffix: unique suffix for importlib module name
-    @param feature_request_available: True = inject mock feature_request; False = simulate missing module
     """
     _ensure_peripheral_dependency_mocks()
     mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
     sys.modules.pop(mod_name, None)
 
-    if feature_request_available:
-        feature_mock = MagicMock()
-        feature_mock.feature_request = MagicMock(return_value=False)
-        sys.modules["hw_management_feature"] = feature_mock
-    else:
-        sys.modules.pop("hw_management_feature", None)
+    feature_mock = MagicMock()
+    feature_mock.feature_request = MagicMock(return_value=(0, "False"))
+    sys.modules["hw_management_feature"] = feature_mock
 
     spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
     module = importlib.util.module_from_spec(spec)
-
-    real_import = builtins.__import__
-
-    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if not feature_request_available and name == "hw_management_feature":
-            raise ImportError("hw_management_feature missing (test)")
-        return real_import(name, globals, locals, fromlist, level)
-
-    if feature_request_available:
-        spec.loader.exec_module(module)
-    else:
-        with patch("builtins.__import__", side_effect=guarded_import):
-            spec.loader.exec_module(module)
-
+    spec.loader.exec_module(module)
     return module
 
 
-class TestFeatureRequestImportFallback(unittest.TestCase):
-    """feature_request import must be optional so daemon startup cannot hard-fail."""
-
-    def test_module_loads_when_feature_request_missing(self):
-        """Missing hw_management_feature keeps Redfish enabled."""
-        module = _load_peripheral_updater_module("no_feature", feature_request_available=False)
-
-        self.assertFalse(module.FEATURE_REQUEST_AVAILABLE)
-        self.assertFalse(module.feature_request("get", "is_redfish_disabled"))
+class TestRedfishDisabledFeature(unittest.TestCase):
+    """is_redfish_disabled controls whether BMC Redfish sensor polling stays."""
 
     def test_module_uses_feature_request_when_present(self):
         """When the helper imports, main() queries is_redfish_disabled."""
-        module = _load_peripheral_updater_module("with_feature", feature_request_available=True)
+        module = _load_peripheral_updater_module("with_feature")
 
-        self.assertTrue(module.FEATURE_REQUEST_AVAILABLE)
         self._init_fns_from_main(module, redfish_disabled=False)
 
     def _init_fns_from_main(self, module, redfish_disabled):
@@ -115,21 +88,23 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
         decides whether that entry is kept.
         """
         seen = []
-        module.feature_request = MagicMock(return_value=redfish_disabled)
+        value = "True" if redfish_disabled else "False"
+        module.feature_request = MagicMock(return_value=(0, value))
         argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
         with patch.object(sys, "argv", argv), \
                 patch.object(module, "init_attr", side_effect=lambda attr: seen.append(attr.get("fn"))), \
                 patch.object(module, "write_module_counter"), \
                 patch.object(module, "update_peripheral_attr"), \
-                patch.object(module, "exit_wait", side_effect=lambda *_a, **_k: module.EXIT.set()), \
-                patch.object(module.signal, "signal"):
-            module.main()
+                patch.object(module.time, "sleep", side_effect=SystemExit(0)):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+        self.assertEqual(ctx.exception.code, 0)
         module.feature_request.assert_called_with("get", "is_redfish_disabled")
         return seen
 
     def test_redfish_disabled_host_strips_redfish_monitor_entries(self):
         """A Redfish-disabled host drops redfish_get_sensor peripheral entries."""
-        module = _load_peripheral_updater_module("redfish_off", feature_request_available=True)
+        module = _load_peripheral_updater_module("redfish_off")
 
         seen = self._init_fns_from_main(module, redfish_disabled=True)
 
@@ -138,12 +113,123 @@ class TestFeatureRequestImportFallback(unittest.TestCase):
 
     def test_redfish_enabled_host_keeps_redfish_monitor_entries(self):
         """While is_redfish_disabled is false, redfish_get_sensor entries stay."""
-        module = _load_peripheral_updater_module("redfish_on", feature_request_available=True)
+        module = _load_peripheral_updater_module("redfish_on")
 
         seen = self._init_fns_from_main(module, redfish_disabled=False)
 
         self.assertIn("monitor_asic_chipup_status", seen)
         self.assertIn("redfish_get_sensor", seen)
+
+    def test_redfish_get_failure_keeps_redfish_monitor_entries(self):
+        """A failed is_redfish_disabled read leaves redfish_get_sensor entries."""
+        module = _load_peripheral_updater_module("redfish_get_fail")
+
+        seen = []
+        module.feature_request = MagicMock(return_value=(1, "DB load failed"))
+        argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
+        with patch.object(sys, "argv", argv), \
+                patch.object(module, "init_attr",
+                             side_effect=lambda attr: seen.append(attr.get("fn"))), \
+                patch.object(module, "write_module_counter"), \
+                patch.object(module, "update_peripheral_attr"), \
+                patch.object(module.time, "sleep", side_effect=SystemExit(0)):
+            with self.assertRaises(SystemExit) as ctx:
+                module.main()
+
+        self.assertEqual(ctx.exception.code, 0)
+        module.feature_request.assert_called_with("get", "is_redfish_disabled")
+        self.assertIn("monitor_asic_chipup_status", seen)
+        self.assertIn("redfish_get_sensor", seen)
+
+    def test_stored_flag_is_read_by_updater(self):
+        """A flag written through the feature API is used by updater main()."""
+        temp_dir = tempfile.mkdtemp()
+        db_file = os.path.join(
+            temp_dir, "hw-management", "hw_management_features.json")
+        os.makedirs(os.path.dirname(db_file), exist_ok=True)
+        try:
+            module, feature = _load_peripheral_updater_with_real_feature("stored_flag")
+            with patch.object(feature, "HW_MANAGEMENT_DB_FILE", db_file):
+                feature.HW_MANAGEMENT_DB = {}
+                ret, _text = feature.feature_request("set", "is_redfish_disabled", "True")
+                self.assertEqual(ret, 0)
+                self.assertTrue(os.path.isfile(db_file))
+
+                feature.HW_MANAGEMENT_DB = {}
+                seen = []
+                argv = ["hw_management_peripheral_updater.py", "-s", "HI162"]
+                with patch.object(sys, "argv", argv), \
+                        patch.object(module, "init_attr",
+                                     side_effect=lambda attr: seen.append(attr.get("fn"))), \
+                        patch.object(module, "write_module_counter"), \
+                        patch.object(module, "update_peripheral_attr"), \
+                        patch.object(module.time, "sleep", side_effect=SystemExit(0)):
+                    with self.assertRaises(SystemExit) as ctx:
+                        module.main()
+                self.assertEqual(ctx.exception.code, 0)
+
+            self.assertIn("monitor_asic_chipup_status", seen)
+            self.assertNotIn("redfish_get_sensor", seen)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _import_hw_management_lib():
+    """Import shipped hw_management_lib. Stub dataclasses on Python < 3.7."""
+    import types
+    sys.modules.pop("hw_management_lib", None)
+    try:
+        import dataclasses  # noqa: F401
+    except ImportError:
+        dc = types.ModuleType("dataclasses")
+
+        def dataclass(*args, **_kwargs):
+            def deco(cls):
+                return cls
+            if args and callable(args[0]):
+                return args[0]
+            return deco
+
+        dc.dataclass = dataclass
+        sys.modules["dataclasses"] = dc
+    import hw_management_lib as lib
+    return lib
+
+
+def _load_real_feature_module():
+    """Load hw_management_feature with the shipped str2bool.
+
+    Mock run_shell_cmd so tests stay offline (no docker ps).
+    """
+    lib = _import_hw_management_lib()
+    sys.modules.pop("hw_management_feature", None)
+
+    def run_shell_cmd(*_args, **_kwargs):
+        return 1, ""
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    feature_path = os.path.join(
+        script_dir, "..", "..", "usr", "usr", "bin", "hw_management_feature.py")
+    with patch.object(lib, "run_shell_cmd", side_effect=run_shell_cmd):
+        spec = importlib.util.spec_from_file_location(
+            "hw_management_feature", feature_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["hw_management_feature"] = module
+        spec.loader.exec_module(module)
+    return module
+
+
+def _load_peripheral_updater_with_real_feature(module_suffix):
+    """Load peripheral_updater using a real hw_management_feature module."""
+    feature = _load_real_feature_module()
+    _ensure_peripheral_dependency_mocks()
+    sys.modules["hw_management_feature"] = feature
+    mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
+    sys.modules.pop(mod_name, None)
+    spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module, feature
 
 
 class TestMonitorAsicChipupStatusLogic(unittest.TestCase):
@@ -634,25 +720,36 @@ class TestRedfishFunctions(unittest.TestCase):
 class TestUtilityFunctions(unittest.TestCase):
     """Test utility functions in peripheral_updater"""
 
-    def test_run_power_button_event(self):
-        """Test run_power_button_event executes commands"""
+    def test_run_graceful_pwr_off_event(self):
+        """Test run_graceful_pwr_off_event executes commands"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
-            peripheral_module.run_power_button_event(None, "1")
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
+            peripheral_module.run_graceful_pwr_off_event(None, "1")
 
-            # Should call os.system 3 times (2 hotplug events + logger)
-            self.assertEqual(mock_system.call_count, 3)
+        self.assertEqual(mock_cmd.call_count, 2)
+        mock_cmd.assert_any_call(
+            "/usr/bin/hw-management-chassis-events.sh",
+            ["hotplug-event", "GRACEFUL_PWR_OFF", "1"],
+            timeout=3.0,
+        )
+        mock_cmd.assert_any_call(
+            "logger",
+            ["-t", "hw-management-peripheral-updater", "-p", "daemon.info",
+             "Graceful CPU power off request "],
+            timeout=3.0,
+        )
 
-    def test_run_power_button_event_released(self):
-        """Test run_power_button_event when released (value=0)"""
+    def test_run_graceful_pwr_off_event_cleared(self):
+        """Test run_graceful_pwr_off_event when cleared (value=0)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
-            peripheral_module.run_power_button_event(None, "0")
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
+            peripheral_module.run_graceful_pwr_off_event(None, "0")
 
-            # Should call os.system 2 times (no logger for release)
-            self.assertEqual(mock_system.call_count, 2)
+        self.assertEqual(mock_cmd.call_count, 1)
+        commands = [call[0][0] for call in mock_cmd.call_args_list]
+        self.assertNotIn("logger", commands)
 
     def test_run_cmd_with_command_list(self):
         """Test run_cmd executes list of commands"""
@@ -660,34 +757,54 @@ class TestUtilityFunctions(unittest.TestCase):
 
         cmd_list = ["echo test_{arg1}", "echo another_{arg1}"]
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
             peripheral_module.run_cmd(cmd_list, "arg_value")
 
-            # Should call os.system for each command
-            self.assertEqual(mock_system.call_count, 2)
+        self.assertEqual(mock_cmd.call_count, 2)
+        mock_cmd.assert_any_call("echo", ["test_arg_value"], timeout=3.0)
+        mock_cmd.assert_any_call("echo", ["another_arg_value"], timeout=3.0)
+
+    def test_run_cmd_user_dump_only_when_trigger_is_one(self):
+        """User dump runs only when the thermal full-speed trigger value is 1."""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd:
+            peripheral_module.run_cmd(["/usr/bin/hw-management-user-dump"], "0")
+            peripheral_module.run_cmd(["/usr/bin/hw-management-user-dump"], "1")
+
+        mock_cmd.assert_called_once_with("/usr/bin/hw-management-user-dump", [], timeout=30.0)
 
     def test_sync_fan_absent(self):
         """Test sync_fan with fan absent (val=0)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd, \
+                patch('builtins.open', mock_open()) as mocked_open:
             peripheral_module.sync_fan(1, "0")
 
-            # Should call os.system twice (echo + hotplug event)
-            self.assertEqual(mock_system.call_count, 2)
-            # Check that status=1 for absent fan
-            calls = [str(call) for call in mock_system.call_args_list]
-            self.assertTrue(any("fan1_status" in str(call) for call in calls))
+        mocked_open.assert_called_with("/var/run/hw-management/thermal/fan1_status", "w")
+        mocked_open().write.assert_called_with("1\n")
+        mock_cmd.assert_called_once_with(
+            "/usr/bin/hw-management-chassis-events.sh",
+            ["hotplug-event", "FAN1", 1],
+            timeout=3.0,
+        )
 
     def test_sync_fan_present(self):
         """Test sync_fan with fan present (val=1)"""
         import hw_management_peripheral_updater as peripheral_module
 
-        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+        with patch('hw_management_peripheral_updater.run_shell_cmd', return_value=(0, "")) as mock_cmd, \
+                patch('builtins.open', mock_open()) as mocked_open:
             peripheral_module.sync_fan(2, "1")
 
-            # Should call os.system twice
-            self.assertEqual(mock_system.call_count, 2)
+        mocked_open.assert_called_with("/var/run/hw-management/thermal/fan2_status", "w")
+        mocked_open().write.assert_called_with("0\n")
+        mock_cmd.assert_called_once_with(
+            "/usr/bin/hw-management-chassis-events.sh",
+            ["hotplug-event", "FAN2", 0],
+            timeout=3.0,
+        )
 
 
 class TestRedfishSensorFunctions(unittest.TestCase):

@@ -1,6 +1,6 @@
 .TH HW-MANAGEMENT-TC "8" "September 2025" "hw-management-tc " "hw-management"
 .SH NAME
-hw-management-tc.service \- service used to run hw_management_thermal_control.py
+hw-management-tc.service \- thermal control service for NVIDIA systems
 .SH SYNOPSIS
 Thermal control for NVIDIA systems.
 The thermal control service provides advanced thermal management for NVIDIA switch systems.
@@ -12,14 +12,26 @@ The service supports multiple thermal control versions:
 - TC v2.0: Standard thermal control implementation
 - TC v2.5: Enhanced thermal control with improved algorithms for newer systems
 
-The service selects the thermal control application from the
-\fItc_version\fR field in \fI/var/run/hw-management/config/tc_config.json\fR (defaults to
-v2.0 when unset). \fBhw-management-start-post.sh\fR aligns the systemd unit to run the
-matching Python script:
-- /usr/bin/hw_management_thermal_control.py (TC v2.0)
+The service is started via \fBhw_management_tc_launcher.sh\fR, which reads the
+\fItc_version\fR field from \fI/var/run/hw-management/config/tc_config.json\fR and
+exec()s the matching Python binary directly as the systemd MAINPID:
+- /usr/bin/hw_management_thermal_control.py (TC v2.0, default)
 - /usr/bin/hw_management_thermal_control_2_5.py (TC v2.5)
 
-When the unit is rewritten, it is reloaded and thermal control is restarted shortly after.
+Version selection happens at each service start. \fItc_config.json\fR is written by
+\fBhw-management.sh\fR before \fBhw-management.service\fR becomes active, so the
+correct binary is chosen on the first start. A missing or unrecognised
+\fItc_version\fR selects v2.0.
+
+\fBhw-management-start-post.sh\fR runs the launcher with \fB\-\-describe\fR after
+\fItc_config.json\fR is in place. That writes the thermal control version into the
+unit \fBDescription\fR as major.minor, for example "Thermal control service (ver 2.5)
+of Nvidia systems". Any \fItc_version\fR other than 2.5 (or 2.5.*) is written as
+"(ver 2.0)". The command does not start the service. \fBsystemctl
+status\fR therefore shows the version while the unit is still inactive. A later
+start of the service refreshes the same line. Only the Description line is
+edited; \fBExecStart\fR is never changed. \fBsystemctl daemon-reload\fR runs only
+when the value changes. The unit file as shipped reads "(ver 2.0)".
 
 .SH STATE ACROSS HW-MANAGEMENT RESTARTS
 On stop, this unit writes "started" to \fI/var/run/.hw-management-tc-state\fR.

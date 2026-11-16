@@ -1,13 +1,31 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** October 21, 2026
+**Last Updated:** November 9, 2026
 
 ---
 
 ## Change History
 
 Section links in Rev. 3.2.6 and later point to the manual heading. Entries from Rev. 3.2.5 and earlier keep the section numbers that the manual used when they were written. The manual no longer numbers its headings.
+
+### Rev. 3.2.15 - November 9, 2026
+
+#### Changed: graceful power off is the only event raised from `cpu_shutdown_req`
+
+**Affected platforms:** SN6600_LD (HI193), SN6600 (HI186), SN6810_LD (HI183) and SN6800_LD (HI187, HI188) gain `events/graceful_pwr_off`, which N5100_LD, N5110_LD, N5112_LD (HI162, HI166, HI167, HI169, HI170, HI176, HI177), N6100_LD (HI180) and N6300_LD (HI185) already had. Those same platforms no longer create `events/power_button`. HI152 and HI159, whose front panel button is an mlxreg-hotplug interrupt, keep `events/power_button` unchanged.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| [Graceful Power Off Event](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#graceful-power-off-event) | Describes the full flow: the BMC sets `system/cpu_shutdown_req`, either from its front panel power button interrupt handler or on a `GracefulPwrOff` Redfish command, hw-mgmt polls the node and raises this event, and the NOS answers through `system/cpu_power_off_ready`. New Platforms row |
+| [Power Button Event (events)](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#power-button-event-events) | New Platforms row: the node exists only where the front panel button raises an interrupt towards the host (HI152, HI159). Where that interrupt is handled by the BMC, which then sets `cpu_shutdown_req`, a press is reported as `graceful_pwr_off` and this node is not created |
+| [CPU Shut Down Request](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#cpu-shut-down-request) | Direction corrected: the BMC raises the request towards the CPU, it is not a CPU initiated request. Access is read only on the host (`.mode = 0444` in every host driver), read/write on the BMC side, so the `echo 1 >` example is replaced by a `cat`. Handler renamed from `run_power_button_event` to `run_graceful_pwr_off_event`, and the platform list is complete instead of ending in "and others" |
+
+**Validation source:** `cpu_shutdown_req` and `graceful_pwr_off` in `nvsw_host_spc6_regs_io_data`, `nvsw_host_spc5_regs_io_data`, `nvsw_host_nvl6_regs_io_data` and the SN6600 driver, `mlxplat_mlxcpld_l1_switch_pwr_events_items_data` in the mlx-platform driver, `PLATFORM_CONFIG` in `usr/usr/bin/hw_management_platform_config.py`, `run_graceful_pwr_off_event` in `usr/usr/bin/hw_management_peripheral_updater.py`, `cpld_power_events` in `usr/usr/bin/hw-management-helpers.sh`.
+
+---
 
 ### Rev. 3.2.14 - October 21, 2026
 

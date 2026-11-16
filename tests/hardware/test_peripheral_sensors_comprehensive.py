@@ -10,7 +10,7 @@ These tests verify ALL peripheral monitoring functions on actual hardware:
 - ASIC chipup status monitoring (monitor_asic_chipup_status)
 - Fan monitoring (sync_fan)
 - Leakage sensor monitoring (run_cmd)
-- Power button events (run_power_button_event)
+- Graceful power off events (run_graceful_pwr_off_event)
 - BMC sensor monitoring via Redfish (redfish_get_sensor)
 - Module counter initialization (write_module_counter)
 
@@ -400,37 +400,37 @@ class PeripheralSensorsComprehensiveTest(unittest.TestCase):
         else:
             print("SKIP: No leakage sensor files found on this platform")
 
-    def test_04_power_button_event_monitoring(self):
+    def test_04_graceful_pwr_off_event_monitoring(self):
         """
-        Test 4: Power Button Event Monitoring (run_power_button_event)
+        Test 4: Graceful Power Off Event Monitoring (run_graceful_pwr_off_event)
 
-        Validates that peripheral_updater monitors power button events
+        Validates that peripheral_updater monitors graceful power off requests
         for graceful shutdown handling.
         """
         print("\n" + "-" * 70)
-        print("TEST 4: Power Button Event Monitoring")
+        print("TEST 4: Graceful Power Off Event Monitoring")
         print("-" * 70)
 
-        power_button_file = os.path.join(self.SYSTEM_PATH, "graceful_pwr_off")
+        graceful_pwr_off_file = os.path.join(self.SYSTEM_PATH, "graceful_pwr_off")
 
         # Start service
         print("Starting peripheral updater...")
         self._start_service(self.SERVICE_NAME)
         time.sleep(2)
 
-        # Check if power button monitoring is configured
-        # (file may not exist until button is pressed, but service should monitor it)
+        # Check if graceful power off monitoring is configured
+        # (file may not exist until requested, but service should monitor it)
         is_running = self._is_service_running(self.SERVICE_NAME)
-        self.assertTrue(is_running, "Service should be monitoring power button")
+        self.assertTrue(is_running, "Service should be monitoring graceful power off")
 
-        print(f"Power button file path: {power_button_file}")
-        if os.path.exists(power_button_file):
-            content = self._read_file_content(power_button_file)
-            print(f"Power button status: {content}")
+        print(f"Graceful power off file path: {graceful_pwr_off_file}")
+        if os.path.exists(graceful_pwr_off_file):
+            content = self._read_file_content(graceful_pwr_off_file)
+            print(f"Graceful power off status: {content}")
         else:
-            print("Power button file does not exist (normal - created on button press)")
+            print("Graceful power off file does not exist (normal - created on request)")
 
-        print("PASS: Power button event monitoring active")
+        print("PASS: Graceful power off event monitoring active")
 
     def test_05_bmc_sensor_monitoring_redfish(self):
         """
