@@ -13,6 +13,7 @@
 # - /var/run/hw-management/config/asics_init_done
 # - /var/run/hw-management/config/asic_num
 
+from import_isolation import temporary_sys_modules
 import os
 import sys
 import unittest
@@ -81,12 +82,12 @@ class TestChipupStatusFiles(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_peripheral_updater", peripheral_path)
         module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        sys.modules["hw_management_lib"] = MagicMock()
-        sys.modules["hw_management_redfish_client"] = MagicMock()
-        sys.modules["hw_management_platform_config"] = MagicMock()
-
-        spec.loader.exec_module(module)
+        with temporary_sys_modules({
+            "hw_management_lib": MagicMock(),
+            "hw_management_redfish_client": MagicMock(),
+            "hw_management_platform_config": MagicMock(),
+        }):
+            spec.loader.exec_module(module)
         return module
 
     def test_01_single_asic_chipup_completed(self):

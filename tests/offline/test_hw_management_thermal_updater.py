@@ -16,6 +16,7 @@
 # - Module temperature configuration present
 # - Consistency across platforms
 
+from import_isolation import temporary_sys_modules
 import os
 import sys
 import unittest
@@ -23,6 +24,22 @@ import re
 from collections import defaultdict
 import importlib.util
 from unittest.mock import MagicMock, patch, mock_open
+
+# Running this file as a script puts tests/offline/ on sys.path, not tests/.
+# Pytest adds tests/ itself. The helper lives in tests/, so add that directory
+# before importing it.
+_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
+
+
+def _exec_with_import_stubs(spec, module):
+    """Load thermal_updater against import stubs, then restore sys.modules."""
+    stubs = {"hw_management_lib": MagicMock()}
+    if "psutil" not in sys.modules:
+        stubs["psutil"] = MagicMock()
+    with temporary_sys_modules(stubs):
+        spec.loader.exec_module(module)
 
 
 class TestThermalConfigValidation(unittest.TestCase):
@@ -55,13 +72,7 @@ class TestThermalConfigValidation(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_thermal_updater", thermal_path)
         cls.thermal_module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        from unittest.mock import MagicMock
-        sys.modules["hw_management_lib"] = MagicMock()
-        if "psutil" not in sys.modules:
-            sys.modules["psutil"] = MagicMock()
-
-        spec.loader.exec_module(cls.thermal_module)
+        _exec_with_import_stubs(spec, cls.thermal_module)
         cls.thermal_config = cls.thermal_module.thermal_config
 
         print(f"[INFO] Loaded thermal_config with {len(cls.thermal_config)} platform entries")
@@ -461,10 +472,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             "hw_management_thermal_updater", thermal_path
         )
         cls.thermal_module = importlib.util.module_from_spec(spec)
-        sys.modules["hw_management_lib"] = MagicMock()
-        if "psutil" not in sys.modules:
-            sys.modules["psutil"] = MagicMock()
-        spec.loader.exec_module(cls.thermal_module)
+        _exec_with_import_stubs(spec, cls.thermal_module)
 
     def setUp(self):
         # Source initializes LOGGER = None at module scope and only sets it
@@ -687,10 +695,7 @@ class TestThermalMainLoop(unittest.TestCase):
             "hw_management_thermal_updater_mainloop", thermal_path
         )
         cls.thermal_module = importlib.util.module_from_spec(spec)
-        sys.modules["hw_management_lib"] = MagicMock()
-        if "psutil" not in sys.modules:
-            sys.modules["psutil"] = MagicMock()
-        spec.loader.exec_module(cls.thermal_module)
+        _exec_with_import_stubs(spec, cls.thermal_module)
 
     def _run_main(self, sleep_side_effect, update_side_effect=None):
         """Run main() for an unknown SKU and stop it from the sleep hook."""

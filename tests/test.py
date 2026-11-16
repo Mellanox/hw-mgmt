@@ -429,13 +429,25 @@ class TestRunner:
         try:
             # NOTE: capture_output=/text= require Python 3.7+; use PIPE and
             # universal_newlines for Python 3.6 compatibility.
+            # Standalone scripts are started with cwd inside a subdirectory, so
+            # tests/ is not on sys.path. Import formatters keep every import at
+            # the top of those scripts, which means they cannot insert tests/
+            # themselves before importing helpers such as import_isolation.
+            # PYTHONPATH is applied before the interpreter runs any of that code.
+            env = os.environ.copy()
+            tests_dir = str(self.tests_dir)
+            pythonpath = [p for p in env.get('PYTHONPATH', '').split(os.pathsep) if p]
+            if tests_dir not in pythonpath:
+                env['PYTHONPATH'] = os.pathsep.join([tests_dir] + pythonpath)
+
             result = subprocess.run(
                 cmd,
                 cwd=cwd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
+                env=env,
             )
 
             passed = result.returncode == 0

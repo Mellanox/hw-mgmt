@@ -7,12 +7,13 @@
 # ExecMainDurationUSec (main process runtime for oneshot/exited jobs; often
 # empty for long-running Type=simple services).
 #
-# Run on the BMC (or any host with these units installed). Requires systemctl.
+# Run on the BMC (or any host with these units installed).
+# Without systemctl the script skips and exits 0.
 #
 # Usage: hw-management-bmc-services-validation.sh [--no-discover]
 #   --no-discover  Use built-in unit list if list-unit-files finds nothing.
 #
-# Exit: 0 if no unit is failed; 1 if any unit is failed.
+# Exit: 0 if no unit is failed, or systemctl is absent; 1 if any unit is failed.
 
 set -u
 set +e
@@ -80,8 +81,9 @@ main()
 	done
 
 	if ! command -v systemctl >/dev/null 2>&1; then
-		echo "systemctl not found; this script is intended for systemd hosts." >&2
-		exit 2
+		echo "SKIPPED: systemctl not found — not a systemd host; skipping service checks"
+		echo "Summary: SKIP (systemctl absent)"
+		exit 0
 	fi
 
 	if [[ "$discover" -eq 1 ]]; then

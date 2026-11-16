@@ -592,6 +592,14 @@ class TestModuleTempPopulate(unittest.TestCase):
 class TestModuleHostManagementMode(unittest.TestCase):
     """Test suite for is_module_host_management_mode function"""
 
+    def setUp(self):
+        # LOGGER stays None until main(); the helper logs on every read.
+        self.logger_patch = patch.object(hw_management_thermal_updater, 'LOGGER', MagicMock())
+        self.logger_patch.start()
+
+    def tearDown(self):
+        self.logger_patch.stop()
+
     def test_fw_control_mode(self):
         """Test FW_CONTROL mode detection"""
         with patch('builtins.open', mock_open(read_data="0")):

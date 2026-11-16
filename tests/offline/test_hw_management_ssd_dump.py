@@ -829,13 +829,14 @@ def _stub_lstat_dev(ssd, monkeypatch, path, mode, extra=None, missing=None):
         for p in missing:
             missing_set.add(os.path.abspath(p))
 
-    def _lstat(p):
+    def _lstat(p, *args, **kwargs):
+        # Python 3.13 shutil calls lstat(path, dir_fd=...).
         ap = os.path.abspath(p)
         if ap in missing_set:
             raise OSError(2, "No such file or directory", p)
         if ap in nodes:
             return _dev_stat(nodes[ap])
-        return real_lstat(p)
+        return real_lstat(p, *args, **kwargs)
 
     monkeypatch.setattr(ssd.os, "lstat", _lstat)
 
@@ -2488,7 +2489,7 @@ class TestEndToEnd:
     ):
         cfg = tmp_path / "cfg.json"
         write_json(cfg, {"defaults": [], "vendors": {}})
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         out = capsys.readouterr()
         text = out.out + out.err
         assert rc != 0
@@ -2503,7 +2504,7 @@ class TestEndToEnd:
         obj = virtium_cfg("vtFA")
         obj["defaults"]["timeout_sec"] = 0
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "invalid config" in text
@@ -2517,7 +2518,7 @@ class TestEndToEnd:
         obj = virtium_cfg("vtFA")
         obj["defaults"]["timeout_sec"] = ssd.TIMEOUT_SEC_JSON_MAX + 1
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "invalid config" in text
@@ -2536,7 +2537,7 @@ class TestEndToEnd:
             ssd.TIMEOUT_SEC_JSON_MAX + 1
         )
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "models.VTPM24CEXI080-BM110006.timeout_sec" in text
@@ -2556,7 +2557,7 @@ class TestEndToEnd:
         obj = virtium_cfg("vtFA")
         del obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"]["tool"]
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "invalid config" in text
@@ -2569,7 +2570,7 @@ class TestEndToEnd:
         obj = virtium_cfg("vtFA")
         del obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"]["args"]
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "invalid config" in text
@@ -2582,7 +2583,7 @@ class TestEndToEnd:
         obj = virtium_cfg("vtFA")
         obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"]["args"] = None
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "invalid config" in text
@@ -2600,7 +2601,7 @@ class TestEndToEnd:
         monkeypatch.setattr(
             ssd, "list_nvme_controllers", lambda *_a, **_k: ["/dev/nvme0"]
         )
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "status: skipped" not in text
@@ -2616,7 +2617,7 @@ class TestEndToEnd:
             "args"
         ] = "{device}"
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "invalid config" in text
@@ -2662,7 +2663,7 @@ class TestEndToEnd:
         obj = virtium_cfg("vtFA")
         obj["defaults"]["timeout_sec"] = True
         write_json(cfg, obj)
-        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump")])
+        rc = ssd.main(["--verify", "--config", str(cfg), "--outdir", str(tmp_path / "ssd-dump"), "--device", "/dev/nvme0"])
         text = "".join(capsys.readouterr())
         assert rc != 0
         assert "timeout_sec" in text
@@ -3500,6 +3501,8 @@ class TestEndToEnd:
                 str(cfg),
                 "--outdir",
                 str(tmp_path / "ssd-dump"),
+                "--device",
+                "/dev/nvme0",
             ]
         )
         text = "".join(capsys.readouterr())

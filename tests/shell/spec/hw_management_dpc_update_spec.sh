@@ -4,10 +4,18 @@
 # SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 
 Describe 'VR DPC update entrypoint + read-vr JSON'
-  # Resolve repo root from this spec file location:
-  #   tests/shell/spec/ -> repo root is ../../..
-  spec_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+  # ShellSpec runs a translated copy, so BASH_SOURCE is not this spec.
+  # tests/shell/spec/ -> repo root is ../../..
+  _spec_file="${SHELLSPEC_SPECFILE:-${BASH_SOURCE[0]}}"
+  case "$_spec_file" in
+    /*) ;;
+    *) _spec_file="${SHELLSPEC_PROJECT_ROOT:-$(pwd)}/${_spec_file}" ;;
+  esac
+  spec_dir="$(cd "$(dirname "$_spec_file")" >/dev/null 2>&1 && pwd -P)"
   repo_root="$(cd "${spec_dir}/../../.." >/dev/null 2>&1 && pwd -P)"
+  system_read_vr_missing() {
+    [ ! -x /usr/bin/hw-management-read-vr-model-version.sh ]
+  }
 
   dpc_update="${repo_root}/usr/usr/bin/hw-management-dpc-update.sh"
   read_vr="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
@@ -26,7 +34,11 @@ EOF
 #!/bin/sh
 exit 0
 EOF
-    chmod +x "${TEST_BINDIR}/i2cget" "${TEST_BINDIR}/i2cset"
+    cat > "${TEST_BINDIR}/i2ctransfer" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+    chmod +x "${TEST_BINDIR}/i2cget" "${TEST_BINDIR}/i2cset" "${TEST_BINDIR}/i2ctransfer"
 
     # Single-line devtree content (space-separated). Use an unsupported device type to avoid I2C reads.
     TEST_DEVTREE="${TEST_TMPDIR}/devtree"
@@ -48,7 +60,8 @@ EOF
       The output should include "\"voltmon_name\":\"voltmon-test0\""
       The output should include "\"pmic_index\""
       The output should include "\"device_name\":\"tps53679\""
-      The output should include "\"bus\":\"X\""
+      # Unsupported devices do not compute bus+i2c_bus_offset, so bus is empty.
+      The output should include "\"bus\":\"\""
       The output should include "\"address\":\"0x40\""
       The output should include "\"model\":\"Not supported\""
       The output should include "\"revision_id\":\"Not supported\""
@@ -98,7 +111,7 @@ EOF
 
     It 'accepts --verify before tar path'
       build_test_pkg
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
+      Skip if "requires /usr/bin/hw-management-read-vr-model-version.sh" system_read_vr_missing
       When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' --verify '${TAR_PATH}'"
       The status should be success
       The output should include "VERIFY PASSED."
@@ -106,7 +119,7 @@ EOF
 
     It 'accepts --verify after tar path'
       build_test_pkg
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
+      Skip if "requires /usr/bin/hw-management-read-vr-model-version.sh" system_read_vr_missing
       When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' '${TAR_PATH}' --verify"
       The status should be success
       The output should include "VERIFY PASSED."
@@ -115,7 +128,7 @@ EOF
 
   Describe 'debug output separation'
     It 'writes debug logs to stderr without contaminating JSON stdout'
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
+      Skip if "requires /usr/bin/hw-management-read-vr-model-version.sh" system_read_vr_missing
       When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEBUG=1 bash '${dpc_update}' --show --json"
       The status should be success
       The output should start with "["
