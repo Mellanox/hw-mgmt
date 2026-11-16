@@ -76,6 +76,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/modules.d
 mkdir -p $RPM_BUILD_ROOT/etc/modules-load.d
 mkdir -p $RPM_BUILD_ROOT/etc/modprobe.d
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-thermal
+mkdir -p $RPM_BUILD_ROOT/etc/hw-management-cfg/HI190
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 mkdir -p $RPM_BUILD_ROOT/lib/udev/rules.d
@@ -109,6 +110,7 @@ install -m 0644 usr/etc/hw-management-sensors/sn3750sx_sensors.conf  $RPM_BUILD_
 install -m 0644 usr/etc/hw-management-sensors/sn5600_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5600_sensors.conf
 install -m 0644 usr/etc/hw-management-sensors/sn5640_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5640_sensors.conf
 install -m 0644 usr/etc/hw-management-sensors/sn5640_sensors_6.1.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/sn5640_sensors_6.1.conf
+install -m 0644 usr/etc/hw-management-sensors/q3300ld_sensors.conf  $RPM_BUILD_ROOT/etc/hw-management-sensors/q3300ld_sensors.conf
 
 install -m 0644 usr/etc/hw-management-thermal/tc_config_default.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_default.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_mqm8700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_mqm8700.json
@@ -126,6 +128,7 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600C.json $RPM_BUILD
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4600.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn4700.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn5600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn5600.json
+install -m 0644 usr/etc/hw-management-cfg/HI190/devtree.json $RPM_BUILD_ROOT/etc/hw-management-cfg/HI190/devtree.json
 install -m 0644 usr/etc/modprobe.d/hw-management.conf $RPM_BUILD_ROOT/etc/modprobe.d/hw-management.conf
 install -m 0644 usr/etc/modules-load.d/05-hw-management-modules.conf $RPM_BUILD_ROOT/etc/modules-load.d/05-hw-management-modules.conf
 
@@ -201,6 +204,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 #%dir %attr(0755, root, root) "/etc"
 %dir %attr(0755, root, root) "/etc/hw-management-sensors"
 %dir %attr(0755, root, root) "/etc/hw-management-thermal"
+%dir %attr(0755, root, root) "/etc/hw-management-cfg"
+%dir %attr(0755, root, root) "/etc/hw-management-cfg/HI190"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/e3597_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_rev1_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_sensors.conf"
@@ -226,6 +231,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-sensors/sn5600_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/sn5640_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/sn5640_sensors_6.1.conf"
+%config %attr(0644, root, root) "/etc/hw-management-sensors/q3300ld_sensors.conf"
 
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_default.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_mqm8700.json"
@@ -243,6 +249,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn4600.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn4700.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn5600.json"
+%config %attr(0644, root, root) "/etc/hw-management-cfg/HI190/devtree.json"
 
 #%dir %attr(0755, root, root) "/etc/modprobe.d"
 %config %attr(0644, root, root) "/etc/modprobe.d/hw-management.conf"

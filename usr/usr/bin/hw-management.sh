@@ -100,6 +100,7 @@ sn58xx_reset_attr_num=15
 sn66xx_reset_attr_num=14
 sn6600_reset_attr_num=13
 sn68xx_reset_attr_num=14
+q3300_reset_attr_num=14
 n61xx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
@@ -643,6 +644,7 @@ sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39
 sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
 sn6600_named_busses=(asic1 5 pwr 4 vr1 16 vr2 17 vpd 1 cpu-vr 6)
 sn68xxld_named_busses=(asic1 4 pwr1 6 vr1 15 vpd 1 cpu-vr 5)
+q3300ld_named_busses=(asic1 4 asic2 20 asic3 36 asic4 52 pwr1 6 pwr2 7 vr1 7 vr2 23 vr3 39 vr4 55 vpd 1 cpu-vr 5)
 
 ACTION=$1
 print_function_call "$0" "main" "ACTION=$ACTION $2 $3"
@@ -3033,6 +3035,44 @@ sn68xxld_specific()
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
+q3300ld_specific()
+{
+	case $sku in
+	# Q3300_LD
+	HI190)
+		cpld_num=4
+		leakage_count=0
+		asic_i2c_buses=(4 20 36 52)
+		hotplug_pdbs=2
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	lm_sensors_config="$lm_sensors_configs_path/q3300ld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	echo 5.333 > $config_path/pdb_hotswap_scale
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	pwr_events_count=1
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	named_busses+=(${q3300ld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${cpld_power_events[@]}" > "$power_events_file"
+	echo "$q3300_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
 system_cleanup_specific()
 {
 	case $board_type in
@@ -3141,6 +3181,9 @@ check_system_internal()
 			;;
 		VMOD0027)
 			sn68xxld_specific
+			;;
+		VMOD0028)
+			q3300ld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3662,7 +3705,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178|HI179)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178|HI179|HI190)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -3770,6 +3813,19 @@ set_asic_pci_id()
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
+	HI190)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
 		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -4031,6 +4087,17 @@ pre_devtr_init()
 	VMOD0025)
 		case $sku in
 		HI193)
+			echo 2 >  "$config_path"/pwr_brd_num
+			echo 1 >  "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		esac
+		;;
+	VMOD0028)
+		case $sku in
+		HI190)
 			echo 2 >  "$config_path"/pwr_brd_num
 			echo 1 >  "$config_path"/pwr_brd_bus_offset
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num

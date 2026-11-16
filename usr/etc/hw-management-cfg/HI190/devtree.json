@@ -1,0 +1,196 @@
+{
+    "swb": [
+        {
+            "key": "mp29816_0",
+            "spec": "mp29816 0x66 7 voltmon1"
+        },
+        {
+            "key": "mp29816_1",
+            "spec": "mp29816 0x68 7 voltmon2"
+        },
+        {
+            "key": "mp29816_2",
+            "spec": "mp29816 0x6c 7 voltmon3"
+        },
+        {
+            "key": "mp29816_3",
+            "spec": "mp29816 0x66 23 voltmon4"
+        },
+        {
+            "key": "mp29816_4",
+            "spec": "mp29816 0x68 23 voltmon5"
+        },
+        {
+            "key": "mp29816_5",
+            "spec": "mp29816 0x6c 23 voltmon6"
+        },
+        {
+            "key": "mp29816_6",
+            "spec": "mp29816 0x66 39 voltmon7"
+        },
+        {
+            "key": "mp29816_7",
+            "spec": "mp29816 0x68 39 voltmon8"
+        },
+        {
+            "key": "mp29816_8",
+            "spec": "mp29816 0x6c 39 voltmon9"
+        },
+        {
+            "key": "mp29816_9",
+            "spec": "mp29816 0x66 55 voltmon10"
+        },
+        {
+            "key": "mp29816_10",
+            "spec": "mp29816 0x68 55 voltmon11"
+        },
+        {
+            "key": "mp29816_11",
+            "spec": "mp29816 0x6c 55 voltmon12"
+        },
+        {
+            "key": "xdpe1a2g7_0",
+            "spec": "xdpe1a2g7b 0x66 7 voltmon1"
+        },
+        {
+            "key": "xdpe1a2g7_1",
+            "spec": "xdpe1a2g7b 0x68 7 voltmon2"
+        },
+        {
+            "key": "xdpe1a2g7_2",
+            "spec": "xdpe1a2g7b 0x6c 7 voltmon3"
+        },
+        {
+            "key": "xdpe1a2g7_3",
+            "spec": "xdpe1a2g7b 0x66 23 voltmon4"
+        },
+        {
+            "key": "xdpe1a2g7_4",
+            "spec": "xdpe1a2g7b 0x68 23 voltmon5"
+        },
+        {
+            "key": "xdpe1a2g7_5",
+            "spec": "xdpe1a2g7b 0x6c 23 voltmon6"
+        },
+        {
+            "key": "xdpe1a2g7_6",
+            "spec": "xdpe1a2g7b 0x66 39 voltmon7"
+        },
+        {
+            "key": "xdpe1a2g7_7",
+            "spec": "xdpe1a2g7b 0x68 39 voltmon8"
+        },
+        {
+            "key": "xdpe1a2g7_8",
+            "spec": "xdpe1a2g7b 0x6c 39 voltmon9"
+        },
+        {
+            "key": "xdpe1a2g7_9",
+            "spec": "xdpe1a2g7b 0x66 55 voltmon10"
+        },
+        {
+            "key": "xdpe1a2g7_10",
+            "spec": "xdpe1a2g7b 0x68 55 voltmon11"
+        },
+        {
+            "key": "xdpe1a2g7_11",
+            "spec": "xdpe1a2g7b 0x6c 55 voltmon12"
+        },
+        {
+            "key": "stts751_0",
+            "spec": "stts751 0x4a 11 ocxo_temp1"
+        },
+        {
+            "key": "stts751_1",
+            "spec": "stts751 0x4a 27 ocxo_temp2"
+        },
+        {
+            "key": "stts751_2",
+            "spec": "stts751 0x4a 43 ocxo_temp3"
+        },
+        {
+            "key": "stts751_3",
+            "spec": "stts751 0x4a 59 ocxo_temp4"
+        },
+        {
+            "key": "adt75_0",
+            "spec": "adt75 0x4a 11 ocxo_temp1"
+        },
+        {
+            "key": "adt75_1",
+            "spec": "adt75 0x4a 27 ocxo_temp2"
+        },
+        {
+            "key": "adt75_2",
+            "spec": "adt75 0x4a 43 ocxo_temp3"
+        },
+        {
+            "key": "adt75_3",
+            "spec": "adt75 0x4a 59 ocxo_temp4"
+        },
+        {
+            "key": "tmp102_0",
+            "spec": "tmp102 0x4a 11 ocxo_temp1"
+        },
+        {
+            "key": "tmp102_1",
+            "spec": "tmp102 0x4a 27 ocxo_temp2"
+        },
+        {
+            "key": "tmp102_2",
+            "spec": "tmp102 0x4a 43 ocxo_temp3"
+        },
+        {
+            "key": "tmp102_3",
+            "spec": "tmp102 0x4a 59 ocxo_temp4"
+        },
+        {
+            "key": "24c512_0",
+            "spec": "24c512 0x51 24 swb_info"
+        }
+    ],
+    "pwr": [
+        {
+            "key": "raa228004_0",
+            "spec": "raa228004 0x60 6 pdb_pwr_conv1"
+        },
+        {
+            "key": "mp29502_0",
+            "spec": "mp29502 0x2e 6 pdb_pwr_conv1"
+        },
+        {
+            "key": "lm5066i_0",
+            "spec": "lm5066i 0x12 6 pdb_hotswap1"
+        },
+        {
+            "key": "tmp451_0",
+            "spec": "tmp451 0x4c 6 pdb_temp1"
+        },
+        {
+            "key": "tmp411_0",
+            "spec": "tmp411 0x4c 6 pdb_temp1"
+        }
+    ],
+    "platform": [
+        {
+            "key": "24c512_1",
+            "spec": "24c512 0x51 1 vpd_info"
+        },
+        {
+            "key": "spd5118_0",
+            "spec": "spd5118 0x52 10 somdimm_temp1"
+        },
+        {
+            "key": "spd5118_1",
+            "spec": "spd5118 0x53 10 somdimm_temp2"
+        },
+        {
+            "key": "mp2845_0",
+            "spec": "mp2845 0x69 5 comex_voltmon1"
+        },
+        {
+            "key": "mp2975_1",
+            "spec": "mp2975 0x6a 5 comex_voltmon2"
+        }
+    ]
+}
