@@ -61,6 +61,11 @@ if check_simx && [ "$product_sku" == "HI193" ]; then
 	exit 0
 fi
 
+#TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI194" ]; then
+	echo "N7200_LD emulation, exiting"
+	exit 0
+fi
 
 #TEMPORARY hw-management mockup values for simx
 if check_simx && [ "$product_sku" == "HI199" ]; then
