@@ -1,0 +1,98 @@
+From 32bd632fbe28fbd02ab806bf9ccd182cf8e12081 Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Mon, 16 Nov 2026 16:05:47 +0200
+Subject: [PATCH] hwmon: (pmbus/mp2975) Use PMBUS_FORCE_PAGE_CHANGE
+
+The voltage reference, from which the vout fault limits are derived, is
+read on page 3. In a single rail configuration the driver writes PAGE
+directly for it, since the PMBus core does not change the page of a chip
+with a single page. If changing back to the rail page fails, the core
+reads page 3 registers in place of the rail registers, until the next
+voltage reference read changes the page again.
+
+Set PMBUS_FORCE_PAGE_CHANGE, and change the page with pmbus_set_page()
+in both configurations. The page change is then read back, and a failed
+change is repeated on the next access, as for two rails.
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+
+Upstream-Status: Pending
+---
+ drivers/hwmon/pmbus/mp2975.c | 29 +++++++++--------------------
+ 1 file changed, 9 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/hwmon/pmbus/mp2975.c b/drivers/hwmon/pmbus/mp2975.c
+index 9b42c81..afba003 100644
+--- a/drivers/hwmon/pmbus/mp2975.c
++++ b/drivers/hwmon/pmbus/mp2975.c
+@@ -12,6 +12,7 @@
+ #include <linux/kernel.h>
+ #include <linux/mod_devicetable.h>
+ #include <linux/module.h>
++#include <linux/pmbus.h>
+ 
+ #include "pmbus.h"
+ 
+@@ -107,6 +108,7 @@ struct mp2975_driver_info {
+ 
+ struct mp2975_data {
+ 	struct pmbus_driver_info info;
++	struct pmbus_platform_data pdata;
+ 	enum chips chip_id;
+ 	int vout_scale;
+ 	int max_phases[MP2975_PAGE_NUM];
+@@ -462,37 +464,20 @@ static int mp2973_write_word_data(struct i2c_client *client, int page,
+ 	return pmbus_write_word_data(client, 0, PMBUS_SMBALERT_MASK, ret);
+ }
+ 
+-/*
+- * Let the PMBus core change the page, so that the page it caches matches the
+- * device. The core does not issue PAGE commands for a single rail
+- * configuration, thus change the page directly then.
+- */
+-static int
+-mp2975_page_set(struct i2c_client *client, struct mp2975_data *data, int page)
+-{
+-	if (data->info.pages > 1)
+-		return pmbus_set_page(client, page, 0xff);
+-
+-	return i2c_smbus_write_byte_data(client, PMBUS_PAGE, page);
+-}
+-
+-/*
+- * Voltage reference is available on page 3 only. The callers read a register
+- * of the rail through the core first, thus the core caches the rail page.
+- */
++/* Voltage reference is available on page 3 only. */
+ static int
+ mp2975_vref_get(struct i2c_client *client, struct mp2975_data *data, int page)
+ {
+ 	int ret, vref;
+ 
+-	ret = mp2975_page_set(client, data, 3);
++	ret = pmbus_set_page(client, 3, 0xff);
+ 	if (ret < 0)
+ 		return ret;
+ 
+ 	vref = i2c_smbus_read_word_data(client, page ? MP2975_MFR_READ_VREF_R2 :
+ 						       MP2975_MFR_READ_VREF_R1);
+ 
+-	ret = mp2975_page_set(client, data, page);
++	ret = pmbus_set_page(client, page, 0xff);
+ 	if (ret < 0)
+ 		return ret;
+ 
+@@ -1105,6 +1090,10 @@ static int mp2975_probe(struct i2c_client *client)
+ 	if (ret)
+ 		return ret;
+ 
++	/* Page 3 is accessed in a single rail configuration as well. */
++	data->pdata.flags = PMBUS_FORCE_PAGE_CHANGE;
++	client->dev.platform_data = &data->pdata;
++
+ 	ret = pmbus_do_probe(client, info);
+ 	if (ret)
+ 		return ret;
+-- 
+2.34.1
+

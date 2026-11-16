@@ -1,0 +1,54 @@
+From 2da1b5597ad214a7b529272e4af81f9be79062c2 Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Mon, 16 Nov 2026 18:49:23 +0200
+Subject: [PATCH] hwmon: (pmbus/core) Invalidate cached page and phase on
+ failed change
+
+pmbus_set_page() writes PAGE, and reads it back to verify the change. If
+the write succeeds, while the read-back fails or returns a different
+page, it returns an error without updating the cached page. The chip can
+then be on the requested page, while the core still caches the previous
+one. The next access to the previous page skips the PAGE command, and
+accesses the chip on the wrong page, until a different page is
+requested.
+
+The same applies to a PAGE or PHASE write which returns an error after
+the chip has accepted it, such as on a late NAK, a PEC error or an
+adapter timeout.
+
+Invalidate the cached page and phase before changing them, and set them
+only once the change succeeded, so that PAGE and PHASE are sent again on
+the next access after a failed change.
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ drivers/hwmon/pmbus/pmbus_core.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/hwmon/pmbus/pmbus_core.c b/drivers/hwmon/pmbus/pmbus_core.c
+index 12482c1..f3b2aa8 100644
+--- a/drivers/hwmon/pmbus/pmbus_core.c
++++ b/drivers/hwmon/pmbus/pmbus_core.c
+@@ -169,6 +169,9 @@ int pmbus_set_page(struct i2c_client *client, int page, int phase)
+ 
+ 	if (!(data->info->func[page] & PMBUS_PAGE_VIRTUAL) &&
+ 	    data->info->pages > 1 && page != data->currpage) {
++		/* A failed page change can leave the chip on any page */
++		data->currpage = -1;
++
+ 		rv = i2c_smbus_write_byte_data(client, PMBUS_PAGE, page);
+ 		if (rv < 0)
+ 			return rv;
+@@ -184,6 +187,9 @@ int pmbus_set_page(struct i2c_client *client, int page, int phase)
+ 
+ 	if (data->info->phases[page] && data->currphase != phase &&
+ 	    !(data->info->func[page] & PMBUS_PHASE_VIRTUAL)) {
++		/* A failed phase change can leave the chip on any phase */
++		data->currphase = -1;
++
+ 		rv = i2c_smbus_write_byte_data(client, PMBUS_PHASE,
+ 					       phase);
+ 		if (rv)
+-- 
+2.34.1
+

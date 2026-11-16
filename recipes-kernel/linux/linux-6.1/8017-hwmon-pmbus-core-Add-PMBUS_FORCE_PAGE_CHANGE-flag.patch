@@ -1,0 +1,103 @@
+From 7af4fb7a69ca48de76719ff1a1241de40f5668f0 Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Mon, 16 Nov 2026 16:05:47 +0200
+Subject: [PATCH] hwmon: (pmbus/core) Add PMBUS_FORCE_PAGE_CHANGE flag
+
+The PMBus core driver only changes the page of chips with more than one
+page, and neither writes nor verifies the page of a chip with a single
+page. Some chips with a single page provide manufacturer specific
+registers on additional pages. Their drivers write PAGE directly to
+access them, and have to change back to the page the core expects on
+their own. If changing back fails, the core accesses the chip on the
+wrong page.
+
+Add the PMBUS_FORCE_PAGE_CHANGE flag, which makes pmbus_set_page()
+change the page of a chip with a single page as well, so that its driver
+can access the additional pages with pmbus_set_page(). The page change
+is then read back, and a failed page change is repeated on the next
+access, as for chips with multiple pages.
+
+While at it, drop the outdated number of flags from the platform data
+description in the documentation.
+
+Suggested-by: Guenter Roeck <linux@roeck-us.net>
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ Documentation/hwmon/pmbus-core.rst | 12 +++++++++++-
+ drivers/hwmon/pmbus/pmbus_core.c   |  3 ++-
+ include/linux/pmbus.h              | 11 +++++++++++
+ 3 files changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/hwmon/pmbus-core.rst b/Documentation/hwmon/pmbus-core.rst
+index 84c5a4e..8184a05 100644
+--- a/Documentation/hwmon/pmbus-core.rst
++++ b/Documentation/hwmon/pmbus-core.rst
+@@ -298,7 +298,7 @@ PMBus driver platform data
+ ==========================
+ 
+ PMBus platform data is defined in include/linux/pmbus.h. Platform data
+-currently provides a flags field with four bits used::
++currently provides a flags field with the following bits::
+ 
+ 	#define PMBUS_SKIP_STATUS_CHECK			BIT(0)
+ 
+@@ -308,6 +308,8 @@ currently provides a flags field with four bits used::
+ 
+ 	#define PMBUS_READ_STATUS_AFTER_FAILED_CHECK	BIT(3)
+ 
++	#define PMBUS_FORCE_PAGE_CHANGE			BIT(8)
++
+ 	struct pmbus_platform_data {
+ 		u32 flags;              /* Device specific flags */
+ 
+@@ -358,3 +360,11 @@ This can be done by reading a known register. By setting this flag the
+ driver will try to read the STATUS register after each failed
+ register check. This read may fail, but it will put the chip into a
+ known state.
++
++PMBUS_FORCE_PAGE_CHANGE
++
++The PMBus core driver only changes the page of chips with more than one
++page. Some chips with a single page provide manufacturer specific registers
++on additional pages. Set this flag so that the PMBus core driver changes the
++page of such chips as well, which lets the chip driver access the additional
++pages with pmbus_set_page().
+diff --git a/drivers/hwmon/pmbus/pmbus_core.c b/drivers/hwmon/pmbus/pmbus_core.c
+index f3b2aa8..3bfa7d2 100644
+--- a/drivers/hwmon/pmbus/pmbus_core.c
++++ b/drivers/hwmon/pmbus/pmbus_core.c
+@@ -168,7 +168,8 @@ int pmbus_set_page(struct i2c_client *client, int page, int phase)
+ 		return 0;
+ 
+ 	if (!(data->info->func[page] & PMBUS_PAGE_VIRTUAL) &&
+-	    data->info->pages > 1 && page != data->currpage) {
++	    (data->info->pages > 1 || (data->flags & PMBUS_FORCE_PAGE_CHANGE)) &&
++	    page != data->currpage) {
+ 		/* A failed page change can leave the chip on any page */
+ 		data->currpage = -1;
+ 
+diff --git a/include/linux/pmbus.h b/include/linux/pmbus.h
+index fa9f081..fbb70a9 100644
+--- a/include/linux/pmbus.h
++++ b/include/linux/pmbus.h
+@@ -73,6 +73,17 @@
+  */
+ #define PMBUS_USE_COEFFICIENTS_CMD		BIT(5)
+ 
++/*
++ * PMBUS_FORCE_PAGE_CHANGE
++ *
++ * The PMBus core driver only changes the page of chips with more than one
++ * page. Some chips with a single page provide manufacturer specific registers
++ * on additional pages. Set this flag so that the PMBus core driver changes the
++ * page of such chips as well, which lets the chip driver access the additional
++ * pages with pmbus_set_page().
++ */
++#define PMBUS_FORCE_PAGE_CHANGE			BIT(8)
++
+ struct pmbus_platform_data {
+ 	u32 flags;		/* Device specific flags */
+ 
+-- 
+2.34.1
+

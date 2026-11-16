@@ -757,6 +757,9 @@ Kernel-6.1
 |8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
 |8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
 |8015-hwmon-pmbus-mp2975-Get-vout-fault-limits-dynamically.patch  | 00944852275e       | Bugfix upstream                          |            | Fix false vout over-voltage report (SN5600)    |
+|8016-hwmon-pmbus-core-Invalidate-cached-page-and-phase-on.patch  |                    | Bugfix pending                           |            | Resend PAGE/PHASE after failed change          |
+|8017-hwmon-pmbus-core-Add-PMBUS_FORCE_PAGE_CHANGE-flag.patch     |                    | Feature pending                          |            | Single page chip page changes (mp2975)         |
+|8018-hwmon-pmbus-mp2975-Use-PMBUS_FORCE_PAGE_CHANGE.patch        |                    | Feature pending                          |            | Single page chip page changes (mp2975)         |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
@@ -880,6 +883,9 @@ Kernel-6.12
 |8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
 |8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
 |8015-hwmon-pmbus-mp2975-Get-vout-fault-limits-dynamically.patch  | 00944852275e       | Bugfix upstream                          |            | Fix false vout over-voltage report (SN5600)    |
+|8016-hwmon-pmbus-core-Invalidate-cached-page-and-phase-on.patch  |                    | Bugfix pending                           |            | Resend PAGE/PHASE after failed change          |
+|8017-hwmon-pmbus-core-Add-PMBUS_FORCE_PAGE_CHANGE-flag.patch     |                    | Feature pending                          |            | Single page chip page changes (mp2975)         |
+|8018-hwmon-pmbus-mp2975-Use-PMBUS_FORCE_PAGE_CHANGE.patch        |                    | Feature pending                          |            | Single page chip page changes (mp2975)         |
 |9001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Rejected                                 |            | Add dedicated match for QMB8700                |
 |9002-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9003-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
