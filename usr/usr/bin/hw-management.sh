@@ -4403,7 +4403,7 @@ case $ACTION in
 		# TEMPORARY hw-management mockup values for SIMX
 		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
 						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
-						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
+						   "$sku" == "HI200" -o "$sku" == "HI201" ] && ! check_simx_normal_init; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
@@ -4523,7 +4523,7 @@ case $ACTION in
 		# TEMPORARY hw-management mockup values for SIMX
 		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
 						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
-						   "$sku" == "HI200" -o "$sku" == "HI201" ]; then
+						   "$sku" == "HI200" -o "$sku" == "HI201" ] && ! check_simx_normal_init; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0

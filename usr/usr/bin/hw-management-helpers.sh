@@ -348,6 +348,25 @@ check_simx()
 	fi
 }
 
+# SimX boards that share the SKU of a mockup platform, but are fully emulated
+# and use the normal init.
+check_simx_normal_init()
+{
+	local id
+
+	if [ -f "$sku_file" ] && [ -f "$pn_file" ]; then
+		id="$(< $sku_file):$(< $pn_file)"
+	fi
+	case $id in
+		HI194:N7210_LD)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
 # This function checks if ThermalControl supports current platform
 # Returns 1 if TC is supported, 0 otherwise.
 check_tc_is_supported()
