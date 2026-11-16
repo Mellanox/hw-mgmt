@@ -1226,35 +1226,101 @@ def _root_only_writable(path, kind):
     return st
 
 
-def check_tool_dir(path):
-    """The tool and the directory that holds it must be root-only.
-
-    PATH is the caller's. A user can prepend a directory they can write,
-    such as /var/tmp, and drop a file or a symlink there with the vendor
-    tool's basename. A symlink in a root-owned directory can also point
-    at a file the user can change. The collector runs as root, so either
-    file would run as root. Refuse the PATH directory, the resolved
-    file, and that file's directory unless root owns them and neither
-    group nor other has the write bit. A vendor symlink whose target is
-    also root-only still passes.
-    """
-    directory = os.path.dirname(os.path.abspath(path))
+def _root_only_dir(directory):
+    """The directory that contains this path component."""
     st = _root_only_writable(directory, "directory")
     if not stat.S_ISDIR(st.st_mode):
         raise DumpError(
             "SSD dump tool directory must be writable by root only: %s"
             % directory
         )
-    real = os.path.realpath(path)
-    real_dir = os.path.dirname(real)
-    if os.path.abspath(real_dir) != os.path.abspath(directory):
-        st = _root_only_writable(real_dir, "directory")
-        if not stat.S_ISDIR(st.st_mode):
+
+
+def _link_components(target):
+    """Path pieces of a symlink target, without empty or '.' parts."""
+    return [part for part in target.split(os.sep) if part and part != "."]
+
+
+def _raise_tool_link(path):
+    raise DumpError(
+        "SSD dump tool link must be writable by root only: %s" % path
+    )
+
+
+def _follow_tool_link(directory, target, hops):
+    """Resolve a symlink target one component at a time.
+
+    normpath() drops '..' before it follows a directory link, so
+    current/../bin/dump becomes vendor/bin/dump when current points at
+    releases/v2. The kernel applies '..' to the directory that component
+    resolved to. Do the same, and return that path. The same link may
+    occur again later in the path; that is not a loop. hops counts
+    expansions and stops the walk after 40. The caller executes the
+    returned path, so a later change to the link is not followed.
+    """
+    resolved = os.sep if os.path.isabs(target) else directory
+    parts = _link_components(target)
+    while parts:
+        comp = parts.pop(0)
+        if comp == "..":
+            if resolved != os.sep:
+                resolved = os.path.dirname(resolved)
+            continue
+        nxt = os.path.join(resolved, comp)
+        try:
+            lst = os.lstat(nxt)
+        except OSError as exc:
             raise DumpError(
-                "SSD dump tool directory must be writable by root only: %s"
-                % real_dir
+                "SSD dump tool file not usable: %s (%s)" % (nxt, exc)
             )
-    _root_only_writable(real, "file")
+        if stat.S_ISLNK(lst.st_mode):
+            _root_only_dir(resolved)
+            hops[0] += 1
+            if hops[0] > 40:
+                _raise_tool_link(nxt)
+            inner = os.readlink(nxt)
+            if os.path.isabs(inner):
+                resolved = os.sep
+            parts = _link_components(inner) + parts
+            continue
+        if parts and not stat.S_ISDIR(lst.st_mode):
+            raise DumpError(
+                "SSD dump tool file not usable: %s" % nxt
+            )
+        resolved = nxt
+    return resolved
+
+
+def check_tool_dir(path):
+    """Return the path to execute. Every step must be root-only.
+
+    PATH is the caller's. A user can prepend a directory they can write,
+    such as /var/tmp, and drop a file or a symlink there. The directory
+    named in PATH can be a link through a directory the user can
+    replace. The entry can also contain '..' after a directory link.
+    Walk every component of the starting path, refuse a directory that
+    is not root-only, and return the final file so the collector does
+    not follow the links a second time. '..' is applied after the
+    directory link it follows. A vendor symlink whose whole chain is
+    root-only still passes.
+    """
+    hops = [0]
+    if os.path.isabs(path):
+        current = _follow_tool_link(os.sep, path, hops)
+    else:
+        current = _follow_tool_link(os.getcwd(), path, hops)
+    directory = os.path.dirname(current) or os.sep
+    _root_only_dir(directory)
+    try:
+        lst = os.lstat(current)
+    except OSError as exc:
+        raise DumpError(
+            "SSD dump tool file not usable: %s (%s)" % (current, exc)
+        )
+    if stat.S_ISLNK(lst.st_mode):
+        _raise_tool_link(current)
+    _root_only_writable(current, "file")
+    return current
 
 
 def find_tool(name):
@@ -1277,8 +1343,7 @@ def find_tool(name):
         if not os.path.isfile(p):
             continue
         if os.access(p, os.X_OK):
-            check_tool_dir(p)
-            return p
+            return check_tool_dir(p)
         if found_nonexec is None:
             found_nonexec = p
     if found_nonexec:
