@@ -1,0 +1,44 @@
+From 41f0200c718cf1826959a082a5374838c15bd242 Mon Sep 17 00:00:00 2001
+From: Nicolin Chen <nicolinc@nvidia.com>
+Date: Thu, 14 Aug 2025 12:30:38 -0700
+Subject: [PATCH 0307/0797] iommu/tegra241-cmdqv: Fix missing cpu_to_le64 at lvcmdq_err_map
+
+Sparse reported a warning:
+drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c:305:47:
+	sparse:     expected restricted __le64
+	sparse:     got unsigned long long
+
+Add cpu_to_le64() to fix that.
+
+Reported-by: kernel test robot <lkp@intel.com>
+Closes: https://lore.kernel.org/oe-kbuild-all/202508142105.Jb5Smjsg-lkp@intel.com/
+Suggested-by: Pranjal Shrivastava <praan@google.com>
+Signed-off-by: Nicolin Chen <nicolinc@nvidia.com>
+Link: https://lore.kernel.org/r/20250814193039.2265813-1-nicolinc@nvidia.com
+Signed-off-by: Joerg Roedel <joerg.roedel@amd.com>
+---
+ drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+index be1aaaf8cd17c8..378104cd395e59 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
++++ b/drivers/iommu/arm/arm-smmu-v3/tegra241-cmdqv.c
+@@ -301,9 +301,11 @@ static void tegra241_vintf_user_handle_error(struct tegra241_vintf *vintf)
+ 	struct iommu_vevent_tegra241_cmdqv vevent_data;
+ 	int i;
+ 
+-	for (i = 0; i < LVCMDQ_ERR_MAP_NUM_64; i++)
+-		vevent_data.lvcmdq_err_map[i] =
+-			readq_relaxed(REG_VINTF(vintf, LVCMDQ_ERR_MAP_64(i)));
++	for (i = 0; i < LVCMDQ_ERR_MAP_NUM_64; i++) {
++		u64 err = readq_relaxed(REG_VINTF(vintf, LVCMDQ_ERR_MAP_64(i)));
++
++		vevent_data.lvcmdq_err_map[i] = cpu_to_le64(err);
++	}
+ 
+ 	iommufd_viommu_report_event(viommu, IOMMU_VEVENTQ_TYPE_TEGRA241_CMDQV,
+ 				    &vevent_data, sizeof(vevent_data));
+-- 
+cgit 1.3.1-korg
+

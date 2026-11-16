@@ -1,0 +1,56 @@
+From 6369fd1d0e69b17664b553bd45c3d03d1cdcd214 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Thu, 4 Dec 2025 08:06:19 +0200
+Subject: [PATCH 0582/0797] ARM: tn7: Adjust panel node
+
+Adjust panel node in Tegra Note 7 according to the updated schema.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra114-tn7.dts | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra114-tn7.dts b/arch/arm/boot/dts/nvidia/tegra114-tn7.dts
+index bfbdb345575a54..75fbafb4a87234 100644
+--- a/arch/arm/boot/dts/nvidia/tegra114-tn7.dts
++++ b/arch/arm/boot/dts/nvidia/tegra114-tn7.dts
+@@ -43,7 +43,9 @@
+ 				compatible = "lg,ld070wx3-sl01";
+ 				reg = <0>;
+ 
+-				power-supply = <&vdd_lcd>;
++				vdd-supply = <&avdd_lcd>;
++				vcc-supply = <&dvdd_lcd>;
++
+ 				backlight = <&backlight>;
+ 			};
+ 		};
+@@ -101,11 +103,10 @@
+ 						regulator-boot-on;
+ 					};
+ 
+-					smps6 {
++					avdd_lcd: smps6 {
+ 						regulator-name = "va-lcd-hv";
+-						regulator-min-microvolt = <3000000>;
+-						regulator-max-microvolt = <3000000>;
+-						regulator-always-on;
++						regulator-min-microvolt = <3160000>;
++						regulator-max-microvolt = <3160000>;
+ 						regulator-boot-on;
+ 					};
+ 
+@@ -325,7 +326,7 @@
+ 		regulator-boot-on;
+ 	};
+ 
+-	vdd_lcd: regulator-lcd {
++	dvdd_lcd: regulator-lcd {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "VD_LCD_1V8";
+ 		regulator-min-microvolt = <1800000>;
+-- 
+cgit 1.3.1-korg
+

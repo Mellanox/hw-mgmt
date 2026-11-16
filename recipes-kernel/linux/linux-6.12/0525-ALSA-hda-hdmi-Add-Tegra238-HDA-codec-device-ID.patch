@@ -1,0 +1,26 @@
+From 5f4338e5633dc034a81000b2516a78cfb51c601d Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Mon, 2 Mar 2026 14:12:17 +0530
+Subject: [PATCH 0525/0797] ALSA: hda/hdmi: Add Tegra238 HDA codec device ID
+
+Add Tegra238 HDA codec device in hda_device_id list.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260302084217.3135982-1-sheetal@nvidia.com
+Signed-off-by: Takashi Iwai <tiwai@suse.de>
+---
+ sound/pci/hda/patch_hdmi.c | 1
+ 1 file changed, 1 insertion(+)
+
+--- a/sound/pci/hda/patch_hdmi.c
++++ b/sound/pci/hda/patch_hdmi.c
+@@ -4553,6 +4553,7 @@ HDA_CODEC_ENTRY(0x10de002e, "Tegra186 HD
+ HDA_CODEC_ENTRY(0x10de002f, "Tegra194 HDMI/DP2", patch_tegra_hdmi),
+ HDA_CODEC_ENTRY(0x10de0030, "Tegra194 HDMI/DP3", patch_tegra_hdmi),
+ HDA_CODEC_ENTRY(0x10de0031, "Tegra234 HDMI/DP", patch_tegra234_hdmi),
++HDA_CODEC_ENTRY(0x10de0032, "Tegra238 HDMI/DP", patch_tegra234_hdmi),
+ HDA_CODEC_ENTRY(0x10de0033, "SoC 33 HDMI/DP",	patch_tegra234_hdmi),
+ HDA_CODEC_ENTRY(0x10de0034, "Tegra264 HDMI/DP",	patch_tegra234_hdmi),
+ HDA_CODEC_ENTRY(0x10de0035, "SoC 35 HDMI/DP",	patch_tegra234_hdmi),
+-- 
+cgit 1.3.1-korg

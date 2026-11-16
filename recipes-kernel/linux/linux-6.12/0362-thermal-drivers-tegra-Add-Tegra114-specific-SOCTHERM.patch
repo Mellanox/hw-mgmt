@@ -1,0 +1,302 @@
+From 9d522a877b6f1a8a2675826d14d2edaa9712db9a Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Thu, 28 Aug 2025 08:51:03 +0300
+Subject: [PATCH 0362/0797] thermal/drivers/tegra: Add Tegra114 specific SOCTHERM driver
+
+Add Tegra114 specific SOCTHERM driver.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Link: https://lore.kernel.org/r/20250828055104.8073-6-clamor95@gmail.com
+Signed-off-by: Daniel Lezcano <daniel.lezcano@linaro.org>
+---
+ drivers/thermal/tegra/Makefile            |   1 +
+ drivers/thermal/tegra/soctherm.c          |  13 ++
+ drivers/thermal/tegra/soctherm.h          |   4 +
+ drivers/thermal/tegra/tegra114-soctherm.c | 209 ++++++++++++++++++++++++++++++
+ 4 files changed, 227 insertions(+)
+ create mode 100644 drivers/thermal/tegra/tegra114-soctherm.c
+
+diff --git a/drivers/thermal/tegra/Makefile b/drivers/thermal/tegra/Makefile
+index eb27d194c58358..9b3e91f7fb97bd 100644
+--- a/drivers/thermal/tegra/Makefile
++++ b/drivers/thermal/tegra/Makefile
+@@ -4,6 +4,7 @@ obj-$(CONFIG_TEGRA_BPMP_THERMAL)	+= tegra-bpmp-thermal.o
+ obj-$(CONFIG_TEGRA30_TSENSOR)		+= tegra30-tsensor.o
+ 
+ tegra-soctherm-y				:= soctherm.o soctherm-fuse.o
++tegra-soctherm-$(CONFIG_ARCH_TEGRA_114_SOC)	+= tegra114-soctherm.o
+ tegra-soctherm-$(CONFIG_ARCH_TEGRA_124_SOC)	+= tegra124-soctherm.o
+ tegra-soctherm-$(CONFIG_ARCH_TEGRA_132_SOC)	+= tegra132-soctherm.o
+ tegra-soctherm-$(CONFIG_ARCH_TEGRA_210_SOC)	+= tegra210-soctherm.o
+diff --git a/drivers/thermal/tegra/soctherm.c b/drivers/thermal/tegra/soctherm.c
+index 53a5c649f4b146..5d26b52beaba7a 100644
+--- a/drivers/thermal/tegra/soctherm.c
++++ b/drivers/thermal/tegra/soctherm.c
+@@ -31,6 +31,7 @@
+ #include <linux/reset.h>
+ #include <linux/thermal.h>
+ 
++#include <dt-bindings/thermal/tegra114-soctherm.h>
+ #include <dt-bindings/thermal/tegra124-soctherm.h>
+ 
+ #include "../thermal_core.h"
+@@ -357,6 +358,12 @@ struct soctherm_oc_irq_chip_data {
+ 
+ static struct soctherm_oc_irq_chip_data soc_irq_cdata;
+ 
++/* Ensure that TEGRA114_* and TEGRA124_* counterparts are equal */
++static_assert(TEGRA114_SOCTHERM_SENSOR_CPU == TEGRA124_SOCTHERM_SENSOR_CPU);
++static_assert(TEGRA114_SOCTHERM_SENSOR_MEM == TEGRA124_SOCTHERM_SENSOR_MEM);
++static_assert(TEGRA114_SOCTHERM_SENSOR_GPU == TEGRA124_SOCTHERM_SENSOR_GPU);
++static_assert(TEGRA114_SOCTHERM_SENSOR_PLLX == TEGRA124_SOCTHERM_SENSOR_PLLX);
++
+ /**
+  * ccroc_writel() - writes a value to a CCROC register
+  * @ts: pointer to a struct tegra_soctherm
+@@ -2045,6 +2052,12 @@ static void soctherm_init(struct platform_device *pdev)
+ }
+ 
+ static const struct of_device_id tegra_soctherm_of_match[] = {
++#ifdef CONFIG_ARCH_TEGRA_114_SOC
++	{
++		.compatible = "nvidia,tegra114-soctherm",
++		.data = &tegra114_soctherm,
++	},
++#endif
+ #ifdef CONFIG_ARCH_TEGRA_124_SOC
+ 	{
+ 		.compatible = "nvidia,tegra124-soctherm",
+diff --git a/drivers/thermal/tegra/soctherm.h b/drivers/thermal/tegra/soctherm.h
+index 083388094fd4ce..aa4af9268b05d8 100644
+--- a/drivers/thermal/tegra/soctherm.h
++++ b/drivers/thermal/tegra/soctherm.h
+@@ -142,6 +142,10 @@ int tegra_calc_tsensor_calib(const struct tegra_tsensor *sensor,
+ 			     const struct tsensor_shared_calib *shared,
+ 			     u32 *calib);
+ 
++#ifdef CONFIG_ARCH_TEGRA_114_SOC
++extern const struct tegra_soctherm_soc tegra114_soctherm;
++#endif
++
+ #ifdef CONFIG_ARCH_TEGRA_124_SOC
+ extern const struct tegra_soctherm_soc tegra124_soctherm;
+ #endif
+diff --git a/drivers/thermal/tegra/tegra114-soctherm.c b/drivers/thermal/tegra/tegra114-soctherm.c
+new file mode 100644
+index 00000000000000..688104f2805280
+--- /dev/null
++++ b/drivers/thermal/tegra/tegra114-soctherm.c
+@@ -0,0 +1,209 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
++ * Copyright (c) 2024, Svyatoslav Ryhel <clamor95@gmail.com>
++ */
++
++#include <linux/module.h>
++#include <linux/platform_device.h>
++
++#include <dt-bindings/thermal/tegra114-soctherm.h>
++
++#include "soctherm.h"
++
++#define TEGRA114_THERMTRIP_ANY_EN_MASK		(0x1 << 28)
++#define TEGRA114_THERMTRIP_MEM_EN_MASK		(0x1 << 27)
++#define TEGRA114_THERMTRIP_GPU_EN_MASK		(0x1 << 26)
++#define TEGRA114_THERMTRIP_CPU_EN_MASK		(0x1 << 25)
++#define TEGRA114_THERMTRIP_TSENSE_EN_MASK	(0x1 << 24)
++#define TEGRA114_THERMTRIP_GPUMEM_THRESH_MASK	(0xff << 16)
++#define TEGRA114_THERMTRIP_CPU_THRESH_MASK	(0xff << 8)
++#define TEGRA114_THERMTRIP_TSENSE_THRESH_MASK	0xff
++
++#define TEGRA114_THERMCTL_LVL0_UP_THRESH_MASK	(0xff << 17)
++#define TEGRA114_THERMCTL_LVL0_DN_THRESH_MASK	(0xff << 9)
++
++#define TEGRA114_THRESH_GRAIN			1000
++#define TEGRA114_BPTT				8
++
++static const struct tegra_tsensor_configuration tegra114_tsensor_config = {
++	.tall = 16300,
++	.tiddq_en = 1,
++	.ten_count = 1,
++	.tsample = 163,
++	.tsample_ate = 655,
++};
++
++static const struct tegra_tsensor_group tegra114_tsensor_group_cpu = {
++	.id = TEGRA114_SOCTHERM_SENSOR_CPU,
++	.name = "cpu",
++	.sensor_temp_offset = SENSOR_TEMP1,
++	.sensor_temp_mask = SENSOR_TEMP1_CPU_TEMP_MASK,
++	.pdiv = 10,
++	.pdiv_ate = 10,
++	.pdiv_mask = SENSOR_PDIV_CPU_MASK,
++	.pllx_hotspot_diff = 6,
++	.pllx_hotspot_mask = SENSOR_HOTSPOT_CPU_MASK,
++	.thermtrip_any_en_mask = TEGRA114_THERMTRIP_ANY_EN_MASK,
++	.thermtrip_enable_mask = TEGRA114_THERMTRIP_CPU_EN_MASK,
++	.thermtrip_threshold_mask = TEGRA114_THERMTRIP_CPU_THRESH_MASK,
++	.thermctl_isr_mask = THERM_IRQ_CPU_MASK,
++	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_CPU,
++	.thermctl_lvl0_up_thresh_mask = TEGRA114_THERMCTL_LVL0_UP_THRESH_MASK,
++	.thermctl_lvl0_dn_thresh_mask = TEGRA114_THERMCTL_LVL0_DN_THRESH_MASK,
++};
++
++static const struct tegra_tsensor_group tegra114_tsensor_group_gpu = {
++	.id = TEGRA114_SOCTHERM_SENSOR_GPU,
++	.name = "gpu",
++	.sensor_temp_offset = SENSOR_TEMP1,
++	.sensor_temp_mask = SENSOR_TEMP1_GPU_TEMP_MASK,
++	.pdiv = 10,
++	.pdiv_ate = 10,
++	.pdiv_mask = SENSOR_PDIV_GPU_MASK,
++	.pllx_hotspot_diff = 6,
++	.pllx_hotspot_mask = SENSOR_HOTSPOT_GPU_MASK,
++	.thermtrip_any_en_mask = TEGRA114_THERMTRIP_ANY_EN_MASK,
++	.thermtrip_enable_mask = TEGRA114_THERMTRIP_GPU_EN_MASK,
++	.thermtrip_threshold_mask = TEGRA114_THERMTRIP_GPUMEM_THRESH_MASK,
++	.thermctl_isr_mask = THERM_IRQ_GPU_MASK,
++	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_GPU,
++	.thermctl_lvl0_up_thresh_mask = TEGRA114_THERMCTL_LVL0_UP_THRESH_MASK,
++	.thermctl_lvl0_dn_thresh_mask = TEGRA114_THERMCTL_LVL0_DN_THRESH_MASK,
++};
++
++static const struct tegra_tsensor_group tegra114_tsensor_group_pll = {
++	.id = TEGRA114_SOCTHERM_SENSOR_PLLX,
++	.name = "pll",
++	.sensor_temp_offset = SENSOR_TEMP2,
++	.sensor_temp_mask = SENSOR_TEMP2_PLLX_TEMP_MASK,
++	.pdiv = 10,
++	.pdiv_ate = 10,
++	.pdiv_mask = SENSOR_PDIV_PLLX_MASK,
++	.thermtrip_any_en_mask = TEGRA114_THERMTRIP_ANY_EN_MASK,
++	.thermtrip_enable_mask = TEGRA114_THERMTRIP_TSENSE_EN_MASK,
++	.thermtrip_threshold_mask = TEGRA114_THERMTRIP_TSENSE_THRESH_MASK,
++	.thermctl_isr_mask = THERM_IRQ_TSENSE_MASK,
++	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_TSENSE,
++	.thermctl_lvl0_up_thresh_mask = TEGRA114_THERMCTL_LVL0_UP_THRESH_MASK,
++	.thermctl_lvl0_dn_thresh_mask = TEGRA114_THERMCTL_LVL0_DN_THRESH_MASK,
++};
++
++static const struct tegra_tsensor_group tegra114_tsensor_group_mem = {
++	.id = TEGRA114_SOCTHERM_SENSOR_MEM,
++	.name = "mem",
++	.sensor_temp_offset = SENSOR_TEMP2,
++	.sensor_temp_mask = SENSOR_TEMP2_MEM_TEMP_MASK,
++	.pdiv = 10,
++	.pdiv_ate = 10,
++	.pdiv_mask = SENSOR_PDIV_MEM_MASK,
++	.pllx_hotspot_diff = 0,
++	.pllx_hotspot_mask = SENSOR_HOTSPOT_MEM_MASK,
++	.thermtrip_any_en_mask = TEGRA114_THERMTRIP_ANY_EN_MASK,
++	.thermtrip_enable_mask = TEGRA114_THERMTRIP_MEM_EN_MASK,
++	.thermtrip_threshold_mask = TEGRA114_THERMTRIP_GPUMEM_THRESH_MASK,
++	.thermctl_isr_mask = THERM_IRQ_MEM_MASK,
++	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_MEM,
++	.thermctl_lvl0_up_thresh_mask = TEGRA114_THERMCTL_LVL0_UP_THRESH_MASK,
++	.thermctl_lvl0_dn_thresh_mask = TEGRA114_THERMCTL_LVL0_DN_THRESH_MASK,
++};
++
++static const struct tegra_tsensor_group *tegra114_tsensor_groups[] = {
++	&tegra114_tsensor_group_cpu,
++	&tegra114_tsensor_group_gpu,
++	&tegra114_tsensor_group_pll,
++	&tegra114_tsensor_group_mem,
++};
++
++static const struct tegra_tsensor tegra114_tsensors[] = {
++	{
++		.name = "cpu0",
++		.base = 0xc0,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x098,
++		.fuse_corr_alpha = 1196400,
++		.fuse_corr_beta = -13600000,
++		.group = &tegra114_tsensor_group_cpu,
++	}, {
++		.name = "cpu1",
++		.base = 0xe0,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x084,
++		.fuse_corr_alpha = 1196400,
++		.fuse_corr_beta = -13600000,
++		.group = &tegra114_tsensor_group_cpu,
++	}, {
++		.name = "cpu2",
++		.base = 0x100,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x088,
++		.fuse_corr_alpha = 1196400,
++		.fuse_corr_beta = -13600000,
++		.group = &tegra114_tsensor_group_cpu,
++	}, {
++		.name = "cpu3",
++		.base = 0x120,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x12c,
++		.fuse_corr_alpha = 1196400,
++		.fuse_corr_beta = -13600000,
++		.group = &tegra114_tsensor_group_cpu,
++	}, {
++		.name = "mem0",
++		.base = 0x140,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x158,
++		.fuse_corr_alpha = 1000000,
++		.fuse_corr_beta = 0,
++		.group = &tegra114_tsensor_group_mem,
++	}, {
++		.name = "mem1",
++		.base = 0x160,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x15c,
++		.fuse_corr_alpha = 1000000,
++		.fuse_corr_beta = 0,
++		.group = &tegra114_tsensor_group_mem,
++	}, {
++		.name = "gpu",
++		.base = 0x180,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x154,
++		.fuse_corr_alpha = 1124500,
++		.fuse_corr_beta = -9793100,
++		.group = &tegra114_tsensor_group_gpu,
++	}, {
++		.name = "pllx",
++		.base = 0x1a0,
++		.config = &tegra114_tsensor_config,
++		.calib_fuse_offset = 0x160,
++		.fuse_corr_alpha = 1224200,
++		.fuse_corr_beta = -14665000,
++		.group = &tegra114_tsensor_group_pll,
++	},
++};
++
++static const struct tegra_soctherm_fuse tegra114_soctherm_fuse = {
++	.fuse_base_cp_mask = 0x3ff,
++	.fuse_base_cp_shift = 0,
++	.fuse_shift_cp_mask = 0x3f << 10,
++	.fuse_shift_cp_shift = 10,
++	.fuse_base_ft_mask = 0x7ff << 16,
++	.fuse_base_ft_shift = 16,
++	.fuse_shift_ft_mask = 0x1f << 27,
++	.fuse_shift_ft_shift = 27,
++	.fuse_common_reg = FUSE_VSENSOR_CALIB,
++	.fuse_spare_realignment = 0,
++	.nominal_calib_ft = 90,
++};
++
++const struct tegra_soctherm_soc tegra114_soctherm = {
++	.tsensors = tegra114_tsensors,
++	.num_tsensors = ARRAY_SIZE(tegra114_tsensors),
++	.ttgs = tegra114_tsensor_groups,
++	.num_ttgs = ARRAY_SIZE(tegra114_tsensor_groups),
++	.tfuse = &tegra114_soctherm_fuse,
++	.thresh_grain = TEGRA114_THRESH_GRAIN,
++	.bptt = TEGRA114_BPTT,
++	.use_ccroc = false,
++};
+-- 
+cgit 1.3.1-korg
+

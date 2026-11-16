@@ -1,0 +1,220 @@
+From a5acde8adb4d4d921a004b8df995d50255253afa Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 11 May 2026 10:48:54 +0300
+Subject: [PATCH 0726/0797] ARM: tegra: grouper: Add support for front camera
+
+Add front camera video path.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../nvidia/tegra30-asus-nexus7-grouper-common.dtsi | 128 +++++++++++++++++++++
+ .../tegra30-asus-nexus7-grouper-maxim-pmic.dtsi    |   4 +-
+ .../tegra30-asus-nexus7-grouper-ti-pmic.dtsi       |   4 +-
+ 3 files changed, 132 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-common.dtsi b/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-common.dtsi
+index 15f53babdc2177..892d718294dd10 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-common.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-common.dtsi
+@@ -2,6 +2,7 @@
+ 
+ #include <dt-bindings/input/gpio-keys.h>
+ #include <dt-bindings/input/input.h>
++#include <dt-bindings/media/video-interfaces.h>
+ #include <dt-bindings/power/summit,smb347-charger.h>
+ #include <dt-bindings/thermal/thermal.h>
+ 
+@@ -84,6 +85,93 @@
+ 		};
+ 	};
+ 
++	host1x@50000000 {
++		vi@54080000 {
++			status = "okay";
++
++			csi@800 {
++				status = "okay";
++
++				avdd-dsi-csi-supply = <&avdd_dsi_csi>;
++
++				/* CSI-A */
++				channel@0 {
++					reg = <0>;
++
++					nvidia,mipi-calibrate = <&csi 0>; /* CSIA pad */
++
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					port@0 {
++						reg = <0>;
++
++						csia_input: endpoint {
++							data-lanes = <1 2>;
++							/* No rear camera */
++						};
++					};
++
++					port@1 {
++						reg = <1>;
++
++						csia_output: endpoint {
++							remote-endpoint = <&vi_ppa_input>;
++						};
++					};
++				};
++
++				/* CSI-B */
++				channel@1 {
++					reg = <1>;
++
++					nvidia,mipi-calibrate = <&csi 1>; /* CSIB pad */
++
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					port@0 {
++						reg = <0>;
++
++						csib_input: endpoint {
++							data-lanes = <3>;
++							remote-endpoint = <&front_camera_output>;
++						};
++					};
++
++					port@1 {
++						reg = <1>;
++
++						csib_output: endpoint {
++							remote-endpoint = <&vi_ppb_input>;
++						};
++					};
++				};
++			};
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				port@0 {
++					reg = <0>;
++
++					vi_ppa_input: endpoint {
++						remote-endpoint = <&csia_output>;
++					};
++				};
++
++				port@1 {
++					reg = <1>;
++
++					vi_ppb_input: endpoint {
++						remote-endpoint = <&csib_output>;
++					};
++				};
++			};
++		};
++	};
++
+ 	pinmux@70000868 {
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&state_default>;
+@@ -890,6 +978,36 @@
+ 			vdd-supply = <&vdd_3v3_sys>;
+ 		};
+ 
++		/* Aptina 1/6" HD SOC (MI1040) */
++		front-camera@48 {
++			compatible = "aptina,mi1040";
++			reg = <0x48>;
++
++			clocks = <&tegra_car TEGRA30_CLK_CSUS>;
++
++			reset-gpios = <&gpio TEGRA_GPIO(O, 0) GPIO_ACTIVE_LOW>;
++
++			vddio-supply = <&avdd_cam1>;
++			vdd-supply = <&vddio_cam>;
++			vaa-supply = <&avdd_cam1>;
++
++			orientation = <0>; /* Front camera */
++
++			assigned-clocks = <&tegra_car TEGRA30_CLK_VI_SENSOR>,
++					  <&tegra_car TEGRA30_CLK_CSUS>;
++			assigned-clock-rates = <24000000>;
++			assigned-clock-parents = <&tegra_car TEGRA30_CLK_PLL_P>,
++						 <&tegra_car TEGRA30_CLK_VI_SENSOR>;
++
++			port {
++				front_camera_output: endpoint {
++					bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
++					link-frequencies = /bits/ 64 <384000000>;
++					remote-endpoint = <&csib_input>;
++				};
++			};
++		};
++
+ 		accelerometer@68 {
+ 			compatible = "invensense,mpu6050";
+ 			reg = <0x68>;
+@@ -1203,6 +1321,16 @@
+ 		vin-supply = <&vdd_5v0_sys>;
+ 	};
+ 
++	avdd_cam1: regulator-vcam1 {
++		compatible = "regulator-fixed";
++		regulator-name = "avdd_cam1";
++		regulator-min-microvolt = <2850000>;
++		regulator-max-microvolt = <2850000>;
++		gpio = <&gpio TEGRA_GPIO(R, 6) GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		vin-supply = <&vdd_5v0_sys>;
++	};
++
+ 	sound {
+ 		compatible = "nvidia,tegra-audio-rt5640-grouper",
+ 			     "nvidia,tegra-audio-rt5640";
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-maxim-pmic.dtsi b/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-maxim-pmic.dtsi
+index 694c7fe37eb880..4bd98935031b40 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-maxim-pmic.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-maxim-pmic.dtsi
+@@ -135,7 +135,7 @@
+ 					regulator-boot-on;
+ 				};
+ 
+-				ldo5 {
++				vddio_cam: ldo5 {
+ 					regulator-name = "vdd_camera";
+ 					regulator-min-microvolt = <1800000>;
+ 					regulator-max-microvolt = <1800000>;
+@@ -149,7 +149,7 @@
+ 					regulator-boot-on;
+ 				};
+ 
+-				ldo7 {
++				avdd_dsi_csi: ldo7 {
+ 					regulator-name = "avdd_dsi_csi";
+ 					regulator-min-microvolt = <1200000>;
+ 					regulator-max-microvolt = <1200000>;
+diff --git a/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-ti-pmic.dtsi b/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-ti-pmic.dtsi
+index ee4a3f4827690b..8fe3c62c90520d 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-ti-pmic.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30-asus-nexus7-grouper-ti-pmic.dtsi
+@@ -92,13 +92,13 @@
+ 					regulator-always-on;
+ 				};
+ 
+-				ldo5 {
++				vddio_cam: ldo5 {
+ 					regulator-name = "vddio_sdmmc,avdd_vdac";
+ 					regulator-min-microvolt = <1800000>;
+ 					regulator-max-microvolt = <1800000>;
+ 				};
+ 
+-				ldo6 {
++				avdd_dsi_csi: ldo6 {
+ 					regulator-name = "avdd_dsi_csi,pwrdet_mipi";
+ 					regulator-min-microvolt = <1200000>;
+ 					regulator-max-microvolt = <1200000>;
+-- 
+cgit 1.3.1-korg
+

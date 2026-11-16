@@ -1,0 +1,48 @@
+From ffff5e7275516f274fac53ab5496f26481b4b1b9 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 23 Feb 2026 15:33:03 +0100
+Subject: [PATCH 0594/0797] dt-bindings: memory: tegra210: Mark EMC as cooling device
+
+The external memory controller found on Tegra210 can use throttling of
+the EMC frequency in order to reduce the memory chip temperature. Mark
+the memory controller as a cooling device to take advantage of this
+functionality.
+
+Reviewed-by: Rob Herring <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../devicetree/bindings/memory-controllers/nvidia,tegra210-emc.yaml | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra210-emc.yaml b/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra210-emc.yaml
+index 4e4fb4acd7f9d3..7a653a011f03f4 100644
+--- a/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra210-emc.yaml
++++ b/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra210-emc.yaml
+@@ -52,6 +52,9 @@ properties:
+       Should contain freqs and voltages and opp-supported-hw property, which
+       is a bitfield indicating SoC speedo ID mask.
+ 
++allOf:
++  - $ref: /schemas/thermal/thermal-cooling-devices.yaml
++
+ required:
+   - compatible
+   - reg
+@@ -59,7 +62,7 @@ required:
+   - clock-names
+   - nvidia,memory-controller
+ 
+-additionalProperties: false
++unevaluatedProperties: false
+ 
+ examples:
+   - |
+@@ -90,4 +93,5 @@ examples:
+         operating-points-v2 = <&dvfs_opp_table>;
+ 
+         #interconnect-cells = <0>;
++        #cooling-cells = <2>;
+     };
+-- 
+cgit 1.3.1-korg
+

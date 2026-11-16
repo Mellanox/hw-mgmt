@@ -1,0 +1,38 @@
+From 1d264d3a198839c7483580acdce17e1015d0ef91 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sun, 20 Jul 2025 21:14:59 -0500
+Subject: [PATCH 0296/0797] dt-bindings: thermal: tegra: Document Tegra210B01
+
+Add the compatible string for Tegra210B01 SOC_THERM
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250720-t210b01-v2-5-9cb209f1edfc@gmail.com
+Signed-off-by: Daniel Lezcano <daniel.lezcano@linaro.org>
+---
+ Documentation/devicetree/bindings/thermal/nvidia,tegra124-soctherm.yaml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/thermal/nvidia,tegra124-soctherm.yaml b/Documentation/devicetree/bindings/thermal/nvidia,tegra124-soctherm.yaml
+index 19bb1f324183bb..cf47a1f3b3847d 100644
+--- a/Documentation/devicetree/bindings/thermal/nvidia,tegra124-soctherm.yaml
++++ b/Documentation/devicetree/bindings/thermal/nvidia,tegra124-soctherm.yaml
+@@ -21,6 +21,7 @@ properties:
+       - nvidia,tegra124-soctherm
+       - nvidia,tegra132-soctherm
+       - nvidia,tegra210-soctherm
++      - nvidia,tegra210b01-soctherm
+ 
+   reg:
+     maxItems: 2
+@@ -207,6 +208,7 @@ allOf:
+             enum:
+               - nvidia,tegra124-soctherm
+               - nvidia,tegra210-soctherm
++              - nvidia,tegra210b01-soctherm
+     then:
+       properties:
+         reg:
+-- 
+cgit 1.3.1-korg
+

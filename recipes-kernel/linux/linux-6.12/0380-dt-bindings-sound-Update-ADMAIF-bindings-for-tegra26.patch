@@ -1,0 +1,136 @@
+From 4d410ba9aa275e7990a270f63ce436990ace1bea Mon Sep 17 00:00:00 2001
+From: sheetal <sheetal@nvidia.com>
+Date: Mon, 29 Sep 2025 16:29:28 +0530
+Subject: [PATCH 0380/0797] dt-bindings: sound: Update ADMAIF bindings for tegra264
+
+Update the ADMAIF bindings as tegra264 supports 64 channels, which includes
+32 RX and 32 TX channels.
+
+Signed-off-by: sheetal <sheetal@nvidia.com>
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://patch.msgid.link/20250929105930.1767294-3-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../bindings/sound/nvidia,tegra210-admaif.yaml     | 106 +++++++++++++--------
+ 1 file changed, 66 insertions(+), 40 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
+index b32f33214ba60b..2ce4049f94acc7 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra210-admaif.yaml
+@@ -67,46 +67,72 @@ properties:
+         $ref: audio-graph-port.yaml#
+         unevaluatedProperties: false
+ 
+-if:
+-  properties:
+-    compatible:
+-      contains:
+-        const: nvidia,tegra210-admaif
+-
+-then:
+-  properties:
+-    dmas:
+-      description:
+-        DMA channel specifiers, equally divided for Tx and Rx.
+-      minItems: 1
+-      maxItems: 20
+-    dma-names:
+-      items:
+-        pattern: "^[rt]x(10|[1-9])$"
+-      description:
+-        Should be "rx1", "rx2" ... "rx10" for DMA Rx channel
+-        Should be "tx1", "tx2" ... "tx10" for DMA Tx channel
+-      minItems: 1
+-      maxItems: 20
+-    interconnects: false
+-    interconnect-names: false
+-    iommus: false
+-
+-else:
+-  properties:
+-    dmas:
+-      description:
+-        DMA channel specifiers, equally divided for Tx and Rx.
+-      minItems: 1
+-      maxItems: 40
+-    dma-names:
+-      items:
+-        pattern: "^[rt]x(1[0-9]|[1-9]|20)$"
+-      description:
+-        Should be "rx1", "rx2" ... "rx20" for DMA Rx channel
+-        Should be "tx1", "tx2" ... "tx20" for DMA Tx channel
+-      minItems: 1
+-      maxItems: 40
++allOf:
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: nvidia,tegra210-admaif
++    then:
++      properties:
++        dmas:
++          description:
++            DMA channel specifiers, equally divided for Tx and Rx.
++          minItems: 1
++          maxItems: 20
++        dma-names:
++          items:
++            pattern: "^[rt]x(10|[1-9])$"
++          description:
++            Should be "rx1", "rx2" ... "rx10" for DMA Rx channel
++            Should be "tx1", "tx2" ... "tx10" for DMA Tx channel
++          minItems: 1
++          maxItems: 20
++        interconnects: false
++        interconnect-names: false
++        iommus: false
++
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: nvidia,tegra186-admaif
++    then:
++      properties:
++        dmas:
++          description:
++            DMA channel specifiers, equally divided for Tx and Rx.
++          minItems: 1
++          maxItems: 40
++        dma-names:
++          items:
++            pattern: "^[rt]x(1[0-9]|[1-9]|20)$"
++          description:
++            Should be "rx1", "rx2" ... "rx20" for DMA Rx channel
++            Should be "tx1", "tx2" ... "tx20" for DMA Tx channel
++          minItems: 1
++          maxItems: 40
++
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: nvidia,tegra264-admaif
++    then:
++      properties:
++        dmas:
++          description:
++            DMA channel specifiers, equally divided for Tx and Rx.
++          minItems: 1
++          maxItems: 64
++        dma-names:
++          items:
++            pattern: "^[rt]x(3[0-2]|[1-2][0-9]|[1-9])$"
++          description:
++            Should be "rx1", "rx2" ... "rx32" for DMA Rx channel
++            Should be "tx1", "tx2" ... "tx32" for DMA Tx channel
++          minItems: 1
++          maxItems: 64
+ 
+ required:
+   - compatible
+-- 
+cgit 1.3.1-korg
+

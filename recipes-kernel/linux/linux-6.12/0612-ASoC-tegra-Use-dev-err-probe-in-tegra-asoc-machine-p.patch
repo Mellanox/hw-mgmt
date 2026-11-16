@@ -1,0 +1,59 @@
+From b015ef4eaeff76466a359b3f53175fc11502fd8f Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 1 Apr 2026 11:25:00 +0000
+Subject: [PATCH 0612/0797] ASoC: tegra: Use dev_err_probe() in tegra_asoc_machine probe
+
+Use dev_err_probe() for clock errors in the tegra_asoc_machine
+probe path.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260401112500.4076861-5-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra_asoc_machine.c | 21 +++++++++------------
+ 1 file changed, 9 insertions(+), 12 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra_asoc_machine.c b/sound/soc/tegra/tegra_asoc_machine.c
+index d48463ac16fc2a..d9a1b35c25d181 100644
+--- a/sound/soc/tegra/tegra_asoc_machine.c
++++ b/sound/soc/tegra/tegra_asoc_machine.c
+@@ -591,16 +591,14 @@ int tegra_asoc_machine_probe(struct platform_device *pdev)
+ 		 * host controller and the external codec
+ 		 */
+ 		err = clk_set_rate(machine->clk_pll_a, 73728000);
+-		if (err) {
+-			dev_err(dev, "Can't set pll_a rate: %d\n", err);
+-			return err;
+-		}
++		if (err)
++			return dev_err_probe(dev, err,
++					     "can't set pll_a rate\n");
+ 
+ 		err = clk_set_rate(machine->clk_pll_a_out0, 24576000);
+-		if (err) {
+-			dev_err(dev, "Can't set pll_a_out0 rate: %d\n", err);
+-			return err;
+-		}
++		if (err)
++			return dev_err_probe(dev, err,
++					     "can't set pll_a_out0 rate\n");
+ 
+ 		machine->set_baseclock = 73728000;
+ 		machine->set_mclk = 24576000;
+@@ -612,10 +610,9 @@ int tegra_asoc_machine_probe(struct platform_device *pdev)
+ 	 * only needed for audio.
+ 	 */
+ 	err = clk_prepare_enable(machine->clk_cdev1);
+-	if (err) {
+-		dev_err(dev, "Can't enable cdev1: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't enable cdev1\n");
+ 
+ 	err = devm_snd_soc_register_card(dev, card);
+ 	if (err)
+-- 
+cgit 1.3.1-korg
+

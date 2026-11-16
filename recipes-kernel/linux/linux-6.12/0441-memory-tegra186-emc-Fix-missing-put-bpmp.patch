@@ -1,0 +1,40 @@
+From 1463299a227d02b40c842a5d91d989cb26da5bbb Mon Sep 17 00:00:00 2001
+From: Jon Hunter <jonathanh@nvidia.com>
+Date: Thu, 6 Nov 2025 19:05:50 +0000
+Subject: [PATCH 0441/0797] memory: tegra186-emc: Fix missing put_bpmp
+
+Commit a52ddb98a674 ("memory: tegra186-emc: Simplify and handle deferred
+probe with dev_err_probe()") accidently dropped a call to 'put_bpmp' to
+release a handle to the BPMP when getting the EMC clock fails. Fix this
+by restoring the 'goto put_bpmp' if devm_clk_get() fails.
+
+Fixes: a52ddb98a674 ("memory: tegra186-emc: Simplify and handle deferred probe with dev_err_probe()")
+Signed-off-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://patch.msgid.link/20251106190550.1776974-1-jonathanh@nvidia.com
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+---
+ drivers/memory/tegra/tegra186-emc.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/memory/tegra/tegra186-emc.c b/drivers/memory/tegra/tegra186-emc.c
+index 9959ad5804b444..dfddceecdd1aae 100644
+--- a/drivers/memory/tegra/tegra186-emc.c
++++ b/drivers/memory/tegra/tegra186-emc.c
+@@ -322,9 +322,11 @@ static int tegra186_emc_probe(struct platform_device *pdev)
+ 				     "failed to get BPMP\n");
+ 
+ 	emc->clk = devm_clk_get(&pdev->dev, "emc");
+-	if (IS_ERR(emc->clk))
+-		return dev_err_probe(&pdev->dev, PTR_ERR(emc->clk),
+-				     "failed to get EMC clock\n");
++	if (IS_ERR(emc->clk)) {
++		err = dev_err_probe(&pdev->dev, PTR_ERR(emc->clk),
++				    "failed to get EMC clock\n");
++		goto put_bpmp;
++	}
+ 
+ 	platform_set_drvdata(pdev, emc);
+ 	emc->dev = &pdev->dev;
+-- 
+cgit 1.3.1-korg
+

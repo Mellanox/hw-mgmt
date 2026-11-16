@@ -1,0 +1,68 @@
+From 0ec0c5949106c5f1a7b50d4d7f34461cdd522264 Mon Sep 17 00:00:00 2001
+From: Ben Dooks <ben.dooks@codethink.co.uk>
+Date: Fri, 9 Jan 2026 12:45:07 +0000
+Subject: [PATCH 0702/0797] gpu: host1x: Fix missing 'host1x_context_device_bus_type'
+
+The drivers/gpu/host1x/context_bus.c does not include any declaration of
+host1x_context_device_bus_type, and after including "context.h" it also
+showed that there are two definitions in the kernel because the extern
+declaration was missing the const qualifier.
+
+Include linux/host1x_context_bus.h and drop the wrong declaration from
+context.h. While at it, also predeclare struct host1x_memory_context.
+
+Fixes the following sparse warning:
+
+    drivers/gpu/host1x/context_bus.c:9:23: warning: symbol 'host1x_context_device_bus_type' was not declared. Should it be static?
+
+Signed-off-by: Ben Dooks <ben.dooks@codethink.co.uk>
+[treding@nvidia.com: minor fixups, reword commit message to reflect changes]
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://patch.msgid.link/20260123140512.609167-1-ben.dooks@codethink.co.uk
+---
+ drivers/gpu/host1x/context.c     | 1 +
+ drivers/gpu/host1x/context.h     | 3 +--
+ drivers/gpu/host1x/context_bus.c | 1 +
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/host1x/context.c b/drivers/gpu/host1x/context.c
+index d50d41c2056178..512f3d189ebfe5 100644
+--- a/drivers/gpu/host1x/context.c
++++ b/drivers/gpu/host1x/context.c
+@@ -4,6 +4,7 @@
+  */
+ 
+ #include <linux/device.h>
++#include <linux/host1x_context_bus.h>
+ #include <linux/kref.h>
+ #include <linux/of.h>
+ #include <linux/of_device.h>
+diff --git a/drivers/gpu/host1x/context.h b/drivers/gpu/host1x/context.h
+index 3e03bc1d3bac32..5ab5be1a6c6386 100644
+--- a/drivers/gpu/host1x/context.h
++++ b/drivers/gpu/host1x/context.h
+@@ -12,8 +12,7 @@
+ #include <linux/refcount.h>
+ 
+ struct host1x;
+-
+-extern struct bus_type host1x_context_device_bus_type;
++struct host1x_memory_context;
+ 
+ struct host1x_memory_context_list {
+ 	struct mutex lock;
+diff --git a/drivers/gpu/host1x/context_bus.c b/drivers/gpu/host1x/context_bus.c
+index 7cd0e1a5edd1b5..398d56e94c732f 100644
+--- a/drivers/gpu/host1x/context_bus.c
++++ b/drivers/gpu/host1x/context_bus.c
+@@ -4,6 +4,7 @@
+  */
+ 
+ #include <linux/device.h>
++#include <linux/host1x_context_bus.h>
+ #include <linux/of.h>
+ 
+ struct bus_type host1x_context_device_bus_type = {
+-- 
+cgit 1.3.1-korg
+

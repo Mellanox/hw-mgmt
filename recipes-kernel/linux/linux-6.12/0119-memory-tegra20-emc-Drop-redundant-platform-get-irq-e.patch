@@ -1,0 +1,34 @@
+From 2f76a890fd2c636c640af1387b333aeb0cf69c75 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Sat, 4 Jan 2025 15:14:30 +0100
+Subject: [PATCH 0119/0797] memory: tegra20-emc: Drop redundant platform_get_irq() error printk
+
+platform_get_irq() already prints error message, so duplicating it is
+redundant.  The message about "need of updating DT" makes no sense,
+because this code was there since beginning.
+
+Link: https://lore.kernel.org/r/20250104141430.115031-1-krzysztof.kozlowski@linaro.org
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+---
+ drivers/memory/tegra/tegra20-emc.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/memory/tegra/tegra20-emc.c b/drivers/memory/tegra/tegra20-emc.c
+index 9b7d30a21a5bd0..44ac55feacd3ee 100644
+--- a/drivers/memory/tegra/tegra20-emc.c
++++ b/drivers/memory/tegra/tegra20-emc.c
+@@ -1191,10 +1191,8 @@ static int tegra_emc_probe(struct platform_device *pdev)
+ 	int irq, err;
+ 
+ 	irq = platform_get_irq(pdev, 0);
+-	if (irq < 0) {
+-		dev_err(&pdev->dev, "please update your device tree\n");
++	if (irq < 0)
+ 		return irq;
+-	}
+ 
+ 	emc = devm_kzalloc(&pdev->dev, sizeof(*emc), GFP_KERNEL);
+ 	if (!emc)
+-- 
+cgit 1.3.1-korg
+

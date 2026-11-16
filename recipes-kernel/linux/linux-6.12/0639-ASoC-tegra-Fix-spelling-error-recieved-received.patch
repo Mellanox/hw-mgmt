@@ -1,0 +1,30 @@
+From 833011cbe663b4ab49c125e09d02c900b599e13b Mon Sep 17 00:00:00 2001
+From: Qinghua Zhao <zqh1630@126.com>
+Date: Thu, 9 Apr 2026 21:52:13 +0800
+Subject: [PATCH 0639/0797] ASoC: tegra: Fix spelling error 'recieved' -> 'received'
+
+Fix typo in comment where 'recieved' should be 'received'.
+
+Signed-off-by: Qinghua Zhao <zqh1630@126.com>
+Link: https://patch.msgid.link/20260409135213.16558-1-zqh1630@126.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra20_spdif.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sound/soc/tegra/tegra20_spdif.h b/sound/soc/tegra/tegra20_spdif.h
+index ff4b79e2052fce..26ab8d5c7f99d8 100644
+--- a/sound/soc/tegra/tegra20_spdif.h
++++ b/sound/soc/tegra/tegra20_spdif.h
+@@ -171,7 +171,7 @@
+ 
+ /*
+  * RX channel block data receive status:
+- * 0=entire block not recieved yet.
++ * 0=entire block not received yet.
+  * 1=received entire block of channel status,
+  */
+ #define TEGRA20_SPDIF_STATUS_IS_C				(1 << 21)
+-- 
+cgit 1.3.1-korg
+
