@@ -761,6 +761,7 @@ Kernel-6.1
 |9011-amd-xgbe-support-accessing-MII-management-bus-from.patch    |                    | Downstream;skip[ALL];take[opt]           |            | AMD XGBE MII PHY access from user space        |
 |9011-platform-mellanox-nvsw-host-l1-Introduce-cpu-power-c.patch  |                    | Downstream;skip[sonic,cumulus]           |            | N6100                                          |
 |9013-platform-mellanox-mlx-platform-Introduce-cpu-power-c.patch  |                    | Downstream;skip[sonic,cumulus]           |            | CPU reboot with pwr_cycle for gb/xdr systems   |
+|9014-platform-mellanox-mlx-platform-Change-the-WD-default.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450 P4262 P4300-A00                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-6.12
@@ -874,6 +875,7 @@ Kernel-6.12
 |9011-platform-mellanox-nvsw-host-l1-Introduce-cpu-power-c.patch  |                    | Downstream;skip[sonic,cumulus]           |            | N6100                                          |
 |9012-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3401          |
 |9013-platform-mellanox-mlx-platform-Introduce-cpu-power-c.patch  |                    | Downstream;skip[sonic,cumulus]           |            | CPU reboot with pwr_cycle for gb/xdr systems   |
+|9014-platform-mellanox-mlx-platform-Change-the-WD-default.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450 P4262 P4300-A00                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
