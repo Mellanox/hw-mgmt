@@ -2751,7 +2751,7 @@ n7xxxld_specific()
 	HI194)
 		asic_i2c_buses=(4 20 36 52)
 		cpld_num=3
-		lm_sensors_config="$lm_sensors_configs_path/n7xxxld_sensors.conf"
+		lm_sensors_config="$lm_sensors_configs_path/n7200ld_sensors.conf"
 		;;
 	# N7400_LD
 	HI200)
