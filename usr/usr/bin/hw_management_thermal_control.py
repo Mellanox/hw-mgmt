@@ -265,9 +265,10 @@ SENSOR_DEF_CONFIG = {
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
+    # lcrit is inclusive. Cooling level 0 is idle, so the floor sits below it.
     r'module\d+_tec':   {"type": "thermal_module_tec_sensor",
                          "pwm_min": 0, "pwm_max": 100, "val_min": 0, "val_max": 100,
-                         "val_lcrit": 0, "val_hcrit": 1000, "poll_time": 20,
+                         "val_lcrit": -1, "val_hcrit": 1000, "poll_time": 20,
                          "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
