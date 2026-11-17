@@ -3608,6 +3608,8 @@ class ThermalManagement(hw_management_file_op):
         self.sys_config = {}
 
         self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
+        # Serializes PWM target changes with the PWM worker (decision to stop vs. new target)
+        self.pwm_lock = threading.RLock()
         self.pwm_worker_timer = None
         self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
         self.state = CONST.UNCONFIGURED
@@ -4072,6 +4074,15 @@ class ThermalManagement(hw_management_file_op):
     # ----------------------------------------------------------------------
     def _set_pwm(self, pwm, reason="", force_reason=False):
         """
+        @summary: Set target PWM for the system (thread safe against _pwm_worker)
+        @param pwm: target PWM value
+        """
+        with self.pwm_lock:
+            self._set_pwm_locked(pwm, reason, force_reason)
+
+    # ----------------------------------------------------------------------
+    def _set_pwm_locked(self, pwm, reason="", force_reason=False):
+        """
         @summary: Set target PWM for the system
         @param pwm: target PWM value
         """
@@ -4133,6 +4144,15 @@ class ThermalManagement(hw_management_file_op):
 
     # ----------------------------------------------------------------------
     def _pwm_worker(self):
+        """
+        @summary: PWM worker. Target check and self stop are atomic with respect to _set_pwm,
+                  so a target changed right before the stop will restart the worker.
+        """
+        with self.pwm_lock:
+            self._pwm_worker_locked()
+
+    # ----------------------------------------------------------------------
+    def _pwm_worker_locked(self):
         """
         @summary: gradually move current PWM towards pwm_target
         """
