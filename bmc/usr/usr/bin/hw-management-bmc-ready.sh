@@ -88,7 +88,7 @@ bmc_debug_step()
 # BMC VPD EEPROM: defaults in hw-management-bmc-ready-common.sh; optional override via
 # /etc/hw-management-bmc-eeprom.conf (from usr/etc/<HID>/hw-management-bmc-eeprom.conf).
 
-# wait_platform_drv, get_cpu_type, get_system_hw_id, get_system_hw_bom — hw-management-bmc-ready-common.sh
+# wait_platform_drv, get_cpu_type, get_system_hw_id, get_system_hw_pn, get_system_hw_bom — hw-management-bmc-ready-common.sh
 # set_chassis_powerstate_on, bmc_to_cpu_tmp, bmc_to_cpu, run_hook — hw-management-bmc-ready-common.sh
 # bmc_init_sysfs_gpio() is defined in hw-management-bmc-gpio-set.sh (JSON: /etc/hw-management-bmc-gpio-pins.json).
 
@@ -118,6 +118,8 @@ bmc_ready_sequence()
 	# Obtain system hardware Id from system EEPROM.
 	# NOTE: 24c512 0x51 is now created by hw-management-bmc-early-i2c-init.service
 	get_system_hw_id
+	# Obtain system part number from system EEPROM.
+	get_system_hw_pn
 	# Obtain system hardware BOM record.
 	get_system_hw_bom
 
