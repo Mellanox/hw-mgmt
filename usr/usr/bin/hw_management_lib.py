@@ -804,6 +804,8 @@ class RepeatedTimer:
         self.interval = interval
         self._stop_event = threading.Event()
         self._thread = None
+        # Protects _thread/_stop_event so start()/stop() are safe against each other
+        self._lock = threading.Lock()
         if auto_start:
             self.start()
 
@@ -818,12 +820,15 @@ class RepeatedTimer:
         except Exception:
             pass
 
-    def _run(self):
+    def _run(self, stop_event):
         """
         @summary:
             Run function in separate thread
+        @param stop_event: Stop event owned by this thread. Each thread has its own event,
+                           so a new thread can be started while an old, already stopped one
+                           is still finishing its last callback.
         """
-        while not self._stop_event.is_set():
+        while not stop_event.is_set():
             start = time.clock_gettime(time.CLOCK_MONOTONIC)
             try:
                 self.func()
@@ -832,26 +837,30 @@ class RepeatedTimer:
             # Sleep remaining time if func took less than interval
             elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
             sleep_time = max(0, self.interval - elapsed)
-            if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
+            if stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately
 
     def start(self, immediately_run=False):
         """
         @summary:
-            Start selected timer (if it not running)
+            Start selected timer (if it not running).
+            If a stop was already requested for the current thread (even if the thread is
+            still finishing its last callback) a new thread is started.
         """
         if immediately_run:
             self.func()
 
-        if self._thread and self._thread.is_alive():
-            return  # already running
+        with self._lock:
+            if self._thread and self._thread.is_alive() and not self._stop_event.is_set():
+                return  # already running
 
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        # Set thread name for debugging
-        thread_name = "RepeatedTimer[{}]{:x}".format(self.func.__name__, id(self))
-        self._thread.name = thread_name
-        self._thread.start()
+            # Old thread (if any) owns the old event which is already set, so it will exit by itself
+            self._stop_event = threading.Event()
+            thread = threading.Thread(target=self._run, args=(self._stop_event,), daemon=True)
+            # Set thread name for debugging
+            thread.name = "RepeatedTimer[{}]{:x}".format(self.func.__name__, id(self))
+            self._thread = thread
+            thread.start()
 
     def stop(self):
         """Stop periodic execution.
@@ -859,28 +868,33 @@ class RepeatedTimer:
             Stop selected timer (if it started before
         @return: True if thread stopped successfully, False if still alive after timeout
         """
-        self._stop_event.set()
-        if self._thread:
+        with self._lock:
+            self._stop_event.set()
+            thread = self._thread
+        if thread:
             # Check if we're trying to stop from within the same thread (avoid deadlock)
-            if self._thread is threading.current_thread():
+            if thread is threading.current_thread():
                 # Don't join ourselves - just set the stop event and return
                 # Thread will exit naturally after current callback completes
                 return True
 
-            self._thread.join(timeout=self.THREAD_STOP_TIMEOUT)
+            thread.join(timeout=self.THREAD_STOP_TIMEOUT)
             # Verify thread actually stopped
-            if self._thread.is_alive():
+            if thread.is_alive():
                 print(f"Warning: RepeatedTimer thread still alive after stop timeout")
                 return False
-            self._thread = None
+            with self._lock:
+                if self._thread is thread:
+                    self._thread = None
         return True
 
     def is_running(self):
         """
         @summary:
-            Return True if the timer is currently running
+            Return True if the timer is currently running (alive and not asked to stop)
         """
-        return self._thread is not None and self._thread.is_alive()
+        with self._lock:
+            return self._thread is not None and self._thread.is_alive() and not self._stop_event.is_set()
 
 # ----------------------------------------------------------------------
 # Memory analysis tools
