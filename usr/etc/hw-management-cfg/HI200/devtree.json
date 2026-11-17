@@ -1,0 +1,163 @@
+{
+    "_comment": [
+        "Only the components of the first switch board are listed. The key index",
+        "is the position of the component within its category in the SMBIOS BOM",
+        "string, so a single entry per BOM string slot is needed, whatever the",
+        "number of the switch boards.",
+        "The components of the other boards are derived by hw-management-devtree.sh",
+        "from the config attributes written by pre_devtr_init(). For board B, from",
+        "1 to swb_brd_num, the i2c bus of a component is its bus in this file plus",
+        "the bus offset of its category multiplied by (B - 1): voltage regulators",
+        "use swb_brd_bus_offset, hot-swap controllers use",
+        "swb_brd_hotswap_bus_offset, power converters use",
+        "swb_brd_pwr_conv_bus_offset and EEPROMs use swb_brd_eeprom_bus_offset.",
+        "The trailing number of the component name is incremented in the same way,",
+        "by the number of the components of that category on a single board:",
+        "swb_brd_vr_num, swb_brd_hotswap_num or swb_brd_pwr_conv_num. EEPROM names",
+        "have no trailing number, the board number is inserted after the board name",
+        "prefix instead and is omitted for the first board.",
+        "E.g voltmon1 on bus 7 with swb_brd_num 2, swb_brd_bus_offset 64 and",
+        "swb_brd_vr_num 12 also creates voltmon13 on bus 71, and swb_info on bus 13",
+        "with swb_brd_eeprom_bus_offset 16 also creates swb2_info on bus 29."
+    ],
+    "swb": [
+        {
+            "key": "24c512_0",
+            "spec": "24c512 0x51 13 swb_info"
+        },
+        {
+            "key": "lm5066i_0",
+            "spec": "lm5066i 0x12 6 hotswap1"
+        },
+        {
+            "key": "mp5926_0",
+            "spec": "mp5926 0x12 6 hotswap1"
+        },
+        {
+            "key": "xdpe1a2g7c_0",
+            "spec": "xdpe1a2g7c 0x5c 7 pwr_conv1"
+        },
+        {
+            "key": "xdpe1a2g7c_1",
+            "spec": "xdpe1a2g7c 0x5c 23 pwr_conv2"
+        },
+        {
+            "key": "xdpe1a2g7c_2",
+            "spec": "xdpe1a2g7c 0x5c 39 pwr_conv3"
+        },
+        {
+            "key": "mp29816_0",
+            "spec": "mp29816 0x66 7 voltmon1"
+        },
+        {
+            "key": "mp29816_1",
+            "spec": "mp29816 0x68 7 voltmon2"
+        },
+        {
+            "key": "mp29816_2",
+            "spec": "mp29816 0x6c 7 voltmon3"
+        },
+        {
+            "key": "mp29816_3",
+            "spec": "mp29816 0x66 23 voltmon4"
+        },
+        {
+            "key": "mp29816_4",
+            "spec": "mp29816 0x68 23 voltmon5"
+        },
+        {
+            "key": "mp29816_5",
+            "spec": "mp29816 0x6c 23 voltmon6"
+        },
+        {
+            "key": "mp29816_6",
+            "spec": "mp29816 0x66 39 voltmon7"
+        },
+        {
+            "key": "mp29816_7",
+            "spec": "mp29816 0x68 39 voltmon8"
+        },
+        {
+            "key": "mp29816_8",
+            "spec": "mp29816 0x6c 39 voltmon9"
+        },
+        {
+            "key": "mp29816_9",
+            "spec": "mp29816 0x66 55 voltmon10"
+        },
+        {
+            "key": "mp29816_10",
+            "spec": "mp29816 0x68 55 voltmon11"
+        },
+        {
+            "key": "mp29816_11",
+            "spec": "mp29816 0x6c 55 voltmon12"
+        },
+        {
+            "key": "xdpe1a2g7_0",
+            "spec": "xdpe1a2g7b 0x66 7 voltmon1"
+        },
+        {
+            "key": "xdpe1a2g7_1",
+            "spec": "xdpe1a2g7b 0x68 7 voltmon2"
+        },
+        {
+            "key": "xdpe1a2g7_2",
+            "spec": "xdpe1a2g7b 0x6c 7 voltmon3"
+        },
+        {
+            "key": "xdpe1a2g7_3",
+            "spec": "xdpe1a2g7b 0x66 23 voltmon4"
+        },
+        {
+            "key": "xdpe1a2g7_4",
+            "spec": "xdpe1a2g7b 0x68 23 voltmon5"
+        },
+        {
+            "key": "xdpe1a2g7_5",
+            "spec": "xdpe1a2g7b 0x6c 23 voltmon6"
+        },
+        {
+            "key": "xdpe1a2g7_6",
+            "spec": "xdpe1a2g7b 0x66 39 voltmon7"
+        },
+        {
+            "key": "xdpe1a2g7_7",
+            "spec": "xdpe1a2g7b 0x68 39 voltmon8"
+        },
+        {
+            "key": "xdpe1a2g7_8",
+            "spec": "xdpe1a2g7b 0x6c 39 voltmon9"
+        },
+        {
+            "key": "xdpe1a2g7_9",
+            "spec": "xdpe1a2g7b 0x66 55 voltmon10"
+        },
+        {
+            "key": "xdpe1a2g7_10",
+            "spec": "xdpe1a2g7b 0x68 55 voltmon11"
+        },
+        {
+            "key": "xdpe1a2g7_11",
+            "spec": "xdpe1a2g7b 0x6c 55 voltmon12"
+        }
+    ],
+    "platform": [
+        {
+            "key": "24c512_0",
+            "spec": "24c512 0x51 1 vpd_info"
+        },
+        {
+            "key": "mp2845_0",
+            "spec": "mp2845 0x69 5 comex_voltmon1"
+        },
+        {
+            "key": "mp2975_1",
+            "spec": "mp2975 0x6a 5 comex_voltmon2"
+        },
+        {
+            "key": "spd5118_0",
+            "spec": "spd5118 0x52 10 somdimm_temp1"
+        }
+    ]
+}

@@ -2751,6 +2751,15 @@ n7xxxld_specific()
 	HI194)
 		asic_i2c_buses=(4 20 36 52)
 		cpld_num=3
+		lm_sensors_config="$lm_sensors_configs_path/n7xxxld_sensors.conf"
+		;;
+	# N7400_LD
+	HI200)
+		asic_i2c_buses=(4 20 36 52 68 84 100 116)
+		cpld_num=3
+		# N7400_LD carries 3 high voltage bucks per switch board against 1 on
+		# N7200_LD, shifting the power converter numbering of the shared busses.
+		lm_sensors_config="$lm_sensors_configs_path/n7400ld_sensors.conf"
 		;;
 	esac
 
@@ -2768,7 +2777,6 @@ n7xxxld_specific()
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=5
 	lm_sensors_labels="$lm_sensors_configs_path/n7xxxld_sensors_labels.json"
-	lm_sensors_config="$lm_sensors_configs_path/n7xxxld_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
 	echo $cpld_num > $config_path/cpld_num
@@ -3595,7 +3603,7 @@ set_asic_pci_id()
 	HI183|HI187|HI188)
 		asic_pci_id="${spc6_pci_id}"
 		;;
-	HI194)
+	HI194|HI200)
 		asic_pci_id="${quantum3_pci_id}|${quantum5_pci_id}"
 		;;
 	*)
@@ -3731,6 +3739,18 @@ set_asic_pci_id()
 		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
+		;;
+	HI200)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		# The order in which lspci reports the 8 ASICs has not been confirmed
+		# on hardware yet. They are taken as reported, unlike on HI194 where
+		# the order is reversed. Revisit once a system is available.
+		asic_idx=1
+		for asic_pci_bus_id in $asics; do
+			echo "$asic_pci_bus_id" > "$config_path"/asic${asic_idx}_pci_bus_id
+			asic_idx=$((asic_idx+1))
+		done
 		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
@@ -3978,6 +3998,16 @@ pre_devtr_init()
 			echo 1 > "$config_path"/swb_brd_hotswap_num
 			echo 16 > "$config_path"/swb_brd_hotswap_bus_offset
 			echo 32 > "$config_path"/swb_brd_pwr_conv_bus_offset
+			echo 16 > "$config_path"/swb_brd_eeprom_bus_offset
+			;;
+		HI200)
+			echo 2 > "$config_path"/swb_brd_num
+			echo 64 > "$config_path"/swb_brd_bus_offset
+			echo 12 > "$config_path"/swb_brd_vr_num
+			echo 3 > "$config_path"/swb_brd_pwr_conv_num
+			echo 1 > "$config_path"/swb_brd_hotswap_num
+			echo 16 > "$config_path"/swb_brd_hotswap_bus_offset
+			echo 64 > "$config_path"/swb_brd_pwr_conv_bus_offset
 			echo 16 > "$config_path"/swb_brd_eeprom_bus_offset
 			;;
 		esac
