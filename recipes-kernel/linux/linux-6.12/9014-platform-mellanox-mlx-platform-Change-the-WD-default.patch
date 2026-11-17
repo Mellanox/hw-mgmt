@@ -1,0 +1,54 @@
+From e6940e5fb79ffd20d41f0e7f09c67537975ceae8 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Tue, 17 Nov 2026 11:03:01 +0200
+Subject: platform: mellanox:  mlx-platform: Change the WD default action
+
+This patch changes the watchdog default action to
+cpu power cycle instead of cpu reset. Applicable for
+Q3450, P4262, and P4300-A00 platforms.
+
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 217d7dd72..03e141b31 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -10063,8 +10063,8 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_led = &mlxplat_l1_switch_led_data;
+ 	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
+ 	mlxplat_fan = &mlxplat_default_fan_data;
+-	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
+-		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_xdr_wd_set_type2); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_xdr_wd_set_type2[i];
+ 	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
+ 	pm_power_off = mlxplat_poweroff;
+@@ -10086,8 +10086,8 @@ static int __init mlxplat_dmi_xdr_liq_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_led = &mlxplat_xdr_liq_led_data;
+ 	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
+ 	mlxplat_fan = &mlxplat_xdr_fan_data;
+-	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
+-		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_xdr_wd_set_type2); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_xdr_wd_set_type2[i];
+ 	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
+ 
+@@ -10132,8 +10132,8 @@ static int __init mlxplat_dmi_l1_g3_switch_matched(const struct dmi_system_id *d
+ 	mlxplat_led = &mlxplat_l1_g3_switch_led_data;
+ 	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
+ 	mlxplat_fan = &mlxplat_default_fan_data;
+-	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
+-		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_xdr_wd_set_type2); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_xdr_wd_set_type2[i];
+ 	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
+ 	pm_power_off = mlxplat_poweroff;
+-- 
+2.47.3
+
