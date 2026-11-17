@@ -235,6 +235,9 @@ PLATFORM_CONFIG = {
         {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
+    "HI194": [
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
+    ],
     "HI186": [
         {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
             "arg": {
