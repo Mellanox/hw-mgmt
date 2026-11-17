@@ -3642,6 +3642,9 @@ class ThermalManagement(hw_management_file_op):
             exit_wait(self.exit, 1)
             if self.exit.is_set():
                 return
+            if self._is_suspend():
+                self.stop(reason="suspend")
+                return
         self.log.info("Resuming normal operation: Setting pwm back to {}%".format(pwm), repeat=1)
         self._update_chassis_fan_speed(pwm, force=True)
         if self.pwm_worker_timer:
@@ -4473,17 +4476,17 @@ class ThermalManagement(hw_management_file_op):
                 exit_wait(self.exit, 30)
                 continue
 
+            if self._is_suspend():
+                self.stop(reason="suspend")
+                exit_wait(self.exit, 5)
+                continue
+
             if self._is_attention_fan_insertion_fail():
                 self.log.notice("Attention fan insertion failed, trying to recover", repeat=1)
                 self._attention_fan_insertion_recovery()
                 continue
 
-            if self._is_suspend():
-                self.stop(reason="suspend")
-                exit_wait(self.exit, 5)
-                continue
-            else:
-                self.start(reason="resume")
+            self.start(reason="resume")
 
             if current_milli_time() >= module_scan_timeout:
                 self.module_scan()
