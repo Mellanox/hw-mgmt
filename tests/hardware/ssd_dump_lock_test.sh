@@ -1116,7 +1116,14 @@ prerequisites() {
 }
 
 make_work_area() {
-	WORK=$(mktemp -d /tmp/ssd-dump-lock-test.XXXXXX) ||
+	# The collector refuses a vendor tool unless every directory
+	# from / to the file is writable by root only, and it
+	# executes that file. /tmp is 1777. /run is root-only but is
+	# often mounted noexec, as examples/hw-management-exec.md
+	# describes, so a stub there fails with Permission denied.
+	# /root is root-only and sits on the root filesystem, which
+	# allows exec. This script already runs as root.
+	WORK=$(mktemp -d /root/ssd-dump-lock-test.XXXXXX) ||
 		die "cannot create a work directory"
 	BACKUP="$WORK/backup"
 	SHIM_DIR="$WORK/shim"
