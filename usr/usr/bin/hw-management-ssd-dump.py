@@ -1255,12 +1255,17 @@ def _follow_tool_link(directory, target, hops):
     releases/v2. The kernel applies '..' to the directory that component
     resolved to. Do the same, and return that path. The same link may
     occur again later in the path; that is not a loop. hops counts
-    expansions and stops the walk after 40. The caller executes the
-    returned path, so a later change to the link is not followed.
+    expansions and stops the walk after 40. Every directory on the way
+    is checked, including the directory a relative path starts in. A
+    root-owned bin under a directory another user can write is refused,
+    because that user can replace bin after the check. The caller
+    executes the returned path, so a later change to the link is not
+    followed.
     """
     resolved = os.sep if os.path.isabs(target) else directory
     parts = _link_components(target)
     while parts:
+        _root_only_dir(resolved)
         comp = parts.pop(0)
         if comp == "..":
             if resolved != os.sep:
@@ -1274,7 +1279,6 @@ def _follow_tool_link(directory, target, hops):
                 "SSD dump tool file not usable: %s (%s)" % (nxt, exc)
             )
         if stat.S_ISLNK(lst.st_mode):
-            _root_only_dir(resolved)
             hops[0] += 1
             if hops[0] > 40:
                 _raise_tool_link(nxt)
@@ -1298,9 +1302,10 @@ def check_tool_dir(path):
     such as /var/tmp, and drop a file or a symlink there. The directory
     named in PATH can be a link through a directory the user can
     replace. The entry can also contain '..' after a directory link.
-    Walk every component of the starting path, refuse a directory that
-    is not root-only, and return the final file so the collector does
-    not follow the links a second time. '..' is applied after the
+    Walk every component of the starting path and refuse a directory
+    that is not root-only, including each ancestor and the directory a
+    relative path starts in. Return the final file so the collector
+    does not follow the links a second time. '..' is applied after the
     directory link it follows. A vendor symlink whose whole chain is
     root-only still passes.
     """

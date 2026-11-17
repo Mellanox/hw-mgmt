@@ -911,8 +911,15 @@ class TestFindTool:
                 # A root-owned directory's files are root-owned too,
                 # so the test does not depend on who runs pytest.
                 _mode, uid_ = by_path[parent]
-                if uid_ == 0:
+                if uid_ == 0 and not (
+                        _mode & (stat.S_IWGRP | stat.S_IWOTH)):
                     return _fake(st, 0o755, 0, stat.S_IFREG)
+            if stat.S_ISDIR(st.st_mode):
+                # Ancestors such as /tmp are world-writable on the
+                # machine that runs pytest. Treat a directory the test
+                # did not name as root-only. A directory the test did
+                # name keeps the mode and owner above.
+                return _fake(st, 0o755, 0, stat.S_IFDIR)
             return st
 
         monkeypatch.setattr(ssd.os, "stat", _stat)
@@ -936,6 +943,7 @@ class TestFindTool:
         bin_dir.mkdir()
         os.chmod(str(bin_dir), 0o777)
         self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o777)
         monkeypatch.setenv("PATH", str(bin_dir))
         with pytest.raises(ssd.DumpError, match="writable by root only"):
             ssd.find_tool("virtium_nvme_dump_v2")
@@ -948,6 +956,7 @@ class TestFindTool:
         os.chmod(str(bin_dir), 0o777)
         target = self._exe(tmp_path / "real-tool")
         os.symlink(str(target), str(bin_dir / "virtium_nvme_dump_v2"))
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o777)
         monkeypatch.setenv("PATH", str(bin_dir))
         with pytest.raises(ssd.DumpError, match="writable by root only"):
             ssd.find_tool("virtium_nvme_dump_v2")
@@ -959,6 +968,40 @@ class TestFindTool:
         self._stat_as_root(ssd, monkeypatch, bin_dir, 0o755)
         monkeypatch.setenv("PATH", str(bin_dir))
         assert ssd.find_tool("virtium_nvme_dump_v2") == str(exe)
+
+    def test_writable_parent_above_root_tool_dir(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # The parent is another user's directory. bin and the tool are
+        # root-owned. That user can rename bin and put a replacement
+        # there after the check, and the collector would run it.
+        parent = tmp_path / "opt"
+        bin_dir = parent / "bin"
+        parent.mkdir()
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((parent, 0o755, 1000),),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_relative_path_refuses_a_writable_start(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        monkeypatch.chdir(tmp_path)
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((tmp_path, 0o755, 1000),),
+        )
+        monkeypatch.setenv("PATH", "bin")
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
 
     def test_root_owned_group_writable_dir_refused(
         self, ssd, tmp_path, monkeypatch, enforce_tool_dir
@@ -1026,7 +1069,7 @@ class TestFindTool:
         os.symlink(str(hop), str(bin_dir / "virtium_nvme_dump_v2"))
         self._stat_as_root(
             ssd, monkeypatch, bin_dir, 0o755,
-            extra=((lib_dir, 0o755, 0),),
+            extra=((lib_dir, 0o755, 0), (mid_dir, 0o777, 0)),
         )
         monkeypatch.setenv("PATH", str(bin_dir))
         with pytest.raises(ssd.DumpError, match="writable by root only"):
@@ -1142,7 +1185,7 @@ class TestFindTool:
         os.symlink(str(hop), str(vendor_bin))
         self._stat_as_root(
             ssd, monkeypatch, local, 0o755,
-            extra=((usr_bin, 0o755, 0),),
+            extra=((usr_bin, 0o755, 0), (var_tmp, 0o777, 0)),
         )
         monkeypatch.setenv("PATH", str(vendor_bin))
         with pytest.raises(ssd.DumpError, match="writable by root only"):
