@@ -16,5 +16,12 @@ TimeoutStopSec=10
 Restart=on-failure
 RestartSec=60s
 
+# Save/clear TC run state for hw-management-start-post.sh.
+# Write "started" only when hw-management is stopping or restarting.
+# A direct stop of this unit removes the marker.
+# Path must match tc_state_file in hw-management-helpers.sh.
+ExecStartPost=-/bin/rm -f /var/run/.hw-management-tc-state
+ExecStop=-/bin/sh -c 'f=/var/run/.hw-management-tc-state; [ -L "$f" ] && rm -f "$f" && exit 0; j=$(systemctl show -p Job --value hw-management.service 2>/dev/null); case $j in ""|0|/) rm -f "$f";; *) umask 077; printf started > "$f";; esac'
+
 [Install]
 WantedBy=multi-user.target
