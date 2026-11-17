@@ -296,7 +296,19 @@ input_smooth_level - smoothing level for sensor input value reading. Formula to 
 """
 
 SENSOR_PARAM_RANGE = {
-    r'module\d+': {
+    # TEC cooling level is valid at 0 (SENSOR_DEF_CONFIG module\d+_tec pwm_min).
+    # Listed first and end-anchored so module1_tec does not inherit the module floor.
+    r'module\d+_tec$': {
+        "pwm_min": {
+            "min": 0,
+            "max": 100,
+        },
+        "pwm_max": {
+            "min": 30,
+            "max": 100,
+        }
+    },
+    r'module\d+$': {
         "val_min_offset": {
             "min": -30000,
             "max": -5000,
@@ -342,9 +354,10 @@ SENSOR_DEF_CONFIG = {
                          "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_WMA,
                          "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
+    # lcrit is inclusive. Cooling level 0 is idle, so the floor sits below it.
     r'module\d+_tec':   {"type": "thermal_module_tec_sensor",
                          "pwm_min": 0, "pwm_max": 100, "val_min": 0, "val_max": 960,
-                         "val_lcrit": 0, "val_hcrit": 1000, "poll_time": 20,
+                         "val_lcrit": -1, "val_hcrit": 1000, "poll_time": 20,
                          "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
@@ -1641,7 +1654,9 @@ class system_device(hw_management_file_op):
     # ----------------------------------------------------------------------
     def validate_sensor_param(self, param_name, param_value):
         """
-        @summary: Validate sensor parameter value
+        @summary: Validate sensor parameter value.
+        The first matching range that defines param_name is authoritative.
+        A specific entry such as moduleN_tec is not tightened by a later generic pattern.
         """
         if not isinstance(param_value, (int, float)):
             self.log.error("{}: {} value({}) is not a number".format(self.name, param_name, param_value), repeat=1)
@@ -1667,6 +1682,7 @@ class system_device(hw_management_file_op):
                                                                                            param_value_range["min"],
                                                                                            param_value_range["max"]))
                             return False
+                    return True
         return True
 
     # ----------------------------------------------------------------------
@@ -2268,17 +2284,11 @@ class thermal_module_tec_sensor(system_device):
             self.fread_err.handle_err(required_files['cooling_level'], cause="crit range")
             return
 
-        cooling_level_norm = int(self.cooling_level * 100 / self.cooling_level_max)
-        if cooling_level_norm > self.pwm_max:
-            self.log.warning("{} cooling_level_norm is greater than {}. Setting to {}".format(self.name,
-                                                                                              self.pwm_max,
-                                                                                              self.pwm_max))
-            cooling_level_norm = self.pwm_max
-        elif cooling_level_norm < self.pwm_min:
-            self.log.debug("{} cooling_level_norm is less than pwm_min".format(self.name))
-            cooling_level_norm = self.pwm_min
-
-        self.update_value(cooling_level_norm)
+        # val_min/val_max are raw cooling-level units (default 0..960), not percent.
+        # Scale this module's reading so its warning level lands on val_max.
+        cooling_span = self.val_max - self.val_min
+        cooling_level_scaled = self.val_min + (float(self.cooling_level) * cooling_span / self.cooling_level_max)
+        self.update_value(cooling_level_scaled)
         for fname, fpath in required_files.items():
             self.fread_err.handle_err(fpath, reset=True)
 
