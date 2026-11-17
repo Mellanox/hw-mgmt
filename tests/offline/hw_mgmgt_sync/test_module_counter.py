@@ -8,6 +8,7 @@
 # Verifies that module_counter is written correctly by peripheral_updater
 # even when thermal_updater is disabled or unavailable.
 
+from import_isolation import temporary_sys_modules
 import os
 import sys
 import unittest
@@ -83,11 +84,11 @@ class TestModuleCounterReliability(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_peripheral_updater", hw_mgmt_path)
         module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        sys.modules["hw_management_redfish_client"] = MagicMock()
-        sys.modules["hw_management_lib"] = MagicMock()
-
-        spec.loader.exec_module(module)
+        with temporary_sys_modules({
+            "hw_management_redfish_client": MagicMock(),
+            "hw_management_lib": MagicMock(),
+        }):
+            spec.loader.exec_module(module)
         return module
 
     def test_01_module_counter_written_by_peripheral_updater(self):
@@ -193,21 +194,22 @@ class TestModuleCounterReliability(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_peripheral_updater_test", hw_mgmt_path)
         peripheral_module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        sys.modules["hw_management_redfish_client"] = MagicMock()
-        sys.modules["hw_management_lib"] = MagicMock()
-
         # Mock platform_config module with proper return values
         mock_platform_config = MagicMock()
         mock_platform_config.get_module_count = MagicMock(return_value=0)  # Return actual int
         # Supported platform: get_platform_config must be truthy or
         # write_module_counter skips the write (commit 1496432d).
         mock_platform_config.get_platform_config = MagicMock(return_value=[{'fn': 'asic_temp_populate'}])
-        sys.modules["hw_management_platform_config"] = mock_platform_config
+        module_stubs = {
+            "hw_management_redfish_client": MagicMock(),
+            "hw_management_lib": MagicMock(),
+            "hw_management_platform_config": mock_platform_config,
+        }
 
         # This should NOT raise an error
         try:
-            spec.loader.exec_module(peripheral_module)
+            with temporary_sys_modules(module_stubs):
+                spec.loader.exec_module(peripheral_module)
             print("[PASS] peripheral_updater loaded successfully without thermal_updater")
         except ImportError as e:
             self.fail(f"peripheral_updater should handle missing dependencies gracefully: {e}")

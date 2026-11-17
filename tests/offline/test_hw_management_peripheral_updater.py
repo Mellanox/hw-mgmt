@@ -15,6 +15,7 @@ Focus on testing the critical business logic:
 - Configuration loading
 """
 
+from import_isolation import temporary_sys_modules
 import unittest
 import sys
 import os
@@ -23,6 +24,14 @@ import tempfile
 import shutil
 import importlib.util
 from unittest.mock import patch, MagicMock, mock_open
+
+# Running this file as a script puts tests/offline/ on sys.path, not tests/.
+# Pytest adds tests/ itself. The helper lives in tests/, so add that directory
+# before importing it.
+_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
+
 
 # Add parent directory to path to import the module under test
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../usr/usr/bin'))
@@ -34,22 +43,25 @@ def _peripheral_updater_script_path():
     return os.path.join(repo_root, 'usr', 'usr', 'bin', 'hw_management_peripheral_updater.py')
 
 
-def _ensure_peripheral_dependency_mocks():
-    """Mock hard-required imports used at peripheral_updater module load time."""
+def _peripheral_import_stubs():
+    """Stubs for imports that peripheral_updater requires at load time."""
     lib_mock = MagicMock()
     lib_mock.HW_Mgmt_Logger = MagicMock()
     lib_mock.current_milli_time = MagicMock(return_value=0)
     lib_mock.RepeatedTimer = MagicMock()
-    sys.modules["hw_management_lib"] = lib_mock
 
     rf_mock = MagicMock()
     rf_mock.RedfishClient = MagicMock()
     rf_mock.RedfishClient.ERR_CODE_OK = 0
     rf_mock.BMCAccessor = MagicMock()
-    sys.modules["hw_management_redfish_client"] = rf_mock
 
+    stubs = {
+        "hw_management_lib": lib_mock,
+        "hw_management_redfish_client": rf_mock,
+    }
     if "psutil" not in sys.modules:
-        sys.modules["psutil"] = MagicMock()
+        stubs["psutil"] = MagicMock()
+    return stubs
 
 
 def _load_peripheral_updater_module(module_suffix, sonic_check_available):
@@ -59,16 +71,14 @@ def _load_peripheral_updater_module(module_suffix, sonic_check_available):
     @param module_suffix: unique suffix for importlib module name
     @param sonic_check_available: True = inject mock sonic_check; False = simulate missing module
     """
-    _ensure_peripheral_dependency_mocks()
     mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
     sys.modules.pop(mod_name, None)
 
+    stubs = _peripheral_import_stubs()
     if sonic_check_available:
         sonic_mock = MagicMock()
         sonic_mock.is_sonic_os = MagicMock(return_value=True)
-        sys.modules["hw_management_sonic_check"] = sonic_mock
-    else:
-        sys.modules.pop("hw_management_sonic_check", None)
+        stubs["hw_management_sonic_check"] = sonic_mock
 
     spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
     module = importlib.util.module_from_spec(spec)
@@ -80,10 +90,16 @@ def _load_peripheral_updater_module(module_suffix, sonic_check_available):
             raise ImportError("hw_management_sonic_check missing (test)")
         return real_import(name, globals, locals, fromlist, level)
 
-    if sonic_check_available:
-        spec.loader.exec_module(module)
-    else:
-        with patch("builtins.__import__", side_effect=guarded_import):
+    with temporary_sys_modules(stubs):
+        if not sonic_check_available:
+            saved_sonic = sys.modules.pop("hw_management_sonic_check", None)
+            try:
+                with patch("builtins.__import__", side_effect=guarded_import):
+                    spec.loader.exec_module(module)
+            finally:
+                if saved_sonic is not None:
+                    sys.modules["hw_management_sonic_check"] = saved_sonic
+        else:
             spec.loader.exec_module(module)
 
     return module
@@ -105,7 +121,7 @@ class TestSonicCheckImportFallback(unittest.TestCase):
 
         self.assertTrue(module.SONIC_CHECK_AVAILABLE)
         self.assertTrue(module.is_sonic_os())
-        sys.modules["hw_management_sonic_check"].is_sonic_os.assert_called()
+        module.is_sonic_os.assert_called()
 
     @staticmethod
     def _apply_sonic_redfish_filter(attrs, is_sonic):
@@ -509,11 +525,11 @@ class TestMonitorAsicChipup(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_peripheral_updater", peripheral_path)
         module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        sys.modules["hw_management_lib"] = MagicMock()
-        sys.modules["hw_management_redfish_client"] = MagicMock()
-
-        spec.loader.exec_module(module)
+        with temporary_sys_modules({
+            "hw_management_lib": MagicMock(),
+            "hw_management_redfish_client": MagicMock(),
+        }):
+            spec.loader.exec_module(module)
         return module
 
     def test_single_asic_ready(self):
@@ -904,24 +920,29 @@ class TestUpdatePeripheralAttr(unittest.TestCase):
         mock_fn = MagicMock()
         peripheral_module.test_error_fn = mock_fn
 
-        attr_prop = {
-            "fn": "test_error_fn",
-            "arg": ["arg1"],
-            "fin": "/tmp/test_sensor",
-            "poll": 0,
-            "ts": 0,
-            "hwmon": ""
-        }
+        temp_dir = tempfile.mkdtemp()
+        test_file = os.path.join(temp_dir, "sensor")
+        try:
+            # File must exist so the read path is taken; open() is then forced to fail.
+            with open(test_file, 'w') as f:
+                f.write("100\n")
 
-        # Create file then make it unreadable
-        with open("/tmp/test_sensor", 'w') as f:
-            f.write("100\n")
+            attr_prop = {
+                "fn": "test_error_fn",
+                "arg": ["arg1"],
+                "fin": test_file,
+                "poll": 0,
+                "ts": 0,
+                "hwmon": ""
+            }
 
-        with patch('builtins.open', side_effect=OSError()):
-            peripheral_module.update_peripheral_attr(attr_prop)
+            with patch('builtins.open', side_effect=OSError()):
+                peripheral_module.update_peripheral_attr(attr_prop)
 
-            # Should call function with empty string on error
-            mock_fn.assert_called_with(["arg1"], "")
+                # Should call function with empty string on error
+                mock_fn.assert_called_with(["arg1"], "")
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_update_peripheral_attr_no_file(self):
         """Test update_peripheral_attr with no fin (file-less trigger)"""

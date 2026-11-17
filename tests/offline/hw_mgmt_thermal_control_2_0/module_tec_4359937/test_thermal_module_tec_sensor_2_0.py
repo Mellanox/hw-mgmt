@@ -748,7 +748,8 @@ class TestThermalModuleTecSensor(unittest.TestCase):
 
             for state_name, setup_func in test_states:
                 setup_func()
-                status_str = str(self.sensor)
+                # TC 2.0 reports state from info(), not __str__.
+                status_str = self.sensor.info()
 
                 # Verify string is valid
                 self.assertIsInstance(status_str, str)

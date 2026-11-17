@@ -84,6 +84,12 @@ class _ValidateRpmHarness:
     def read_pwm(self):
         return self.read_pwm_val
 
+    def _is_pwm_stabilized_for_trend(self, pwm_curr):
+        """Delegate to TC 2.0 fan_sensor. TC 2.5 compares PWM inline and never calls this."""
+        import hw_management_thermal_control as tc
+
+        return tc.fan_sensor._is_pwm_stabilized_for_trend(self, pwm_curr)
+
     def get_hw_path(self, p):
         return p
 

@@ -11,11 +11,19 @@
 # - Helper functions (get_platform_config, get_module_count, etc.)
 # - Architecture independence (thermal_updater can be disabled)
 
+from import_isolation import temporary_sys_modules
 import os
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
 import importlib.util
+
+# Running this file as a script puts tests/offline/ on sys.path, not tests/.
+# Pytest adds tests/ itself. The helper lives in tests/, so add that directory
+# before importing it.
+_tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
 
 
 class TestPlatformConfigStructure(unittest.TestCase):
@@ -170,12 +178,11 @@ class TestThermalConfigFiltering(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("hw_management_thermal_updater", thermal_path)
         cls.thermal_module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        sys.modules["hw_management_lib"] = MagicMock()
+        stubs = {"hw_management_lib": MagicMock()}
         if "psutil" not in sys.modules:
-            sys.modules["psutil"] = MagicMock()
-
-        spec.loader.exec_module(cls.thermal_module)
+            stubs["psutil"] = MagicMock()
+        with temporary_sys_modules(stubs):
+            spec.loader.exec_module(cls.thermal_module)
         cls.thermal_config = cls.thermal_module.thermal_config
 
         # Also load platform_config for comparison
@@ -406,13 +413,13 @@ class TestArchitectureIndependence(unittest.TestCase):
                                                       peripheral_path)
         peripheral_module = importlib.util.module_from_spec(spec)
 
-        # Mock dependencies
-        sys.modules["hw_management_redfish_client"] = MagicMock()
-        sys.modules["hw_management_lib"] = MagicMock()
-
         # This should NOT raise ImportError
         try:
-            spec.loader.exec_module(peripheral_module)
+            with temporary_sys_modules({
+                "hw_management_redfish_client": MagicMock(),
+                "hw_management_lib": MagicMock(),
+            }):
+                spec.loader.exec_module(peripheral_module)
             print(f"[PASS] peripheral_updater imports successfully without thermal_updater")
         except ImportError as e:
             self.fail(f"peripheral_updater should not depend on thermal_updater: {e}")
