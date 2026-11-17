@@ -37,6 +37,14 @@
 #   BMC_VPD_EEPROM_HID_SIZE
 #     Length in bytes to read for HID (dd skip/count in get_system_hw_id).
 #
+#   BMC_VPD_EEPROM_PN_OFFSET
+#     Byte offset in the EEPROM image where the system part number (FRU Board
+#     Part Number) starts.
+#
+#   BMC_VPD_EEPROM_PN_SIZE
+#     Length in bytes of that field (space padded; trailing spaces are dropped
+#     in get_system_hw_pn).
+#
 #   BMC_VPD_EEPROM_BOM_SIZE
 #     Maximum BOM region length after the Vx- anchor is found in get_system_hw_bom.
 #
@@ -51,6 +59,8 @@ BMC_VPD_EEPROM_I2C_BUS=5
 BMC_VPD_EEPROM_I2C_ADDRES=0x51
 BMC_VPD_EEPROM_HID_OFFSET=22
 BMC_VPD_EEPROM_HID_SIZE=5
+BMC_VPD_EEPROM_PN_OFFSET=58
+BMC_VPD_EEPROM_PN_SIZE=29
 BMC_VPD_EEPROM_BOM_SIZE=192
 eeprom_file=/sys/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f600.i2c-bus/i2c-5/5-0051/eeprom
 
