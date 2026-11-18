@@ -8,6 +8,9 @@ pytest>=6.0
 coverage>=5.0
 pytest-cov>=2.10
 
+# REQUIRED - imported by hw-mgmt modules under test (e.g. hw_management_thermal_control.py)
+psutil>=5.0
+
 # NOTE: Other pytest plugins are OPTIONAL
 # The test suite is designed to work with just pytest installed
 # Additional plugins can enhance functionality but are not required:

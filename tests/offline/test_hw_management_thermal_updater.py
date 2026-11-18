@@ -483,7 +483,7 @@ class TestModuleTempPopulate(unittest.TestCase):
     @staticmethod
     def _writes_map(mock_afw):
         """Build {path: contents} from atomic_file_write call_args_list."""
-        return {call.args[0]: call.args[1] for call in mock_afw.call_args_list}
+        return {c[0][0]: c[0][1] for c in mock_afw.call_args_list}
 
     def test_module_absent_writes_zero_defaults_for_fw_control_module(self):
         """Absent module in FW mode -> all temps written as '0\\n', no cooling-level writes."""

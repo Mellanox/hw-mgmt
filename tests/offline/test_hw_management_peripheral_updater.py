@@ -58,6 +58,7 @@ def _ensure_peripheral_dependency_mocks():
 
     rf_mock = MagicMock()
     rf_mock.RedfishClient = MagicMock()
+    rf_mock.RedfishClient.ERR_CODE_OK = 0
     rf_mock.BMCAccessor = MagicMock()
     sys.modules["hw_management_redfish_client"] = rf_mock
 
@@ -588,7 +589,8 @@ class TestRedfishFunctions(unittest.TestCase):
         mock_rf_obj.rf_client.build_get_cmd.return_value = "mock_cmd"
         mock_rf_obj.rf_client.exec_curl_cmd.return_value = (0, '{"test": "data"}', '')
 
-        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=mock_rf_obj):
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=mock_rf_obj), \
+                patch.object(peripheral_module.RedfishClient, 'ERR_CODE_OK', 0):
             result = peripheral_module.redfish_get_req('/test/path')
 
             self.assertIsNotNone(result)
@@ -800,7 +802,8 @@ class TestRedfishConnectionSingleton(unittest.TestCase):
         mock_accessor = MagicMock()
         mock_accessor.login.return_value = 0  # ERR_CODE_OK
 
-        with patch('hw_management_peripheral_updater.BMCAccessor', return_value=mock_accessor):
+        with patch('hw_management_peripheral_updater.BMCAccessor', return_value=mock_accessor), \
+                patch.object(peripheral_module.RedfishClient, 'ERR_CODE_OK', 0):
             instance = peripheral_module.RedfishConnection.get_instance()
 
             self.assertIsNotNone(instance)
@@ -1104,11 +1107,16 @@ class TestWriteModuleCounterError(unittest.TestCase):
         import hw_management_peripheral_updater as peripheral_module
 
         mock_logger = MagicMock()
-        with patch('hw_management_peripheral_updater.get_module_count', return_value=32):
-            with patch('hw_management_peripheral_updater.get_platform_config', return_value=[{}]):
+        # write_module_counter early-returns for platforms not in PLATFORM_CONFIG
+        # (commit 1496432d), so make the SKU resolve as supported to reach the
+        # file write that we force to fail.
+        with patch('hw_management_peripheral_updater.get_platform_config', return_value=[{'fn': 'asic_temp_populate'}]):
+            with patch('hw_management_peripheral_updater.get_module_count', return_value=32):
                 with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
                     with patch('builtins.open', side_effect=OSError("Permission denied")):
                         peripheral_module.write_module_counter("TEST_SKU")
+
+                        # Should log warning about failure
                         mock_logger.warning.assert_called()
 
 
@@ -1151,9 +1159,15 @@ class TestPlatformChipupCoverage(unittest.TestCase):
 
                 if has_chipup:
                     platforms_with_chipup.append(platform_key)
-                    # Validate ASIC configs match
+                    # Validate chipup monitoring covers every physical ASIC.
+                    # asic_temp_populate may carry a legacy 'asic' alias that
+                    # maps to the same sysfs path as 'asic1' (used only for the
+                    # temperature file naming); chipup monitoring tracks one
+                    # entry per physical ASIC (asic1, asic2, ...) and omits the
+                    # alias (commit c164ecac), so normalize it away first.
+                    physical_asics = set(asic_config.keys()) - {'asic'}
                     self.assertEqual(
-                        set(asic_config.keys()),
+                        physical_asics,
                         set(chipup_config.keys()),
                         f"{platform_key}: ASIC configs must match"
                     )
