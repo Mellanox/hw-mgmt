@@ -469,10 +469,12 @@ validate_revisions()
 	log_info "Device model: $model, revision: $revision"
 
 	# Process substitution (not a pipe) so return exits this function, not a subshell.
+	# Vendor CSVs may carry columns past page 2 (e.g. MP29816 Page4); collect
+	# them in 'extra' so they do not end up appended to p2_val.
 	while IFS=, read -r dev_addr cmd_code wr \
 		p0_name p0_byte p0_val \
 		p1_name p1_byte p1_val \
-		p2_name p2_byte p2_val
+		p2_name p2_byte p2_val extra
 	do
 		for page in 0 1 2; do
 			local name_var="p${page}_name"
@@ -577,11 +579,11 @@ compare_and_flash_device()
 		return 1
 	}
 
-	# Skip header, process each line.
+	# Skip header, process each line. Columns past page 2 go to 'extra'.
 	tail -n +2 "$CSV_FILE" | while IFS=, read -r dev_addr cmd_code wr \
 		p0_name p0_byte p0_val \
 		p1_name p1_byte p1_val \
-		p2_name p2_byte p2_val
+		p2_name p2_byte p2_val extra
 	do
 		for page in 0 1 2; do
 			local name_var="p${page}_name"
