@@ -224,27 +224,30 @@ get_system_hw_pn()
 bom_find_v_tag_offset_in_eeprom()
 {
 	local eef="$1"
-	local chunk offset
+	local offset
 
-	chunk=$(dd if="$eef" bs=1 count=128 2>/dev/null) || return 1
-	[ -n "$chunk" ] || return 1
+	# Bail out on an unreadable EEPROM instead of walking every fallback below.
+	dd if="$eef" bs=1 count=128 >/dev/null 2>&1 || return 1
 
+	# Search the EEPROM as a byte stream, never through a shell variable: the
+	# VPD is an IPMI FRU image with NUL bytes ahead of the BOM field, and bash
+	# drops NULs in $(...), which makes the offset short by the NUL count.
 	if command -v strings >/dev/null 2>&1; then
-		offset=$(printf '%s' "$chunk" | strings -a -n 3 -t d | LC_ALL=C awk 'match($2, /V[0-9]-/) { print $1 + RSTART - 1; exit }')
+		offset=$(dd if="$eef" bs=1 count=128 2>/dev/null | strings -a -n 3 -t d | LC_ALL=C awk 'match($2, /V[0-9]-/) { print $1 + RSTART - 1; exit }')
 		if [[ "${offset:-}" =~ ^[0-9]+$ ]]; then
 			printf '%s' "$offset"
 			return 0
 		fi
 	fi
 
-	offset=$(printf '%s' "$chunk" | LC_ALL=C grep -boa 'V[0-9]-' 2>/dev/null | head -n1 | awk -F: '{ print $1 }')
+	offset=$(dd if="$eef" bs=1 count=128 2>/dev/null | LC_ALL=C grep -boa 'V[0-9]-' 2>/dev/null | head -n1 | awk -F: '{ print $1 }')
 	if [[ "${offset:-}" =~ ^[0-9]+$ ]]; then
 		printf '%s' "$offset"
 		return 0
 	fi
 
 	if command -v hexdump >/dev/null 2>&1; then
-		offset=$(printf '%s' "$chunk" | hexdump -ve '1/1 "%u "' | LC_ALL=C awk '{ for (i = 1; i <= NF - 2; i++) \
+		offset=$(dd if="$eef" bs=1 count=128 2>/dev/null | hexdump -ve '1/1 "%u "' | LC_ALL=C awk '{ for (i = 1; i <= NF - 2; i++) \
 			if ($i == 86 && $(i + 1) >= 48 && $(i + 1) <= 57 && $(i + 2) == 45) { print i - 1; exit } }')
 		if [[ "${offset:-}" =~ ^[0-9]+$ ]]; then
 			printf '%s' "$offset"
