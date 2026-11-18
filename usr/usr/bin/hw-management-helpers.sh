@@ -2234,6 +2234,18 @@ write_pwm_mlxreg()
 	fi
 
 	if [ "$mlxreg_rc" -ne 0 ]; then
+		# Removal mid-transaction applies only to an mst device node.
+		# A PCI BDF is not a file, so -e on it is always false.
+		case "$mt_dev" in
+		/*)
+			# mlxreg can fail if the mst device is removed during the transaction.
+			# That case is expected: log info instead of an error.
+			if [ ! -e "$mt_dev" ]; then
+				log_info "Can't set PWM via mlxreg; mst device removed (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
+				return 1
+			fi
+			;;
+		esac
 		log_err "Failed to set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
 		return 1
 	fi

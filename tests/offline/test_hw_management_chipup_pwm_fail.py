@@ -42,6 +42,8 @@ def _run_pwm_fail_helper(
     board_type=None,
     product_name="",
     reset_attrs=None,
+    remove_dev_on_fail=False,
+    capture_logs=False,
 ):
     config_dir = tmp_path / "config"
     thermal_dir = tmp_path / "thermal"
@@ -78,11 +80,28 @@ def _run_pwm_fail_helper(
             (mst_devdir / name).write_text("")
 
     mlxreg_log = tmp_path / "mlxreg.args"
+    if remove_dev_on_fail:
+        # Drop the -d target before exiting so the caller sees a removal
+        # that happened during the mlxreg transaction.
+        remove_snippet = (
+            'prev=""\n'
+            'for arg in "$@"; do\n'
+            '    if [ "$prev" = "-d" ]; then\n'
+            '        rm -f "$arg"\n'
+            '    fi\n'
+            '    prev="$arg"\n'
+            'done\n'
+        )
+    else:
+        remove_snippet = ""
     _write_exec(
         bin_dir / "mlxreg",
         "#!/bin/sh\n"
         "printf '%s\\n' \"$*\" > \"{log}\"\n"
-        "exit {rc}\n".format(log=mlxreg_log, rc=int(mlxreg_rc)),
+        "{remove}"
+        "exit {rc}\n".format(
+            log=mlxreg_log, rc=int(mlxreg_rc), remove=remove_snippet
+        ),
     )
 
     if (
@@ -150,11 +169,17 @@ def _run_pwm_fail_helper(
             asic_index, pwm, explicit_arg
         )
         spc1_stub = ""
+    log_path = tmp_path / "pwm_calls.log"
+    if capture_logs:
+        log_funcs = (
+            "log_info() {{ printf 'INFO %s\\n' \"$*\" >> \"{log}\"; }}\n"
+            "log_err() {{ printf 'ERR %s\\n' \"$*\" >> \"{log}\"; }}\n"
+        ).format(log=log_path)
+    else:
+        log_funcs = "log_info() { :; }\nlog_err() { :; }\n"
     script = """
 source "{helpers}"
-log_info() {{ :; }}
-log_err() {{ :; }}
-config_path="{config}"
+{log_funcs}config_path="{config}"
 thermal_path="{thermal}"
 export HW_MGMT_MST_SYSFS="{mst_sysfs}"
 export HW_MGMT_MST_DEVDIR="{mst_devdir}"
@@ -169,6 +194,7 @@ echo RC:$?
         helper_call=helper_call,
         spc1_stub=spc1_stub,
         path_overrides=path_overrides,
+        log_funcs=log_funcs,
     )
 
     result = subprocess.run(
@@ -606,3 +632,80 @@ def test_set_asic_pwm_speed_safe_mlxreg_fail_without_pwm1(tmp_path):
     assert "RC:1" in result.stdout
     assert mlxreg_log.exists()
     assert not pwm1.exists()
+
+
+def _pwm_call_log(tmp_path):
+    return (tmp_path / "pwm_calls.log").read_text()
+
+
+def test_write_pwm_mlxreg_logs_info_when_mst_node_removed(tmp_path):
+    """A node that disappears during mlxreg is an expected removal."""
+    dev_name = "mt52100_pciconf0"
+    result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        pwm="255",
+        asic_index="1",
+        explicit_dev=None,
+        asic_num=1,
+        pci_bus_ids={1: "03:00.0"},
+        mst_map={dev_name: "0000:03:00.0"},
+        mlxreg_rc=1,
+        remove_dev_on_fail=True,
+        capture_logs=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    assert mlxreg_log.exists()
+    assert not (tmp_path / "dev_mst" / dev_name).exists()
+    log = _pwm_call_log(tmp_path)
+    assert "INFO " in log
+    assert "mst device removed" in log
+    assert "dev={}".format(tmp_path / "dev_mst" / dev_name) in log
+    assert "ERR " not in log
+
+
+def test_write_pwm_mlxreg_logs_error_when_mst_node_remains(tmp_path):
+    """mlxreg failure with the node still present is a real error."""
+    dev_name = "mt52100_pciconf0"
+    result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        pwm="255",
+        asic_index="1",
+        explicit_dev=None,
+        asic_num=1,
+        pci_bus_ids={1: "03:00.0"},
+        mst_map={dev_name: "0000:03:00.0"},
+        mlxreg_rc=1,
+        capture_logs=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    assert mlxreg_log.exists()
+    assert (tmp_path / "dev_mst" / dev_name).exists()
+    log = _pwm_call_log(tmp_path)
+    assert "ERR " in log
+    assert "Failed to set PWM via mlxreg" in log
+    assert "rc=1" in log
+    assert "mst device removed" not in log
+
+
+def test_write_pwm_mlxreg_logs_error_for_pci_bdf_target(tmp_path):
+    """A PCI BDF is not a file, so a failed write stays an error."""
+    result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        pwm="255",
+        asic_index="1",
+        explicit_dev=None,
+        asic_num=1,
+        pci_bus_ids={1: "03:00.0"},
+        mlxreg_rc=1,
+        capture_logs=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    args = mlxreg_log.read_text()
+    assert "-d 03:00.0" in args
+    log = _pwm_call_log(tmp_path)
+    assert "ERR " in log
+    assert "dev=03:00.0" in log
+    assert "mst device removed" not in log
