@@ -48,7 +48,7 @@ index faa4a883d..4caeef3ab 100644
  	case NVSW_REG_GP1_RO_OFFSET:
  	case NVSW_REG_GP2_RO_OFFSET:
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
-index ae15ac354..c954a2241 100644
+index 219f7056f..4a8aba7ed 100644
 --- a/drivers/platform/mellanox/nvsw-host-nvl6.c
 +++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
 @@ -199,6 +199,12 @@ static struct mlxreg_core_data nvsw_host_nvl6_regs_io_data[] = {

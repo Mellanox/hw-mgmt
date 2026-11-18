@@ -782,7 +782,7 @@ set_jtag_gpio()
 			;;
 		$AMD_SNW_CPU)
 			case $sku in
-			HI180|HI185)
+			HI180)
 				echo 0x20e5 > $config_path/jtag_rw_reg
 				echo 0x20e6 > $config_path/jtag_ro_reg
 				;;
@@ -2743,24 +2743,6 @@ n61xxld_specific()
 		erot_count=1
 		hotplug_pdbs=1
 		;;
-	# N6300_LD
-	HI185)
-		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
-		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
-		echo 4 > $config_path/cartridge_counter
-
-		asic_i2c_buses=(5 21 37 53)
-		echo 1 > $config_path/global_wp_wait_step
-		echo 20 > $config_path/global_wp_timeout
-		echo 0 > $config_path/i2c_bus_offset
-		lm_sensors_config="$lm_sensors_configs_path/n63xxld_sensors.conf"
-		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-
-		cpld_num=3
-		leakage_count=2
-		erot_count=1
-		hotplug_pdbs=2
-		;;
 	esac
 
 	echo $cpld_num > $config_path/cpld_num
@@ -3715,7 +3697,7 @@ set_asic_pci_id()
 	HI172)
 		asic_pci_id=$spc4_pci_id
 		;;
-	HI180|HI185)
+	HI180)
 		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
 		;;
 	HI193|HI186)
@@ -3809,7 +3791,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI180|HI185)
+	HI180)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
@@ -4561,9 +4543,9 @@ case $ACTION in
 			exit 1
 		fi
 		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
-						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
-						   "$sku" == "HI200" -o "$sku" == "HI201" -o "$sku" == "HI203" ]; then
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI187" -o \
+						   "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o "$sku" == "HI200" -o \
+						   "$sku" == "HI201" -o "$sku" == "HI203" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
@@ -4686,9 +4668,9 @@ case $ACTION in
 		do_stop
 		sleep 3
 		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI185" -o \
-						   "$sku" == "HI187" -o "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o \
-						   "$sku" == "HI200" -o "$sku" == "HI201" -o "$sku" == "HI203" ]; then
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI183" -o "$sku" == "HI187" -o \
+						   "$sku" == "HI193" -o "$sku" == "HI194" -o "$sku" == "HI199" -o "$sku" == "HI200" -o \
+						   "$sku" == "HI201" -o "$sku" == "HI203" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
