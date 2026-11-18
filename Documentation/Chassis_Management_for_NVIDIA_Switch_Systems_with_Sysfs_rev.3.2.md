@@ -1,15 +1,10 @@
 # What changed in this revision
 
-Rev. 3.2.15, November 2026. Revisions through 3.2.14 are in the
+Rev. 3.2.16, November 2026. Revisions through 3.2.15 are in the
 [user manual changelog](CHANGELOG_User_Manual.md).
 
-- [Graceful Power Off Event](#graceful-power-off-event). `$bsp_path/events/graceful_pwr_off` is the
-  single event raised when the BMC sets `$bsp_path/system/cpu_shutdown_req`, whether it did so from
-  its front panel power button interrupt handler or on a `GracefulPwrOff` Redfish command. SN6600,
-  SN6600_LD, SN6800_LD and SN6810_LD now have the node, and the platforms signalled this way no
-  longer have [`events/power_button`](#power-button-event-events).
-- [CPU Shut Down Request](#cpu-shut-down-request). The node is read only on the host and the BMC
-  raises it towards the CPU, not the other way round.
+- N6300_LD (HI185) is no longer supported. It was an experimental system that never went to
+  production, and it is removed from every platform list and note in this manual.
 
 # Introduction
 
@@ -426,7 +421,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/hotplug\_pdbs}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.\newline Note: This attribute is primarily for liquid-cooled systems (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD, N6300\_LD; SN66XX\_LD family: SN6600\_LD). PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present. It can be zero on air-cooled systems or systems without hot-pluggable PDBs. Note: N6100\_LD has hotplug\_pdbs=0 (PDB is not hot-pluggable). Note: N6300\_LD (SKU HI185) has hotplug\_pdbs=2. Note: SN6600\_LD (SKU HI193) has hotplug\_pdbs=2 with \texttt{\small events/pdb1} and \texttt{\small events/pdb2}.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.\newline Note: This attribute is primarily for liquid-cooled systems (SN58XX\_LD family: SN5810\_LD, SN5800\_LD; N61XX\_LD family: N6100\_LD; SN66XX\_LD family: SN6600\_LD). PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present. It can be zero on air-cooled systems or systems without hot-pluggable PDBs. Note: N6100\_LD has hotplug\_pdbs=0 (PDB is not hot-pluggable). Note: SN6600\_LD (SKU HI193) has hotplug\_pdbs=2 with \texttt{\small events/pdb1} and \texttt{\small events/pdb2}.} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Status, Integer: 0-X (number of hot-pluggable PDBs)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.3930} \\
@@ -744,7 +739,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\tex
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cartridge\_counter}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of cable cartridges in the system. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD and N6300\_LD (SKU HI185) have 4 cable cartridges (\texttt{\small config/cartridge\_counter} = 4).} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get the number of cable cartridges in the system. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD). N6100\_LD has 4 cable cartridges (\texttt{\small config/cartridge\_counter} = 4).} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Count, Integer: 0-X (number of cartridges)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
@@ -1475,7 +1470,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{\tex
 Stack & \multicolumn{3}{p{0.735\linewidth}}{Host} \\
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/config/cable\_cartridge\textless{}cartridge number\textgreater{}\_valid}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Result of the IPMI FRU check run on the cable cartridge EEPROM at init. The BMC reads the same EEPROM and programs the rack id, topology id, switch tray id and slot id into the switch board CPLD without validating it, so this node reports whether that source data can be trusted.\newline Written by \texttt{\small validate\_cartridge\_fru()} in \texttt{\small hw-management-chassis-events.sh} after \texttt{\small ipmi-fru} parses \texttt{\small eeprom/cable\_cartridge\textless{}n\textgreater{}\_eeprom}. \texttt{\small ipmi-fru} exits 0 even for a broken FRU, so the verdict comes from its output: a \texttt{\small FRU Error} line, or a missing board serial number or chassis custom info field, gives 0. Failures are also reported to syslog.\newline Created on the N51XX\_LD and N61XX\_LD families only. Other platforms that have cable cartridge EEPROMs parse them through a different path and do not get this node. It is also absent when \texttt{\small ipmi-fru} is not installed.\newline The node is created when the cartridge EEPROM appears and removed when the cartridge is removed, so it never reports a verdict for an empty slot.\newline One node per cartridge, so the count follows \texttt{\small config/cartridge\_counter}, which is platform dependent: 4 on N6100\_LD (HI180), N6300\_LD (HI185), N5110\_LD (HI166) and N5100\_LD (HI167/HI170), and 2 on N5112\_LD (HI169).} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Result of the IPMI FRU check run on the cable cartridge EEPROM at init. The BMC reads the same EEPROM and programs the rack id, topology id, switch tray id and slot id into the switch board CPLD without validating it, so this node reports whether that source data can be trusted.\newline Written by \texttt{\small validate\_cartridge\_fru()} in \texttt{\small hw-management-chassis-events.sh} after \texttt{\small ipmi-fru} parses \texttt{\small eeprom/cable\_cartridge\textless{}n\textgreater{}\_eeprom}. \texttt{\small ipmi-fru} exits 0 even for a broken FRU, so the verdict comes from its output: a \texttt{\small FRU Error} line, or a missing board serial number or chassis custom info field, gives 0. Failures are also reported to syslog.\newline Created on the N51XX\_LD and N61XX\_LD families only. Other platforms that have cable cartridge EEPROMs parse them through a different path and do not get this node. It is also absent when \texttt{\small ipmi-fru} is not installed.\newline The node is created when the cartridge EEPROM appears and removed when the cartridge is removed, so it never reports a verdict for an empty slot.\newline One node per cartridge, so the count follows \texttt{\small config/cartridge\_counter}, which is platform dependent: 4 on N6100\_LD (HI180), N5110\_LD (HI166) and N5100\_LD (HI167/HI170), and 2 on N5112\_LD (HI169).} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Validity, Integer: 1 - FRU valid, 0 - FRU invalid} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.2.8} \\
@@ -1627,7 +1622,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/eeprom/cable\_cartridge\textless{}index\textgreater{}\_eeprom}\newline \texttt{\small \$bsp\_path/eeprom/cable\_cartridge\textless{}index\textgreater{}\_eeprom\_data}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Read cable cartridge EEPROM raw data or parsed data. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is for systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD has 4 cable cartridges (index 1-4) on I2C buses 68, 69, 70, 71. N6300\_LD (SKU HI185) uses the same cartridge EEPROM connect table as N6100\_LD (\texttt{\small n61xxld\_cartridge\_eeprom\_connect\_table} in \texttt{\small hw-management.sh}).} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Read cable cartridge EEPROM raw data or parsed data. Cable cartridges are used in liquid-cooled multi-ASIC systems for connecting external cables.\newline Note: This attribute is for systems with cable cartridges (N61XX\_LD family: N6100\_LD). N6100\_LD has 4 cable cartridges (index 1-4) on I2C buses 68, 69, 70, 71.} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD); EEPROM data, Binary/String: Raw or parsed EEPROM content} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
@@ -2203,7 +2198,7 @@ Description & \multicolumn{3}{p{0.735\linewidth}}{Graceful power off request. hw
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (normal), 1 (graceful shutdown requested)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Platforms & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Systems whose power events are signalled through the CPLD: N5100\_LD, N5110\_LD, N5112\_LD (HI162, HI166, HI167, HI169, HI170, HI176, HI177), N6100\_LD (HI180), N6300\_LD (HI185), SN6600 (HI186), SN6600\_LD (HI193), SN6810\_LD (HI183) and SN6800\_LD (HI187, HI188)} \\
+Platforms & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Systems whose power events are signalled through the CPLD: N5100\_LD, N5110\_LD, N5112\_LD (HI162, HI166, HI167, HI169, HI170, HI176, HI177), N6100\_LD (HI180), SN6600 (HI186), SN6600\_LD (HI193), SN6810\_LD (HI183) and SN6800\_LD (HI187, HI188)} \\
 Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/graceful\_pwr\_off}} \\
 \bottomrule
 \end{tabular}
@@ -4518,7 +4513,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpu\_shutdown\_req}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Shutdown request raised towards the CPU. The BMC sets this bit, both from its front panel power button interrupt handler and on a \texttt{\small GracefulPwrOff} Redfish command.\newline On platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node and invokes \texttt{\small run\_graceful\_pwr\_off\_event} when the value changes, which raises \hyperref[graceful-power-off-event]{\texttt{\small events/graceful\_pwr\_off}} for the NOS. Platforms with this entry are HI162, HI166, HI167, HI169, HI170, HI176, HI177, HI180, HI185, HI186, HI193, HI183, HI187 and HI188, as listed in \texttt{\small PLATFORM\_CONFIG}.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Shutdown request raised towards the CPU. The BMC sets this bit, both from its front panel power button interrupt handler and on a \texttt{\small GracefulPwrOff} Redfish command.\newline On platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node and invokes \texttt{\small run\_graceful\_pwr\_off\_event} when the value changes, which raises \hyperref[graceful-power-off-event]{\texttt{\small events/graceful\_pwr\_off}} for the NOS. Platforms with this entry are HI162, HI166, HI167, HI169, HI170, HI176, HI177, HI180, HI186, HI193, HI183, HI187 and HI188, as listed in \texttt{\small PLATFORM\_CONFIG}.} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (no request), 1 (shutdown requested)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only on the host. The BMC side of the node is read/write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
@@ -5086,8 +5081,8 @@ SN6810_LD (HI183) and SN6800_LD (HI187) do not support triggering `reset_system`
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cartridge\textless{}index\textgreater{}}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX\_LD family: N6100\_LD, N6300\_LD) for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD, N6300\_LD). N6100\_LD and N6300\_LD (SKU HI185) have 4 cable cartridges.} \\
-Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD, N6300\_LD); Status, Integer: 0/1} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get cable cartridge status at the specified index. Cable cartridges are used in liquid-cooled multi-ASIC systems (N61XX\_LD family: N6100\_LD) for connecting external cables.\newline Note: This attribute is primarily for liquid-cooled systems with cable cartridges (N61XX\_LD family: N6100\_LD). N6100\_LD has 4 cable cartridges.} \\
+Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-4 (N6100\_LD); Status, Integer: 0/1} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0060.1000} \\
 Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get cartridge 1 status: \texttt{\small cat \$bsp\_path/system/cartridge1}} \\
@@ -5126,7 +5121,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/sgmii\_phy2\_reset} (eth0), \texttt{\small \$bsp\_path/system/sgmii\_phy\_reset} (eth1)} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Reset the PHY of one CPU management port: \texttt{\small sgmii\_phy2\_reset} is eth0, \texttt{\small sgmii\_phy\_reset} is eth1. Write 0, wait 120 ms, then read the node. If it still reads 0, write 1. \texttt{\small hw-management-phy-recover.sh} does this sequence (see Management PHY Recovery Helper).\newline Note: These attributes are for N51XX\_LD, N6100\_LD, N6300\_LD, SN6600, SN6600\_LD, SN6800\_LD and SN6810\_LD systems. SN5640 and SN5610 have \texttt{\small sgmii\_phy2\_reset} only.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Reset the PHY of one CPU management port: \texttt{\small sgmii\_phy2\_reset} is eth0, \texttt{\small sgmii\_phy\_reset} is eth1. Write 0, wait 120 ms, then read the node. If it still reads 0, write 1. \texttt{\small hw-management-phy-recover.sh} does this sequence (see Management PHY Recovery Helper).\newline Note: These attributes are for N51XX\_LD, N6100\_LD, SN6600, SN6600\_LD, SN6800\_LD and SN6810\_LD systems. SN5640 and SN5610 have \texttt{\small sgmii\_phy2\_reset} only.} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read/Write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small sgmii\_phy\_reset} V.7.0030.4000, \texttt{\small sgmii\_phy2\_reset} TBD (first release with this change)} \\
 \multirow{2}{*}{Arguments} & \textbf{Name} & \textbf{Data type} & \textbf{Values} \\
@@ -5173,7 +5168,7 @@ Example & \multicolumn{3}{p{0.735\linewidth}}{Recover eth0 and bring it up: \tex
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/leakage\textless{}index\textgreater{}}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Get leakage sensor status at the specified index. Detects liquid leaks in liquid-cooled systems.\newline Note: This attribute is for liquid-cooled systems (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family). N6100\_LD has 2 leakage sensors, SN5810\_LD has 2, SN5800\_LD has 5. N6300\_LD (SKU HI185): \texttt{\small config/leakage\_counter} is \textbf{2} (\texttt{\small n61xxld\_specific()} / HI185 branch in \texttt{\small hw-management.sh}). SN6600\_LD: \texttt{\small config/leakage\_counter} is \textbf{2}; the validated sysfs tree may still list \texttt{\small system/leakage1} through \texttt{\small system/leakage5} when the hardware exposes those mlxreg-io channels (see the \texttt{\small leakage\_counter} section note above).} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Get leakage sensor status at the specified index. Detects liquid leaks in liquid-cooled systems.\newline Note: This attribute is for liquid-cooled systems (SN58XX\_LD family, N61XX\_LD family, SN66XX\_LD family). N6100\_LD has 2 leakage sensors, SN5810\_LD has 2, SN5800\_LD has 5. SN6600\_LD: \texttt{\small config/leakage\_counter} is \textbf{2}; the validated sysfs tree may still list \texttt{\small system/leakage1} through \texttt{\small system/leakage5} when the hardware exposes those mlxreg-io channels (see the \texttt{\small leakage\_counter} section note above).} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{index, Integer: 1-X (system dependent); Status, Integer: 0=no leak, 1=leak detected} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{V.7.0040.3930} \\
