@@ -21,8 +21,8 @@ Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig          |  10 +
  drivers/platform/mellanox/Makefile         |   1 +
- drivers/platform/mellanox/nvsw-host-nvl6.c | 738 +++++++++++++++++++++
- 3 files changed, 749 insertions(+)
+ drivers/platform/mellanox/nvsw-host-nvl6.c | 731 +++++++++++++++++++++
+ 3 files changed, 742 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-host-nvl6.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -59,10 +59,10 @@ index a959d07f1787..11070f26b468 100644
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
 new file mode 100644
-index 000000000000..2d2ad0d34bd5
+index 000000000000..413bdbddbe33
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
-@@ -0,0 +1,738 @@
+@@ -0,0 +1,731 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia NVL6 host platform driver
@@ -714,13 +714,6 @@ index 000000000000..2d2ad0d34bd5
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0023"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI180"),
-+		},
-+	},
-+	{
-+		.callback = nvsw_host_dmi_nvl6_switch_matched,
-+		.matches = {
-+			DMI_MATCH(DMI_BOARD_NAME, "VMOD0023"),
-+			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI185"),
 +		},
 +	},
 +	{ }

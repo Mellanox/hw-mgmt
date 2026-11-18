@@ -15,8 +15,8 @@ ready to lose power as it is going to be. Halt is deliberately not
 covered, because the only hook it reaches runs before device shutdown.
 
 The handler is registered only when the host driver asks for it through
-the new cpu_pwr_off_notify field, set for N6100_LD and N6300_LD (NVL6)
-and for SN6600, SN6600_LD, SN6800_LD and SN6810_LD (SPC6).
+the new cpu_pwr_off_notify field, set for N6100_LD (NVL6) and for
+SN6600, SN6600_LD, SN6800_LD and SN6810_LD (SPC6).
 
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
@@ -106,10 +106,10 @@ index 4caeef3ab8cd..7e5311db329a 100644
  	nvsw_core_mux_topology_exit(nvsw_core);
  	if (nvsw_core->set_reg_default)
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
-index c954a22418de..bab135519b72 100644
+index 4a8aba7edbf3..26d564a9ec74 100644
 --- a/drivers/platform/mellanox/nvsw-host-nvl6.c
 +++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
-@@ -693,6 +693,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
+@@ -686,6 +686,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
  		nvsw_core->wd_data[i] = nvsw_wd_data[i];
  	nvsw_core->regio_data = nvsw_regs_io_data;
  	nvsw_core->led_data = nvsw_led_data;

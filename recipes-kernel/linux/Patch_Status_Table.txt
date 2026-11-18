@@ -739,7 +739,7 @@ Kernel-6.1
 |0122-i2c-dev-Fix-duplicate-chardev-registration-during-mo.patch|                    | Bugfix pending                           |            | Fix duplicate /dev/i2c-N node race at init     |
 |0123-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600 SN6600_LD SN6800_LD SN6810_LD PHY reset |
 |0124-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
-|0125-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
+|0125-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD PHY reset                             |
 |0126-platform-mellanox-nvsw-host-nvl6-Introduce-cpu-power.patch  |                    | Downstream accepted                      |            | CPU reboot with pwr_cycle                      |
 |0127-platform-mellanox-nvsw-Notify-BMC-on-CPU-power-off-c.patch  |                    | Downstream accepted                      |            | NVL6 SPC6 notify BMC on CPU power off          |
 |0128-platform-mellanox-Add-platform-driver-for-Nvidia-NVL.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
@@ -862,7 +862,7 @@ Kernel-6.12
 |0074-i2c-dev-Fix-duplicate-chardev-registration-during-mo.patch|                    | Bugfix pending                           |            | Fix duplicate /dev/i2c-N node race at init     |
 |0075-platform-mellanox-nvsw-host-spc6-Add-the-management-.patch  |                    | Downstream accepted                      |            | SN6600 SN6600_LD SN6800_LD SN6810_LD PHY reset |
 |0076-platform-mellanox-mlx-platform-Downstream-Add-eth0-P.patch  |                    | Downstream accepted                      |            | SN5640 SN5610 eth0 PHY reset                   |
-|0077-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD N6300_LD PHY reset                    |
+|0077-platform-mellanox-nvsw-host-nvl6-Fix-the-management-.patch  |                    | Downstream accepted                      |            | N6100_LD PHY reset                             |
 |0078-platform-mellanox-nvsw-host-nvl6-Introduce-cpu-power.patch  |                    | Downstream accepted                      |            | CPU reboot with pwr_cycle                      |
 |0079-platform-mellanox-nvsw-Notify-BMC-on-CPU-power-off-c.patch  |                    | Downstream accepted                      |            | NVL6 SPC6 notify BMC on CPU power off          |
 |0080-platform-mellanox-mlx-platform-Fix-SW-reboot-reset-ca.patch |                    | Downstream accepted                      |            | Reset cause fix for V3000 Comex based system   |

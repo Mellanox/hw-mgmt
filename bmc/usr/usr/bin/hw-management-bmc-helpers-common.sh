@@ -305,7 +305,6 @@ bmc_init_eth()
 
 # Read CPLD config1 register bits 2:0 (decimal) - management board revision / flavour.
 # Prefer /var/run/hw-management/system/config1; fallback to i2ctransfer.
-# Used to distinguish hid180 flavours (e.g. revision 3 => hi185-style leakage/rtc).
 get_mgmt_board_revision() {
 	local config1_val
 	local config_file="/var/run/hw-management/system/config1"

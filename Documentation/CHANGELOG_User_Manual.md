@@ -1,13 +1,30 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** November 9, 2026
+**Last Updated:** November 18, 2026
 
 ---
 
 ## Change History
 
 Section links in Rev. 3.2.6 and later point to the manual heading. Entries from Rev. 3.2.5 and earlier keep the section numbers that the manual used when they were written. The manual no longer numbers its headings.
+
+### Rev. 3.2.16 - November 18, 2026
+
+#### Removed: N6300_LD (HI185) support
+
+**Affected platforms:** N6300_LD (HI185). It was an experimental NVL6 system that never went to production, and hw-mgmt no longer supports it. Entries for this SKU in earlier revisions below are kept as history.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| [Graceful Power Off Event](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#graceful-power-off-event), [CPU Shut Down Request](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#cpu-shut-down-request), [Management PHY Reset](Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md#management-phy-reset) | HI185 removed from the platform lists |
+| N61XX_LD notes | `hotplug_pdbs`, `cartridge_counter`, cable cartridge EEPROM, cable cartridge FRU validity, cartridge status and leakage notes now cover N6100_LD only |
+
+**Validation source:** `nvsw_host_dmi_table` in the nvsw-host-nvl6 driver, `n61xxld_specific()` in `usr/usr/bin/hw-management.sh`, `PLATFORM_CONFIG` in `usr/usr/bin/hw_management_platform_config.py`, `usr/etc/hw-management-sensors/n61xxld_sensors_labels.json`.
+
+---
 
 ### Rev. 3.2.15 - November 9, 2026
 
