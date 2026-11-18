@@ -388,7 +388,7 @@ check_if_simx_supported_platform()
 	case $vm_sku in
 		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|\
 		HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI183|\
-		HI186|HI187|HI193|HI194|HI199|HI200|HI201|HI203)
+		HI186|HI187|HI193|HI194|HI199|HI200|HI201|HI203|HI195)
 			return 0
 			;;
 
@@ -446,7 +446,7 @@ consume_tc_saved_state()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI187|HI188|HI193|HI194)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI187|HI188|HI193|HI194|HI195)
 			return 0
 			;;
 
@@ -1363,6 +1363,25 @@ check_and_recreate_dpu_devices()
 			echo "mlxreg-dpu 0x68" > /sys/bus/i2c/devices/i2c-${bus}/new_device >/dev/null 2>&1
 		else
 			log_info "Found mlxreg-io on i2c-$bus"
+		fi
+	done
+}
+
+# Due to some delay in hardware, in some switches it has been observed that
+# cable cartridge eeprom initialization fails during the startup. This
+# function will try to re-instantiate if there was a failure. Needs to be
+# invoked from hw-management-start-post.sh
+check_and_recreate_cable_cartridge_eeprom()
+{
+	for bus in {35..38}; do
+		if ! ls /sys/bus/i2c/devices/${bus}-0050/eeprom >/dev/null 2>&1; then
+			log_info "Cable cartridge eeprom not found on i2c-$bus. Recreating device..."
+			# Delete the device on this bus with address 0x68
+			echo 0x50 > /sys/bus/i2c/devices/i2c-${bus}/delete_device 2>/dev/null
+			# Create the device again
+			echo "24c02 0x50" > /sys/bus/i2c/devices/i2c-${bus}/new_device 2>/dev/null
+		else
+			log_info "Found cable cartridge eeprom on i2c-$bus"
 		fi
 	done
 }

@@ -101,6 +101,7 @@ sn58xx_reset_attr_num=15
 sn66xx_reset_attr_num=14
 sn6600_reset_attr_num=13
 sn68xx_reset_attr_num=14
+sn62xx_reset_attr_num=14
 n61xx_reset_attr_num=17
 n7xxx_reset_attr_num=17
 q3401_reset_attr_num=17
@@ -621,6 +622,12 @@ n61xxld_cartridge_eeprom_connect_table=( \
 	24c02 0x50 70 cable_cartridge3_eeprom \
 	24c02 0x50 71 cable_cartridge4_eeprom)
 
+sn62xxld_cartridge_eeprom_connect_table=( \
+	24c02 0x50 35 cable_cartridge1_eeprom \
+	24c02 0x50 36 cable_cartridge2_eeprom \
+	24c02 0x50 37 cable_cartridge3_eeprom \
+	24c02 0x50 38 cable_cartridge4_eeprom)
+
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
@@ -645,6 +652,7 @@ sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39
 sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
 sn6600_named_busses=(asic1 5 pwr 4 vr1 16 vr2 17 vpd 1 cpu-vr 6)
 sn68xxld_named_busses=(asic1 4 pwr1 6 vr1 15 vpd 1 cpu-vr 5)
+sn62xxld_named_busses=(asic1 4 pwr1 6 vpd 1 cpu-vr 5)
 
 ACTION=$1
 print_function_call "$0" "main" "ACTION=$ACTION $2 $3"
@@ -3053,6 +3061,45 @@ sn68xxld_specific()
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
+sn62xxld_specific()
+{
+	case $sku in
+	# SN6200_LD
+	HI195)
+		cpld_num=3
+		leakage_count=2
+		i2c_asic_bus_default=4
+		hotplug_pdbs=0
+		echo 4.5 > $config_path/pdb_hotswap_scale
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	lm_sensors_config="$lm_sensors_configs_path/sn62xx_ld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	named_busses+=(${sn62xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$sn62xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+	add_i2c_dynamic_bus_dev_connection_table "${sn62xxld_cartridge_eeprom_connect_table[@]}"
+	echo -n "${sn62xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+	echo 4 > $config_path/cartridge_counter
+}
+
 system_cleanup_specific()
 {
 	case $board_type in
@@ -3157,7 +3204,14 @@ check_system_internal()
 			sn58xxld_specific
 			;;
 		VMOD0025)
-			sn66xx_specific
+			case $sku in
+			HI195)
+				sn62xxld_specific
+				;;
+			*)
+				sn66xx_specific
+				;;
+			esac
 			;;
 		VMOD0026)
 			n7xxxld_specific
@@ -3706,6 +3760,9 @@ set_asic_pci_id()
 	HI183|HI187|HI188)
 		asic_pci_id="${spc6_pci_id}"
 		;;
+	HI195)
+		asic_pci_id="${spc6_pci_id}"
+		;;
 	HI194)
 		asic_pci_id="${quantum3_pci_id}|${quantum5_pci_id}"
 		;;
@@ -4076,6 +4133,9 @@ pre_devtr_init()
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
 			echo 1 >  "$config_path"/pwr_brd_hotswap_num
 			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		HI195)
+			echo 0 >  "$config_path"/pwr_brd_num
 			;;
 		esac
 		;;
