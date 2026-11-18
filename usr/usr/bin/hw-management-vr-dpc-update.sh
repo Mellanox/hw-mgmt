@@ -97,6 +97,7 @@ show_help()
 	echo "CSV FILE FORMAT:"
 	echo "  Header line followed by data lines with comma-separated values:"
 	echo "  device_addr,cmd_code,wr,p0_name,p0_byte,p0_val,p1_name,p1_byte,p1_val,p2_name,p2_byte,p2_val"
+	echo "  Optional p4_name,p4_byte,p4_val follow when the header labels them Page4."
 	echo ""
 	echo "CONFIG FILE FORMAT:"
 	echo "  KEY=value lines (no shell execution); optional 'export' prefix:"
@@ -225,7 +226,24 @@ _validate_i2c_hex_reg()
 
 _validate_i2c_page_num()
 {
-	[[ "$1" =~ ^[0-2]$ ]]
+	[[ "$1" =~ ^[0124]$ ]]
+}
+
+# Pages to program. The 4th column group is written only when the header
+# labels it Page4 (MP29816); any other label (e.g. MP2845D Page3) is ignored.
+csv_pages()
+{
+	local hdr
+	hdr=$(head -n1 "$CSV_FILE" | cut -d ',' -f13 | tr -d '\r')
+
+	if [[ "${hdr,,}" == page4.* ]]; then
+		echo "0 1 2 4"
+		return
+	fi
+	if [[ -n "$hdr" ]]; then
+		log_info "Ignoring unsupported CSV column group '$hdr'"
+	fi
+	echo "0 1 2"
 }
 
 # CSV pN_byte must be exactly 1 (byte) or 2 (word); anything else is an error.
@@ -579,13 +597,17 @@ compare_and_flash_device()
 		return 1
 	}
 
-	# Skip header, process each line. Columns past page 2 go to 'extra'.
+	local pages
+	pages="$(csv_pages)"
+
+	# Skip header, process each line. Columns past page 4 go to 'extra'.
 	tail -n +2 "$CSV_FILE" | while IFS=, read -r dev_addr cmd_code wr \
 		p0_name p0_byte p0_val \
 		p1_name p1_byte p1_val \
-		p2_name p2_byte p2_val extra
+		p2_name p2_byte p2_val \
+		p4_name p4_byte p4_val extra
 	do
-		for page in 0 1 2; do
+		for page in $pages; do
 			local name_var="p${page}_name"
 			local byte_var="p${page}_byte"
 			local val_var="p${page}_val"
