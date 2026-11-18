@@ -43,6 +43,13 @@ case $board in
 			check_and_recreate_dpu_devices
 		fi
 		;;
+	VMOD0025)
+		# Trying to re-instatiate cable cartridge eeproms
+		# if there was a problem during initialization
+		if [ "$sku" == "HI195" ]; then
+			check_and_recreate_cable_cartridge_eeprom
+		fi
+		;;
 	*)
 		;;
 esac
@@ -55,7 +62,7 @@ fi
 if check_simx; then
         if check_if_simx_supported_platform; then
                 case $sku in
-                        HI166|HI176|HI171|HI183|HI187)
+                        HI166|HI176|HI171|HI183|HI187|HI195)
                                 process_simx_links
                                 ;;
                         *)

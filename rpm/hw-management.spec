@@ -72,6 +72,7 @@ rm -rf $RPM_BUILD_ROOT
 
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-sensors
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-cfg/HI194
+mkdir -p $RPM_BUILD_ROOT/etc/hw-management-cfg/HI195
 mkdir -p $RPM_BUILD_ROOT/usr/share/doc/hw-management
 mkdir -p $RPM_BUILD_ROOT/etc/modules.d
 mkdir -p $RPM_BUILD_ROOT/etc/modules-load.d
@@ -131,6 +132,7 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_msn4700.json $RPM_BUILD_
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn5600.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn5600.json
 
 install -m 0644 usr/etc/hw-management-cfg/HI194/devtree.json $RPM_BUILD_ROOT/etc/hw-management-cfg/HI194/devtree.json
+install -m 0644 usr/etc/hw-management-cfg/HI195/devtree.json $RPM_BUILD_ROOT/etc/hw-management-cfg/HI195/devtree.json
 
 install -m 0644 usr/etc/modprobe.d/hw-management.conf $RPM_BUILD_ROOT/etc/modprobe.d/hw-management.conf
 install -m 0644 usr/etc/modules-load.d/05-hw-management-modules.conf $RPM_BUILD_ROOT/etc/modules-load.d/05-hw-management-modules.conf
@@ -210,7 +212,9 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %dir %attr(0755, root, root) "/etc/hw-management-thermal"
 %dir %attr(0755, root, root) "/etc/hw-management-cfg"
 %dir %attr(0755, root, root) "/etc/hw-management-cfg/HI194"
+%dir %attr(0755, root, root) "/etc/hw-management-cfg/HI195"
 %config %attr(0644, root, root) "/etc/hw-management-cfg/HI194/devtree.json"
+%config %attr(0644, root, root) "/etc/hw-management-cfg/HI195/devtree.json"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/e3597_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_rev1_sensors.conf"
 %config %attr(0644, root, root) "/etc/hw-management-sensors/mqm9700_sensors.conf"
