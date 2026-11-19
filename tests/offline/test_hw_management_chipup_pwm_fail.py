@@ -38,6 +38,10 @@ def _run_pwm_fail_helper(
     cooling_name=None,
     mlxreg_rc=0,
     call=None,
+    spc1_warm_reboot=True,
+    board_type=None,
+    product_name="",
+    reset_attrs=None,
 ):
     config_dir = tmp_path / "config"
     thermal_dir = tmp_path / "thermal"
@@ -95,19 +99,57 @@ def _run_pwm_fail_helper(
     env["HW_MGMT_MST_SYSFS"] = str(mst_sysfs)
     env["HW_MGMT_MST_DEVDIR"] = str(mst_devdir)
 
+    system_dir = tmp_path / "system"
+    system_dir.mkdir(exist_ok=True)
+    board_file = tmp_path / "board_name"
+    pn_file = tmp_path / "product_name"
+    if board_type is not None:
+        board_file.write_text("{}\n".format(board_type))
+    pn_file.write_text("{}\n".format(product_name))
+    if reset_attrs:
+        for name, val in reset_attrs.items():
+            (system_dir / name).write_text("{}\n".format(val))
+
+    path_overrides = ""
+    if board_type is not None or reset_attrs is not None:
+        # Keep reset-cause reads on the planted files. The production helper
+        # also walks mlxreg-io hwmon, which would pick up a real DUT.
+        path_overrides = (
+            'board_type_file="{board}"\n'
+            'pn_file="{pn}"\n'
+            'system_path="{system}"\n'
+            '_hw_mgmt_reset_attr_is_set() {{\n'
+            '    local name="$1"\n'
+            '    [ -e "$system_path/$name" ] || return 1\n'
+            '    [ "$(cat "$system_path/$name" 2>/dev/null)" = "1" ]\n'
+            '}}\n'.format(board=board_file, pn=pn_file, system=system_dir)
+        )
+
     explicit_arg = '"{}"'.format(explicit_dev) if explicit_dev is not None else '""'
     if call == "set_asic_pwm_speed_safe":
         helper_call = 'set_asic_pwm_speed_safe "{}" "{}"'.format(
             asic_index, "255" if pwm is None else pwm
         )
+        spc1_stub = ""
+    elif call == "is_spc1_warm_reboot":
+        helper_call = "is_spc1_warm_reboot"
+        spc1_stub = ""
     elif pwm is None:
         helper_call = 'set_asic_pwm_full_speed_on_chipup_fail "{}" {}'.format(
             asic_index, explicit_arg
         )
+        # Chipup-fail fallback is gated on SPC1 warm reboot. Tests that
+        # supply board_type/reset_attrs exercise the real helper.
+        if board_type is None and reset_attrs is None:
+            spc1_rc = 0 if spc1_warm_reboot else 1
+            spc1_stub = "is_spc1_warm_reboot() { return %d; }\n" % spc1_rc
+        else:
+            spc1_stub = ""
     else:
         helper_call = 'write_pwm_mlxreg "{}" "{}" {}'.format(
             asic_index, pwm, explicit_arg
         )
+        spc1_stub = ""
     script = """
 source "{helpers}"
 log_info() {{ :; }}
@@ -116,7 +158,7 @@ config_path="{config}"
 thermal_path="{thermal}"
 export HW_MGMT_MST_SYSFS="{mst_sysfs}"
 export HW_MGMT_MST_DEVDIR="{mst_devdir}"
-{helper_call}
+{path_overrides}{spc1_stub}{helper_call}
 echo RC:$?
 """.format(
         helpers=HELPERS,
@@ -125,6 +167,8 @@ echo RC:$?
         mst_sysfs=mst_sysfs,
         mst_devdir=mst_devdir,
         helper_call=helper_call,
+        spc1_stub=spc1_stub,
+        path_overrides=path_overrides,
     )
 
     result = subprocess.run(
@@ -151,14 +195,20 @@ def test_chipup_fail_path_passes_failed_asic_index():
     assert "get_asic_mlxreg_dev()" in helpers
     assert "write_pwm_mlxreg()" in helpers
     assert "set_asic_pwm_speed_safe()" in helpers
-    assert "is_spc1_system()" not in helpers
-    assert "is_spc1_warm_reboot()" not in helpers
+    assert "is_spc1_system()" in helpers
+    assert "is_spc1_warm_reboot()" in helpers
     speed_safe = helpers[helpers.index("set_asic_pwm_speed_safe()"):]
     speed_safe = speed_safe[: speed_safe.index("set_asic_pwm_full_speed_on_chipup_fail()")]
     assert '[ "$cooling_name" == "mlxsw" ]' in speed_safe
+    assert "is_spc1_system" not in speed_safe
     assert "PWM sysfs is missing; ASIC PWM control is not configured." in speed_safe
     assert 'write_pwm_mlxreg "$1" 0xff "$explicit_dev"' in helpers
-    assert "if is_spc1_warm_reboot; then" not in chipup_case[fail_idx:]
+    assert "if is_spc1_warm_reboot; then" in chipup_case[fail_idx:]
+    warm_fn = helpers[helpers.index("is_spc1_warm_reboot()"):]
+    warm_fn = warm_fn[: warm_fn.index("write_pwm_mlxreg()")]
+    assert "_hw_mgmt_reset_attr_is_set reset_sw_reset" in warm_fn
+    assert "_hw_mgmt_reset_attr_is_set reset_from_comex" in warm_fn
+    assert "_hw_mgmt_reset_attr_is_set reset_platform" in warm_fn
     assert "_hw_mgmt_normalize_asic_index()" in helpers
     assert "asic${asic_index}_pci_bus_id" in helpers
     assert "head -n 1" in helpers
@@ -171,7 +221,8 @@ def test_chipup_fail_path_passes_failed_asic_index():
     assert "printf 'y\\ny\\ny\\n' |" in write_pwm
 
 
-def test_sysfs_pwm_used_when_pwm1_exists(tmp_path):
+def test_chipup_fail_uses_mlxreg_even_when_pwm1_exists(tmp_path):
+    """Chipup-fail fallback must not write thermal/pwm1 (mlxsw_minimal is gone)."""
     result, mlxreg_log, pwm1 = _run_pwm_fail_helper(
         tmp_path,
         tc_config=TC_ASIC_PWM,
@@ -179,8 +230,10 @@ def test_sysfs_pwm_used_when_pwm1_exists(tmp_path):
     )
     assert result.returncode == 0
     assert "RC:0" in result.stdout
-    assert pwm1.read_text().strip() == "255"
-    assert not mlxreg_log.exists()
+    assert pwm1.read_text().strip() == "128"
+    args = mlxreg_log.read_text()
+    assert "--reg_name MFSC" in args
+    assert "pwm_duty_cycle=0xff" in args
 
 
 def test_mlxreg_used_when_asic_pwm_and_no_pwm1(tmp_path):
@@ -197,14 +250,117 @@ def test_mlxreg_used_when_asic_pwm_and_no_pwm1(tmp_path):
     assert "--indexes pwm=0x0" in args
 
 
-def test_no_mlxreg_when_pwm_control_disabled(tmp_path):
+def test_chipup_fail_uses_mlxreg_when_pwm_control_disabled(tmp_path):
+    """Chipup-fail MFSC write is not gated on tc_config pwm_control."""
     result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
         tmp_path,
         tc_config=TC_ASIC_PWM_OFF,
     )
     assert result.returncode == 0
+    assert "RC:0" in result.stdout
+    args = mlxreg_log.read_text()
+    assert "--reg_name MFSC" in args
+    assert "pwm_duty_cycle=0xff" in args
+
+
+def test_chipup_fail_skips_when_not_spc1_warm_reboot(tmp_path):
+    result, mlxreg_log, pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        tc_config=TC_ASIC_PWM,
+        pwm1="128",
+        spc1_warm_reboot=False,
+    )
+    assert result.returncode == 0
     assert "RC:1" in result.stdout
+    assert pwm1.read_text().strip() == "128"
     assert not mlxreg_log.exists()
+
+
+def test_is_spc1_warm_reboot_accepts_reset_sw_reset(tmp_path):
+    """reboot/kexec on MSN2700B/MSN2100/MSN2410 latch only reset_sw_reset."""
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+
+
+def test_is_spc1_warm_reboot_accepts_reset_from_comex(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_from_comex": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+
+
+def test_is_spc1_warm_reboot_accepts_reset_platform(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_platform": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+
+
+def test_is_spc1_warm_reboot_rejects_cold_with_reset_sw_reset(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={
+            "reset_sw_reset": "1",
+            "reset_aux_pwr_or_ref": "1",
+        },
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
+def test_is_spc1_warm_reboot_rejects_when_no_warm_flag(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_sw_reset": "0"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
+def test_is_spc1_warm_reboot_rejects_non_spc1(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0010",
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
+def test_chipup_fail_uses_mlxreg_when_reset_sw_reset(tmp_path):
+    """Unstubbed path: reboot-latched reset_sw_reset must run the fallback."""
+    result, mlxreg_log, pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        tc_config=TC_ASIC_PWM,
+        pwm1="128",
+        board_type="VMOD0001",
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+    assert pwm1.read_text().strip() == "128"
+    args = mlxreg_log.read_text()
+    assert "--reg_name MFSC" in args
+    assert "pwm_duty_cycle=0xff" in args
 
 
 def test_mlxreg_targets_failed_asic_on_multi_asic(tmp_path):
