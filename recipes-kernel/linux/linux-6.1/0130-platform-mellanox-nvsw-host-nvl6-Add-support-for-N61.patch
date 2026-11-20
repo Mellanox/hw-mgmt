@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Fri, 20 Nov 2026 09:54:23 +0200
+Subject: [PATCH] platform/mellanox: nvsw-host-nvl6: Add support for N6164_LD
+
+N6164_LD (SKU HI196) is an NVL6 switch built on the same VMOD0023
+management board and the same host CPLD as N6100_LD. It differs from
+N6100_LD by the absence of the cable cartridge EEPROMs and of the leakage
+sensors, both of which are handled by the user space, so the system
+shares the N6100_LD configuration and only needs its own DMI match.
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-host-nvl6.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
+index dec6383..cde3782 100644
+--- a/drivers/platform/mellanox/nvsw-host-nvl6.c
++++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
+@@ -663,6 +663,13 @@ static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
+ 			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI180"),
+ 		},
+ 	},
++	{
++		.callback = nvsw_host_dmi_nvl6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0023"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI196"),
++		},
++	},
+ 	{ }
+ };
+ 
+-- 
+2.34.1
+
