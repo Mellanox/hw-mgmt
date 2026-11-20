@@ -233,6 +233,9 @@ PLATFORM_CONFIG = {
     "HI194": [
         {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
     ],
+    "HI196": [
+        {'fin': '/var/run/hw-management/system/cpu_shutdown_req', 'fn': 'run_graceful_pwr_off_event', 'arg': [], 'poll': 1, 'ts': 0},
+    ],
     "HI186": [
         {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
             "arg": {

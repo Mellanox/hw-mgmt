@@ -647,6 +647,7 @@ q3401_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 vr1 5 vr2 21 vr3 
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
 n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cart1 68 cart2 69 cart3 70 cart4 71 cpu-vr 6)
+n6164ld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cpu-vr 6)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
 sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
@@ -790,7 +791,7 @@ set_jtag_gpio()
 			;;
 		$AMD_SNW_CPU)
 			case $sku in
-			HI180)
+			HI180|HI196)
 				echo 0x20e5 > $config_path/jtag_rw_reg
 				echo 0x20e6 > $config_path/jtag_ro_reg
 				;;
@@ -2751,6 +2752,23 @@ n61xxld_specific()
 		erot_count=1
 		hotplug_pdbs=1
 		;;
+	# N6164_LD
+	HI196)
+		echo 0 > $config_path/cartridge_counter
+
+		asic_i2c_buses=(5 21 37 53)
+		echo 1 > $config_path/global_wp_wait_step
+		echo 20 > $config_path/global_wp_timeout
+		echo 0 > $config_path/i2c_bus_offset
+		echo 53 > $config_path/i2c_swb_bus
+		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+		cpld_num=2
+		leakage_count=0
+		erot_count=1
+		hotplug_pdbs=1
+		;;
 	esac
 
 	echo $cpld_num > $config_path/cpld_num
@@ -2767,7 +2785,14 @@ n61xxld_specific()
 	i2c_bus_def_off_eeprom_vpd=1
 	i2c_comex_mon_bus_default=6
 	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
-	named_busses+=(${n61xxld_named_busses[@]})
+	case $sku in
+	HI196)
+		named_busses+=(${n6164ld_named_busses[@]})
+		;;
+	*)
+		named_busses+=(${n61xxld_named_busses[@]})
+		;;
+	esac
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${cpld_power_events[@]}" > "$power_events_file"
 	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
@@ -3751,7 +3776,7 @@ set_asic_pci_id()
 	HI172)
 		asic_pci_id=$spc4_pci_id
 		;;
-	HI180)
+	HI180|HI196)
 		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
 		;;
 	HI193|HI186)
@@ -3848,7 +3873,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI180)
+	HI180|HI196)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`

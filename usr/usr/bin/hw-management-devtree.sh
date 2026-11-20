@@ -1393,7 +1393,7 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0023)
 			case $sku in
-			HI180)
+			HI180|HI196)
 				for key in "${!n61xxld_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${n61xxld_swb_alternatives["$key"]}"
 				done
