@@ -433,7 +433,7 @@ index 7afc86e43f64..07bef9606e23 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9721,6 +10008,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9717,6 +10004,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
  		},
  	},

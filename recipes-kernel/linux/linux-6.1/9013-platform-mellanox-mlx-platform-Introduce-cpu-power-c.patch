@@ -18,7 +18,7 @@ Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
  1 file changed, 121 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index b0bb74fba..f44e0d55d 100644
+index 228ed215a..d07b42c16 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -398,6 +398,8 @@
@@ -205,7 +205,7 @@ index b0bb74fba..f44e0d55d 100644
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
  
-@@ -10134,8 +10251,8 @@ static int __init mlxplat_dmi_l1_scale_out_switch_matched(const struct dmi_syste
+@@ -10130,8 +10247,8 @@ static int __init mlxplat_dmi_l1_scale_out_switch_matched(const struct dmi_syste
  		mlxplat_fan = &mlxplat_l1_scale_out_fan_data;
  	}
  	mlxplat_regs_io = &mlxplat_l1_scale_out_regs_io_data;

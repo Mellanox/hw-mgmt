@@ -17,9 +17,9 @@ Upstream-Status: Pending
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/i2c/muxes/i2c-mux-regmap.c           | 13 ++++++
- drivers/platform/mellanox/nvsw-bmc-hid162.c  | 45 ++++++++++++++++++++
+ drivers/platform/mellanox/nvsw-bmc-hid162.c  | 44 ++++++++++++++++++++
  include/linux/platform_data/i2c-mux-regmap.h |  2 +
- 3 files changed, 60 insertions(+)
+ 3 files changed, 59 insertions(+)
 
 diff --git a/drivers/i2c/muxes/i2c-mux-regmap.c b/drivers/i2c/muxes/i2c-mux-regmap.c
 index fb5e89c82423..cd8b45fa4dba 100644
@@ -56,7 +56,7 @@ diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mell
 index 3a94b519d6ea..a2319a412725 100644
 --- a/drivers/platform/mellanox/nvsw-bmc-hid162.c
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-@@ -6984,6 +6984,19 @@ nvsw_bmc_hid162_completion_notify(void *handle, struct i2c_adapter *parent,
+@@ -6882,6 +6882,19 @@ nvsw_bmc_hid162_completion_notify(void *handle, struct i2c_adapter *parent,
  	return 0;
  }
  
@@ -76,7 +76,7 @@ index 3a94b519d6ea..a2319a412725 100644
  static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
  {
  	int i;
-@@ -6995,6 +7008,7 @@ static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -6893,6 +6906,7 @@ static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid162_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -84,7 +84,7 @@ index 3a94b519d6ea..a2319a412725 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7021,6 +7035,7 @@ static int nvsw_bmc_hid176_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -6919,6 +6933,7 @@ static int nvsw_bmc_hid176_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -92,15 +92,7 @@ index 3a94b519d6ea..a2319a412725 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7046,6 +7061,7 @@ static int nvsw_bmc_hid177_platform_data_init(struct nvsw_core *nvsw_core)
- 		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
- 		mux_data[i]->handle = nvsw_core;
- 		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
-+		mux_data[i]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
- 		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
- 		mux_brdinfo[i]->platform_data = mux_data[i];
- 	}
-@@ -7071,6 +7087,7 @@ static int nvsw_bmc_hid180_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -6944,6 +6959,7 @@ static int nvsw_bmc_hid180_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid180_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -108,7 +100,7 @@ index 3a94b519d6ea..a2319a412725 100644
  		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
-@@ -7096,10 +7113,20 @@ static int nvsw_bmc_hid181_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -6969,10 +6985,20 @@ static int nvsw_bmc_hid181_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_data[i] = &nvsw_bmc_hid181_mux_data[i];
  		mux_data[i]->handle = nvsw_core;
  		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
@@ -127,9 +119,9 @@ index 3a94b519d6ea..a2319a412725 100644
 +	mux_data[0]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
 +
  	nvsw_core->regio_data = &nvsw_bmc_hid181_regio;
- 	nvsw_core->led_data = &nvsw_bmc_hid177_led;
+ 	nvsw_core->led_data = &nvsw_bmc_hid180_led;
  	nvsw_core->hotplug_data = &nvsw_bmc_hid181_hotplug;
-@@ -7125,6 +7152,15 @@ static int nvsw_bmc_hid189_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -6998,6 +7024,15 @@ static int nvsw_bmc_hid189_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
  
@@ -143,9 +135,9 @@ index 3a94b519d6ea..a2319a412725 100644
 +	mux_data[0]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
 +
  	nvsw_core->regio_data = &nvsw_bmc_hid193_regio; /* hid189 uses info from 193 */
- 	nvsw_core->led_data = &nvsw_bmc_hid177_led;
+ 	nvsw_core->led_data = &nvsw_bmc_hid180_led;
  	nvsw_core->hotplug_data = &nvsw_bmc_hid193_hotplug;
-@@ -7175,6 +7211,15 @@ static int nvsw_bmc_hid193_platform_data_init(struct nvsw_core *nvsw_core)
+@@ -7048,6 +7083,15 @@ static int nvsw_bmc_hid193_platform_data_init(struct nvsw_core *nvsw_core)
  		mux_brdinfo[i]->platform_data = mux_data[i];
  	}
  
@@ -159,7 +151,7 @@ index 3a94b519d6ea..a2319a412725 100644
 +	mux_data[0]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
 +
  	nvsw_core->regio_data = &nvsw_bmc_hid193_regio;
- 	nvsw_core->led_data = &nvsw_bmc_hid177_led;
+ 	nvsw_core->led_data = &nvsw_bmc_hid180_led;
  	nvsw_core->hotplug_data = &nvsw_bmc_hid193_hotplug;
 diff --git a/include/linux/platform_data/i2c-mux-regmap.h b/include/linux/platform_data/i2c-mux-regmap.h
 index a06614e5edd2..f92db6ca7851 100644

@@ -1,10 +1,10 @@
 # What changed in this revision
 
-Rev. 3.2.16, November 2026. Revisions through 3.2.15 are in the
+Rev. 3.2.17, November 2026. Revisions through 3.2.16 are in the
 [user manual changelog](CHANGELOG_User_Manual.md).
 
-- N6300_LD (HI185) is no longer supported. It was an experimental system that never went to
-  production, and it is removed from every platform list and note in this manual.
+- N5240_LD (HI177) is no longer supported. It never went to production, and it is removed from
+  every platform list and note in this manual.
 
 # Introduction
 
@@ -2198,7 +2198,7 @@ Description & \multicolumn{3}{p{0.735\linewidth}}{Graceful power off request. hw
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (normal), 1 (graceful shutdown requested)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{3.0} \\
-Platforms & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Systems whose power events are signalled through the CPLD: N5100\_LD, N5110\_LD, N5112\_LD (HI162, HI166, HI167, HI169, HI170, HI176, HI177), N6100\_LD (HI180), SN6600 (HI186), SN6600\_LD (HI193), SN6810\_LD (HI183) and SN6800\_LD (HI187, HI188)} \\
+Platforms & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Systems whose power events are signalled through the CPLD: N5100\_LD, N5110\_LD, N5112\_LD (HI162, HI166, HI167, HI169, HI170, HI176), N6100\_LD (HI180), SN6600 (HI186), SN6600\_LD (HI193), SN6810\_LD (HI183) and SN6800\_LD (HI187, HI188)} \\
 Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Read the node: \texttt{\small cat \$bsp\_path/events/graceful\_pwr\_off}} \\
 \bottomrule
 \end{tabular}
@@ -4513,7 +4513,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Set 
 \toprule
 Node name & \multicolumn{3}{p{0.735\linewidth}}{\texttt{\small \$bsp\_path/system/cpu\_shutdown\_req}} \\
 \midrule
-Description & \multicolumn{3}{p{0.735\linewidth}}{Shutdown request raised towards the CPU. The BMC sets this bit, both from its front panel power button interrupt handler and on a \texttt{\small GracefulPwrOff} Redfish command.\newline On platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node and invokes \texttt{\small run\_graceful\_pwr\_off\_event} when the value changes, which raises \hyperref[graceful-power-off-event]{\texttt{\small events/graceful\_pwr\_off}} for the NOS. Platforms with this entry are HI162, HI166, HI167, HI169, HI170, HI176, HI177, HI180, HI186, HI193, HI183, HI187 and HI188, as listed in \texttt{\small PLATFORM\_CONFIG}.} \\
+Description & \multicolumn{3}{p{0.735\linewidth}}{Shutdown request raised towards the CPU. The BMC sets this bit, both from its front panel power button interrupt handler and on a \texttt{\small GracefulPwrOff} Redfish command.\newline On platforms where \texttt{\small hw\_management\_platform\_config.py} defines a monitor entry, hw-mgmt polls this node and invokes \texttt{\small run\_graceful\_pwr\_off\_event} when the value changes, which raises \hyperref[graceful-power-off-event]{\texttt{\small events/graceful\_pwr\_off}} for the NOS. Platforms with this entry are HI162, HI166, HI167, HI169, HI170, HI176, HI180, HI186, HI193, HI183, HI187 and HI188, as listed in \texttt{\small PLATFORM\_CONFIG}.} \\
 Values & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Integer: 0 (no request), 1 (shutdown requested)} \\
 Access & \multicolumn{3}{p{0.735\linewidth}}{Read only on the host. The BMC side of the node is read/write} \\
 Release version & \multicolumn{3}{p{0.735\linewidth}}{1.0} \\
@@ -5033,7 +5033,7 @@ Example & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.735\linewidth}}{Get 
 
 N51XX_LD platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_comex_wd`, `reset_from_asic`, `reset_from_comex`, or `reset_reload_bios`.
 
-Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
+Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD and N5500_LD (GB200/GB300). `config/reset_attr_num` = 22.
 
 | Reset cause attribute | Description |
 |-----------------------|-------------|
@@ -7496,11 +7496,11 @@ Kernel module `i2c-i801` (`drivers/i2c/busses/i2c-i801.c`). `MODULE_DESCRIPTION`
 
 ### i2c-designware
 
-Kernel module `i2c_designware_platform` (`drivers/i2c/busses/i2c-designware-platdrv.c`). `MODULE_DESCRIPTION` is "Synopsys DesignWare I2C bus adapter". `hw-management.sh` runs `modprobe i2c_designware_platform` for SKUs HI162, HI166, HI167, HI169, HI170, HI176, and HI177 (N51XX_LD), and on AMD SNW CPUs.
+Kernel module `i2c_designware_platform` (`drivers/i2c/busses/i2c-designware-platdrv.c`). `MODULE_DESCRIPTION` is "Synopsys DesignWare I2C bus adapter". `hw-management.sh` runs `modprobe i2c_designware_platform` for SKUs HI162, HI166, HI167, HI169, HI170, and HI176 (N51XX_LD), and on AMD SNW CPUs.
 
 ### i2c-asf
 
-hw-mgmt adds `drivers/i2c/busses/i2c-asf.c` in the Linux 6.12 kernel patch `0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch`. `MODULE_DESCRIPTION` is "ASF SMBus driver". `hw-management.sh` runs `modprobe i2c_asf` for SKUs HI162, HI166, HI167, HI169, HI170, HI176, and HI177 (N51XX_LD); see `config/mctp_bus` and `config/mctp_addr` in [BMC status](#bmc-status). It is enabled by `CONFIG_I2C_ASF`.
+hw-mgmt adds `drivers/i2c/busses/i2c-asf.c` in the Linux 6.12 kernel patch `0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch`. `MODULE_DESCRIPTION` is "ASF SMBus driver". `hw-management.sh` runs `modprobe i2c_asf` for SKUs HI162, HI166, HI167, HI169, HI170, and HI176 (N51XX_LD); see `config/mctp_bus` and `config/mctp_addr` in [BMC status](#bmc-status). It is enabled by `CONFIG_I2C_ASF`.
 
 ## Other modules
 

@@ -319,7 +319,7 @@ index aa1116fcb..69c4bbb7d 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9856,14 +10093,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9852,14 +10089,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  			mlxplat_mlxcpld_xdr_pwr_nr_fixup[i];
  	}
  
