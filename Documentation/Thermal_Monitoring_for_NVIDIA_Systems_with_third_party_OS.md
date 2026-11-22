@@ -48,6 +48,7 @@ This document provides comprehensive guidance for thermal monitoring and managem
 
 | System | Thermal Zones | Sensors | Kernel Support | TC Version | Notes |
 |--------|---------------|---------|----------------|------------|-------|
+| **SN5600** | 12 | 36 | 6.1, 6.12 | **TC v2.5** | Production ready |
 | **SN5610** | 12 | 36 | 6.1, 6.12 | **TC v2.5** | Production ready |
 | **SN5640** | 10 | 30 | 6.1, 6.12 | **TC v2.5** | Production ready |
 | **Q3401-RD** | 4 | 12 | 6.1, 6.12 | **TC v2.5** | Reference design |
@@ -74,7 +75,7 @@ This document provides comprehensive guidance for thermal monitoring and managem
 | MSN4410 | 10 | 30 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
 | MSN4700 | 12 | 36 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
 | MSN4800 | 12 | 36 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
-| MSN5600 | 12 | 36 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN5600 | 12 | 36 | 5.10, 5.14, 6.1 | **TC v2.5** | Supported |
 
 ---
 
@@ -264,7 +265,8 @@ temp2_input:
 The hw-management package supports two versions of thermal control:
 
 #### **TC v2.5 (New Generation)**
-**Only 3 systems currently use TC v2.5:**
+**Only 4 systems currently use TC v2.5:**
+- **SN5600**
 - **SN5610**
 - **SN5640**  
 - **Q3401-RD**
@@ -278,7 +280,7 @@ The hw-management package supports two versions of thermal control:
 
 #### **TC v2.0 (Legacy)**
 **All other systems use TC v2.0:**
-- All MSN series (MSN2700, MSN3700, MSN4700, etc.)
+- MSN2700, MSN3700, MSN4700, and the other MSN systems on TC v2.0
 - All MQM series (MQM8700, MQM9700, etc.)
 - All other current and legacy systems
 

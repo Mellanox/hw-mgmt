@@ -44,7 +44,11 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
 			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
 			 "vdd_cpu_alert" "vddq_alert")
-l1_power_events=("power_button graceful_pwr_off")
+# Power events reported through the CPLD cpu_shutdown_req bit. The BMC sets
+# that bit both from its front panel power button interrupt handler and on a
+# GracefulPwrOff Redfish command, so both are reported as a single
+# graceful_pwr_off event.
+cpld_power_events=("graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
@@ -201,12 +205,21 @@ show_hw_info()
 		CPLD_IOREG_RANGE=256
 	fi
 
+	# 1. Get the cpldreg dump
 	io_dump=$(iorw -b 0x2500 -r -l  $CPLD_IOREG_RANGE | expand)
+
+	# 2. Add extra reg dump [0x203d, 0x20f4] x86 only
+	if [ "$arch" = "x86_64" ]; then
+		extra_dump1=$(iorw -b 0x203d -r -l 1 | expand)
+		extra_dump2=$(iorw -b 0x20f4 -r -l 1 | expand)
+		io_dump="$io_dump"$'\n'"$extra_dump1"$'\n'"$extra_dump2"
+	fi
+
 	log_info "== cpld reg dump start =="
     echo "$io_dump" | logger
 	log_info "== cpld reg dump end =="
-		
-	# Append the new cpldreg dump entry
+
+	# 1. Append the new cpldreg dump entry
  	timestamp=$(date +"%d_%m_%y %H:%M:%S")
 	echo "====== $timestamp cpldreg dump ======" >> "$cpldreg_log_file"
 	echo "$io_dump" >> "$cpldreg_log_file"
@@ -214,7 +227,8 @@ show_hw_info()
 	echo "" >> "$cpldreg_log_file"
 
 	N_REC=100
-	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / 16 + 4)))
+	MSG_LINES=$(echo "$io_dump" | wc -l)
+	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / $MSG_LINES + 4)))
 	tail -n $dump_max_lines "$cpldreg_log_file" > "${cpldreg_log_file}.tmp" && mv "${cpldreg_log_file}.tmp" "$cpldreg_log_file"
 }
 
@@ -318,14 +332,13 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI169" ] ||
         [ "$ui_tree_sku" = "HI170" ] || 
         [ "$ui_tree_sku" = "HI173" ] ||
-        [ "$ui_tree_sku" = "HI174" ] ||
         [ "$ui_tree_sku" = "HI175" ] ||
         [ "$ui_tree_sku" = "HI176" ] ||
         [ "$ui_tree_sku" = "HI177" ] ||
         [ "$ui_tree_sku" = "HI178" ] ||
         [ "$ui_tree_sku" = "HI179" ] ||
         [ "$ui_tree_sku" = "HI180" ] ||
-        [ "$ui_tree_sku" = "HI185" ]; then
+        [ "$ui_tree_sku" = "HI194" ]; then
         ui_tree_archive_file="$(get_ui_tree_archive_file)"
         if [ ! -e "$ui_tree_archive_file" ]; then
             return 0
@@ -375,7 +388,7 @@ check_if_simx_supported_platform()
 	case $vm_sku in
 		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|\
 		HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI183|\
-		HI185|HI186|HI187|HI193|HI194|HI199|HI200|HI201|HI203)
+		HI186|HI187|HI193|HI194|HI199|HI200|HI201|HI203|HI195)
 			return 0
 			;;
 
@@ -433,7 +446,7 @@ consume_tc_saved_state()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI185|HI187|HI188|HI193)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI183|HI187|HI188|HI193|HI194|HI195)
 			return 0
 			;;
 
@@ -443,14 +456,9 @@ check_bmc_is_supported()
 	esac
 }
 
-# This function checks if the host NOS is Redfish disabled.
-# On Redfish disabled, hw-management must skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
-# polling). On any other host OS the behavior is unchanged.
-# Returns 0 if the host runs Redfish disabled, 1 otherwise (single source of truth:
-# hw_management_feature.py).
+# Returns 0 if is_redfish_disabled is True, 1 otherwise.
 check_host_os_is_redfish_disabled()
 {
-	# Return stdout string: True or False 
 	print_function_call "$0" "${FUNCNAME[0]}" "Checking host OS Redfish disabled started"
 	local result=$(/usr/bin/hw_management_feature.py --get is_redfish_disabled)
 	print_function_call "$0" "${FUNCNAME[0]}" "Checking host OS Redfish disabled result: $result"
@@ -461,12 +469,9 @@ check_host_os_is_redfish_disabled()
 	fi
 }
 
-# Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
-# Requires the SONiC manifest (is_usb0_managed_by_nos) plus a host-side contract
-# file (same well-known paths as on the BMC).
+# Returns 0 if is_usb0_managed_by_nos is True and a usb0 contract file exists.
 check_host_usb0_managed_by_nos()
 {
-	# stdout is True when /etc/sonic/sonic_version.yml exists, False otherwise.
 	print_function_call "$0" "${FUNCNAME[0]}" "Checking host USB0 managed by NOS started"
 	local result
 	result=$(/usr/bin/hw_management_feature.py --get is_usb0_managed_by_nos)
@@ -495,6 +500,29 @@ start_sysfs_monitor_if_needed()
 
     log_info "Starting sysfs monitor to complete hw-management initialization"
     systemctl start --no-block hw-management-sysfs-monitor.service 2>/dev/null
+}
+
+# hw-management-bmc-login.service logs in to the BMC over Redfish, which also
+# provisions the NOS account there. systemd pulls it in after
+# hw-management.service, so the same reasoning as for the sysfs monitor above
+# applies: a "hw-management.sh restart" or a manual start runs do_start outside
+# any systemd job, and nothing would log in then.
+#
+# Unlike the monitor, this is not restricted to an active hw-management.service.
+# A start after "systemctl stop hw-management.service" initializes the hardware
+# while leaving that unit inactive, and the login has to happen on that path as
+# well; the login unit has no Requires= on it, so starting it there initializes
+# nothing a second time. --no-block because during the ExecStart of
+# hw-management.service the login is ordered after the very unit we are running
+# under, so a blocking start would wait for its own caller.
+start_bmc_login_if_needed()
+{
+    print_function_call "$0" "${FUNCNAME[0]}" "entering..."
+    check_bmc_is_supported || return 0
+    systemctl is-active --quiet hw-management-bmc-login.service 2>/dev/null && return 0
+
+    log_info "Starting BMC Redfish login"
+    systemctl start --no-block hw-management-bmc-login.service 2>/dev/null
 }
 
 # This function create or cleans sysfs monitor helper files.
@@ -1339,6 +1367,25 @@ check_and_recreate_dpu_devices()
 	done
 }
 
+# Due to some delay in hardware, in some switches it has been observed that
+# cable cartridge eeprom initialization fails during the startup. This
+# function will try to re-instantiate if there was a failure. Needs to be
+# invoked from hw-management-start-post.sh
+check_and_recreate_cable_cartridge_eeprom()
+{
+	for bus in {35..38}; do
+		if ! ls /sys/bus/i2c/devices/${bus}-0050/eeprom >/dev/null 2>&1; then
+			log_info "Cable cartridge eeprom not found on i2c-$bus. Recreating device..."
+			# Delete the device on this bus with address 0x68
+			echo 0x50 > /sys/bus/i2c/devices/i2c-${bus}/delete_device 2>/dev/null
+			# Create the device again
+			echo "24c02 0x50" > /sys/bus/i2c/devices/i2c-${bus}/new_device 2>/dev/null
+		else
+			log_info "Found cable cartridge eeprom on i2c-$bus"
+		fi
+	done
+}
+
 run_fixup_script()
 {
 	local status
@@ -2107,7 +2154,10 @@ _hw_mgmt_reset_attr_is_set()
 }
 
 # Cold power-cycle: recovery is another reboot, not MFSC PWM.
-# Warm reboot: COMEX/CPU reset (Linux reboot) or reset_platform.
+# Warm reboot: software reset (Linux reboot/kexec), COMEX/CPU reset, or
+# reset_platform. SPC1 ASIC-fan systems (MSN2700B, MSN2100, MSN2410) latch
+# reset_sw_reset for reboot and kexec; they do not expose reset_from_comex
+# or reset_platform.
 is_spc1_warm_reboot()
 {
 	local cold
@@ -2122,6 +2172,7 @@ is_spc1_warm_reboot()
 		fi
 	done
 
+	_hw_mgmt_reset_attr_is_set reset_sw_reset && return 0
 	_hw_mgmt_reset_attr_is_set reset_from_comex && return 0
 	_hw_mgmt_reset_attr_is_set reset_platform && return 0
 	return 1
@@ -2201,6 +2252,18 @@ write_pwm_mlxreg()
 	fi
 
 	if [ "$mlxreg_rc" -ne 0 ]; then
+		# Removal mid-transaction applies only to an mst device node.
+		# A PCI BDF is not a file, so -e on it is always false.
+		case "$mt_dev" in
+		/*)
+			# mlxreg can fail if the mst device is removed during the transaction.
+			# That case is expected: log info instead of an error.
+			if [ ! -e "$mt_dev" ]; then
+				log_info "Can't set PWM via mlxreg; mst device removed (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
+				return 1
+			fi
+			;;
+		esac
 		log_err "Failed to set PWM via mlxreg (asic=$asic_index dev=$mt_dev pwm=$pwm_hex rc=$mlxreg_rc)."
 		return 1
 	fi
@@ -2246,8 +2309,8 @@ set_asic_pwm_speed_safe()
 # not created (SPC1 PWM comes from ASIC hwmon). Thermal control never
 # latches emergency and never calls write_pwm_mlxreg(), so ASIC PWM stays
 # at the HW default (~60%). Program MFSC via mlxreg for the failed ASIC.
-# Scope: SPC1 after a warm (COMEX/CPU) reboot only. Cold reboot recovery
-# is another reboot; other platforms must not get these register writes.
+# Scope: SPC1 after a warm (software/COMEX/CPU) reboot only. Cold reboot
+# recovery is another reboot; other platforms must not get these writes.
 # Do not skip on pwm_control and do not use the sysfs PWM path.
 # $1: ASIC index from chipup (0- or 1-based; 0 means first ASIC)
 # $2: optional mlxreg device, PCI BDF, or sxcore PCI sysfs path

@@ -1087,7 +1087,14 @@ prerequisites() {
 }
 
 make_work_area() {
-	WORK=$(mktemp -d /tmp/ssd-dump-lock-test.XXXXXX) ||
+	# The collector refuses a vendor tool unless every directory
+	# from / to the file is writable by root only, and it
+	# executes that file. /tmp is 1777. /run is root-only but is
+	# often mounted noexec, as examples/hw-management-exec.md
+	# describes, so a stub there fails with Permission denied.
+	# /root is root-only and sits on the root filesystem, which
+	# allows exec. This script already runs as root.
+	WORK=$(mktemp -d /root/ssd-dump-lock-test.XXXXXX) ||
 		die "cannot create a work directory"
 	BACKUP="$WORK/backup"
 	SHIM_DIR="$WORK/shim"
@@ -1119,6 +1126,12 @@ done
 exit 0
 EOF
 	chmod 0755 "$STUB"
+	# The collector refuses a path in "tool" and looks the name
+	# up on PATH. The stub stays in $WORK; direct calls and the
+	# helper subshells (they prepend $SHIM_DIR and keep this
+	# PATH) both find it by basename.
+	PATH="$WORK:$PATH"
+	export PATH
 
 	# "*" matches any model through the config fnmatch fallback,
 	# so the holder works on every target. timeout_sec is the
@@ -1133,7 +1146,7 @@ EOF
     "LockTest": {
       "models": {
         "*": {
-          "tool": "$STUB",
+          "tool": "stub-vendor-tool.sh",
           "args": ["{device}"],
           "device_form": "controller",
           "timeout_sec": $LOCK_WAIT_SEC

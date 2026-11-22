@@ -16,6 +16,8 @@ BMC_VPD_EEPROM_I2C_BUS=5
 BMC_VPD_EEPROM_I2C_ADDRES=0x51
 BMC_VPD_EEPROM_HID_OFFSET=22
 BMC_VPD_EEPROM_HID_SIZE=5
+BMC_VPD_EEPROM_PN_OFFSET=58
+BMC_VPD_EEPROM_PN_SIZE=29
 BMC_VPD_EEPROM_BOM_SIZE=192
 eeprom_file=/sys/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f600.i2c-bus/i2c-5/5-0051/eeprom
 
@@ -183,6 +185,37 @@ get_system_hw_id()
 }
 
 #######################################
+# Read system part number from BMC VPD EEPROM into $config_path/pn.
+# This is the FRU Board Part Number of the system VPD (space padded field),
+# not the part number of the BMC card.
+# Globals: BMC_VPD_EEPROM_PN_{OFFSET,SIZE}, eeprom_file (defaults + optional /etc/hw-management-bmc-eeprom.conf).
+#######################################
+get_system_hw_pn()
+{
+	local offset num_bytes raw_data
+
+	if [ -z "${config_path:-}" ]; then
+		echo "[ERROR] config_path unset; cannot store pn"
+		return 1
+	fi
+	if [ -z "${eeprom_file:-}" ] || [ ! -r "$eeprom_file" ]; then
+		echo "[ERROR] eeprom_file not readable: ${eeprom_file:-<unset>}"
+		return 1
+	fi
+
+	offset=$BMC_VPD_EEPROM_PN_OFFSET
+	num_bytes=$BMC_VPD_EEPROM_PN_SIZE
+	# pipefail: a failed I2C read must not pass as a short or empty part number.
+	if ! raw_data=$(set -o pipefail; dd if="$eeprom_file" bs=1 skip="$offset" count="$num_bytes" 2>/dev/null | tr -d '\0' | sed 's/[[:space:]]*$//'); then
+		echo "[ERROR] failed to read system part number from ${eeprom_file}"
+		return 1
+	fi
+
+	printf '%s\n' "$raw_data" > "${config_path}/pn"
+	echo "System part number is $raw_data"
+}
+
+#######################################
 # Find byte offset of V[0-9]- anchor in first 128 bytes of EEPROM (BOM layout).
 # Uses strings(1) when available; else grep --byte-offset; else a small scan
 # (no binutils required — some images omit /usr/bin/strings).
@@ -191,27 +224,30 @@ get_system_hw_id()
 bom_find_v_tag_offset_in_eeprom()
 {
 	local eef="$1"
-	local chunk offset
+	local offset
 
-	chunk=$(dd if="$eef" bs=1 count=128 2>/dev/null) || return 1
-	[ -n "$chunk" ] || return 1
+	# Bail out on an unreadable EEPROM instead of walking every fallback below.
+	dd if="$eef" bs=1 count=128 >/dev/null 2>&1 || return 1
 
+	# Search the EEPROM as a byte stream, never through a shell variable: the
+	# VPD is an IPMI FRU image with NUL bytes ahead of the BOM field, and bash
+	# drops NULs in $(...), which makes the offset short by the NUL count.
 	if command -v strings >/dev/null 2>&1; then
-		offset=$(printf '%s' "$chunk" | strings -a -n 3 -t d | LC_ALL=C awk 'match($2, /V[0-9]-/) { print $1 + RSTART - 1; exit }')
+		offset=$(dd if="$eef" bs=1 count=128 2>/dev/null | strings -a -n 3 -t d | LC_ALL=C awk 'match($2, /V[0-9]-/) { print $1 + RSTART - 1; exit }')
 		if [[ "${offset:-}" =~ ^[0-9]+$ ]]; then
 			printf '%s' "$offset"
 			return 0
 		fi
 	fi
 
-	offset=$(printf '%s' "$chunk" | LC_ALL=C grep -boa 'V[0-9]-' 2>/dev/null | head -n1 | awk -F: '{ print $1 }')
+	offset=$(dd if="$eef" bs=1 count=128 2>/dev/null | LC_ALL=C grep -boa 'V[0-9]-' 2>/dev/null | head -n1 | awk -F: '{ print $1 }')
 	if [[ "${offset:-}" =~ ^[0-9]+$ ]]; then
 		printf '%s' "$offset"
 		return 0
 	fi
 
 	if command -v hexdump >/dev/null 2>&1; then
-		offset=$(printf '%s' "$chunk" | hexdump -ve '1/1 "%u "' | LC_ALL=C awk '{ for (i = 1; i <= NF - 2; i++) \
+		offset=$(dd if="$eef" bs=1 count=128 2>/dev/null | hexdump -ve '1/1 "%u "' | LC_ALL=C awk '{ for (i = 1; i <= NF - 2; i++) \
 			if ($i == 86 && $(i + 1) >= 48 && $(i + 1) <= 57 && $(i + 2) == 45) { print i - 1; exit } }')
 		if [[ "${offset:-}" =~ ^[0-9]+$ ]]; then
 			printf '%s' "$offset"

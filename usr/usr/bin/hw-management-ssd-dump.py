@@ -132,11 +132,17 @@ def skip_without_package(args):
     no NVMe. The default JSON is the package file. Missing that
     file with no dpkg package is a skip, not a warning. An
     explicit --device or --config still goes to require_config,
-    so a missing file there stays a warning. The package
+    so a missing file there stays a warning. --config is noted
+    before the default path is filled in, so naming that same
+    path on the command line is still explicit. The package
     installed and that file missing stays a warning. A default
     JSON that is already on disk is used, dpkg record or not.
     """
-    if args.device or args.config != DEFAULT_CONFIG:
+    if (
+        args.device or
+        getattr(args, "config_explicit", False) or
+        args.config != DEFAULT_CONFIG
+    ):
         return
     if os.path.isfile(args.config):
         return
@@ -882,19 +888,27 @@ def _stop_vendor_group(proc):
 
 
 def _vendor_unblock_sigterm():
-    """Run in the child, before exec. The collector blocks SIGTERM
-    around Popen, and the child inherits that mask."""
-    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
+    """Run in the child, before exec.
+
+    The collector blocks SIGTERM and SIGINT around Popen, and the
+    child inherits that mask. Restore it before exec so the vendor
+    can still be signalled.
+    """
+    signal.pthread_sigmask(
+        signal.SIG_UNBLOCK, {signal.SIGTERM, signal.SIGINT}
+    )
 
 
 def run_vendor_process(cmd, outdir, logf, timeout_sec):
     """New session so timeout can kill vendor children too."""
     global _vendor_proc
     proc = None
-    # SIGTERM between Popen and _vendor_proc would exit with the
-    # vendor still running. Hold the signal until the child is registered.
-    # The child unblocks SIGTERM in preexec so it can still stop normally.
-    blocked = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+    # SIGTERM or SIGINT between fork and _vendor_proc would exit
+    # with the vendor still running. Hold both until the child is
+    # registered. The child restores the mask in preexec.
+    blocked = signal.pthread_sigmask(
+        signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT}
+    )
     try:
         proc = subprocess.Popen(
             cmd,
@@ -1184,21 +1198,147 @@ def resolve_device(explicit, cfg=None, dev_dir="/dev"):
     raise DumpSkip("no NVMe model in sysfs")
 
 
+def check_tool_basename(name):
+    """JSON `tool` / `tool_alt` must be a bare name looked up on PATH.
+
+    A path (absolute or relative) would let a config edit run any
+    executable as root, so it is refused before any lookup.
+    """
+    if os.path.sep in name or (os.path.altsep and os.path.altsep in name):
+        raise DumpError(
+            "SSD dump tool must be a PATH basename, not a path: %s" % name
+        )
+
+
+def _root_only_writable(path, kind):
+    """Refuse path unless root owns it and nobody else can write it."""
+    try:
+        st = os.stat(path)
+    except OSError as exc:
+        raise DumpError(
+            "SSD dump tool %s not usable: %s (%s)" % (kind, path, exc)
+        )
+    if st.st_uid != 0 or (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
+        raise DumpError(
+            "SSD dump tool %s must be writable by root only: %s"
+            % (kind, path)
+        )
+    return st
+
+
+def _root_only_dir(directory):
+    """The directory that contains this path component."""
+    st = _root_only_writable(directory, "directory")
+    if not stat.S_ISDIR(st.st_mode):
+        raise DumpError(
+            "SSD dump tool directory must be writable by root only: %s"
+            % directory
+        )
+
+
+def _link_components(target):
+    """Path pieces of a symlink target, without empty or '.' parts."""
+    return [part for part in target.split(os.sep) if part and part != "."]
+
+
+def _raise_tool_link(path):
+    raise DumpError(
+        "SSD dump tool link must be writable by root only: %s" % path
+    )
+
+
+def _follow_tool_link(directory, target, hops):
+    """Resolve a symlink target one component at a time.
+
+    normpath() drops '..' before it follows a directory link, so
+    current/../bin/dump becomes vendor/bin/dump when current points at
+    releases/v2. The kernel applies '..' to the directory that component
+    resolved to. Do the same, and return that path. The same link may
+    occur again later in the path; that is not a loop. hops counts
+    expansions and stops the walk after 40. Every directory on the way
+    is checked, including the directory a relative path starts in. A
+    root-owned bin under a directory another user can write is refused,
+    because that user can replace bin after the check. The caller
+    executes the returned path, so a later change to the link is not
+    followed.
+    """
+    resolved = os.sep if os.path.isabs(target) else directory
+    parts = _link_components(target)
+    while parts:
+        _root_only_dir(resolved)
+        comp = parts.pop(0)
+        if comp == "..":
+            if resolved != os.sep:
+                resolved = os.path.dirname(resolved)
+            continue
+        nxt = os.path.join(resolved, comp)
+        try:
+            lst = os.lstat(nxt)
+        except OSError as exc:
+            raise DumpError(
+                "SSD dump tool file not usable: %s (%s)" % (nxt, exc)
+            )
+        if stat.S_ISLNK(lst.st_mode):
+            hops[0] += 1
+            if hops[0] > 40:
+                _raise_tool_link(nxt)
+            inner = os.readlink(nxt)
+            if os.path.isabs(inner):
+                resolved = os.sep
+            parts = _link_components(inner) + parts
+            continue
+        if parts and not stat.S_ISDIR(lst.st_mode):
+            raise DumpError(
+                "SSD dump tool file not usable: %s" % nxt
+            )
+        resolved = nxt
+    return resolved
+
+
+def check_tool_dir(path):
+    """Return the path to execute. Every step must be root-only.
+
+    PATH is the caller's. A user can prepend a directory they can write,
+    such as /var/tmp, and drop a file or a symlink there. The directory
+    named in PATH can be a link through a directory the user can
+    replace. The entry can also contain '..' after a directory link.
+    Walk every component of the starting path and refuse a directory
+    that is not root-only, including each ancestor and the directory a
+    relative path starts in. Return the final file so the collector
+    does not follow the links a second time. '..' is applied after the
+    directory link it follows. A vendor symlink whose whole chain is
+    root-only still passes.
+    """
+    hops = [0]
+    if os.path.isabs(path):
+        current = _follow_tool_link(os.sep, path, hops)
+    else:
+        current = _follow_tool_link(os.getcwd(), path, hops)
+    directory = os.path.dirname(current) or os.sep
+    _root_only_dir(directory)
+    try:
+        lst = os.lstat(current)
+    except OSError as exc:
+        raise DumpError(
+            "SSD dump tool file not usable: %s (%s)" % (current, exc)
+        )
+    if stat.S_ISLNK(lst.st_mode):
+        _raise_tool_link(current)
+    _root_only_writable(current, "file")
+    return current
+
+
 def find_tool(name):
-    """Locate JSON `tool` on PATH (or as an absolute path).
+    """Locate JSON `tool` on PATH by bare name.
 
     shutil.which() skips non-executable files, so a present but
     chmod -x binary looked like "not found". Search PATH ourselves:
     executable match wins; else a non-executable file -> that warning.
+    The directory of an executable match must be writable by root only.
     """
     if not name:
         raise DumpError("SSD dump tool not found on PATH: %s" % name)
-    if os.path.isabs(name):
-        if os.path.isfile(name):
-            if os.access(name, os.X_OK):
-                return name
-            raise DumpError("SSD dump tool not executable: %s" % name)
-        raise DumpError("SSD dump tool not found on PATH: %s" % name)
+    check_tool_basename(name)
 
     found_nonexec = None
     for d in os.environ.get("PATH", "").split(os.pathsep):
@@ -1208,7 +1348,7 @@ def find_tool(name):
         if not os.path.isfile(p):
             continue
         if os.access(p, os.X_OK):
-            return p
+            return check_tool_dir(p)
         if found_nonexec is None:
             found_nonexec = p
     if found_nonexec:
@@ -1231,13 +1371,22 @@ def resolve_tool(mcfg):
     names = tool_candidates(mcfg)
     if not names:
         raise DumpError("SSD dump tool not found on PATH: ")
+    # Refuse every path-like name up front, so a bad `tool` cannot
+    # quietly fall back to a valid `tool_alt`.
+    for name in names:
+        check_tool_basename(name)
     nonexec = None
     for name in names:
         try:
             return find_tool(name), name
         except DumpError as exc:
-            if "not executable" in str(exc) and nonexec is None:
+            msg = str(exc)
+            if "not found on PATH" in msg:
+                continue
+            if "not executable" in msg and nonexec is None:
                 nonexec = exc
+                continue
+            raise
     if nonexec is not None:
         raise nonexec
     raise DumpError("SSD dump tool not found on PATH: %s" % ", ".join(names))
@@ -1514,6 +1663,9 @@ def run_verify(args):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
+    # Remember an explicit --config before the default path is filled
+    # in. Naming the default path on the command line is still explicit.
+    args.config_explicit = args.config is not None
     args.config = resolve_config_path(args.config)
     signal.signal(signal.SIGTERM, _handle_sigterm)
     try:

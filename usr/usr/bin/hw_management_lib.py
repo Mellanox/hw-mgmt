@@ -1,6 +1,35 @@
+##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
 
 import os
 import sys
@@ -15,7 +44,12 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
-ALLOWED_SHELL_CMDS = ["iorw", "/usr/bin/hw-management-chassis-events.sh"]
+ALLOWED_SHELL_CMDS = [
+    "iorw",
+    "logger",
+    "/usr/bin/hw-management-chassis-events.sh",
+    "/usr/bin/hw-management-user-dump",
+]
 
 
 def to_int(value: Any, default: int = 0) -> int:
@@ -30,6 +64,51 @@ def to_int(value: Any, default: int = 0) -> int:
         return int(str(value).strip())
     except (ValueError, TypeError):
         return default
+
+
+# ----------------------------------------------------------------------
+def str2bool(val):
+    """
+    @summary:
+        Convert input val value (y/n, true/false, (nonzero)/0, y/n) to bool
+    @param val: input value.
+    @return: True / False / None
+    """
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, int):
+        return bool(val)
+    try:
+        if val.lower() in ("yes", "true", "t", "y", "1"):
+            return True
+        if val.lower() in ("no", "false", "f", "n", "0"):
+            return False
+    except AttributeError:
+        return None
+    return None
+
+# ----------------------------------------------------------------------
+
+
+def get_nested_value(d: dict, keys: list, default=None):
+    """
+    @summary:
+        Get a nested value from a dictionary
+    @param d: dictionary
+    @param keys: list of keys
+    @param default: default value if the key is not found
+    @return: value of the nested key
+    """
+    if not isinstance(d, dict):
+        return default
+    for key in keys:
+        if isinstance(d, dict) and key in d:
+            d = d[key]
+        else:
+            return default
+    return d
 
 # ----------------------------------------------------------------------
 
@@ -785,6 +864,8 @@ class RepeatedTimer:
         self.interval = interval
         self._stop_event = threading.Event()
         self._thread = None
+        # Protects _thread/_stop_event so start()/stop() are safe against each other
+        self._lock = threading.Lock()
         if auto_start:
             self.start()
 
@@ -799,12 +880,15 @@ class RepeatedTimer:
         except Exception:
             pass
 
-    def _run(self):
+    def _run(self, stop_event):
         """
         @summary:
             Run function in separate thread
+        @param stop_event: Stop event owned by this thread. Each thread has its own event,
+                           so a new thread can be started while an old, already stopped one
+                           is still finishing its last callback.
         """
-        while not self._stop_event.is_set():
+        while not stop_event.is_set():
             start = time.clock_gettime(time.CLOCK_MONOTONIC)
             try:
                 self.func()
@@ -813,26 +897,30 @@ class RepeatedTimer:
             # Sleep remaining time if func took less than interval
             elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
             sleep_time = max(0, self.interval - elapsed)
-            if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
+            if stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately
 
     def start(self, immediately_run=False):
         """
         @summary:
-            Start selected timer (if it not running)
+            Start selected timer (if it not running).
+            If a stop was already requested for the current thread (even if the thread is
+            still finishing its last callback) a new thread is started.
         """
         if immediately_run:
             self.func()
 
-        if self._thread and self._thread.is_alive():
-            return  # already running
+        with self._lock:
+            if self._thread and self._thread.is_alive() and not self._stop_event.is_set():
+                return  # already running
 
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        # Set thread name for debugging
-        thread_name = "RepeatedTimer[{}]{:x}".format(self.func.__name__, id(self))
-        self._thread.name = thread_name
-        self._thread.start()
+            # Old thread (if any) owns the old event which is already set, so it will exit by itself
+            self._stop_event = threading.Event()
+            thread = threading.Thread(target=self._run, args=(self._stop_event,), daemon=True)
+            # Set thread name for debugging
+            thread.name = "RepeatedTimer[{}]{:x}".format(self.func.__name__, id(self))
+            self._thread = thread
+            thread.start()
 
     def stop(self):
         """Stop periodic execution.
@@ -840,28 +928,34 @@ class RepeatedTimer:
             Stop selected timer (if it started before
         @return: True if thread stopped successfully, False if still alive after timeout
         """
-        self._stop_event.set()
-        if self._thread:
+        with self._lock:
+            self._stop_event.set()
+            thread = self._thread
+        if thread:
             # Check if we're trying to stop from within the same thread (avoid deadlock)
-            if self._thread is threading.current_thread():
+            if thread is threading.current_thread():
                 # Don't join ourselves - just set the stop event and return
                 # Thread will exit naturally after current callback completes
                 return True
 
-            self._thread.join(timeout=self.THREAD_STOP_TIMEOUT)
-            # Verify thread actually stopped
-            if self._thread.is_alive():
+            thread.join(timeout=self.THREAD_STOP_TIMEOUT)
+            # Verify thread actually stopped. Check the thread we joined: start() may
+            # already have replaced self._thread while this one was exiting.
+            if thread.is_alive():
                 print("Warning: RepeatedTimer thread still alive after stop timeout")
                 return False
-            self._thread = None
+            with self._lock:
+                if self._thread is thread:
+                    self._thread = None
         return True
 
     def is_running(self):
         """
         @summary:
-            Return True if the timer is currently running
+            Return True if the timer is currently running (alive and not asked to stop)
         """
-        return self._thread is not None and self._thread.is_alive()
+        with self._lock:
+            return self._thread is not None and self._thread.is_alive() and not self._stop_event.is_set()
 
 # ----------------------------------------------------------------------
 # Memory analysis tools

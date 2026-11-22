@@ -9,14 +9,18 @@ and XDPE1A2G5B Controllers.
 
 This patch applies to Linux kernel versions older than 6.1.111.
 
+Add XDPE1A2G7C to the supported devices. It has the same dual loop
+topology, PMBus command set and telemetry formats as XDPE1A2G7B, so
+only the device identifiers are needed.
+
 Signed-off-by: Ashish Yadav <ashish.yadav@infineon.com>
 ---
  drivers/hwmon/pmbus/Kconfig      |   9 +++
  drivers/hwmon/pmbus/Makefile     |   1 +
  drivers/hwmon/pmbus/pmbus.h      |   8 ++-
  drivers/hwmon/pmbus/pmbus_core.c |   4 ++
- drivers/hwmon/pmbus/xdpe1a2g7b.c | 116 +++++++++++++++++++++++++++++++
- 5 files changed, 137 insertions(+), 1 deletion(-)
+ drivers/hwmon/pmbus/xdpe1a2g7b.c | 118 +++++++++++++++++++++++++++++++
+ 5 files changed, 139 insertions(+), 1 deletion(-)
  create mode 100644 drivers/hwmon/pmbus/xdpe1a2g7b.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
@@ -86,14 +90,14 @@ index 7ec04934747e..87b364226aa7 100644
  }
 diff --git a/drivers/hwmon/pmbus/xdpe1a2g7b.c b/drivers/hwmon/pmbus/xdpe1a2g7b.c
 new file mode 100644
-index 000000000000..e1b22abe0169
+index 000000000000..a3ba100bc2a3
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/xdpe1a2g7b.c
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,118 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
-+ * Hardware monitoring driver for Infineon Multi-phase Digital XDPE1A2G7B
-+ * and XDPE1A2G5B Controllers
++ * Hardware monitoring driver for Infineon Multi-phase Digital XDPE1A2G7B,
++ * XDPE1A2G7C and XDPE1A2G5B Controllers
 + *
 + * Copyright (c) 2026 Infineon Technologies. All rights reserved.
 + */
@@ -178,6 +182,7 @@ index 000000000000..e1b22abe0169
 +}
 +
 +static const struct i2c_device_id xdpe1a2g7b_id[] = { { "xdpe1a2g7b" },
++						      { "xdpe1a2g7c" },
 +						      { "xdpe1a2g5b" },
 +						      {} };
 +
@@ -185,6 +190,7 @@ index 000000000000..e1b22abe0169
 +
 +static const struct of_device_id __maybe_unused xdpe1a2g7b_of_match[] = {
 +	{ .compatible = "infineon,xdpe1a2g7b" },
++	{ .compatible = "infineon,xdpe1a2g7c" },
 +	{ .compatible = "infineon,xdpe1a2g5b" },
 +	{}
 +};
@@ -203,7 +209,7 @@ index 000000000000..e1b22abe0169
 +module_i2c_driver(xdpe1a2g7b_driver);
 +
 +MODULE_AUTHOR("Ashish Yadav <ashish.yadav@infineon.com>");
-+MODULE_DESCRIPTION("PMBus driver for Infineon XDPE1A2G7B/5B");
++MODULE_DESCRIPTION("PMBus driver for Infineon XDPE1A2G7B/7C/5B");
 +MODULE_LICENSE("GPL");
 +MODULE_IMPORT_NS(PMBUS);
 -- 

@@ -123,6 +123,8 @@ class CONST:
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     TEMP_NA_VAL = 255
+    MODULE_MIN_OFFSET_DEF = -20000
+    MODULE_MAX_OFFSET_DEF = 0
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -263,13 +265,14 @@ SENSOR_DEF_CONFIG = {
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
+    # lcrit is inclusive. Cooling level 0 is idle, so the floor sits below it.
     r'module\d+_tec':   {"type": "thermal_module_tec_sensor",
                          "pwm_min": 0, "pwm_max": 100, "val_min": 0, "val_max": 100,
-                         "val_lcrit": 0, "val_hcrit": 1000, "poll_time": 20,
+                         "val_lcrit": -1, "val_hcrit": 1000, "poll_time": 20,
                          "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 5, "val_hcrit": 150000,  "poll_time": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
@@ -480,24 +483,56 @@ def get_dict_val_by_path(dict_in, path):
 
 
 # ----------------------------------------------------------------------
-def g_get_range_val(line, in_value):
+def g_get_range_val(line, in_value, clamp=True):
     """
-    @summary: Searching range which is match to input val and returning corresponding output value
-    @param line: dict with temp ranges and output values
+    @summary: Searching range which is match to input value and returning corresponding output value.
+            If clamp is True:
+            if input value lower than lowest range - return lowest range value
+            if input value higher than highest range - return highest range value
+            Input value falling into a gap between ranges always returns None.
+    @param line: dict with temp ranges and output values (range bounds may be negative)
         Example: {"-127:20":30, "21:25":40 , "26:30":50, "31:120":60},
-    @param val: input value
-    @return: output value
+    @param in_value: input value (converted to int, fractional part is truncated)
+    @param clamp: clamp out-of-bounds input to the lowest/highest range (default True)
+    @return: tuple (output value, range min, range max).
+            (None, None, None) if input value is not a valid integer, the table is empty/malformed,
+            or no range matches. For clamped values range min and range max are both the violated boundary.
     """
+    try:
+        in_value = int(in_value)
+    except (ValueError, TypeError):
+        return None, None, None
+    if not line:
+        return None, None, None
+
+    lowest = None   # (min, val) of the range with lowest min
+    highest = None  # (max, val) of the range with highest max
     for key, val in line.items():
-        val_range = key.split(":")
-        val_min = int(val_range[0])
-        val_max = int(val_range[1])
+        # 1. split range and get min and max values (negative bounds are allowed)
+        try:
+            val_min, val_max = (int(x) for x in key.split(":"))
+        except (ValueError, TypeError, AttributeError):
+            return None, None, None
+        # 2. check if input value is in range
         if val_min <= in_value <= val_max:
             return val, val_min, val_max
+        # 3. save lowest and highest range values
+        if lowest is None or val_min < lowest[0]:
+            lowest = (val_min, val)
+        if highest is None or val_max > highest[0]:
+            highest = (val_max, val)
+
+    if clamp:
+        if in_value < lowest[0]:
+            return lowest[1], lowest[0], lowest[0]
+        if in_value > highest[0]:
+            return highest[1], highest[0], highest[0]
+
     return None, None, None
 
-
 # ----------------------------------------------------------------------
+
+
 def g_get_dmin(thermal_table, temp, path, interpolated=False):
     """
     @summary: Searching PWM value in dmin table based on input temperature
@@ -514,7 +549,7 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
         return CONST.PWM_MIN
     # get current range
     dmin, range_min, range_max = g_get_range_val(line, temp)
-    if not dmin:
+    if dmin is None:
         dmin, _, _ = g_get_range_val(line, 100)
         return dmin
 
@@ -522,7 +557,7 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
         return dmin
 
     # get range of next step
-    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1)
+    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1, clamp=False)
     # reached maximum range
     if dmin_next is None:
         return dmin
@@ -1532,8 +1567,8 @@ class thermal_module_sensor(system_device):
 
         self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
         self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
-        self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
-        self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        self.val_min_offset = self.sensors_config.get("val_min_offset", CONST.MODULE_MIN_OFFSET_DEF)
+        self.val_max_offset = self.sensors_config.get("val_max_offset", CONST.MODULE_MAX_OFFSET_DEF)
 
         self.eeprom_data_timestamp = None
         self.refresh_attr()
@@ -3207,6 +3242,8 @@ class ThermalManagement(hw_management_file_op):
 
         self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
         self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
+        # Serializes PWM target changes with the PWM worker (decision to stop vs. new target)
+        self.pwm_lock = threading.RLock()
         self.pwm_worker_timer = None
         self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
         self.state = CONST.UNCONFIGURED
@@ -3616,7 +3653,7 @@ class ThermalManagement(hw_management_file_op):
             self.log.warn("Missing PWM link {}".format(pwm_val))
             return
         for drwr_idx in range(1, self.fan_drwr_num + 1):
-            fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
+            fan_obj = self._get_dev_obj(r"drwr{}(:|$)".format(drwr_idx))
             if fan_obj:
                 fan_obj.set_pwm(pwm_val, force)
 
@@ -3631,6 +3668,15 @@ class ThermalManagement(hw_management_file_op):
 
     # ----------------------------------------------------------------------
     def _set_pwm(self, pwm, reason="", force_reason=False):
+        """
+        @summary: Set target PWM for the system (thread safe against _pwm_worker)
+        @param pwm: target PWM value
+        """
+        with self.pwm_lock:
+            self._set_pwm_locked(pwm, reason, force_reason)
+
+    # ----------------------------------------------------------------------
+    def _set_pwm_locked(self, pwm, reason="", force_reason=False):
         """
         @summary: Set target PWM for the system
         @param pwm: target PWM value
@@ -3693,6 +3739,15 @@ class ThermalManagement(hw_management_file_op):
 
     # ----------------------------------------------------------------------
     def _pwm_worker(self):
+        """
+        @summary: PWM worker. Target check and self stop are atomic with respect to _set_pwm,
+                  so a target changed right before the stop will restart the worker.
+        """
+        with self.pwm_lock:
+            self._pwm_worker_locked()
+
+    # ----------------------------------------------------------------------
+    def _pwm_worker_locked(self):
         """
         @summary: gradually move current PWM towards pwm_target
         """
@@ -4260,7 +4315,8 @@ class ThermalManagement(hw_management_file_op):
         self.attention_fans = []
         if self.attention_fans_lst:
             for fan_drwr_name in self.attention_fans_lst:
-                fan_drwr_obj = self._get_dev_obj(fan_drwr_name)
+                # Match the full device name: "drwr1" must not match "drwr10:..."
+                fan_drwr_obj = self._get_dev_obj(r"{}(:|$)".format(re.escape(fan_drwr_name)))
                 if not fan_drwr_obj:
                     self.log.warn("Dev name {} missing in system_config".format(fan_drwr_name))
                     continue

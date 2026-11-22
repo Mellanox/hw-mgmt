@@ -4,9 +4,9 @@ Date: Wed, 21 Oct 2026 23:52:59 +0300
 Subject: [PATCH] platform/mellanox: nvsw-host-nvl6: Fix the management PHY
  reset attributes
 
-On the N6100_LD and N6300_LD systems the eth0 PHY reset is RESET_GP2 bit
-4, a level bit, and the eth1 PHY reset is RESET_GP1 bit 5, pulsed by the
-ComEx CPLD. Expose them as "sgmii_phy2_reset" (eth0) and "sgmii_phy_reset"
+On the N6100_LD system the eth0 PHY reset is RESET_GP2 bit 4, a level
+bit, and the eth1 PHY reset is RESET_GP1 bit 5, pulsed by the ComEx
+CPLD. Expose them as "sgmii_phy2_reset" (eth0) and "sgmii_phy_reset"
 (eth1), the same names as on the other NVLink switches, so the names keep
 their port meaning.
 
@@ -16,7 +16,7 @@ Signed-off-by: Nadav Hugi <nhugi@nvidia.com>
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/mellanox/nvsw-host-nvl6.c b/drivers/platform/mellanox/nvsw-host-nvl6.c
-index 35b0fe946..aeaffcf2b 100644
+index 9426b24bd..c17c8eff6 100644
 --- a/drivers/platform/mellanox/nvsw-host-nvl6.c
 +++ b/drivers/platform/mellanox/nvsw-host-nvl6.c
 @@ -273,11 +273,17 @@ static struct mlxreg_core_data nvsw_host_nvl6_regs_io_data[] = {

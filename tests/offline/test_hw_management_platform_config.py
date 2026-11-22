@@ -124,7 +124,7 @@ class TestPlatformConfigStructure(unittest.TestCase):
 
         # Expected function categories
         expected_thermal_functions = {"asic_temp_populate", "module_temp_populate"}
-        expected_peripheral_functions = {"sync_fan", "run_cmd", "run_power_button_event"}
+        expected_peripheral_functions = {"sync_fan", "run_cmd", "run_graceful_pwr_off_event"}
 
         # Check thermal functions exist
         for fn in expected_thermal_functions:
@@ -208,7 +208,7 @@ class TestThermalConfigFiltering(unittest.TestCase):
         """Test that thermal_config excludes peripheral functions."""
         print("\n[TEST 2] Validating thermal_config excludes peripheral functions")
 
-        peripheral_functions = {"sync_fan", "run_cmd", "run_power_button_event",
+        peripheral_functions = {"sync_fan", "run_cmd", "run_graceful_pwr_off_event",
                                 "redfish_get_sensor"}
 
         for sku, entries in self.thermal_config.items():

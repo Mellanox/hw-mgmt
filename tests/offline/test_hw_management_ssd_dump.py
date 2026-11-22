@@ -39,6 +39,27 @@ def ssd():
     return load_mod()
 
 
+@pytest.fixture
+def enforce_tool_dir():
+    """Leave check_tool_dir in place for this test.
+
+    Other tests look tools up under tmp_path, which the user owns.
+    The autouse fixture below skips that check unless a test asks for
+    this fixture.
+    """
+    return None
+
+
+@pytest.fixture(autouse=True)
+def _allow_user_tool_dirs(request, monkeypatch):
+    if "ssd" not in request.fixturenames:
+        return
+    if "enforce_tool_dir" in request.fixturenames:
+        return
+    ssd = request.getfixturevalue("ssd")
+    monkeypatch.setattr(ssd, "check_tool_dir", lambda path: path)
+
+
 @pytest.fixture(autouse=True)
 def lock_in_tmp(ssd, tmp_path, monkeypatch):
     """Give every test a lock file of its own.
@@ -809,6 +830,444 @@ class TestFindTool:
     def test_resolve_missing_both(self, ssd, tmp_path, monkeypatch):
         monkeypatch.setenv("PATH", str(tmp_path))
         with pytest.raises(ssd.DumpError, match="not found on PATH"):
+            ssd.resolve_tool(
+                {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
+            )
+
+    def _exe(self, path):
+        path.write_text("#!/bin/sh\n")
+        os.chmod(str(path), 0o755)
+        return path
+
+    def test_absolute_path_refused_even_if_executable(self, ssd, tmp_path, monkeypatch):
+        # A config "tool" set to any executable path must not run as root.
+        exe = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(tmp_path))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.find_tool(str(exe))
+
+    def test_relative_path_refused(self, ssd, tmp_path, monkeypatch):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.find_tool("bin/virtium_nvme_dump_v2")
+
+    def test_resolve_refuses_absolute_primary_even_if_alt_valid(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        # The bad primary must not silently fall back to a good alt.
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "vtFA_RTK_5766_v2")
+        exe = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.resolve_tool({"tool": str(exe), "tool_alt": "vtFA_RTK_5766_v2"})
+
+    def test_resolve_refuses_absolute_alt_even_if_primary_valid(
+        self, ssd, tmp_path, monkeypatch
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        exe = self._exe(tmp_path / "evil")
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="PATH basename"):
+            ssd.resolve_tool({"tool": "virtium_nvme_dump_v2", "tool_alt": str(exe)})
+
+    def _stat_as_root(self, ssd, monkeypatch, directory, mode, uid=0, extra=()):
+        real_stat = ssd.os.stat
+        entries = [(os.path.abspath(str(directory)), mode, uid)]
+        for item in extra:
+            entries.append(
+                (os.path.abspath(str(item[0])), item[1], item[2])
+            )
+        by_path = dict((path, (mode_, uid_)) for path, mode_, uid_ in entries)
+
+        def _fake(st, mode_, uid_, kind):
+            return os.stat_result((
+                kind | mode_,
+                st.st_ino,
+                st.st_dev,
+                st.st_nlink,
+                uid_,
+                0,
+                st.st_size,
+                st.st_atime,
+                st.st_mtime,
+                st.st_ctime,
+            ))
+
+        def _stat(path, *args, **kwargs):
+            st = real_stat(path, *args, **kwargs)
+            ab = os.path.abspath(path)
+            if ab in by_path:
+                mode_, uid_ = by_path[ab]
+                return _fake(st, mode_, uid_, stat.S_IFDIR)
+            parent = os.path.dirname(ab)
+            if parent in by_path and stat.S_ISREG(st.st_mode):
+                # A root-owned directory's files are root-owned too,
+                # so the test does not depend on who runs pytest.
+                _mode, uid_ = by_path[parent]
+                if uid_ == 0 and not (
+                        _mode & (stat.S_IWGRP | stat.S_IWOTH)):
+                    return _fake(st, 0o755, 0, stat.S_IFREG)
+            if stat.S_ISDIR(st.st_mode):
+                # Ancestors such as /tmp are world-writable on the
+                # machine that runs pytest. Treat a directory the test
+                # did not name as root-only. A directory the test did
+                # name keeps the mode and owner above.
+                return _fake(st, 0o755, 0, stat.S_IFDIR)
+            return st
+
+        monkeypatch.setattr(ssd.os, "stat", _stat)
+
+    def test_user_owned_dir_refused(self, ssd, tmp_path, monkeypatch, enforce_tool_dir):
+        # Mock the owner. A real mkdir is root-owned when pytest runs as
+        # root, and check_tool_dir() would then accept mode 0755.
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o755, uid=1000)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_world_writable_dir_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # /var/tmp is this case: the caller prepends it and plants the name.
+        bin_dir = tmp_path / "var-tmp"
+        bin_dir.mkdir()
+        os.chmod(str(bin_dir), 0o777)
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o777)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_symlink_in_writable_dir_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "var-tmp"
+        bin_dir.mkdir()
+        os.chmod(str(bin_dir), 0o777)
+        target = self._exe(tmp_path / "real-tool")
+        os.symlink(str(target), str(bin_dir / "virtium_nvme_dump_v2"))
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o777)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_root_owned_dir_accepted(self, ssd, tmp_path, monkeypatch, enforce_tool_dir):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        exe = self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o755)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(exe)
+
+    def test_writable_parent_above_root_tool_dir(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # The parent is another user's directory. bin and the tool are
+        # root-owned. That user can rename bin and put a replacement
+        # there after the check, and the collector would run it.
+        parent = tmp_path / "opt"
+        bin_dir = parent / "bin"
+        parent.mkdir()
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((parent, 0o755, 1000),),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_relative_path_refuses_a_writable_start(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        monkeypatch.chdir(tmp_path)
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((tmp_path, 0o755, 1000),),
+        )
+        monkeypatch.setenv("PATH", "bin")
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_root_owned_group_writable_dir_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        self._exe(bin_dir / "virtium_nvme_dump_v2")
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o775)
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_symlink_to_user_owned_target_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # The PATH directory is root-only. The name there is a symlink
+        # to a file in a directory the user owns.
+        bin_dir = tmp_path / "bin"
+        home = tmp_path / "home"
+        bin_dir.mkdir()
+        home.mkdir()
+        target = self._exe(home / "real-tool")
+        os.symlink(str(target), str(bin_dir / "virtium_nvme_dump_v2"))
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755, uid=0,
+            extra=((home, 0o755, 1000),),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_symlink_to_root_owned_target_accepted(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        lib_dir = tmp_path / "lib"
+        bin_dir.mkdir()
+        lib_dir.mkdir()
+        target = self._exe(lib_dir / "real-tool")
+        link = bin_dir / "virtium_nvme_dump_v2"
+        os.symlink(str(target), str(link))
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((lib_dir, 0o755, 0),),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        # The returned path is the final file, not the symlink.
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(target)
+
+    def test_symlink_through_user_link_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # /usr/bin/tool -> /var/tmp/hop -> root-owned binary. The middle
+        # link can be replaced before exec.
+        bin_dir = tmp_path / "bin"
+        mid_dir = tmp_path / "var-tmp"
+        lib_dir = tmp_path / "lib"
+        bin_dir.mkdir()
+        mid_dir.mkdir()
+        lib_dir.mkdir()
+        os.chmod(str(mid_dir), 0o777)
+        target = self._exe(lib_dir / "real-tool")
+        hop = mid_dir / "hop"
+        os.symlink(str(target), str(hop))
+        os.symlink(str(hop), str(bin_dir / "virtium_nvme_dump_v2"))
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((lib_dir, 0o755, 0), (mid_dir, 0o777, 0)),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def _dotdot_tree(self, tmp_path):
+        # current -> releases/v2, so current/../bin/dump is
+        # releases/bin/dump. normpath() would pick vendor/bin/dump.
+        bin_dir = tmp_path / "bin"
+        vendor = tmp_path / "vendor"
+        real_bin = vendor / "releases" / "bin"
+        lexical_bin = vendor / "bin"
+        bin_dir.mkdir()
+        real_bin.mkdir(parents=True)
+        lexical_bin.mkdir()
+        (vendor / "releases" / "v2").mkdir()
+        os.symlink(str(vendor / "releases" / "v2"), str(vendor / "current"))
+        real_tool = self._exe(real_bin / "dump")
+        self._exe(lexical_bin / "dump")
+        os.symlink(
+            "%s/../bin/dump" % (vendor / "current"),
+            str(bin_dir / "virtium_nvme_dump_v2"),
+        )
+        return bin_dir, vendor, real_bin, lexical_bin, real_tool
+
+    def test_dotdot_follows_directory_link(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir, vendor, real_bin, lexical_bin, real_tool = (
+            self._dotdot_tree(tmp_path)
+        )
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=(
+                (vendor, 0o755, 0),
+                (real_bin, 0o755, 0),
+                (lexical_bin, 0o755, 0),
+            ),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(real_tool)
+
+    def test_dotdot_refuses_the_resolved_directory(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # The lexical parent is root-only. The directory '..' actually
+        # reaches is not, so the tool is refused.
+        bin_dir, vendor, real_bin, lexical_bin, _real = (
+            self._dotdot_tree(tmp_path)
+        )
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=(
+                (vendor, 0o755, 0),
+                (real_bin, 0o755, 1000),
+                (lexical_bin, 0o755, 0),
+            ),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_same_link_followed_twice(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # current -> v2. current/../current/bin/dump visits that link
+        # twice and lands on v2/bin/dump. A repeated name is not a loop.
+        bin_dir = tmp_path / "bin"
+        vendor = tmp_path / "vendor"
+        real_bin = vendor / "v2" / "bin"
+        bin_dir.mkdir()
+        real_bin.mkdir(parents=True)
+        os.symlink("v2", str(vendor / "current"))
+        real_tool = self._exe(real_bin / "dump")
+        os.symlink(
+            "%s/../current/bin/dump" % (vendor / "current"),
+            str(bin_dir / "virtium_nvme_dump_v2"),
+        )
+        self._stat_as_root(
+            ssd, monkeypatch, bin_dir, 0o755,
+            extra=((vendor, 0o755, 0), (real_bin, 0o755, 0)),
+        )
+        monkeypatch.setenv("PATH", str(bin_dir))
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(real_tool)
+
+    def test_symlink_to_itself_is_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        link = bin_dir / "virtium_nvme_dump_v2"
+        os.symlink(link.name, str(link))
+        self._stat_as_root(ssd, monkeypatch, bin_dir, 0o755)
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.check_tool_dir(str(link))
+
+    def test_path_dir_through_user_link_refused(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        # PATH names a root-owned link that points through a directory
+        # the user can replace, then at a root-owned bin.
+        usr_bin = tmp_path / "usr-bin"
+        var_tmp = tmp_path / "var-tmp"
+        local = tmp_path / "local"
+        usr_bin.mkdir()
+        var_tmp.mkdir()
+        local.mkdir()
+        os.chmod(str(var_tmp), 0o777)
+        self._exe(usr_bin / "virtium_nvme_dump_v2")
+        hop = var_tmp / "hop"
+        os.symlink(str(usr_bin), str(hop))
+        vendor_bin = local / "vendor-bin"
+        os.symlink(str(hop), str(vendor_bin))
+        self._stat_as_root(
+            ssd, monkeypatch, local, 0o755,
+            extra=((usr_bin, 0o755, 0), (var_tmp, 0o777, 0)),
+        )
+        monkeypatch.setenv("PATH", str(vendor_bin))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_path_dir_symlink_returns_the_real_file(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        usr_bin = tmp_path / "usr-bin"
+        local = tmp_path / "local"
+        usr_bin.mkdir()
+        local.mkdir()
+        exe = self._exe(usr_bin / "virtium_nvme_dump_v2")
+        vendor_bin = local / "vendor-bin"
+        os.symlink(str(usr_bin), str(vendor_bin))
+        self._stat_as_root(
+            ssd, monkeypatch, local, 0o755,
+            extra=((usr_bin, 0o755, 0),),
+        )
+        monkeypatch.setenv("PATH", str(vendor_bin))
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(exe)
+
+    def _path_dotdot_tree(self, tmp_path):
+        # PATH is vendor/current/../bin and current -> releases/v2, so
+        # the directory is releases/bin. The lexical parent is vendor/bin.
+        vendor = tmp_path / "vendor"
+        real_bin = vendor / "releases" / "bin"
+        lexical_bin = vendor / "bin"
+        real_bin.mkdir(parents=True)
+        lexical_bin.mkdir()
+        (vendor / "releases" / "v2").mkdir()
+        os.symlink(str(vendor / "releases" / "v2"), str(vendor / "current"))
+        real_tool = self._exe(real_bin / "virtium_nvme_dump_v2")
+        self._exe(lexical_bin / "virtium_nvme_dump_v2")
+        path_entry = "%s/../bin" % (vendor / "current")
+        return vendor, real_bin, lexical_bin, real_tool, path_entry
+
+    def test_path_dotdot_follows_directory_link(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        vendor, real_bin, lexical_bin, real_tool, path_entry = (
+            self._path_dotdot_tree(tmp_path)
+        )
+        self._stat_as_root(
+            ssd, monkeypatch, vendor, 0o755,
+            extra=(
+                (real_bin, 0o755, 0),
+                (lexical_bin, 0o755, 0),
+            ),
+        )
+        monkeypatch.setenv("PATH", path_entry)
+        assert ssd.find_tool("virtium_nvme_dump_v2") == str(real_tool)
+
+    def test_path_dotdot_refuses_the_resolved_directory(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        vendor, real_bin, lexical_bin, _real, path_entry = (
+            self._path_dotdot_tree(tmp_path)
+        )
+        self._stat_as_root(
+            ssd, monkeypatch, vendor, 0o755,
+            extra=(
+                (real_bin, 0o755, 1000),
+                (lexical_bin, 0o755, 0),
+            ),
+        )
+        monkeypatch.setenv("PATH", path_entry)
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
+            ssd.find_tool("virtium_nvme_dump_v2")
+
+    def test_resolve_does_not_fall_through_a_writable_dir(
+        self, ssd, tmp_path, monkeypatch, enforce_tool_dir
+    ):
+        bad = tmp_path / "bad"
+        good = tmp_path / "good"
+        bad.mkdir()
+        good.mkdir()
+        os.chmod(str(bad), 0o777)
+        self._exe(bad / "virtium_nvme_dump_v2")
+        self._exe(good / "vtFA_RTK_5766_v2")
+        monkeypatch.setenv("PATH", "%s%s%s" % (bad, os.pathsep, good))
+        with pytest.raises(ssd.DumpError, match="writable by root only"):
             ssd.resolve_tool(
                 {"tool": "virtium_nvme_dump_v2", "tool_alt": "vtFA_RTK_5766_v2"}
             )
@@ -1712,6 +2171,11 @@ class TestLockTestScript:
 
 
 class TestEndToEnd:
+    @pytest.fixture(autouse=True)
+    def _fake_tools_on_path(self, tmp_path, monkeypatch):
+        # Configs name tools by bare basename; fake tools live in tmp_path.
+        monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+
     def _nvme(self, ssd, monkeypatch, model="Virtium VTPM24CEXI080-BM110006"):
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -1727,7 +2191,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         stale = outdir / "stale.bin"
@@ -1760,7 +2224,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
@@ -1796,7 +2260,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
@@ -1881,7 +2345,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         keep = outdir / "keep.bin"
@@ -1911,7 +2375,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         self._nvme(ssd, monkeypatch)
@@ -2213,6 +2677,50 @@ class TestEndToEnd:
         assert "SSD dump tool skipped: ssd-dump-tools is not installed" in captured.err
         assert "config not found" not in captured.err
         assert seen == []
+
+    def test_explicit_default_config_missing_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(
+            ["--outdir", str(outdir), "--config", ssd.DEFAULT_CONFIG]
+        )
+        err = capsys.readouterr().err
+        status = (outdir / "ssd-dump-status.log").read_text()
+        assert rc != 0
+        assert "SSD dump tool failed:" in err
+        assert "config not found" in err
+        assert "ssd-dump-tools is not installed" not in err
+        assert "status: warning" in status
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
+
+    def test_verify_explicit_default_config_missing_stays_warning(
+        self, ssd, tmp_path, monkeypatch, capsys
+    ):
+        outdir = tmp_path / "ssd-dump"
+        monkeypatch.setattr(ssd, "DEFAULT_OUTDIR", str(outdir))
+        seen = self._missing_default_config(ssd, tmp_path, monkeypatch, False)
+        rc = ssd.main(
+            [
+                "--verify",
+                "--outdir",
+                str(outdir),
+                "--config",
+                ssd.DEFAULT_CONFIG,
+            ]
+        )
+        captured = capsys.readouterr()
+        assert rc != 0
+        assert "SSD dump tool verify failed:" in captured.err
+        assert "config not found" in captured.err
+        assert "ssd-dump-tools is not installed" not in captured.err
+        assert "status: warning" in captured.out
+        assert seen == [
+            (ssd.syslog.LOG_WARNING, "config not found: %s" % ssd.DEFAULT_CONFIG)
+        ]
 
     def test_package_installed_missing_config_stays_warning(
         self, ssd, tmp_path, monkeypatch, capsys
@@ -2628,7 +3136,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        obj = virtium_cfg(tool)
+        obj = virtium_cfg(os.path.basename(tool))
         obj["defaults"]["gzip"] = True
         obj["defaults"]["gzip_level"] = 10
         obj["vendors"]["Virtium"]["models"]["VTPM24CEXI080-BM110006"][
@@ -2722,7 +3230,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         stale = outdir / "stale.bin"
@@ -2768,7 +3276,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -2810,7 +3318,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         tar_path = tmp_path / "ssd-dump.tar.gz"
         tar_path.write_bytes(b"OLD")
@@ -2846,7 +3354,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -2883,7 +3391,7 @@ class TestEndToEnd:
             )
         os.chmod(tool, 0o755)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -2911,7 +3419,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -2942,7 +3450,7 @@ class TestEndToEnd:
         )
         fake_phison_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, phison_cfg(tool))
+        write_json(cfg, phison_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -2990,7 +3498,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         inflight = outdir / "nandlog_inflight.bin"
@@ -3034,7 +3542,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         status = outdir / "ssd-dump-status.log"
@@ -3081,7 +3589,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         monkeypatch.setattr(
@@ -3116,7 +3624,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         self._nvme(ssd, monkeypatch)
         monkeypatch.setattr(
             ssd, "LOCK_PATH", str(tmp_path / "absent" / "ssd.lock")
@@ -3144,7 +3652,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         real_pack = ssd.pack_outdir
@@ -3177,7 +3685,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
         rc = ssd.main(
@@ -3202,7 +3710,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         tar_path = tmp_path / "ssd-dump.tar.gz"
         tar_path.write_bytes(b"GOOD")
@@ -3242,7 +3750,7 @@ class TestEndToEnd:
         tool = str(tmp_path / "virtium_nvme_dump_v2")
         fake_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         self._nvme(ssd, monkeypatch)
 
@@ -3278,7 +3786,7 @@ class TestEndToEnd:
         )
         fake_phison_tool(tool)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, phison_cfg(tool))
+        write_json(cfg, phison_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -3324,7 +3832,7 @@ class TestEndToEnd:
             f.write("#!/bin/sh\necho no nandlog\n")
         os.chmod(tool, os.stat(tool).st_mode | stat.S_IEXEC)
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, virtium_cfg(tool))
+        write_json(cfg, virtium_cfg(os.path.basename(tool)))
         outdir = tmp_path / "ssd-dump"
         tar_path = tmp_path / "ssd-dump.tar.gz"
         tar_path.write_bytes(b"GOOD")
@@ -3354,7 +3862,7 @@ class TestEndToEnd:
         fake_smi_tool(tool)
         stage = make_smi_stage(tmp_path / "smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -3403,7 +3911,7 @@ class TestEndToEnd:
         fake_smi_tool(tool)
         stage = make_smi_stage(tmp_path / "smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         outdir = tmp_path / "ssd-dump"
         outdir.mkdir()
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
@@ -3449,7 +3957,7 @@ class TestEndToEnd:
         fake_smi_tool(tool)
         missing = str(tmp_path / "no-such-smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, missing))
+        write_json(cfg, smi_cfg(os.path.basename(tool), missing))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -3521,7 +4029,7 @@ class TestEndToEnd:
         os.chmod(tool, 0o755)
         stage = make_smi_stage(tmp_path / "smi")
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         outdir = tmp_path / "ssd-dump"
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
@@ -3568,7 +4076,7 @@ class TestEndToEnd:
         secret.write_text("x")
         os.symlink(str(secret), os.path.join(stage, "Setting", "link.ini"))
         cfg = tmp_path / "cfg.json"
-        write_json(cfg, smi_cfg(tool, stage))
+        write_json(cfg, smi_cfg(os.path.basename(tool), stage))
         monkeypatch.setattr(ssd.syslog, "syslog", lambda *a, **_k: None)
         monkeypatch.setattr(ssd.syslog, "openlog", lambda *a, **_k: None)
         monkeypatch.setattr(
@@ -3631,6 +4139,64 @@ class TestEndToEnd:
             logf.close()
         assert killed
         assert killed[0][0] == 4242
+
+    def test_vendor_start_blocks_sigint_until_registered(
+        self, ssd, monkeypatch, tmp_path
+    ):
+        killed = []
+        ops = []
+        restores = {"n": 0}
+
+        class FakeProc(object):
+            pid = 4242
+            returncode = None
+
+            def communicate(self, timeout=None):
+                raise AssertionError("communicate ran")
+
+            def wait(self, timeout=None):
+                return None
+
+        def fake_mask(how, mask):
+            ops.append((how, set(mask)))
+            if how != ssd.signal.SIG_SETMASK:
+                return set()
+            restores["n"] += 1
+            if restores["n"] == 1:
+                # The mask is restored only after the child is registered.
+                assert ssd._vendor_proc is not None
+                assert ssd._vendor_proc.pid == 4242
+                raise KeyboardInterrupt()
+            return set()
+
+        def fake_popen(*_a, **k):
+            assert ops
+            assert ops[0][0] == ssd.signal.SIG_BLOCK
+            assert ssd.signal.SIGINT in ops[0][1]
+            assert ssd.signal.SIGTERM in ops[0][1]
+            preexec = k.get("preexec_fn")
+            assert preexec is ssd._vendor_unblock_sigterm
+            preexec()
+            how, mask = ops[-1]
+            assert how == ssd.signal.SIG_UNBLOCK
+            assert ssd.signal.SIGINT in mask
+            assert ssd.signal.SIGTERM in mask
+            return FakeProc()
+
+        monkeypatch.setattr(ssd.signal, "pthread_sigmask", fake_mask)
+        monkeypatch.setattr(ssd.subprocess, "Popen", fake_popen)
+        monkeypatch.setattr(
+            ssd.os, "killpg", lambda pid, sig: killed.append((pid, sig))
+        )
+        logf = open(os.devnull, "w")
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                ssd.run_vendor_process(["true"], str(tmp_path), logf, 1)
+        finally:
+            logf.close()
+        assert killed
+        assert killed[0][0] == 4242
+        assert ssd._vendor_proc is None
 
     def test_vendor_interrupt_kills_process_group(
         self, ssd, monkeypatch, tmp_path

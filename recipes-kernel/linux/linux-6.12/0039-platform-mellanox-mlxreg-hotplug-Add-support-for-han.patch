@@ -107,7 +107,7 @@ index 51dac7e..2b52610 100644
 +	/* Unmask event, exclude storming bits. */
  	ret = regmap_write(priv->regmap, item->reg + MLXREG_HOTPLUG_MASK_OFF,
 -			   item->mask);
-++			   item->mask & ~item->storming_bits);
++			   item->mask & ~item->storming_bits);
  
   out:
  	if (ret)

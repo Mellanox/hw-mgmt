@@ -1,0 +1,100 @@
+From: Michael Shych <michaelsh@nvidia.com>
+Subject: [PATCH] platform: mellanox: mlx-platform: Fix SW reboot reset cause
+ on systems with V3000 COM-Express board
+
+Systems equipped with the V3000 COM-Express board do not report any reset
+cause after a software initiated reboot: all reset_* attributes read 0.
+This was observed on SN4700-A1 (system class VMOD0010, SKU HI202).
+
+Per the V3000 COMex register map and the Leopard main CPLD MAS,
+RESET_CAUSE (Reset_Cause_REG_1, offset 0x1d) is the one-hot reset cause
+register latched by the switch board CPLD, and a reboot issued from the
+OS is reported in its bit 4, "Reset_from_comex" ("S_CEX_CPLD_CB_RESET_L
+was asserted without entering to sleep mode"). The MAS implements a
+dedicated FSM for this, since asserting that signal is the only
+indication the CPLD gets for the OS "reboot" and "reload" commands.
+
+RST_CAUSE1 (Reset_Cause_REG_2, offset 0x1e) lives in the COM-Express
+board CPLD, and on the V3000 board its bit 0 is not a software reset
+indication at all - it carries the CPU thermal trip (SE_SOC_THERMTRIP_L).
+
+The difference belongs to the COM-Express board and not to the system:
+the V3000 board can also be fitted to other VMOD0005 and VMOD0010
+systems as a replacement for the legacy board, and those systems lose
+the reset cause the same way. Keep the affected systems in a SKU list,
+so that further systems adopting the board are added in one place, and
+re-point 'reset_sw_reset' to RESET_CAUSE bit 4 for them.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 48 ++++++++++++++++++++++++++++++++
+ 1 file changed, 48 insertions(+)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -8219,6 +8219,52 @@ static int __init mlxplat_dmi_comex_matc
+ 	return mlxplat_register_platform_device();
+ }
+ 
++/* SKUs of the systems equipped with the V3000 COM-Express board. */
++static const char * const mlxplat_v3000_comex_sku[] __initconst = {
++	"HI202",	/* SN4700-A1 */
++};
++
++static bool __init mlxplat_v3000_comex_matched(const char *sku)
++{
++	int i;
++
++	if (!sku)
++		return false;
++
++	for (i = 0; i < ARRAY_SIZE(mlxplat_v3000_comex_sku); i++) {
++		if (!strcmp(sku, mlxplat_v3000_comex_sku[i]))
++			return true;
++	}
++
++	return false;
++}
++
++/*
++ * The V3000 COM-Express board does not indicate a software initiated reboot
++ * the way the rest of the VMOD0005 and VMOD0010 families do: RST_CAUSE1 bit 0,
++ * used as 'reset_sw_reset' by the legacy board, carries the CPU thermal trip
++ * indication (SE_SOC_THERMTRIP_L) and is never set by a reboot. RST_CAUSE1
++ * bit 1 is set by a reboot, but also by a reset push button, so it cannot
++ * tell them apart. The only specific indication is RESET_CAUSE bit 4 ('reset
++ * from COMEX'), latched by the switch board CPLD, which both boards drive.
++ */
++static void __init mlxplat_v3000_comex_regs_io_fixup(void)
++{
++	struct mlxreg_core_data *data;
++	int i;
++
++	for (i = 0; i < mlxplat_default_ng_regs_io_data.counter; i++) {
++		data = &mlxplat_mlxcpld_default_ng_regs_io_data[i];
++
++		if (strcmp(data->label, "reset_sw_reset"))
++			continue;
++
++		data->reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET;
++		data->mask = GENMASK(7, 0) & ~BIT(4);
++		return;
++	}
++}
++
+ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+ {
+ 	int i;
+@@ -8240,6 +8286,8 @@ static int __init mlxplat_dmi_ng400_matc
+ 	} else {
+ 		mlxplat_hotplug = &mlxplat_mlxcpld_ext_data;
+ 		mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
++		if (mlxplat_v3000_comex_matched(sku))
++			mlxplat_v3000_comex_regs_io_fixup();
+ 	}
+ 
+ 	mlxplat_hotplug->deferred_nr =
+-- 
+2.34.1
+

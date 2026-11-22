@@ -39,6 +39,11 @@ def _run_pwm_fail_helper(
     mlxreg_rc=0,
     call=None,
     spc1_warm_reboot=True,
+    board_type=None,
+    product_name="",
+    reset_attrs=None,
+    remove_dev_on_fail=False,
+    capture_logs=False,
 ):
     config_dir = tmp_path / "config"
     thermal_dir = tmp_path / "thermal"
@@ -75,11 +80,28 @@ def _run_pwm_fail_helper(
             (mst_devdir / name).write_text("")
 
     mlxreg_log = tmp_path / "mlxreg.args"
+    if remove_dev_on_fail:
+        # Drop the -d target before exiting so the caller sees a removal
+        # that happened during the mlxreg transaction.
+        remove_snippet = (
+            'prev=""\n'
+            'for arg in "$@"; do\n'
+            '    if [ "$prev" = "-d" ]; then\n'
+            '        rm -f "$arg"\n'
+            '    fi\n'
+            '    prev="$arg"\n'
+            'done\n'
+        )
+    else:
+        remove_snippet = ""
     _write_exec(
         bin_dir / "mlxreg",
         "#!/bin/sh\n"
         "printf '%s\\n' \"$*\" > \"{log}\"\n"
-        "exit {rc}\n".format(log=mlxreg_log, rc=int(mlxreg_rc)),
+        "{remove}"
+        "exit {rc}\n".format(
+            log=mlxreg_log, rc=int(mlxreg_rc), remove=remove_snippet
+        ),
     )
 
     if (
@@ -96,33 +118,72 @@ def _run_pwm_fail_helper(
     env["HW_MGMT_MST_SYSFS"] = str(mst_sysfs)
     env["HW_MGMT_MST_DEVDIR"] = str(mst_devdir)
 
+    system_dir = tmp_path / "system"
+    system_dir.mkdir(exist_ok=True)
+    board_file = tmp_path / "board_name"
+    pn_file = tmp_path / "product_name"
+    if board_type is not None:
+        board_file.write_text("{}\n".format(board_type))
+    pn_file.write_text("{}\n".format(product_name))
+    if reset_attrs:
+        for name, val in reset_attrs.items():
+            (system_dir / name).write_text("{}\n".format(val))
+
+    path_overrides = ""
+    if board_type is not None or reset_attrs is not None:
+        # Keep reset-cause reads on the planted files. The production helper
+        # also walks mlxreg-io hwmon, which would pick up a real DUT.
+        path_overrides = (
+            'board_type_file="{board}"\n'
+            'pn_file="{pn}"\n'
+            'system_path="{system}"\n'
+            '_hw_mgmt_reset_attr_is_set() {{\n'
+            '    local name="$1"\n'
+            '    [ -e "$system_path/$name" ] || return 1\n'
+            '    [ "$(cat "$system_path/$name" 2>/dev/null)" = "1" ]\n'
+            '}}\n'.format(board=board_file, pn=pn_file, system=system_dir)
+        )
+
     explicit_arg = '"{}"'.format(explicit_dev) if explicit_dev is not None else '""'
     if call == "set_asic_pwm_speed_safe":
         helper_call = 'set_asic_pwm_speed_safe "{}" "{}"'.format(
             asic_index, "255" if pwm is None else pwm
         )
         spc1_stub = ""
+    elif call == "is_spc1_warm_reboot":
+        helper_call = "is_spc1_warm_reboot"
+        spc1_stub = ""
     elif pwm is None:
         helper_call = 'set_asic_pwm_full_speed_on_chipup_fail "{}" {}'.format(
             asic_index, explicit_arg
         )
-        # Chipup-fail fallback is gated on SPC1 warm reboot.
-        spc1_rc = 0 if spc1_warm_reboot else 1
-        spc1_stub = "is_spc1_warm_reboot() { return %d; }\n" % spc1_rc
+        # Chipup-fail fallback is gated on SPC1 warm reboot. Tests that
+        # supply board_type/reset_attrs exercise the real helper.
+        if board_type is None and reset_attrs is None:
+            spc1_rc = 0 if spc1_warm_reboot else 1
+            spc1_stub = "is_spc1_warm_reboot() { return %d; }\n" % spc1_rc
+        else:
+            spc1_stub = ""
     else:
         helper_call = 'write_pwm_mlxreg "{}" "{}" {}'.format(
             asic_index, pwm, explicit_arg
         )
         spc1_stub = ""
+    log_path = tmp_path / "pwm_calls.log"
+    if capture_logs:
+        log_funcs = (
+            "log_info() {{ printf 'INFO %s\\n' \"$*\" >> \"{log}\"; }}\n"
+            "log_err() {{ printf 'ERR %s\\n' \"$*\" >> \"{log}\"; }}\n"
+        ).format(log=log_path)
+    else:
+        log_funcs = "log_info() { :; }\nlog_err() { :; }\n"
     script = """
 source "{helpers}"
-log_info() {{ :; }}
-log_err() {{ :; }}
-config_path="{config}"
+{log_funcs}config_path="{config}"
 thermal_path="{thermal}"
 export HW_MGMT_MST_SYSFS="{mst_sysfs}"
 export HW_MGMT_MST_DEVDIR="{mst_devdir}"
-{spc1_stub}{helper_call}
+{path_overrides}{spc1_stub}{helper_call}
 echo RC:$?
 """.format(
         helpers=HELPERS,
@@ -132,6 +193,8 @@ echo RC:$?
         mst_devdir=mst_devdir,
         helper_call=helper_call,
         spc1_stub=spc1_stub,
+        path_overrides=path_overrides,
+        log_funcs=log_funcs,
     )
 
     result = subprocess.run(
@@ -167,6 +230,11 @@ def test_chipup_fail_path_passes_failed_asic_index():
     assert "PWM sysfs is missing; ASIC PWM control is not configured." in speed_safe
     assert 'write_pwm_mlxreg "$1" 0xff "$explicit_dev"' in helpers
     assert "if is_spc1_warm_reboot; then" in chipup_case[fail_idx:]
+    warm_fn = helpers[helpers.index("is_spc1_warm_reboot()"):]
+    warm_fn = warm_fn[: warm_fn.index("write_pwm_mlxreg()")]
+    assert "_hw_mgmt_reset_attr_is_set reset_sw_reset" in warm_fn
+    assert "_hw_mgmt_reset_attr_is_set reset_from_comex" in warm_fn
+    assert "_hw_mgmt_reset_attr_is_set reset_platform" in warm_fn
     assert "_hw_mgmt_normalize_asic_index()" in helpers
     assert "asic${asic_index}_pci_bus_id" in helpers
     assert "head -n 1" in helpers
@@ -232,6 +300,93 @@ def test_chipup_fail_skips_when_not_spc1_warm_reboot(tmp_path):
     assert "RC:1" in result.stdout
     assert pwm1.read_text().strip() == "128"
     assert not mlxreg_log.exists()
+
+
+def test_is_spc1_warm_reboot_accepts_reset_sw_reset(tmp_path):
+    """reboot/kexec on MSN2700B/MSN2100/MSN2410 latch only reset_sw_reset."""
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+
+
+def test_is_spc1_warm_reboot_accepts_reset_from_comex(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_from_comex": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+
+
+def test_is_spc1_warm_reboot_accepts_reset_platform(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_platform": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+
+
+def test_is_spc1_warm_reboot_rejects_cold_with_reset_sw_reset(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={
+            "reset_sw_reset": "1",
+            "reset_aux_pwr_or_ref": "1",
+        },
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
+def test_is_spc1_warm_reboot_rejects_when_no_warm_flag(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0001",
+        reset_attrs={"reset_sw_reset": "0"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
+def test_is_spc1_warm_reboot_rejects_non_spc1(tmp_path):
+    result, _, _ = _run_pwm_fail_helper(
+        tmp_path,
+        call="is_spc1_warm_reboot",
+        board_type="VMOD0010",
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+
+
+def test_chipup_fail_uses_mlxreg_when_reset_sw_reset(tmp_path):
+    """Unstubbed path: reboot-latched reset_sw_reset must run the fallback."""
+    result, mlxreg_log, pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        tc_config=TC_ASIC_PWM,
+        pwm1="128",
+        board_type="VMOD0001",
+        reset_attrs={"reset_sw_reset": "1"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:0" in result.stdout
+    assert pwm1.read_text().strip() == "128"
+    args = mlxreg_log.read_text()
+    assert "--reg_name MFSC" in args
+    assert "pwm_duty_cycle=0xff" in args
 
 
 def test_mlxreg_targets_failed_asic_on_multi_asic(tmp_path):
@@ -477,3 +632,80 @@ def test_set_asic_pwm_speed_safe_mlxreg_fail_without_pwm1(tmp_path):
     assert "RC:1" in result.stdout
     assert mlxreg_log.exists()
     assert not pwm1.exists()
+
+
+def _pwm_call_log(tmp_path):
+    return (tmp_path / "pwm_calls.log").read_text()
+
+
+def test_write_pwm_mlxreg_logs_info_when_mst_node_removed(tmp_path):
+    """A node that disappears during mlxreg is an expected removal."""
+    dev_name = "mt52100_pciconf0"
+    result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        pwm="255",
+        asic_index="1",
+        explicit_dev=None,
+        asic_num=1,
+        pci_bus_ids={1: "03:00.0"},
+        mst_map={dev_name: "0000:03:00.0"},
+        mlxreg_rc=1,
+        remove_dev_on_fail=True,
+        capture_logs=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    assert mlxreg_log.exists()
+    assert not (tmp_path / "dev_mst" / dev_name).exists()
+    log = _pwm_call_log(tmp_path)
+    assert "INFO " in log
+    assert "mst device removed" in log
+    assert "dev={}".format(tmp_path / "dev_mst" / dev_name) in log
+    assert "ERR " not in log
+
+
+def test_write_pwm_mlxreg_logs_error_when_mst_node_remains(tmp_path):
+    """mlxreg failure with the node still present is a real error."""
+    dev_name = "mt52100_pciconf0"
+    result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        pwm="255",
+        asic_index="1",
+        explicit_dev=None,
+        asic_num=1,
+        pci_bus_ids={1: "03:00.0"},
+        mst_map={dev_name: "0000:03:00.0"},
+        mlxreg_rc=1,
+        capture_logs=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    assert mlxreg_log.exists()
+    assert (tmp_path / "dev_mst" / dev_name).exists()
+    log = _pwm_call_log(tmp_path)
+    assert "ERR " in log
+    assert "Failed to set PWM via mlxreg" in log
+    assert "rc=1" in log
+    assert "mst device removed" not in log
+
+
+def test_write_pwm_mlxreg_logs_error_for_pci_bdf_target(tmp_path):
+    """A PCI BDF is not a file, so a failed write stays an error."""
+    result, mlxreg_log, _pwm1 = _run_pwm_fail_helper(
+        tmp_path,
+        pwm="255",
+        asic_index="1",
+        explicit_dev=None,
+        asic_num=1,
+        pci_bus_ids={1: "03:00.0"},
+        mlxreg_rc=1,
+        capture_logs=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "RC:1" in result.stdout
+    args = mlxreg_log.read_text()
+    assert "-d 03:00.0" in args
+    log = _pwm_call_log(tmp_path)
+    assert "ERR " in log
+    assert "dev=03:00.0" in log
+    assert "mst device removed" not in log
