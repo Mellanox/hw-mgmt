@@ -31,6 +31,31 @@ dump_cmd () {
 	fi
 }
 
+# Remove secrets from a saved journal before it goes into the dump.
+# dump_cmd writes the journal as is, then this rewrites it. If the
+# rewrite fails, the raw file is removed so no secret reaches the archive.
+redact_journal_file () {
+	f="$1"
+	[ -f "$f" ] || return 0
+	# Quoted values are matched through the closing quote, honoring escapes,
+	# so a password with spaces or punctuation is hidden whole. Unquoted
+	# values end at a space, comma, semicolon or brace.
+	script=$(cat <<'EOF'
+s/(['"]?(passkey|passwd|password|secret|bind_pw|bind_password|token)['"]?[[:space:]]*[:=][[:space:]]*)"(\\.|[^"\\])*"/\1"***"/gI
+s/(['"]?(passkey|passwd|password|secret|bind_pw|bind_password|token)['"]?[[:space:]]*[:=][[:space:]]*)'(\\.|[^'\\])*'/\1'***'/gI
+s/(['"]?(passkey|passwd|password|secret|bind_pw|bind_password|token)['"]?[[:space:]]*[:=][[:space:]]*)[^'" ,;}]+/\1***/gI
+s/(user_utility -p )("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|[^[:space:]]+)/\1***/g
+s/(--password )("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|[^[:space:]]+)/\1***/g
+s/\$[1-9a-z]+\$(rounds=[0-9]+\$)?[./0-9A-Za-z$]{8,}/$***/g
+EOF
+)
+	if sed -E "$script" "$f" > "$f.redacted" && mv "$f.redacted" "$f"; then
+		return 0
+	fi
+	rm -f "$f" "$f.redacted"
+	echo "hw-management-generate-dump: journal redaction failed, journal dropped" >&2
+}
+
 # SWB CPLD cartridge identity (CPU). Gated by config/i2c_swb_bus.
 # Registers match BMC Swb* offsets: MSB 0x10, rack/topo/tray/slot.
 # Mux ownership is assumed already set (CPU); do not touch bmc_to_cpu_ctrl.
@@ -102,6 +127,7 @@ fi
 
 if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
 	dump_cmd "journalctl -o short-precise --no-pager" "journalctl" "45"
+	redact_journal_file "$DUMP_FOLDER/journalctl"
 	dump_cmd "journalctl --list-boots --no-pager" "journalctl-boots" "5"
 fi
 
