@@ -15,7 +15,17 @@ REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
 CPLD_IOREG_RANGE=256
 dump_process_pid=$$
 
-MODE=$1
+# Options, in any order:
+#   compact    skip the journal and its boot list
+#   no-dmesg   do not collect dmesg
+MODE=
+COLLECT_DMESG="yes"
+for arg in "$@"; do
+	case "$arg" in
+	compact) MODE="compact" ;;
+	no-dmesg) COLLECT_DMESG="no" ;;
+	esac
+done
 
 dump_cmd () {
 	cmd=$1
@@ -100,8 +110,52 @@ if [ -d "$HW_MGMT_FOLDER" ]; then
 	timeout 80 find "$HW_MGMT_FOLDER/eeprom/" -type l -exec ls -la {} \; -exec hexdump -C {} \; > "$DUMP_FOLDER/hw-management_fru_dump" 2> /dev/null
 fi
 
+# Journal scope, one file: records of the hw-management units, the kernel log,
+# and the syslog tags that hw-management scripts log under. Other services
+# (sshd, sudo, pam, audit, ...) are not collected. The tags are read from the
+# journal at dump time, the same way as the unit names.
+
+# Writes the journal scope to the dump. Each term is a separate argument to
+# journalctl and no shell parses them, so a unit name read from the journal
+# cannot run commands. journalctl ORs the matches on each side of a "+".
+# _SYSTEMD_UNIT: records the unit wrote. UNIT: systemd's own records about the
+# unit (start, failure, stop).
+dump_journal_scope()
+{
+	if [ ! -x "$(command -v journalctl)" ]; then
+		return
+	fi
+
+	set -- "_TRANSPORT=kernel"
+	for unit in $HW_MGMT_UNITS; do
+		set -- "$@" "+" "_SYSTEMD_UNIT=$unit" "+" "UNIT=$unit"
+	done
+	for tag in $HW_MGMT_TAGS; do
+		set -- "$@" "+" "SYSLOG_IDENTIFIER=$tag"
+	done
+
+	timeout 45 journalctl -o short-precise --no-pager "$@" > "$DUMP_FOLDER/hw-management-system-log" 2>&1
+}
+
 if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
-	dump_cmd "journalctl -o short-precise --no-pager" "journalctl" "45"
+	# Unit names come from the journal and from the unit files on the system.
+	# Only plain unit names are kept, so no shell metacharacter reaches the
+	# journal call. The unit files cover a unit that failed before it logged
+	# anything. The discovery is time limited; if it fails, the kernel records
+	# and the units found in the unit files are still collected. The tagged
+	# records need the journal discovery.
+	HW_MGMT_UNITS=$( {
+		timeout 10 journalctl -F _SYSTEMD_UNIT 2>/dev/null
+		timeout 10 journalctl -F UNIT 2>/dev/null
+		ls /usr/lib/systemd/system /lib/systemd/system /etc/systemd/system 2>/dev/null
+	} | grep -E '^hw-management[A-Za-z0-9@._-]*$' | sort -u)
+	# Syslog tags: hw-management scripts and daemons, the cartridge and VR
+	# tools. Python daemons log under their file name, so both "-" and "_"
+	# separators are matched. Only plain names are kept, as for the units.
+	HW_MGMT_TAGS=$(timeout 10 journalctl -F SYSLOG_IDENTIFIER 2>/dev/null \
+		| grep -E '^(hw[-_]manage|hw[-_]mgmt|cartridge_flash|vr_)[A-Za-z0-9@._-]*$' | sort -u)
+	dump_journal_scope
+	dump_cmd "journalctl --list-boots --no-pager" "boot-list" "5"
 fi
 
 [ -f /var/log/tc_log ] && cp /var/log/tc_* "$DUMP_FOLDER/" 2>/dev/null || true
@@ -141,7 +195,12 @@ VMOD0014)
 esac
 
 dump_cmd "iorw -b 0x2500 -r -l${CPLD_IOREG_RANGE}" "cpld_reg_direct_dump" "5"
-dump_cmd "dmesg" "dmesg" "10"
+# The kernel log of the current boot. The hw-management-system-log file has it too,
+# for all boots, but it is not always there (compact mode, no journalctl), so dmesg
+# is collected unless the no-dmesg option is given.
+if [ "$COLLECT_DMESG" = "yes" ]; then
+	dump_cmd "dmesg" "dmesg" "10"
+fi
 dump_cmd "dmidecode" "dmidecode" "5"
 dump_cmd "lsmod" "lsmod" "3"
 dump_cmd "lspci -vvv" "lspci" "5"
