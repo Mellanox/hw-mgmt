@@ -1,0 +1,45 @@
+From 39dcfa63dc479c97ba90170b972116030a4e184d Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Fri, 10 Apr 2026 13:10:49 +0200
+Subject: [PATCH 0651/0797] dt-bindings: pinctrl: nvidia,tegra234: Correctly use additionalProperties
+
+The binding does not reference any other schema, thus should use
+"additionalProperties: false" to disallow any undocumented properties.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Linus Walleij <linusw@kernel.org>
+---
+ .../devicetree/bindings/pinctrl/nvidia,tegra234-pinmux-aon.yaml         | 2 +-
+ Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux.yaml   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux-aon.yaml b/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux-aon.yaml
+index 56fb9cf763ef7f..4910dc8e8aebde 100644
+--- a/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux-aon.yaml
++++ b/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux-aon.yaml
+@@ -62,7 +62,7 @@ required:
+   - compatible
+   - reg
+ 
+-unevaluatedProperties: false
++additionalProperties: false
+ 
+ examples:
+   - |
+diff --git a/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux.yaml b/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux.yaml
+index bd305a34eee2b2..52b3d40e8839a2 100644
+--- a/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux.yaml
++++ b/Documentation/devicetree/bindings/pinctrl/nvidia,tegra234-pinmux.yaml
+@@ -119,7 +119,7 @@ required:
+   - compatible
+   - reg
+ 
+-unevaluatedProperties: false
++additionalProperties: false
+ 
+ examples:
+   - |
+-- 
+cgit 1.3.1-korg
+

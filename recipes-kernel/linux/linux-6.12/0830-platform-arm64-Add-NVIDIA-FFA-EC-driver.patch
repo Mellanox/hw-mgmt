@@ -1,0 +1,142 @@
+From abhsahu@nvidia.com Wed, 7 May 2025 07:32:22 +0000
+From: Abhishek Sahu <abhsahu@nvidia.com>
+Date: Wed, 7 May 2025 07:32:22 +0000
+Subject: [PATCH] platform/arm64: Add the NVIDIA FFA driver for EC communication
+
+Backport of NVIDIA SAUCE 7cb49afcf788 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94. The driver file is unchanged. Kconfig and the Makefile
+are appended at the 6.12 end of drivers/platform/arm64, which stops at
+EC_LENOVO_YOGA_C630.
+
+Upstream-commit: 7cb49afcf788
+
+diff --git a/drivers/platform/arm64/Kconfig b/drivers/platform/arm64/Kconfig
+index f88395ea3..ed02b12fc 100644
+--- a/drivers/platform/arm64/Kconfig
++++ b/drivers/platform/arm64/Kconfig
+@@ -49,4 +49,18 @@ config EC_LENOVO_YOGA_C630
+ 
+ 	  Say M or Y here to include this support.
+ 
++config NVIDIA_FFA_EC
++	tristate "NVIDIA FFA EC services driver"
++	depends on ARM_FFA_TRANSPORT || COMPILE_TEST
++	depends on ACPI
++	depends on ACPI_FFH
++	help
++	  Enable NVIDIA FFA EC services.
++	  For GB10 and other similar SOCs, to communicate with the embedded
++	  controller, a new specification is being defined. It is currently in
++	  draft stage and maintained in
++	  https://github.com/OpenDevicePartnership/documentation/blob/main/bookshelf/Shelf%204%20Specifications/EC%20Interface/src/secure-ec-services-overview.md
++
++	  Say M or Y here to include this support.
++
+ endif # ARM64_PLATFORM_DEVICES
+diff --git a/drivers/platform/arm64/Makefile b/drivers/platform/arm64/Makefile
+index b2ae9114f..995c5f96b 100644
+--- a/drivers/platform/arm64/Makefile
++++ b/drivers/platform/arm64/Makefile
+@@ -7,3 +7,4 @@
+ 
+ obj-$(CONFIG_EC_ACER_ASPIRE1)	+= acer-aspire1-ec.o
+ obj-$(CONFIG_EC_LENOVO_YOGA_C630) += lenovo-yoga-c630.o
++obj-$(CONFIG_NVIDIA_FFA_EC) += nvidia-ffa-ec.o
+diff --git a/drivers/platform/arm64/nvidia-ffa-ec.c b/drivers/platform/arm64/nvidia-ffa-ec.c
+new file mode 100644
+index 000000000..22dd49a13
+--- /dev/null
++++ b/drivers/platform/arm64/nvidia-ffa-ec.c
+@@ -0,0 +1,92 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/acpi.h>
++
++#define DRV_NAME "nvidia-ffa-ec"
++
++/* platform device for FFA ACPI device (HID MSFT000C) */
++static struct platform_device *ffa_pdev;
++
++static const struct acpi_device_id nvidia_ffa_device_ids[] = {
++	/*
++	 * Please refer
++	 * https://github.com/OpenDevicePartnership/documentation/blob/main/bookshelf/Shelf%204%20Specifications/EC%20Interface/src/secure-ec-services-overview.md#hid-definition
++	 * where MSFT000C is documented.
++	 *
++	 * The _HID 'MSFT000C' is reserved for FFA device which uses
++	 * FFA interface for secure EC communication.
++	 */
++	{"MSFT000C", 0},
++	{"", 0},
++};
++
++MODULE_DEVICE_TABLE(acpi, nvidia_ffa_device_ids);
++
++static int nvidia_ffa_probe(struct platform_device *pdev)
++{
++	struct acpi_device *adev = ACPI_COMPANION(&pdev->dev);
++	acpi_status status;
++	unsigned long long data = 0;
++
++	if (ffa_pdev) {
++		dev_err(&pdev->dev, "FFA device already registered\n");
++		return -EINVAL;
++	}
++
++	if (!adev) {
++		dev_err(&pdev->dev, "No ACPI companion found\n");
++		return -ENODEV;
++	}
++
++	status = acpi_evaluate_integer(adev->handle, "AVAL", NULL, &data);
++	if (ACPI_FAILURE(status)) {
++		dev_err(&pdev->dev, "Failed to execute AVAL method\n");
++		return -ENODEV;
++	}
++
++	if (data != 1) {
++		dev_err(&pdev->dev, "FFA not available\n");
++		return -ENODEV;
++	}
++
++	ffa_pdev = pdev;
++
++	return 0;
++}
++
++static void nvidia_ffa_remove(struct platform_device *pdev)
++{
++	ffa_pdev = NULL;
++}
++
++static struct platform_driver nvidia_ffa_driver = {
++	.probe = nvidia_ffa_probe,
++	.remove = nvidia_ffa_remove,
++	.driver = {
++		.name = "nvidia-ffa",
++		.acpi_match_table = nvidia_ffa_device_ids,
++	},
++};
++
++static int __init nvidia_ffa_init(void)
++{
++	return platform_driver_register(&nvidia_ffa_driver);
++}
++module_init(nvidia_ffa_init);
++
++static void __exit nvidia_ffa_exit(void)
++{
++	platform_driver_unregister(&nvidia_ffa_driver);
++}
++module_exit(nvidia_ffa_exit);
++
++MODULE_SOFTDEP("pre: arm-ffa");
++MODULE_AUTHOR("NVIDIA CORPORATION");
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("NVIDIA FFA EC services driver");

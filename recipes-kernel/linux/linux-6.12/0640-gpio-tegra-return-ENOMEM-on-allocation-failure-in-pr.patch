@@ -1,0 +1,32 @@
+From 57df6923ca53b524d06d2347b896d9de74b3bc86 Mon Sep 17 00:00:00 2001
+From: Samasth Norway Ananda <samasth.norway.ananda@oracle.com>
+Date: Thu, 9 Apr 2026 11:58:53 -0700
+Subject: [PATCH 0640/0797] gpio: tegra: return -ENOMEM on allocation failure in probe
+
+devm_kzalloc() failure in tegra_gpio_probe() returns -ENODEV, which
+indicates "no such device". The correct error code for a memory
+allocation failure is -ENOMEM.
+
+Signed-off-by: Samasth Norway Ananda <samasth.norway.ananda@oracle.com>
+Link: https://patch.msgid.link/20260409185853.2163034-1-samasth.norway.ananda@oracle.com
+Signed-off-by: Bartosz Golaszewski <bartosz.golaszewski@oss.qualcomm.com>
+---
+ drivers/gpio/gpio-tegra.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpio/gpio-tegra.c b/drivers/gpio/gpio-tegra.c
+index b14052fe64ac69..df06b56a2ade85 100644
+--- a/drivers/gpio/gpio-tegra.c
++++ b/drivers/gpio/gpio-tegra.c
+@@ -698,7 +698,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
+ 
+ 	tgi = devm_kzalloc(&pdev->dev, sizeof(*tgi), GFP_KERNEL);
+ 	if (!tgi)
+-		return -ENODEV;
++		return -ENOMEM;
+ 
+ 	tgi->soc = of_device_get_match_data(&pdev->dev);
+ 	tgi->dev = &pdev->dev;
+-- 
+cgit 1.3.1-korg
+

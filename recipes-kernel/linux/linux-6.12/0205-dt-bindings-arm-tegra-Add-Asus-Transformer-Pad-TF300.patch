@@ -1,0 +1,26 @@
+From 236d4257572f4cd7167ac417701b887d138bed31 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Sat, 3 May 2025 13:29:49 +0300
+Subject: [PATCH 0205/0797] dt-bindings: arm: tegra: Add Asus Transformer Pad TF300TL
+
+Add a compatible for the Asus Transformer Pad TF300TL.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Link: https://lore.kernel.org/r/20250503102950.32744-3-clamor95@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 49021e940d3cc..9cae3268a8274 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -58,6 +58,7 @@ properties:
+               - asus,tf201
+               - asus,tf300t
+               - asus,tf300tg
++              - asus,tf300tl
+               - asus,tf700t
+           - const: nvidia,tegra30
+       - description: LG Optimus 4X P880

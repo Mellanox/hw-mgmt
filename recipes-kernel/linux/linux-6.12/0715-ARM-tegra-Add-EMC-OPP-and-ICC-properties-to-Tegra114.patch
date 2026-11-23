@@ -1,0 +1,231 @@
+From bdc80b3246f18f8f9f94af78c3c9f3c22c62fad3 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 27 Apr 2026 10:03:10 +0300
+Subject: [PATCH 0715/0797] ARM: tegra: Add EMC OPP and ICC properties to Tegra114 EMC and ACTMON device-tree nodes
+
+Add EMC OPP tables and interconnect paths that will be used for dynamic
+memory bandwidth scaling based on memory utilization statistics.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../boot/dts/nvidia/tegra114-peripherals-opp.dtsi  | 164 +++++++++++++++++++++
+ arch/arm/boot/dts/nvidia/tegra114.dtsi             |   9 ++
+ 2 files changed, 173 insertions(+)
+ create mode 100644 arch/arm/boot/dts/nvidia/tegra114-peripherals-opp.dtsi
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra114-peripherals-opp.dtsi b/arch/arm/boot/dts/nvidia/tegra114-peripherals-opp.dtsi
+new file mode 100644
+index 00000000000000..b40a1c24abab70
+--- /dev/null
++++ b/arch/arm/boot/dts/nvidia/tegra114-peripherals-opp.dtsi
+@@ -0,0 +1,164 @@
++// SPDX-License-Identifier: GPL-2.0
++
++/ {
++	emc_icc_dvfs_opp_table: opp-table-emc {
++		compatible = "operating-points-v2";
++
++		opp-12750000-900 {
++			opp-microvolt = <900000 900000 1390000>;
++			opp-hz = /bits/ 64 <12750000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-20400000-900 {
++			opp-microvolt = <900000 900000 1390000>;
++			opp-hz = /bits/ 64 <20400000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-40800000-900 {
++			opp-microvolt = <900000 900000 1390000>;
++			opp-hz = /bits/ 64 <40800000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-68000000-900 {
++			opp-microvolt = <900000 900000 1390000>;
++			opp-hz = /bits/ 64 <68000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-102000000-900 {
++			opp-microvolt = <900000 900000 1390000>;
++			opp-hz = /bits/ 64 <102000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-204000000-900 {
++			opp-microvolt = <900000 900000 1390000>;
++			opp-hz = /bits/ 64 <204000000>;
++			opp-supported-hw = <0x000F>;
++			opp-suspend;
++		};
++
++		opp-312000000-1000 {
++			opp-microvolt = <1000000 1000000 1390000>;
++			opp-hz = /bits/ 64 <312000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-408000000-1000 {
++			opp-microvolt = <1000000 1000000 1390000>;
++			opp-hz = /bits/ 64 <408000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		/*
++		 * T40X can work with 1050mV for 528MHz but T40T which is
++		 * in the same group as T40X requires 1100mV. If there will
++		 * be enough data that T40T can work reliably with 1050mV
++		 * for 528MHz then voltage for 528MHz opp can be lowered.
++		 * T40S should remain with 1100mV for 528MHz opp.
++		 */
++		opp-528000000-1100 {
++			opp-microvolt = <1100000 1100000 1390000>;
++			opp-hz = /bits/ 64 <528000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-624000000-1100 {
++			opp-microvolt = <1100000 1100000 1390000>;
++			opp-hz = /bits/ 64 <624000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-792000000-1100 {
++			opp-microvolt = <1100000 1100000 1390000>;
++			opp-hz = /bits/ 64 <792000000>;
++			opp-supported-hw = <0x000F>;
++		};
++
++		opp-900000000-1200 {
++			opp-microvolt = <1200000 1200000 1390000>;
++			opp-hz = /bits/ 64 <900000000>;
++			opp-supported-hw = <0x000E>;
++		};
++	};
++
++	emc_bw_dfs_opp_table: opp-table-actmon {
++		compatible = "operating-points-v2";
++
++		opp-12750000 {
++			opp-hz = /bits/ 64 <12750000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <204000>;
++		};
++
++		opp-20400000 {
++			opp-hz = /bits/ 64 <20400000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <326400>;
++		};
++
++		opp-40800000 {
++			opp-hz = /bits/ 64 <40800000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <652800>;
++		};
++
++		opp-68000000 {
++			opp-hz = /bits/ 64 <68000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <1088000>;
++		};
++
++		opp-102000000 {
++			opp-hz = /bits/ 64 <102000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <1632000>;
++		};
++
++		opp-204000000 {
++			opp-hz = /bits/ 64 <204000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <3264000>;
++			opp-suspend;
++		};
++
++		opp-312000000 {
++			opp-hz = /bits/ 64 <312000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <4992000>;
++		};
++
++		opp-408000000 {
++			opp-hz = /bits/ 64 <408000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <6528000>;
++		};
++
++		opp-528000000 {
++			opp-hz = /bits/ 64 <528000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <8448000>;
++		};
++
++		opp-624000000 {
++			opp-hz = /bits/ 64 <624000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <9984000>;
++		};
++
++		opp-792000000 {
++			opp-hz = /bits/ 64 <792000000>;
++			opp-supported-hw = <0x000F>;
++			opp-peak-kBps = <12672000>;
++		};
++
++		opp-900000000 {
++			opp-hz = /bits/ 64 <900000000>;
++			opp-supported-hw = <0x000E>;
++			opp-peak-kBps = <14400000>;
++		};
++	};
++};
+diff --git a/arch/arm/boot/dts/nvidia/tegra114.dtsi b/arch/arm/boot/dts/nvidia/tegra114.dtsi
+index 7e8f90d339359a..6c2b79b359385b 100644
+--- a/arch/arm/boot/dts/nvidia/tegra114.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra114.dtsi
+@@ -8,6 +8,8 @@
+ #include <dt-bindings/soc/tegra-pmc.h>
+ #include <dt-bindings/thermal/tegra114-soctherm.h>
+ 
++#include "tegra114-peripherals-opp.dtsi"
++
+ / {
+ 	compatible = "nvidia,tegra114";
+ 	interrupt-parent = <&lic>;
+@@ -323,6 +325,9 @@
+ 		clock-names = "actmon", "emc";
+ 		resets = <&tegra_car TEGRA114_CLK_ACTMON>;
+ 		reset-names = "actmon";
++		operating-points-v2 = <&emc_bw_dfs_opp_table>;
++		interconnects = <&mc TEGRA114_MC_MPCORER &emc>;
++		interconnect-names = "cpu-read";
+ 		#cooling-cells = <2>;
+ 	};
+ 
+@@ -655,6 +660,7 @@
+ 
+ 		#reset-cells = <1>;
+ 		#iommu-cells = <1>;
++		#interconnect-cells = <1>;
+ 	};
+ 
+ 	emc: external-memory-controller@7001b000 {
+@@ -665,6 +671,9 @@
+ 		clock-names = "emc";
+ 
+ 		nvidia,memory-controller = <&mc>;
++		operating-points-v2 = <&emc_icc_dvfs_opp_table>;
++
++		#interconnect-cells = <0>;
+ 	};
+ 
+ 	hda@70030000 {
+-- 
+cgit 1.3.1-korg
+

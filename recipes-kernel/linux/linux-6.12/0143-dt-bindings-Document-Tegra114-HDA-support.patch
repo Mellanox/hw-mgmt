@@ -1,0 +1,30 @@
+From 294630d81ad65333e5d4ad3efcb82dcad6177e6b Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Thu, 6 Mar 2025 18:50:35 +0100
+Subject: [PATCH 0143/0797] dt-bindings: Document Tegra114 HDA support
+
+The HDA hardware on Tegra114 is almost identical to the one found on
+Tegra30 or Tegra124. Add a compatible string to allow matching in case
+it's ever needed. Typically the match on Tegra30 should be sufficient.
+
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml
+index 12c31b4b99e180..3ca9affb79a20a 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra30-hda.yaml
+@@ -28,6 +28,7 @@ properties:
+               - nvidia,tegra186-hda
+               - nvidia,tegra210-hda
+               - nvidia,tegra124-hda
++              - nvidia,tegra114-hda
+           - const: nvidia,tegra30-hda
+       - items:
+           - const: nvidia,tegra132-hda
+-- 
+cgit 1.3.1-korg
+

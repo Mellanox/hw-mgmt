@@ -1,0 +1,104 @@
+From yung-chi.chen@mediatek.com Tue, 22 Apr 2025 09:18:17 +0800
+From: Jonas Chen <yung-chi.chen@mediatek.com>
+Date: Tue, 22 Apr 2025 09:18:17 +0800
+Subject: [PATCH] pinctrl: mediatek: Add ACPI support
+
+Backport of NVIDIA SAUCE db856f1c9ba4 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94. 6.12 has one EINT register base, named "eint" on OF.
+ACPI has no names, so the EINT region is the memory resource after the
+pin bases and the IRQ comes from platform_get_irq(). OF behavior is
+unchanged.
+
+Upstream-commit: db856f1c9ba4
+
+diff --git a/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.c b/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.c
+index 54301fbba..f34fe684c 100644
+--- a/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.c
++++ b/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /*
+- * Copyright (C) 2018 MediaTek Inc.
++ * Copyright (C) 2018-2025 MediaTek Inc.
+  *
+  * Author: Sean Wang <sean.wang@mediatek.com>
+  *
+@@ -367,26 +367,37 @@ static const struct mtk_eint_xt mtk_eint_xt = {
+ int mtk_build_eint(struct mtk_pinctrl *hw, struct platform_device *pdev)
+ {
+ 	struct device_node *np = pdev->dev.of_node;
++	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
+ 	int ret;
+ 
+ 	if (!IS_ENABLED(CONFIG_EINT_MTK))
+ 		return 0;
+ 
+-	if (!of_property_read_bool(np, "interrupt-controller"))
++	/* 6.12 has one EINT mapping. ACPI lists it after the pin bases. */
++	if (is_of_node(fwnode) &&
++	    !of_property_read_bool(np, "interrupt-controller"))
+ 		return -ENODEV;
+ 
+ 	hw->eint = devm_kzalloc(hw->dev, sizeof(*hw->eint), GFP_KERNEL);
+ 	if (!hw->eint)
+ 		return -ENOMEM;
+ 
+-	hw->eint->base = devm_platform_ioremap_resource_byname(pdev, "eint");
++	if (is_of_node(fwnode))
++		hw->eint->base = devm_platform_ioremap_resource_byname(pdev,
++								       "eint");
++	else
++		hw->eint->base = devm_platform_ioremap_resource(pdev,
++							hw->soc->nbase_names);
+ 	if (IS_ERR(hw->eint->base)) {
+ 		ret = PTR_ERR(hw->eint->base);
+ 		goto err_free_eint;
+ 	}
+ 
+-	hw->eint->irq = irq_of_parse_and_map(np, 0);
+-	if (!hw->eint->irq) {
++	if (is_of_node(fwnode))
++		hw->eint->irq = irq_of_parse_and_map(np, 0);
++	else
++		hw->eint->irq = platform_get_irq(pdev, 0);
++	if (hw->eint->irq <= 0) {
+ 		ret = -EINVAL;
+ 		goto err_free_eint;
+ 	}
+diff --git a/drivers/pinctrl/mediatek/pinctrl-paris.c b/drivers/pinctrl/mediatek/pinctrl-paris.c
+index b551b3cc7..bc7b61d13 100644
+--- a/drivers/pinctrl/mediatek/pinctrl-paris.c
++++ b/drivers/pinctrl/mediatek/pinctrl-paris.c
+@@ -1023,6 +1023,7 @@ int mtk_paris_pinctrl_probe(struct platform_device *pdev)
+ 	struct device *dev = &pdev->dev;
+ 	struct pinctrl_pin_desc *pins;
+ 	struct mtk_pinctrl *hw;
++	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
+ 	int err, i;
+ 
+ 	hw = devm_kzalloc(&pdev->dev, sizeof(*hw), GFP_KERNEL);
+@@ -1047,16 +1048,21 @@ int mtk_paris_pinctrl_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	for (i = 0; i < hw->soc->nbase_names; i++) {
+-		hw->base[i] = devm_platform_ioremap_resource_byname(pdev,
+-					hw->soc->base_names[i]);
++		hw->base[i] = is_of_node(fwnode)
++			? devm_platform_ioremap_resource_byname(pdev,
++						hw->soc->base_names[i])
++			: devm_platform_get_and_ioremap_resource(pdev, i, NULL);
+ 		if (IS_ERR(hw->base[i]))
+ 			return PTR_ERR(hw->base[i]);
+ 	}
+ 
+ 	hw->nbase = hw->soc->nbase_names;
+ 
+-	hw->rsel_si_unit = of_property_read_bool(hw->dev->of_node,
++	if (is_of_node(fwnode))
++		hw->rsel_si_unit = of_property_read_bool(hw->dev->of_node,
+ 						 "mediatek,rsel-resistance-in-si-unit");
++	else
++		hw->rsel_si_unit = false;
+ 
+ 	spin_lock_init(&hw->lock);
+ 

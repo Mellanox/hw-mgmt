@@ -1,0 +1,42 @@
+From cc0dce769bcedb621f2c5535c31570cd51bc0235 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Date: Tue, 3 Jun 2025 13:57:11 +0200
+Subject: [PATCH 0303/0797] dt-bindings: mailbox: nvidia,tegra186-hsp: Use generic node name
+
+According to Devicetree specifications, device node names should be
+generic, thus Mailbox provider should be called "mailbox", not "hsp".
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Jassi Brar <jassisinghbrar@gmail.com>
+---
+ Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml b/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml
+index d97050e40fbfb4..307dea3fd83fba 100644
+--- a/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml
++++ b/Documentation/devicetree/bindings/mailbox/nvidia,tegra186-hsp.yaml
+@@ -59,9 +59,6 @@ description: |
+         <dt-bindings/mailbox/tegra186-hsp.h>
+ 
+ properties:
+-  $nodename:
+-    pattern: "^hsp@[0-9a-f]+$"
+-
+   compatible:
+     oneOf:
+       - enum:
+@@ -131,7 +128,7 @@ examples:
+     #include <dt-bindings/interrupt-controller/arm-gic.h>
+     #include <dt-bindings/mailbox/tegra186-hsp.h>
+ 
+-    hsp_top0: hsp@3c00000 {
++    hsp_top0: mailbox@3c00000 {
+         compatible = "nvidia,tegra186-hsp";
+         reg = <0x03c00000 0xa0000>;
+         interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>;
+-- 
+cgit 1.3.1-korg
+

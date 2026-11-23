@@ -1,0 +1,52 @@
+From 7a430af7d135be5042f14987bce16f6b40a3f694 Mon Sep 17 00:00:00 2001
+From: "Rob Herring (Arm)" <robh@kernel.org>
+Date: Tue, 12 Aug 2025 15:33:07 -0500
+Subject: [PATCH 0310/0797] dt-bindings: dma: nvidia,tegra20-apbdma: Add undocumented compatibles and "clock-names"
+
+Add the undocumented NVIDIA APBDMA compatibles and "clock-names" which
+are already in use. There doesn't appear to be any per compatible
+differences.
+
+Signed-off-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250812203308.727731-1-robh@kernel.org
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ .../devicetree/bindings/dma/nvidia,tegra20-apbdma.yaml       | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/Documentation/devicetree/bindings/dma/nvidia,tegra20-apbdma.yaml b/Documentation/devicetree/bindings/dma/nvidia,tegra20-apbdma.yaml
+index a2ffd5209b3bf3..ea40c4e27a9730 100644
+--- a/Documentation/devicetree/bindings/dma/nvidia,tegra20-apbdma.yaml
++++ b/Documentation/devicetree/bindings/dma/nvidia,tegra20-apbdma.yaml
+@@ -18,10 +18,17 @@ maintainers:
+ properties:
+   compatible:
+     oneOf:
+-      - const: nvidia,tegra20-apbdma
++      - enum:
++          - nvidia,tegra114-apbdma
++          - nvidia,tegra20-apbdma
+       - items:
+           - const: nvidia,tegra30-apbdma
+           - const: nvidia,tegra20-apbdma
++      - items:
++          - enum:
++              - nvidia,tegra124-apbdma
++              - nvidia,tegra210-apbdma
++          - const: nvidia,tegra148-apbdma
+ 
+   reg:
+     maxItems: 1
+@@ -32,6 +39,9 @@ properties:
+   clocks:
+     maxItems: 1
+ 
++  clock-names:
++    const: dma
++
+   interrupts:
+     description:
+       Should contain all of the per-channel DMA interrupts in
+-- 
+cgit 1.3.1-korg
+

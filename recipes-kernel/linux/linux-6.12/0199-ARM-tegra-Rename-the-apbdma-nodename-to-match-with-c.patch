@@ -1,0 +1,45 @@
+From c533c0a2acb1194d3353d46377ca1206305465bc Mon Sep 17 00:00:00 2001
+From: Charan Pedumuru <charan.pedumuru@gmail.com>
+Date: Wed, 7 May 2025 04:57:33 +0000
+Subject: [PATCH 0199/0797] ARM: tegra: Rename the apbdma nodename to match with common dma-controller binding
+
+Rename the apbdma nodename from "dma@" to "dma-controller@" to align with
+linux common dma-controller binding.
+
+Signed-off-by: Charan Pedumuru <charan.pedumuru@gmail.com>
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Reviewed-by: Jon Hunter <jonathanh@nvidia.com>
+Link: https://lore.kernel.org/r/20250507-nvidea-dma-v4-1-6161a8de376f@gmail.com
+[treding@nvidia.com: adjust subject prefix for consistency]
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra20.dtsi | 2 +-
+ arch/arm/boot/dts/nvidia/tegra30.dtsi | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra20.dtsi b/arch/arm/boot/dts/nvidia/tegra20.dtsi
+index 8da75ccc44025..882adb7f2f263 100644
+--- a/arch/arm/boot/dts/nvidia/tegra20.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra20.dtsi
+@@ -284,7 +284,7 @@
+ 		reg = <0x60007000 0x1000>;
+ 	};
+ 
+-	apbdma: dma@6000a000 {
++	apbdma: dma-controller@6000a000 {
+ 		compatible = "nvidia,tegra20-apbdma";
+ 		reg = <0x6000a000 0x1200>;
+ 		interrupts = <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>,
+diff --git a/arch/arm/boot/dts/nvidia/tegra30.dtsi b/arch/arm/boot/dts/nvidia/tegra30.dtsi
+index f866fa7b55a50..2a4d93db81347 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30.dtsi
+@@ -431,7 +431,7 @@
+ 		reg = <0x60007000 0x1000>;
+ 	};
+ 
+-	apbdma: dma@6000a000 {
++	apbdma: dma-controller@6000a000 {
+ 		compatible = "nvidia,tegra30-apbdma", "nvidia,tegra20-apbdma";
+ 		reg = <0x6000a000 0x1400>;
+ 		interrupts = <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>,

@@ -1,0 +1,23 @@
+From abhsahu@nvidia.com Mon, 15 Sep 2025 17:23:32 +0530
+From: Abhishek Sahu <abhsahu@nvidia.com>
+Date: Mon, 15 Sep 2025 17:23:32 +0530
+Subject: [PATCH] platform/arm64: Fix FFA notification count initialization
+
+Backport of NVIDIA SAUCE 8972b5881db1 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94.
+
+Upstream-commit: 8972b5881db1
+
+diff --git a/drivers/platform/arm64/nvidia-ffa-ec.c b/drivers/platform/arm64/nvidia-ffa-ec.c
+index 1c9da1bcd..754f5ac53 100644
+--- a/drivers/platform/arm64/nvidia-ffa-ec.c
++++ b/drivers/platform/arm64/nvidia-ffa-ec.c
+@@ -619,7 +619,7 @@ static int nvidia_ffa_ec_service_probe(struct ffa_device *ffa_dev)
+ 		return -ENODEV;
+ 	}
+ 
+-	nvidia_ec_ffa_dev = devm_kmalloc(&ffa_dev->dev,
++	nvidia_ec_ffa_dev = devm_kzalloc(&ffa_dev->dev,
+ 					 sizeof(*nvidia_ec_ffa_dev),
+ 					 GFP_KERNEL);
+ 	if (!nvidia_ec_ffa_dev) {

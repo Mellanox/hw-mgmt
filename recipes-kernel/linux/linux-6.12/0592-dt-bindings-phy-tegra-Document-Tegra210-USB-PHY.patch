@@ -1,0 +1,28 @@
+From 99250f7553ea8e09b160ac290f5f22ac986e7c4a Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 23 Feb 2026 15:33:01 +0100
+Subject: [PATCH 0592/0797] dt-bindings: phy: tegra: Document Tegra210 USB PHY
+
+Add a compatible string for the USB PHY found on Tegra210 SoCs.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/phy/nvidia,tegra20-usb-phy.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/phy/nvidia,tegra20-usb-phy.yaml b/Documentation/devicetree/bindings/phy/nvidia,tegra20-usb-phy.yaml
+index d61585c96e319e..a37e8322dc5010 100644
+--- a/Documentation/devicetree/bindings/phy/nvidia,tegra20-usb-phy.yaml
++++ b/Documentation/devicetree/bindings/phy/nvidia,tegra20-usb-phy.yaml
+@@ -16,6 +16,7 @@ properties:
+     oneOf:
+       - items:
+           - enum:
++              - nvidia,tegra210-usb-phy
+               - nvidia,tegra124-usb-phy
+               - nvidia,tegra114-usb-phy
+           - enum:
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,33 @@
+From 00b5b4e5d3c235950a80a7c5ca9297233640cbe9 Mon Sep 17 00:00:00 2001
+From: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Date: Thu, 14 May 2026 16:47:22 +0200
+Subject: [PATCH 0709/0797] arm64: tegra: Mark MAX77620 as system power controller on Smaug
+
+Register the MAX77620 PMIC as the system power controller on Pixel C so
+the driver can install its sys-off handler.
+
+This allows the PMIC poweroff sequence to override the non-working PSCI
+SYSTEM_OFF implementation on this platform.
+
+Signed-off-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra210-smaug.dts | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts b/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
+index f0b8c2c80aa502..1791b47f0a7312 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
++++ b/arch/arm64/boot/dts/nvidia/tegra210-smaug.dts
+@@ -1467,6 +1467,8 @@
+ 			gpio-controller;
+ 			#gpio-cells = <2>;
+ 
++			system-power-controller;
++
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <&max77620_default>;
+ 
+-- 
+cgit 1.3.1-korg
+

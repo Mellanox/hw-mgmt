@@ -1,0 +1,29 @@
+From fdfc84371a7539b1b6bcb65e864b262b9dba716a Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Sat, 22 Nov 2025 15:23:02 +0100
+Subject: [PATCH 8/9] r8169: fix RTL8127 hang on suspend/shutdown
+
+Backport of upstream ae1737e7339b onto Linux 6.12.94.
+6.12 still has a single D3_NO_PLL_DOWN bit, so version 80 keeps
+that bit set instead of the later hot/cold split.
+
+Upstream-commit: ae1737e7339b
+
+diff --git a/drivers/net/ethernet/realtek/r8169_main.c b/drivers/net/ethernet/realtek/r8169_main.c
+index ce04576fc..9784d1079 100644
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -1460,6 +1460,10 @@ static enum rtl_dash_type rtl_get_dash_type(struct rtl8169_private *tp)
+ static void rtl_set_d3_pll_down(struct rtl8169_private *tp, bool enable)
+ {
+ 	switch (tp->mac_version) {
++	case RTL_GIGA_MAC_VER_80:
++		/* 8127 hangs on D3 if the PLL is allowed to power down. */
++		RTL_W8(tp, PMCH, RTL_R8(tp, PMCH) | D3_NO_PLL_DOWN);
++		break;
+ 	case RTL_GIGA_MAC_VER_25 ... RTL_GIGA_MAC_VER_26:
+ 	case RTL_GIGA_MAC_VER_29 ... RTL_GIGA_MAC_VER_30:
+ 	case RTL_GIGA_MAC_VER_32 ... RTL_GIGA_MAC_VER_37:
+-- 
+2.34.1
+

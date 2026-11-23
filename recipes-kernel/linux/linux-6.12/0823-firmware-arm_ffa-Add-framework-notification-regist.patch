@@ -1,0 +1,238 @@
+From holla@backport Mon Sep 17 00:00:00 2001
+From: Sudeep Holla <sudeep.holla@arm.com>
+Date: Mon, 17 Feb 2025 15:38:57 +0000
+Subject: [PATCH] firmware: arm_ffa: Add support for {un,}registration of framework notifications
+
+Backport of upstream c10debfe7f02 onto Linux 6.12.94.
+Registration still allocates the notifier node in the caller and takes
+the 6.12 rwlock. Framework callbacks are stored in fwk_cb and are not
+bound with FFA_NOTIFICATION_BIND.
+
+Upstream-commit: c10debfe7f02
+
+diff --git a/drivers/firmware/arm_ffa/driver.c b/drivers/firmware/arm_ffa/driver.c
+index d81ecfe..a810915 100644
+--- a/drivers/firmware/arm_ffa/driver.c
++++ b/drivers/firmware/arm_ffa/driver.c
+@@ -1110,6 +1110,7 @@ static int ffa_memory_lend(struct ffa_mem_ops_args *args)
+ struct notifier_cb_info {
+ 	struct hlist_node hnode;
+ 	struct ffa_device *dev;
++	ffa_fwk_notifier_cb fwk_cb;
+ 	ffa_notifier_cb cb;
+ 	void *cb_data;
+ };
+@@ -1184,27 +1185,60 @@ static enum notify_type ffa_notify_type_get(u16 vm_id)
+ 		return NON_SECURE_VM;
+ }
+ 
+-/* Should be called while the notify_lock is taken */
++/* notifier_hnode_get* should be called with notify_lock held */
+ static struct notifier_cb_info *
+-notifier_hash_node_get(u16 notify_id, enum notify_type type)
++notifier_hnode_get_by_vmid(u16 notify_id, int vmid)
+ {
+ 	struct notifier_cb_info *node;
+ 
+ 	hash_for_each_possible(drv_info->notifier_hash, node, hnode, notify_id)
+-		if (type == ffa_notify_type_get(node->dev->vm_id))
++		if (node->fwk_cb && vmid == node->dev->vm_id)
++			return node;
++
++	return NULL;
++}
++
++static struct notifier_cb_info *
++notifier_hnode_get_by_vmid_uuid(u16 notify_id, int vmid, const uuid_t *uuid)
++{
++	struct notifier_cb_info *node;
++
++	if (uuid_is_null(uuid))
++		return notifier_hnode_get_by_vmid(notify_id, vmid);
++
++	hash_for_each_possible(drv_info->notifier_hash, node, hnode, notify_id)
++		if (node->fwk_cb && vmid == node->dev->vm_id &&
++		    uuid_equal(&node->dev->uuid, uuid))
++			return node;
++
++	return NULL;
++}
++
++static struct notifier_cb_info *
++notifier_hnode_get_by_type(u16 notify_id, enum notify_type type)
++{
++	struct notifier_cb_info *node;
++
++	hash_for_each_possible(drv_info->notifier_hash, node, hnode, notify_id)
++		if (node->cb && type == ffa_notify_type_get(node->dev->vm_id))
+ 			return node;
+ 
+ 	return NULL;
+ }
+ 
+ static int update_notifier_cb(struct ffa_device *dev, int notify_id,
+-			      struct notifier_cb_info *cb)
++			      struct notifier_cb_info *cb, bool is_framework)
+ {
+ 	struct notifier_cb_info *cb_info = NULL;
+ 	enum notify_type type = ffa_notify_type_get(dev->vm_id);
+ 	bool cb_found, is_registration = !!cb;
+ 
+-	cb_info = notifier_hash_node_get(notify_id, type);
++	if (is_framework)
++		cb_info = notifier_hnode_get_by_vmid_uuid(notify_id, dev->vm_id,
++							  &dev->uuid);
++	else
++		cb_info = notifier_hnode_get_by_type(notify_id, type);
++
+ 	cb_found = !!cb_info;
+ 
+ 	if (!(is_registration ^ cb_found))
+@@ -1221,7 +1255,8 @@ static int update_notifier_cb(struct ffa_device *dev, int notify_id,
+ 	return 0;
+ }
+ 
+-static int ffa_notify_relinquish(struct ffa_device *dev, int notify_id)
++static int __ffa_notify_relinquish(struct ffa_device *dev, int notify_id,
++				   bool is_framework)
+ {
+ 	int rc;
+ 
+@@ -1233,22 +1268,34 @@ static int ffa_notify_relinquish(struct ffa_device *dev, int notify_id)
+ 
+ 	write_lock(&drv_info->notify_lock);
+ 
+-	rc = update_notifier_cb(dev, notify_id, NULL);
++	rc = update_notifier_cb(dev, notify_id, NULL, is_framework);
+ 	if (rc) {
+ 		pr_err("Could not unregister notification callback\n");
+ 		write_unlock(&drv_info->notify_lock);
+ 		return rc;
+ 	}
+ 
+-	rc = ffa_notification_unbind(dev->vm_id, BIT(notify_id));
++	if (!is_framework)
++		rc = ffa_notification_unbind(dev->vm_id, BIT(notify_id));
+ 
+ 	write_unlock(&drv_info->notify_lock);
+ 
+ 	return rc;
+ }
+ 
+-static int ffa_notify_request(struct ffa_device *dev, bool is_per_vcpu,
+-			      ffa_notifier_cb cb, void *cb_data, int notify_id)
++static int ffa_notify_relinquish(struct ffa_device *dev, int notify_id)
++{
++	return __ffa_notify_relinquish(dev, notify_id, false);
++}
++
++static int ffa_fwk_notify_relinquish(struct ffa_device *dev, int notify_id)
++{
++	return __ffa_notify_relinquish(dev, notify_id, true);
++}
++
++static int __ffa_notify_request(struct ffa_device *dev, bool is_per_vcpu,
++				void *cb, void *cb_data, int notify_id,
++				bool is_framework)
+ {
+ 	int rc;
+ 	u32 flags = 0;
+@@ -1265,22 +1312,28 @@ static int ffa_notify_request(struct ffa_device *dev, bool is_per_vcpu,
+ 		return -ENOMEM;
+ 
+ 	cb_info->cb_data = cb_data;
+-	cb_info->cb = cb;
++	if (is_framework)
++		cb_info->fwk_cb = (ffa_fwk_notifier_cb)cb;
++	else
++		cb_info->cb = (ffa_notifier_cb)cb;
+ 
+ 	write_lock(&drv_info->notify_lock);
+ 
+-	if (is_per_vcpu)
+-		flags = PER_VCPU_NOTIFICATION_FLAG;
++	if (!is_framework) {
++		if (is_per_vcpu)
++			flags = PER_VCPU_NOTIFICATION_FLAG;
+ 
+-	rc = ffa_notification_bind(dev->vm_id, BIT(notify_id), flags);
+-	if (rc)
+-		goto out_unlock_free;
++		rc = ffa_notification_bind(dev->vm_id, BIT(notify_id), flags);
++		if (rc)
++			goto out_unlock_free;
++	}
+ 
+-	rc = update_notifier_cb(dev, notify_id, cb_info);
++	rc = update_notifier_cb(dev, notify_id, cb_info, is_framework);
+ 	if (rc) {
+ 		pr_err("Failed to register callback for %d - %d\n",
+ 		       notify_id, rc);
+-		ffa_notification_unbind(dev->vm_id, BIT(notify_id));
++		if (!is_framework)
++			ffa_notification_unbind(dev->vm_id, BIT(notify_id));
+ 	}
+ 
+ out_unlock_free:
+@@ -1291,6 +1344,20 @@ out_unlock_free:
+ 	return rc;
+ }
+ 
++static int ffa_notify_request(struct ffa_device *dev, bool is_per_vcpu,
++			      ffa_notifier_cb cb, void *cb_data, int notify_id)
++{
++	return __ffa_notify_request(dev, is_per_vcpu, cb, cb_data, notify_id,
++				    false);
++}
++
++static int
++ffa_fwk_notify_request(struct ffa_device *dev, ffa_fwk_notifier_cb cb,
++		       void *cb_data, int notify_id)
++{
++	return __ffa_notify_request(dev, false, cb, cb_data, notify_id, true);
++}
++
+ static int ffa_notify_send(struct ffa_device *dev, int notify_id,
+ 			   bool is_per_vcpu, u16 vcpu)
+ {
+@@ -1320,7 +1387,7 @@ static void handle_notif_callbacks(u64 bitmap, enum notify_type type)
+ 			continue;
+ 
+ 		read_lock(&drv_info->notify_lock);
+-		cb_info = notifier_hash_node_get(notify_id, type);
++		cb_info = notifier_hnode_get_by_type(notify_id, type);
+ 		read_unlock(&drv_info->notify_lock);
+ 
+ 		if (cb_info && cb_info->cb)
+@@ -1393,6 +1460,8 @@ static const struct ffa_notifier_ops ffa_drv_notifier_ops = {
+ 	.sched_recv_cb_unregister = ffa_sched_recv_cb_unregister,
+ 	.notify_request = ffa_notify_request,
+ 	.notify_relinquish = ffa_notify_relinquish,
++	.fwk_notify_request = ffa_fwk_notify_request,
++	.fwk_notify_relinquish = ffa_fwk_notify_relinquish,
+ 	.notify_send = ffa_notify_send,
+ };
+ 
+diff --git a/include/linux/arm_ffa.h b/include/linux/arm_ffa.h
+index d3d4801..f14899b 100644
+--- a/include/linux/arm_ffa.h
++++ b/include/linux/arm_ffa.h
+@@ -468,6 +468,7 @@ struct ffa_cpu_ops {
+ 
+ typedef void (*ffa_sched_recv_cb)(u16 vcpu, bool is_per_vcpu, void *cb_data);
+ typedef void (*ffa_notifier_cb)(int notify_id, void *cb_data);
++typedef void (*ffa_fwk_notifier_cb)(int notify_id, void *cb_data, void *buf);
+ 
+ struct ffa_notifier_ops {
+ 	int (*sched_recv_cb_register)(struct ffa_device *dev,
+@@ -476,6 +477,10 @@ struct ffa_notifier_ops {
+ 	int (*notify_request)(struct ffa_device *dev, bool per_vcpu,
+ 			      ffa_notifier_cb cb, void *cb_data, int notify_id);
+ 	int (*notify_relinquish)(struct ffa_device *dev, int notify_id);
++	int (*fwk_notify_request)(struct ffa_device *dev,
++				  ffa_fwk_notifier_cb cb, void *cb_data,
++				  int notify_id);
++	int (*fwk_notify_relinquish)(struct ffa_device *dev, int notify_id);
+ 	int (*notify_send)(struct ffa_device *dev, int notify_id, bool per_vcpu,
+ 			   u16 vcpu);
+ };

@@ -1,0 +1,43 @@
+From cec785a7f25d9ebe3a151ddc4f3a4ede7fc0dab0 Mon Sep 17 00:00:00 2001
+From: Michal Pecio <michal.pecio@gmail.com>
+Date: Wed, 4 Dec 2024 21:44:43 +0100
+Subject: [PATCH 0100/0797] ARM: tegra: nyan: Maintain power to USB ports on boot
+
+USB ports are turned on by the firmware as it looks for disks to boot,
+ensure that they aren't power cycled before the xHCI driver comes up.
+
+This enables USB devices to be ready for use faster and reduces wear
+and risk of data loss on storage devices. A particularly annoying case
+was booting from a mechanical disk, which takes time to spin up again.
+
+Vendor kernel also kept these ports powered, and by the same means.
+
+Signed-off-by: Michal Pecio <michal.pecio@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra124-nyan.dtsi | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra124-nyan.dtsi b/arch/arm/boot/dts/nvidia/tegra124-nyan.dtsi
+index 8125c1b3e8d791..974c76f007db4d 100644
+--- a/arch/arm/boot/dts/nvidia/tegra124-nyan.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra124-nyan.dtsi
+@@ -716,6 +716,7 @@
+ 		regulator-name = "+5V_USB_HS";
+ 		regulator-min-microvolt = <5000000>;
+ 		regulator-max-microvolt = <5000000>;
++		regulator-boot-on;
+ 		gpio = <&gpio TEGRA_GPIO(N, 4) GPIO_ACTIVE_HIGH>;
+ 		enable-active-high;
+ 		gpio-open-drain;
+@@ -727,6 +728,7 @@
+ 		regulator-name = "+5V_USB_SS";
+ 		regulator-min-microvolt = <5000000>;
+ 		regulator-max-microvolt = <5000000>;
++		regulator-boot-on;
+ 		gpio = <&gpio TEGRA_GPIO(N, 5) GPIO_ACTIVE_HIGH>;
+ 		enable-active-high;
+ 		gpio-open-drain;
+-- 
+cgit 1.3.1-korg
+

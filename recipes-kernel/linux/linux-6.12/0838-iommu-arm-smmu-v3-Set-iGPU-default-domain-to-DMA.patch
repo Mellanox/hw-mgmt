@@ -1,0 +1,24 @@
+From nirmoyd@nvidia.com Wed, 10 Sep 2025 08:23:52 -0700
+From: Nirmoy Das <nirmoyd@nvidia.com>
+Date: Wed, 10 Sep 2025 08:23:52 -0700
+Subject: [PATCH] iommu/arm-smmu-v3: Set the DGX Spark iGPU default domain to DMA
+
+Backport of NVIDIA SAUCE 4db1c3d8cad1 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94.
+
+Upstream-commit: 4db1c3d8cad1
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index 115c19433..4499b8f3e 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -3518,6 +3518,9 @@ static int arm_smmu_def_domain_type(struct device *dev)
+ 
+ 		if (IS_HISI_PTT_DEVICE(pdev))
+ 			return IOMMU_DOMAIN_IDENTITY;
++
++		if (pdev->vendor == PCI_VENDOR_ID_NVIDIA && pdev->device == 0x2E12)
++			return IOMMU_DOMAIN_DMA;
+ 	}
+ 
+ 	return 0;

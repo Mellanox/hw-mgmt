@@ -1,0 +1,56 @@
+From 50e51b84a4b38f2dbffe48e16aef5e0568cc14e9 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 25 Mar 2026 10:14:27 +0000
+Subject: [PATCH 0563/0797] ASoC: tegra: Add error logging in tegra210_adx driver
+
+Log errors in the Tegra210 ADX probe and set_audio_cif paths.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260325101437.3059693-5-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_adx.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_adx.c b/sound/soc/tegra/tegra210_adx.c
+index 95875c75ddf87d..6a5f93f76984b0 100644
+--- a/sound/soc/tegra/tegra210_adx.c
++++ b/sound/soc/tegra/tegra210_adx.c
+@@ -134,8 +134,11 @@ static int tegra210_adx_set_audio_cif(struct snd_soc_dai *dai,
+ 
+ 	memset(&cif_conf, 0, sizeof(struct tegra_cif_conf));
+ 
+-	if (channels < 1 || channels > adx->soc_data->max_ch)
++	if (channels < 1 || channels > adx->soc_data->max_ch) {
++		dev_err(dai->dev, "invalid channels: %u (max %u)\n",
++			channels, adx->soc_data->max_ch);
+ 		return -EINVAL;
++	}
+ 
+ 	switch (format) {
+ 	case SNDRV_PCM_FORMAT_S8:
+@@ -149,6 +152,7 @@ static int tegra210_adx_set_audio_cif(struct snd_soc_dai *dai,
+ 		audio_bits = TEGRA_ACIF_BITS_32;
+ 		break;
+ 	default:
++		dev_err(dai->dev, "unsupported format: %d\n", format);
+ 		return -EINVAL;
+ 	}
+ 
+@@ -717,10 +721,9 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
+ 	err = devm_snd_soc_register_component(dev, &tegra210_adx_cmpnt,
+ 					      tegra210_adx_dais,
+ 					      ARRAY_SIZE(tegra210_adx_dais));
+-	if (err) {
+-		dev_err(dev, "can't register ADX component, err: %d\n", err);
+-		return err;
+-	}
++	if (err)
++		return dev_err_probe(dev, err,
++				     "can't register ADX component\n");
+ 
+ 	pm_runtime_enable(dev);
+ 
+-- 
+cgit 1.3.1-korg
+

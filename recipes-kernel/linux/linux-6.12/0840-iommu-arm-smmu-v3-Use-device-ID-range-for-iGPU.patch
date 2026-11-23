@@ -1,0 +1,24 @@
+From abhsahu@nvidia.com Mon, 27 Apr 2026 05:04:56 +0000
+From: Abhishek Sahu <abhsahu@nvidia.com>
+Date: Mon, 27 Apr 2026 05:04:56 +0000
+Subject: [PATCH] iommu/arm-smmu-v3: Use a device ID range for the DGX Spark iGPU
+
+Backport of NVIDIA SAUCE fb3a7aedeb8f from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94.
+
+Upstream-commit: fb3a7aedeb8f
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+index a8680f1cf..33e31d328 100644
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -3520,8 +3520,7 @@ static int arm_smmu_def_domain_type(struct device *dev)
+ 			return IOMMU_DOMAIN_IDENTITY;
+ 
+ 		if (pdev->vendor == PCI_VENDOR_ID_NVIDIA &&
+-		    (pdev->device == 0x2E12 || pdev->device == 0x2E2A ||
+-		     pdev->device == 0x2E2B))
++		    pdev->device >= 0x2E00 && pdev->device <= 0x2E3F)
+ 			return IOMMU_DOMAIN_DMA;
+ 	}
+ 

@@ -1,0 +1,111 @@
+From a28d17fdd3f766277c196a5078989bedd2a38e4f Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Date: Tue, 5 May 2026 12:28:04 +0200
+Subject: [PATCH 0664/0797] ASoC: tegra: Move MODULE_DEVICE_TABLE next to the table itself
+
+By convention MODULE_DEVICE_TABLE() immediately follows the ID table it
+exports, because this is easier to read and verify.  It also makes more
+sense since #ifdef for ACPI or OF could hide both of them.
+
+Most of the privers already have this correctly placed, so adjust
+the missing ones.  No functional impact.
+
+Signed-off-by: Krzysztof Kozlowski <krzysztof.kozlowski@oss.qualcomm.com>
+Link: https://patch.msgid.link/20260505102803.183455-3-krzysztof.kozlowski@oss.qualcomm.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra20_ac97.c | 2 +-
+ sound/soc/tegra/tegra20_das.c  | 2 +-
+ sound/soc/tegra/tegra20_i2s.c  | 2 +-
+ sound/soc/tegra/tegra30_ahub.c | 2 +-
+ sound/soc/tegra/tegra30_i2s.c  | 2 +-
+ 5 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra20_ac97.c b/sound/soc/tegra/tegra20_ac97.c
+index 08c58e8f3c222d..0df1fc64f532f0 100644
+--- a/sound/soc/tegra/tegra20_ac97.c
++++ b/sound/soc/tegra/tegra20_ac97.c
+@@ -441,6 +441,7 @@ static const struct of_device_id tegra20_ac97_of_match[] = {
+ 	{ .compatible = "nvidia,tegra20-ac97", },
+ 	{},
+ };
++MODULE_DEVICE_TABLE(of, tegra20_ac97_of_match);
+ 
+ static struct platform_driver tegra20_ac97_driver = {
+ 	.driver = {
+@@ -456,4 +457,3 @@ MODULE_AUTHOR("Lucas Stach");
+ MODULE_DESCRIPTION("Tegra20 AC97 ASoC driver");
+ MODULE_LICENSE("GPL v2");
+ MODULE_ALIAS("platform:" DRV_NAME);
+-MODULE_DEVICE_TABLE(of, tegra20_ac97_of_match);
+diff --git a/sound/soc/tegra/tegra20_das.c b/sound/soc/tegra/tegra20_das.c
+index c620ab0c601fae..b48cc4a6967b82 100644
+--- a/sound/soc/tegra/tegra20_das.c
++++ b/sound/soc/tegra/tegra20_das.c
+@@ -188,6 +188,7 @@ static const struct of_device_id tegra20_das_of_match[] = {
+ 	{ .compatible = "nvidia,tegra20-das", },
+ 	{},
+ };
++MODULE_DEVICE_TABLE(of, tegra20_das_of_match);
+ 
+ static struct platform_driver tegra20_das_driver = {
+ 	.probe = tegra20_das_probe,
+@@ -202,4 +203,3 @@ MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
+ MODULE_DESCRIPTION("Tegra20 DAS driver");
+ MODULE_LICENSE("GPL");
+ MODULE_ALIAS("platform:" DRV_NAME);
+-MODULE_DEVICE_TABLE(of, tegra20_das_of_match);
+diff --git a/sound/soc/tegra/tegra20_i2s.c b/sound/soc/tegra/tegra20_i2s.c
+index 51df0835ce3eca..d9ab210ad69a9c 100644
+--- a/sound/soc/tegra/tegra20_i2s.c
++++ b/sound/soc/tegra/tegra20_i2s.c
+@@ -485,6 +485,7 @@ static const struct of_device_id tegra20_i2s_of_match[] = {
+ 	{ .compatible = "nvidia,tegra20-i2s", },
+ 	{},
+ };
++MODULE_DEVICE_TABLE(of, tegra20_i2s_of_match);
+ 
+ static const struct dev_pm_ops tegra20_i2s_pm_ops = {
+ 	RUNTIME_PM_OPS(tegra20_i2s_runtime_suspend,
+@@ -507,4 +508,3 @@ MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
+ MODULE_DESCRIPTION("Tegra20 I2S ASoC driver");
+ MODULE_LICENSE("GPL");
+ MODULE_ALIAS("platform:" DRV_NAME);
+-MODULE_DEVICE_TABLE(of, tegra20_i2s_of_match);
+diff --git a/sound/soc/tegra/tegra30_ahub.c b/sound/soc/tegra/tegra30_ahub.c
+index 51e5ab6c276b36..ee68f28852c426 100644
+--- a/sound/soc/tegra/tegra30_ahub.c
++++ b/sound/soc/tegra/tegra30_ahub.c
+@@ -509,6 +509,7 @@ static const struct of_device_id tegra30_ahub_of_match[] = {
+ 	{ .compatible = "nvidia,tegra30-ahub",  .data = &soc_data_tegra30 },
+ 	{},
+ };
++MODULE_DEVICE_TABLE(of, tegra30_ahub_of_match);
+ 
+ static int tegra30_ahub_probe(struct platform_device *pdev)
+ {
+@@ -684,4 +685,3 @@ MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
+ MODULE_DESCRIPTION("Tegra30 AHUB driver");
+ MODULE_LICENSE("GPL v2");
+ MODULE_ALIAS("platform:" DRV_NAME);
+-MODULE_DEVICE_TABLE(of, tegra30_ahub_of_match);
+diff --git a/sound/soc/tegra/tegra30_i2s.c b/sound/soc/tegra/tegra30_i2s.c
+index b121af9ef8eda2..1d7b3aed51fd91 100644
+--- a/sound/soc/tegra/tegra30_i2s.c
++++ b/sound/soc/tegra/tegra30_i2s.c
+@@ -402,6 +402,7 @@ static const struct of_device_id tegra30_i2s_of_match[] = {
+ 	{ .compatible = "nvidia,tegra30-i2s", .data = &tegra30_i2s_config },
+ 	{},
+ };
++MODULE_DEVICE_TABLE(of, tegra30_i2s_of_match);
+ 
+ static int tegra30_i2s_platform_probe(struct platform_device *pdev)
+ {
+@@ -567,4 +568,3 @@ MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
+ MODULE_DESCRIPTION("Tegra30 I2S ASoC driver");
+ MODULE_LICENSE("GPL");
+ MODULE_ALIAS("platform:" DRV_NAME);
+-MODULE_DEVICE_TABLE(of, tegra30_i2s_of_match);
+-- 
+cgit 1.3.1-korg
+

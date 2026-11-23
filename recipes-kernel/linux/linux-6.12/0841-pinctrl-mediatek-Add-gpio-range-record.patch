@@ -1,0 +1,69 @@
+From yung-chi.chen@mediatek.com Mon, 21 Apr 2025 17:17:38 +0800
+From: Jonas Chen <yung-chi.chen@mediatek.com>
+Date: Mon, 21 Apr 2025 17:17:38 +0800
+Subject: [PATCH] pinctrl: mediatek: Add a gpio-range record
+
+Backport of NVIDIA SAUCE e656877f3f96 from 24.04_linux-nvidia-6.17-next
+onto Linux 6.12.94.
+
+Upstream-commit: e656877f3f96
+
+diff --git a/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.h b/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.h
+index 23688ca6d..b013d1c34 100644
+--- a/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.h
++++ b/drivers/pinctrl/mediatek/pinctrl-mtk-common-v2.h
+@@ -300,6 +300,7 @@ struct mtk_pinctrl {
+ 	spinlock_t lock;
+ 	/* identify rsel setting by si unit or rsel define in dts node */
+ 	bool rsel_si_unit;
++	struct pinctrl_gpio_range	range;
+ };
+ 
+ void mtk_rmw(struct mtk_pinctrl *pctl, u8 i, u32 reg, u32 mask, u32 set);
+diff --git a/drivers/pinctrl/mediatek/pinctrl-paris.c b/drivers/pinctrl/mediatek/pinctrl-paris.c
+index 87e958d82..b551b3cc7 100644
+--- a/drivers/pinctrl/mediatek/pinctrl-paris.c
++++ b/drivers/pinctrl/mediatek/pinctrl-paris.c
+@@ -3,7 +3,7 @@
+  * MediaTek Pinctrl Paris Driver, which implement the vendor per-pin
+  * bindings for MediaTek SoC.
+  *
+- * Copyright (C) 2018 MediaTek Inc.
++ * Copyright (C) 2018-2025 MediaTek Inc.
+  * Author: Sean Wang <sean.wang@mediatek.com>
+  *	   Zhiyong Tao <zhiyong.tao@mediatek.com>
+  *	   Hongzhou.Yang <hongzhou.yang@mediatek.com>
+@@ -951,6 +951,15 @@ static int mtk_gpio_set_config(struct gpio_chip *chip, unsigned int offset,
+ 	return mtk_eint_set_debounce(hw->eint, desc->eint.eint_n, debounce);
+ }
+ 
++static void mtk_pinctrl_gpio_range_init(struct mtk_pinctrl *hw, struct gpio_chip *chip)
++{
++	hw->range.name = "mtk_pinctrl_gpio_range";
++	hw->range.id = 0;
++	hw->range.pin_base = 0;
++	hw->range.base = chip->base;
++	hw->range.npins = hw->soc->npins;
++}
++
+ static int mtk_build_gpiochip(struct mtk_pinctrl *hw)
+ {
+ 	struct gpio_chip *chip = &hw->chip;
+@@ -974,6 +983,8 @@ static int mtk_build_gpiochip(struct mtk_pinctrl *hw)
+ 	if (ret < 0)
+ 		return ret;
+ 
++	mtk_pinctrl_gpio_range_init(hw, chip);
++
+ 	return 0;
+ }
+ 
+@@ -1092,6 +1103,8 @@ int mtk_paris_pinctrl_probe(struct platform_device *pdev)
+ 	if (err)
+ 		return dev_err_probe(dev, err, "Failed to add gpio_chip\n");
+ 
++	pinctrl_add_gpio_range(hw->pctrl, &hw->range);
++
+ 	platform_set_drvdata(pdev, hw);
+ 
+ 	return 0;
