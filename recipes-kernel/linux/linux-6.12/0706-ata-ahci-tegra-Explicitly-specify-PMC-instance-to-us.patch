@@ -17,7 +17,6 @@ Signed-off-by: Thierry Reding <treding@nvidia.com>
  3 files changed, 104 insertions(+), 5 deletions(-)
 
 diff --git a/include/soc/tegra/pmc.h b/include/soc/tegra/pmc.h
-index 00000000000000..11111111111111 100644
 --- a/include/soc/tegra/pmc.h
 +++ b/include/soc/tegra/pmc.h
 @@ -10,12 +10,15 @@
@@ -92,7 +91,6 @@ index 00000000000000..11111111111111 100644
  static inline int tegra_io_pad_power_enable(enum tegra_io_pad id)
  {
 diff --git a/drivers/soc/tegra/pmc.c b/drivers/soc/tegra/pmc.c
-index 00000000000000..11111111111111 100644
 --- a/drivers/soc/tegra/pmc.c
 +++ b/drivers/soc/tegra/pmc.c
 @@ -1037,6 +1037,54 @@
