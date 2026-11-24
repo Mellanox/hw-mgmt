@@ -36,12 +36,12 @@ class CONST(object):
                            "cumulus": "./linux-{kver}/cumulus",
                            "nvos": "./linux-{kver}/nvos",
                            "dvs": "./linux-{kver}/dvs"}
-    # ARM point-release overlay dir names. Used only for --arch arm64.
-    # x86 keeps linux-<major.minor>/<nos>/ (os[...]). amd64/aspeed reserved for later.
+    # Point-release overlay dir names. Used for --arch arm64 and aspeed.
+    # x86 keeps linux-<major.minor>/<nos>/ (os[...]). amd64 reserved for later.
     PATCH_ARCH_FOLDERS = {"amd64": "amd64",
                           "arm64": "arm",
                           "aspeed": "aspeed"}
-    ARM_KVER_OVERLAY_ARCHES = ("arm64",)
+    ARM_KVER_OVERLAY_ARCHES = ("arm64", "aspeed")
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
@@ -298,18 +298,26 @@ def skip_patch_filter(patch, accepted_folder, candidate_folder, kver):
 
 
 def resolve_patch_src(src_folder, patch_name, kver, kver_major, nos, os_list, arch, kver_list):
-    """Pick a NOS or ARM point-release overlay when present, else linux-x.y.
+    """Pick a local fix, a NOS overlay, or the base patch.
 
     Order:
-      1. ARM (--arch arm64) only: linux-<major.minor>/<nos>/<arch>/<kver>/<patch>
-         (<arch> folder is arm). Overwrites linux-x.y/<patch> for that NOS/kver.
-      2. linux-<major.minor>/<nos>/<patch> when status has os[<nos>]
+      1. linux-<major.minor>/third-party/<kver>/<patch>, then
+         linux-<major.minor>/third-party/<patch>. A same-named file here
+         is a local fix (often a third-party conflict). It is not part of
+         the hw-mgmt series; send it upstream.
+      2. arm64 and aspeed: linux-<major.minor>/<nos>/<arch>/<kver>/<patch>
+         (arm64 folder is arm, aspeed folder is aspeed). Overwrites
+         linux-x.y/<patch> for that NOS/kver.
+      3. linux-<major.minor>/<nos>/<patch> when status has os[<nos>]
          (existing x86 and all-arch NOS copy; amd64 does not walk <arch>/<kver>/).
-      3. linux-<major.minor>/<patch>
+      4. linux-<major.minor>/<patch>
     kver[6.12.94] documents an overlay; a matching file is also auto-selected.
     """
     base = os.path.join(src_folder, "linux-{}".format(kver_major))
-    candidates = []
+    candidates = [
+        os.path.join(base, "third-party", kver, patch_name),
+        os.path.join(base, "third-party", patch_name),
+    ]
     nos_ok = nos and nos != "None" and nos in CONST.PATCH_OS_SUBFOLDERS and nos != "default"
     use_arm_kver_overlay = (
         arch in CONST.ARM_KVER_OVERLAY_ARCHES and

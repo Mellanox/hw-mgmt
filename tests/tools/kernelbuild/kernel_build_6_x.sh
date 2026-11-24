@@ -13,9 +13,12 @@
 # table. --os-type picks the NOS (nvos, opt, cumulus, sonic, dvs). The
 # deploy tool reads markers such as os[nvos] and skip[sonic] and, when
 # needed, takes the patch from recipes-kernel/linux/linux-<major.minor>/<nos>/.
-# An ARM (--arch arm64) point-release overlay at
-# linux-<major.minor>/<nos>/arm/<kver>/ overwrites linux-<major.minor>/<patch>.
+# An arm64 or aspeed point-release overlay at
+# linux-<major.minor>/<nos>/{arm,aspeed}/<kver>/ overwrites linux-<major.minor>/<patch>.
 # x86 keeps linux-<major.minor>/<nos>/ only.
+# A same-named file under linux-<major.minor>/third-party/<kver>/ (then
+# linux-<major.minor>/third-party/) is a local fix and wins over both.
+# kernel_build_7_x.sh sources this file, so 7.x uses the same rules.
 #
 
 set -euo pipefail
@@ -88,10 +91,14 @@ The status table decides which patches apply. --os-type selects the NOS.
 Patches marked for another NOS are skipped. A patch that the table ties to
 one NOS is taken from recipes-kernel/linux/linux-<major.minor>/<nos>/ when
 that directory is the one the deploy tool selects (x86 and all-arch).
-An ARM (--arch arm64) point-release overlay at
-linux-<major.minor>/<nos>/arm/<kver>/ overwrites linux-<major.minor>/<patch>
-when that file exists. amd64 does not look under <arch>/<kver>/.
-Status marker kver[6.12.94] documents the overlay.
+An arm64 or aspeed point-release overlay at
+linux-<major.minor>/<nos>/{arm,aspeed}/<kver>/ overwrites
+linux-<major.minor>/<patch> when that file exists. amd64 does not look
+under <arch>/<kver>/. Status marker kver[6.12.94] documents the overlay.
+A same-named file in linux-<major.minor>/third-party/<version>/ (then
+linux-<major.minor>/third-party/) wins over those. That tree is a local
+fix of a conflicting patch, including a third-party conflict. Send the
+fix upstream. Do not add the vendor patch to the hw-mgmt series.
 
 Options may be placed before or after the three arguments.
 
@@ -134,9 +141,18 @@ Options:
                    recipes-kernel/linux/. A basename is looked up in that
                    directory.
   --third-party-patches DIR
-                   After the status-table patches, import every *.patch in
-                   this directory, one by one, in version-sort order. No
-                   status-table filtering.
+                   After the status-table patches, import patches from this
+                   directory. No status-table filtering. If DIR/series exists,
+                   that file is the apply order (comments and ###-> markers
+                   are skipped). DIR/<version>/series replaces it for that
+                   kernel. Otherwise every *.patch in DIR is imported in
+                   version-sort order. fetch_sonic_aspeed_patches.sh writes
+                   this directory from the SONiC Aspeed block.
+                   A same-named file under
+                   recipes-kernel/linux/linux-<major.minor>/third-party/<version>/
+                   (then .../third-party/) replaces the downloaded patch.
+                   That directory is for local conflict fixes to send
+                   upstream. It is not an hw-mgmt patch series.
   --bmc-patch-table FILE
                    After the third-party patches, apply this table. Requires
                    --third-party-patches. kernel_build_${KERNEL_SERIES}_x_sonic_bmc.sh
@@ -573,18 +589,124 @@ resolve_patch_table() {
     printf '%s\n' "$table"
 }
 
+# Local fix of a conflicting patch. Same file name.
+# linux-<base>/third-party/<version>/<name>, then .../third-party/<name>.
+# Send the fix upstream. Do not add it to the hw-mgmt series.
+recipe_patch_override() {
+    local name=$1 path
+    [[ -n "${LINUX_RECIPES:-}" && -n "${KERNEL_BASE:-}" ]] || return 1
+    if [[ -n "${KERNEL_VER:-}" ]]; then
+        path="$LINUX_RECIPES/linux-$KERNEL_BASE/third-party/$KERNEL_VER/$name"
+        if [[ -f "$path" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    fi
+    path="$LINUX_RECIPES/linux-$KERNEL_BASE/third-party/$name"
+    if [[ -f "$path" ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+    return 1
+}
+
+# A series name is a relative path. ".." or an absolute name would read a
+# file outside the third-party directory and write it outside the staging
+# folder. Reject those before any directory is created.
+reject_patch_name() {
+    local name=$1 part rest
+    [[ -n "$name" && "$name" != /* && "$name" != *$'\n'* && "$name" != *\\* ]] || return 1
+    rest=$name
+    while [[ -n "$rest" ]]; do
+        part=${rest%%/*}
+        [[ -n "$part" && "$part" != "." && "$part" != ".." ]] || return 1
+        if [[ "$rest" == */* ]]; then
+            rest=${rest#*/}
+        else
+            rest=
+        fi
+    done
+}
+
+# Real path of $path must be a file inside $root (not the root itself).
+path_is_inside() {
+    local root=$1 path=$2 real base
+    real=$(realpath -m -- "$path")
+    base=$(realpath -m -- "$root")
+    [[ "$real" == "$base"/* ]]
+}
+
+# Version copy, then the shared file. A recipe fix under
+# linux-<base>/third-party/ wins over both. Every result stays inside
+# one of those two directories.
+resolve_third_party_src() {
+    local dir=$1 patch=$2 src real override
+    reject_patch_name "$patch" || die "third-party patch name escapes its directory: $patch"
+    src="$dir/$patch"
+    if [[ -n "${KERNEL_VER:-}" && -f "$dir/$KERNEL_VER/$patch" ]]; then
+        src="$dir/$KERNEL_VER/$patch"
+    fi
+    if override=$(recipe_patch_override "$patch"); then
+        printf '==> third-party fix from hw-mgmt: %s\n' "$override" >&2
+        src=$override
+        path_is_inside "$LINUX_RECIPES/linux-$KERNEL_BASE/third-party" "$src" \
+            || die "third-party fix leaves linux-$KERNEL_BASE/third-party: $patch"
+    else
+        path_is_inside "$dir" "$src" \
+            || die "third-party patch leaves $dir: $patch"
+    fi
+    real=$(realpath -m -- "$src")
+    printf '%s\n' "$real"
+}
+
 list_third_party_patches() {
-    local dir=$1 patch
+    local dir=$1 line patch src series_file
     THIRD_PARTY_PATCHES=()
+    THIRD_PARTY_SRCS=()
     THIRD_PARTY_STRIPS=()
-    while IFS= read -r patch; do
-        [[ -n "$patch" ]] || continue
-        [[ -f "$dir/$patch" ]] || die "third-party patch not found: $dir/$patch"
-        THIRD_PARTY_PATCHES+=("$patch")
-        THIRD_PARTY_STRIPS+=(1)
-    done < <(find "$dir" -maxdepth 1 -type f -name '*.patch' -printf '%f\n' | LC_ALL=C sort -V)
+    # A <dir>/<kver>/series replaces the shared series for that kernel.
+    # A file of the same name in <dir>/<kver>/ replaces the shared file,
+    # whether or not a series file is present.
+    series_file="$dir/series"
+    if [[ -n "${KERNEL_VER:-}" && -f "$dir/$KERNEL_VER/series" ]]; then
+        series_file="$dir/$KERNEL_VER/series"
+    fi
+    if [[ -f "$series_file" ]]; then
+        # fetch_sonic_aspeed_patches.sh writes this. Filename sort is wrong
+        # here: several Aspeed patches share a 0001- prefix.
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            line=${line//$'\r'/}
+            line=${line#"${line%%[![:space:]]*}"}
+            line=${line%"${line##*[![:space:]]}"}
+            [[ -z "$line" ]] && continue
+            # "###->" is a section marker, not a comment. Strip comments only
+            # after that check so a marker is not eaten by ${line%%#*}.
+            [[ "$line" == '###->'* ]] && continue
+            line=${line%%#*}
+            line=${line#"${line%%[![:space:]]*}"}
+            line=${line%"${line##*[![:space:]]}"}
+            [[ -z "$line" ]] && continue
+            patch=${line%%[[:space:]]*}
+            src=$(resolve_third_party_src "$dir" "$patch") \
+                || die "third-party patch rejected: $patch"
+            [[ -f "$src" ]] || die "third-party patch listed in series not found: $src"
+            THIRD_PARTY_PATCHES+=("$patch")
+            THIRD_PARTY_SRCS+=("$src")
+            THIRD_PARTY_STRIPS+=(1)
+        done <"$series_file"
+    else
+        while IFS= read -r patch; do
+            [[ -n "$patch" ]] || continue
+            src=$(resolve_third_party_src "$dir" "$patch") \
+                || die "third-party patch rejected: $patch"
+            [[ -f "$src" ]] || die "third-party patch not found: $src"
+            THIRD_PARTY_PATCHES+=("$patch")
+            THIRD_PARTY_SRCS+=("$src")
+            THIRD_PARTY_STRIPS+=(1)
+        done < <(find "$dir" -maxdepth 1 -type f -name '*.patch' -printf '%f\n' | LC_ALL=C sort -V)
+    fi
     if [[ "${#THIRD_PARTY_PATCHES[@]}" -eq 0 ]]; then
-        die "no *.patch files in $dir"
+        die "no third-party patches in $dir"
     fi
 }
 
@@ -616,16 +738,107 @@ import_series() {
     )
 }
 
+# SONiC's Aspeed drop marks brand-new files with a 1970 timestamp and
+# "@@ -0,0", not with "new file mode" / "--- /dev/null". git apply --index
+# (what stg import uses) then refuses them: "does not exist in index".
+# Rewrite those file sections into git new-file diffs. Real edits are left
+# alone.
+normalize_gnu_new_files() {
+    local src=$1 dest=$2
+    python3 - "$src" "$dest" <<'PY'
+import re
+import sys
+
+src, dest = sys.argv[1], sys.argv[2]
+
+def rewrite(part):
+    if not part.startswith(b"diff --git "):
+        return part
+    if b"new file mode" in part or b"--- /dev/null" in part:
+        return part
+    lines = part.splitlines(keepends=True)
+    dash = None
+    hunks = []
+    for i, line in enumerate(lines):
+        if dash is None and line.startswith(b"--- "):
+            dash = i
+        elif line.startswith(b"@@ "):
+            hunks.append(line)
+    if dash is None or not hunks:
+        return part
+    if b"1970-01-01" not in lines[dash]:
+        return part
+    if any(not (h.startswith(b"@@ -0,0") or h.startswith(b"@@ -0 ")) for h in hunks):
+        return part
+    out = []
+    inserted = False
+    for line in lines:
+        if line.startswith(b"diff --git ") and not inserted:
+            out.append(line)
+            out.append(b"new file mode 100644\n")
+            inserted = True
+            continue
+        if line.startswith(b"--- "):
+            out.append(b"--- /dev/null\n")
+            continue
+        if line.startswith(b"+++ "):
+            path = line[4:].split(b"\t", 1)[0].rstrip(b"\n")
+            out.append(b"+++ %s\n" % path)
+            continue
+        out.append(line)
+    return b"".join(out)
+
+text = open(src, "rb").read()
+parts = re.split(br"(?=^diff --git )", text, flags=re.M)
+rewritten = [rewrite(part) for part in parts]
+# A patch that needed no new-file fix is written back unchanged.
+open(dest, "wb").write(text if rewritten == parts else b"".join(rewritten))
+PY
+}
+
+# Destination of a staged patch. The name was already checked, and the
+# resolved path must still sit under PATCH_DIR/third-party.
+third_party_stage_path() {
+    local name=$1 dest real base
+    command -v realpath >/dev/null 2>&1 || die "realpath is required to place third-party patches"
+    reject_patch_name "$name" || die "third-party patch name escapes the staging folder: $name"
+    mkdir -p "$PATCH_DIR/third-party"
+    dest="$PATCH_DIR/third-party/$name"
+    real=$(realpath -m -- "$dest")
+    base=$(realpath -m -- "$PATCH_DIR/third-party")
+    [[ "$real" == "$base"/* ]] || die "third-party patch destination leaves the staging folder: $name"
+    mkdir -p "$(dirname "$real")"
+    printf '%s\n' "$real"
+}
+
 import_third_party_patches() {
-    local dir=$1 i name strip
+    local dir=$1 i name strip norm
     info "importing ${#THIRD_PARTY_PATCHES[@]} third-party patches from $dir"
     for i in "${!THIRD_PARTY_PATCHES[@]}"; do
         name=${THIRD_PARTY_PATCHES[$i]}
         strip=${THIRD_PARTY_STRIPS[$i]}
+        norm=$(third_party_stage_path "$name") \
+            || die "third-party patch rejected: $name"
+        normalize_gnu_new_files "${THIRD_PARTY_SRCS[$i]}" "$norm"
         info "third-party: $name"
         (
             cd "$SRC_DIR"
-            stg import -p "$strip" "$dir/$name"
+            if git apply --check -p"$strip" "$norm" >/dev/null 2>&1; then
+                stg import -p "$strip" "$norm"
+                exit 0
+            fi
+            # One shared-kernel hunk in the v00.07.04 drop (edac Makefile)
+            # has trailing context that drifted from kernel.org 6.12.94.
+            # patch(1) places it with fuzz. Keep the result on the stack.
+            info "git apply rejected $name; applying with patch"
+            command -v patch >/dev/null 2>&1 || {
+                echo "error: patch is required to apply $name" >&2
+                exit 1
+            }
+            stg new -m "third-party: $name" "third-party-${name%.patch}"
+            patch -p"$strip" --forward --batch -f -i "$norm"
+            git add -A
+            stg refresh --index
         )
     done
 }
@@ -1111,7 +1324,11 @@ else
 fi
 info "patch table: $PATCH_TABLE"
 if [[ -n "$THIRD_PARTY_DIR" ]]; then
-    info "third-party: $THIRD_PARTY_DIR (${#THIRD_PARTY_PATCHES[@]} patches, filename order)"
+    if [[ -f "$THIRD_PARTY_DIR/series" ]]; then
+        info "third-party: $THIRD_PARTY_DIR (${#THIRD_PARTY_PATCHES[@]} patches, series order)"
+    else
+        info "third-party: $THIRD_PARTY_DIR (${#THIRD_PARTY_PATCHES[@]} patches, filename order)"
+    fi
 fi
 if [[ -n "$BMC_PATCH_TABLE" ]]; then
     info "bmc table:   $BMC_PATCH_TABLE"

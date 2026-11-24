@@ -99,10 +99,20 @@ Options:
                    recipes-kernel/linux/. A basename is looked up in that
                    directory.
   --third-party-patches DIR, --third_party_patches=DIR
-                   After the status-table patches, import every *.patch in
-                   this directory, one by one, in version-sort order. No
-                   status-table filtering. A series file in the directory
-                   is not used.
+                   After the status-table patches, import patches from this
+                   directory. No status-table filtering. If DIR/series exists,
+                   that file is the apply order. Otherwise every *.patch in
+                   DIR is imported in version-sort order.
+                   fetch_sonic_aspeed_patches.sh fills DIR with the Nexthop
+                   AST2700 patches and the NVIDIA SPC6 DTS from SONiC
+                   patches-sonic/series. --set aspeed takes the whole
+                   aspeed marker instead.
+                   A same-named file under
+                   recipes-kernel/linux/linux-<major.minor>/third-party/<version>/
+                   (then .../third-party/) replaces the downloaded file.
+                   Put a conflict fix there and send it upstream. Do not
+                   add the vendor patch to the hw-mgmt series. The 7.x
+                   scripts use linux-7.<minor>/third-party/ the same way.
   --bmc-patch-table FILE, --bmc_patch_table=FILE
                    After the third-party patches, apply this table. Requires
                    --third-party-patches. The SONiC BMC script passes
@@ -122,8 +132,16 @@ NOS types: nvos, opt, cumulus, sonic, dvs, none (default opt).
 
 Patch order when third-party and BMC tables are used:
   1. Patch_Status_Table.txt (linux-<major.minor>/, filtered by NOS markers)
-  2. Each *.patch in the third-party directory, filename order
+  2. Third-party directory, series order when series exists.
+     linux-<major.minor>/third-party/<version>/<same-name> replaces a file.
   3. Patch_BMC_Status_Table.txt (linux-<major.minor>/, filtered for sonic)
+
+SONiC third-party BMC patches for step 2 (6.12.94 Nexthop AST2700 drop
+plus the NVIDIA SPC6 DTS, from sonic-net master):
+tests/tools/kernelbuild/fetch_sonic_aspeed_patches.sh <sonic-aspeed-patches>
+
+Nexthop-authored Aspeed files only, from the 202608 tree (v00.07.02):
+tests/tools/kernelbuild/fetch_sonic_aspeed_patches.sh --tree 202608 --set nexthop <sonic-aspeed-patches>
 
 Examples:
 
@@ -145,8 +163,9 @@ tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=
     --arch arm64 --cross-compile aarch64-none-linux-gnu-
 
 SONiC BMC, arm64 tools and aspeed kconfig:
+tests/tools/kernelbuild/fetch_sonic_aspeed_patches.sh <sonic-aspeed-patches>
 tests/tools/kernelbuild/kernel_build_6_x_sonic_bmc.sh <build> <hw-mgmt> 6.12.94 \
-    --third-party-patches <sonic-patches>
+    --third-party-patches <sonic-aspeed-patches>
 
 SONiC BMC with another arm64 toolchain:
 tests/tools/kernelbuild/kernel_build_6_x_sonic_bmc.sh <build> <hw-mgmt> 6.12.94 \
@@ -184,9 +203,12 @@ arm64, arm64 kconfig, toolchain prefix aarch64-none-linux-gnu-:
 tests/tools/kernelbuild/kernel_build_7_x.sh <build> <hw-mgmt> 7.0.1 --os_type=nvos \
     --arch arm64 --cross-compile aarch64-none-linux-gnu-
 
-SONiC BMC, arm64 tools and aspeed kconfig:
+SONiC BMC, arm64 tools and aspeed kconfig. Same three layers as 6.x.
+A conflict fix of a downloaded patch goes in
+recipes-kernel/linux/linux-7.0/third-party/7.0.1/, not into the series:
+tests/tools/kernelbuild/fetch_sonic_aspeed_patches.sh <sonic-aspeed-patches>
 tests/tools/kernelbuild/kernel_build_7_x_sonic_bmc.sh <build> <hw-mgmt> 7.0.1 \
-    --third-party-patches <sonic-patches>
+    --third-party-patches <sonic-aspeed-patches>
 
 SONiC BMC with another arm64 toolchain:
 tests/tools/kernelbuild/kernel_build_7_x_sonic_bmc.sh <build> <hw-mgmt> 7.0.1 \

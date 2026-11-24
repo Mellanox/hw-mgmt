@@ -11,10 +11,17 @@
 # Patches are applied in three layers:
 #   1. recipes-kernel/linux/Patch_Status_Table.txt
 #      (files under recipes-kernel/linux/linux-<major.minor>/)
-#   2. Every *.patch in --third-party-patches, in filename order.
-#      These are the Sonic patches. They are not filtered by a status table.
+#   2. --third-party-patches. fetch_sonic_aspeed_patches.sh downloads the
+#      Nexthop AST2700 patches from patches-sonic/ plus the NVIDIA SPC6 DTS.
+#      If the directory contains series, that order is used; otherwise
+#      filenames are sorted. A same-named file under
+#      linux-<major.minor>/third-party/<version>/ replaces the download.
+#      Keep Nexthop conflict fixes there and send them to SONiC. Do not
+#      add them to the hw-mgmt series.
 #   3. recipes-kernel/linux/Patch_BMC_Status_Table.txt
 #      (also taken from linux-<major.minor>/, selected for sonic)
+#
+# kernel_build_7_x_sonic_bmc.sh sources this file. $0 stays the 7.x name.
 #
 
 set -euo pipefail
@@ -46,16 +53,25 @@ recipes-kernel/linux/kconfig_<major>_<minor>.txt.
 
 Patch order:
   1. Patch_Status_Table.txt for --os-type (this script uses sonic)
-  2. Each *.patch in <sonic_patch_dir>, sorted by name
+  2. Patches in <sonic_patch_dir>. series order when that file exists,
+     otherwise version-sort of *.patch
   3. Patch_BMC_Status_Table.txt for sonic
 
 Options are the same as kernel_build_6_x.sh. --third-party-patches is required.
 --os-type sonic, --arch arm64, and the aspeed kconfig section are set by
 this script. A --cross-compile prefix on the command line is kept.
 
+fetch_sonic_aspeed_patches.sh downloads the Nexthop AST2700 patches and
+the NVIDIA SPC6 DTS from patches-sonic/series. Do not put the
+nvidia_aspeed_bmc section in that directory: layer 3 already applies
+those patches. A conflict fix of the same file name belongs in
+recipes-kernel/linux/linux-<major.minor>/third-party/<version>/.
+The build uses that file instead of the download. Send the fix to SONiC.
+
 Example:
+  fetch_sonic_aspeed_patches.sh /tmp/sonic-aspeed-patches
   ${0##*/} /tmp/bmc-build /path/to/hw-mgmt ${EXAMPLE_VER} \\
-      --third-party-patches /path/to/sonic-patches
+      --third-party-patches /tmp/sonic-aspeed-patches
 EOF
 }
 
