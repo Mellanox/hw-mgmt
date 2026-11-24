@@ -56,7 +56,7 @@ index d2bae88ad545f4..2377e2b76397a3 100644
  	kfree(map);
  }
  
-@@ -504,16 +503,8 @@ free:
+@@ -504,17 +503,9 @@ free:
  void tegra_bo_free_object(struct drm_gem_object *gem)
  {
  	struct tegra_drm *tegra = gem->dev->dev_private;
