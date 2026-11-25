@@ -24,7 +24,12 @@
 #
 # SONiC BMC primary cause (exactly one 1 under OUT_DIR) - v3:
 #   reset_pwr_cycle | reset_soft_reboot | reset_unknown
-#   pwr_like = SRST|EXTRST; warm_evidence = WDT (0x070/0x080) | ABR (0x060 bit31)
+#   pwr_like = SRST|EXTRST; warm_evidence = WDT (0x070/0x080, bit31 excluded) | ABR (0x060 bit31)
+#   WDT7 SW (bit31 of 0x070 and 0x080) is exported as domains/reset_wdt7_sw but is not
+#   warm evidence: it is set on power-on and warm boots alike (BootMCU/ROM).
+#   Kernel DDR workaround (patch 0013-watchdog-aspeed-Set-WDT_RESET_MASK1-bit-1-on-AST2700)
+#   sets WDT_RESET_MASK1 bit 1 in the Linux restart path; it does not set WDT7 SW.
+#   WDT7 SW is set by the BootMCU, which resets the DRAM controller through WDT7.
 #   pwr_cycle   = pwr_like && !warm_evidence
 #   soft_reboot = warm_evidence && !SRST   (EXTRST+WDT without SRST is soft)
 #   unknown     = (SRST && warm_evidence) || (!pwr_like && !warm_evidence)
@@ -287,15 +292,22 @@ others=$((!(power_on | watchdog | software | cpu | security_watchdog2 | abr)))
 # Inputs:
 #   scu0_srst_bit0   - SCU0 0x050 bit 0 (SRST#)
 #   scu0_extrst_bit1 - SCU0 0x050 bit 1 (EXTRST#)
-#   any_wdt_log      - SCU0 0x070 or SCU1 0x080 non-zero
+#   any_wdt_log      - SCU0 0x070 or SCU1 0x080 non-zero, with bit31 (WDT7 SW) masked
 #   abr              - SCU0 0x060 bit 31 (ABR/WDTA)
 #   warm_evidence    - any_wdt_log or abr
 # Branches:
 #   pwr_cycle   - (SRST|EXTRST) and no warm evidence
 #   soft_reboot - warm evidence and no SRST
 #   unknown     - SRST+warm sticky/mixed, or neither power-like nor warm
+# WDT7 SW (bit31 of SCU0 0x070 and SCU1 0x080) is excluded from warm evidence.
+# Kernel DDR workaround (patch 0013-watchdog-aspeed-Set-WDT_RESET_MASK1-bit-1-on-AST2700)
+# sets WDT_RESET_MASK1 bit 1 in the Linux restart path; it does not set WDT7 SW.
+# WDT7 SW is set by the BootMCU, which resets the DRAM controller through WDT7.
+wdt7_sw=$((((scu0_log2 >> 31) & 1) | ((scu1_log3 >> 31) & 1)))
+scu0_warm_w=$((scu0_log2 & 0x7fffffff))
+scu1_warm_w=$((scu1_log3 & 0x7fffffff))
 any_wdt_log=0
-if [ "${scu0_log2}" -ne 0 ] || [ "${scu1_log3}" -ne 0 ]; then
+if [ "${scu0_warm_w}" -ne 0 ] || [ "${scu1_warm_w}" -ne 0 ]; then
 	any_wdt_log=1
 fi
 warm_evidence=0
@@ -341,6 +353,7 @@ set_domain_reset_file emmc "${emmc}"
 set_domain_reset_file msi "${msi}"
 set_domain_reset_file security_watchdog2 "${security_watchdog2}"
 set_domain_reset_file abr "${abr}"
+set_domain_reset_file wdt7_sw "${wdt7_sw}"
 set_domain_reset_file others "${others}"
 
 if [ "${CLEAR_SCU_RESET_LOG}" != "0" ]; then

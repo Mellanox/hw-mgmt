@@ -379,6 +379,71 @@ SHIM
         sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
     check_file_value "$RUN_OUT5c/reset_unknown" "1" "SRST+ABR: reset_unknown=1"
 
+    # Case G: AC power cycle - SRST plus WDT7 SW on both words.
+    # Kernel DDR workaround (patch 0013-watchdog-aspeed-Set-WDT_RESET_MASK1-bit-1-on-AST2700)
+    # sets WDT_RESET_MASK1 bit 1 in the Linux restart path; it does not set WDT7 SW.
+    # WDT7 SW is set by the BootMCU, which resets the DRAM controller through WDT7.
+    # WDT7 SW must not count as warm evidence: pwr_cycle, not unknown.
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xffffff31" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x80000000" ;;
+reset_cause_scu1_0) echo "0xffffef70" ;;
+reset_cause_scu1_3) echo "0x80000000" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUTG="$WORK/run_outG"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUTG" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUTG/reset_pwr_cycle"   "1" "AC+WDT7: reset_pwr_cycle=1"
+    check_file_value "$RUN_OUTG/reset_soft_reboot"  "0" "AC+WDT7: reset_soft_reboot=0"
+    check_file_value "$RUN_OUTG/reset_unknown"      "0" "AC+WDT7: reset_unknown=0"
+    check_file_value "$RUN_OUTG/domains/reset_wdt7_sw" "1" "AC+WDT7: domains/reset_wdt7_sw=1"
+    check_file_value "$RUN_OUTG/domains/reset_watchdog" "1" "AC+WDT7: domains/reset_watchdog stays raw (1)"
+
+    # Case H: reboot -f - SRST clear, WDT0 SOC plus WDT7 SW - soft_reboot.
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0xffffff30" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x80000001" ;;
+reset_cause_scu1_0) echo "0xffffef70" ;;
+reset_cause_scu1_3) echo "0x80000004" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUTH="$WORK/run_outH"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUTH" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUTH/reset_soft_reboot" "1" "reboot -f: reset_soft_reboot=1"
+    check_file_value "$RUN_OUTH/reset_pwr_cycle"   "0" "reboot -f: reset_pwr_cycle=0"
+    check_file_value "$RUN_OUTH/reset_unknown"      "0" "reboot -f: reset_unknown=0"
+    check_file_value "$RUN_OUTH/domains/reset_wdt7_sw" "1" "reboot -f: domains/reset_wdt7_sw=1"
+
+    # Case I: WDT7 SW alone, no SRST/EXTRST - unknown (not soft_reboot, not pwr_cycle).
+    # A real WDT7 SW reset would also land here; documented risk of the exclusion.
+    cat >"$MOCK_BIN/fw_printenv" <<'SHIM'
+#!/bin/sh
+case "$2" in
+reset_cause_scu0_0) echo "0x00000000" ;;
+reset_cause_scu0_1) echo "0x00000000" ;;
+reset_cause_scu0_2) echo "0x80000000" ;;
+reset_cause_scu1_0) echo "0x00000000" ;;
+reset_cause_scu1_3) echo "0x80000000" ;;
+*) exit 1 ;;
+esac
+SHIM
+    RUN_OUTI="$WORK/run_outI"
+    PATH="$MOCK_BIN:$PATH" OUT_DIR="$RUN_OUTI" CLEAR_SCU_RESET_LOG=0 \
+        sh "$GET_RESET_CAUSE_SCRIPT" >/dev/null 2>&1
+    check_file_value "$RUN_OUTI/reset_unknown"      "1" "WDT7-only: reset_unknown=1"
+    check_file_value "$RUN_OUTI/reset_pwr_cycle"    "0" "WDT7-only: reset_pwr_cycle=0"
+    check_file_value "$RUN_OUTI/reset_soft_reboot"  "0" "WDT7-only: reset_soft_reboot=0"
+
     # Case F: CLEAR_SCU_RESET_LOG=1 issues W1C writes via devmem
     CLEAR_LOG="$WORK/devmem_writes.log"
     : >"$CLEAR_LOG"
