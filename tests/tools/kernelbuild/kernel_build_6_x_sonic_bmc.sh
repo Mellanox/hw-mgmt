@@ -58,6 +58,7 @@ Patch order:
   3. Patch_BMC_Status_Table.txt for sonic
 
 Options are the same as kernel_build_6_x.sh. --third-party-patches is required.
+--apply-with-quilt applies all three layers with quilt push --fuzz=0.
 --os-type sonic, --arch arm64, and the aspeed kconfig section are set by
 this script. A --cross-compile prefix on the command line is kept.
 

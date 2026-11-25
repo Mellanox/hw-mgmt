@@ -19,6 +19,7 @@
 #      replaces the download. Send that fix to SONiC. Do not add the
 #      Nexthop patch to the hw-mgmt series.
 #   3. Patch_BMC_Status_Table.txt
+# --apply-with-quilt applies all three layers with quilt push --fuzz=0.
 #
 
 set -euo pipefail
