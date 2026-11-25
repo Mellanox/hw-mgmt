@@ -16,6 +16,8 @@
 #      downloaded patch. That is a local conflict fix to send upstream,
 #      not an hw-mgmt series patch.
 #   3. Optional --bmc-patch-table, after the third-party layer.
+# --apply-with-quilt applies those layers with quilt push --fuzz=0,
+# the OPT packaging command, instead of stg import.
 # An arm64 or aspeed point-release overlay under
 # linux-7.<minor>/<nos>/{arm,aspeed}/<kver>/ overwrites the base patch.
 # The third-party fix directory wins over that overlay.

@@ -19,6 +19,8 @@
 # A same-named file under linux-<major.minor>/third-party/<kver>/ (then
 # linux-<major.minor>/third-party/) is a local fix and wins over both.
 # kernel_build_7_x.sh sources this file, so 7.x uses the same rules.
+# --apply-with-quilt applies every layer with quilt push --fuzz=0, the
+# command OPT packaging uses, instead of stg import (git apply).
 #
 
 set -euo pipefail
@@ -62,6 +64,7 @@ SKIP_BUILD=0
 NO_RETRY=0
 DRY_RUN=0
 DEBUG=0
+APPLY_WITH_QUILT=0
 
 info() {
     printf '==> %s\n' "$*"
@@ -174,7 +177,16 @@ Options:
   --force          Delete an existing linux-<version> tree, patches/, and
                    deploy-src/ under build_path before starting. The tarball
                    and any sibling linux-<major.minor>/ tree are kept.
-  --skip-build     Import patches, then stop before olddefconfig and deb-pkg.
+  --skip-build     Apply patches, then stop before olddefconfig and deb-pkg.
+  --apply-with-quilt, --apply_with_quilt
+                   Apply every patch layer with
+                   "quilt push --quiltrc - -a -q --fuzz=0".
+                   That is the command OPT packaging uses. The default
+                   remains stg import, which applies with git apply.
+                   A hunk git apply accepts can still fail here. The
+                   status-table series, third-party patches, and the BMC
+                   table are pushed in that order. The Dockerfile installs
+                   quilt for this option.
   --no-retry       Do not start a second build after a failure.
   --dry-run        Check arguments, the patch table, and the container tools, then exit.
   --debug          Trace shell commands (set -x).
@@ -185,6 +197,8 @@ the build is repeated with -j2 and V=1 so the compiler error is readable.
 Examples:
   mkdir -p /tmp/kernel-build
   ${0##*/} /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} --os_type=nvos
+
+  ${0##*/} /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} --os_type=opt --apply-with-quilt
 
   kernel_build_${KERNEL_SERIES}_x_arm.sh /tmp/kernel-build /path/to/hw-mgmt ${EXAMPLE_VER} --os_type=nvos
 
@@ -208,6 +222,7 @@ Tools:
   All of them are installed by the Dockerfile. tar, xz, git, stg (stgit),
   python3, make, wget or curl, and gcc (or the --cross-compile gcc) are
   checked in the container before the kernel is downloaded.
+  --apply-with-quilt checks for quilt instead of stg.
   The packages for "make deb-pkg" (the Build-Depends of Linux 6.12
   scripts/package/mkdebian, used for ${KERNEL_SERIES}.x too) are debhelper, bc,
   bison, cpio, flex, kmod, rsync, libelf-dev, libssl-dev, and the gcc package
@@ -729,8 +744,64 @@ run_deploy() {
         --verbose 1
 }
 
+# Names from a series file, comments and blank lines removed.
+series_patch_names() {
+    local series=$1 line name
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line=${line%%#*}
+        line=${line#"${line%%[![:space:]]*}"}
+        line=${line%"${line##*[![:space:]]}"}
+        [[ -z "$line" ]] && continue
+        name=${line%%[[:space:]]*}
+        printf '%s\n' "$name"
+    done <"$series"
+}
+
+# Quilt reads only QUILT_PATCHES/series. Later layers (third-party, BMC)
+# are appended there and pushed with the patches already applied left in place.
+quilt_append_names() {
+    local name
+    local -A have=()
+    while IFS= read -r name; do
+        [[ -n "$name" ]] && have["$name"]=1
+    done < <(series_patch_names "$SERIES_FILE")
+    # update_series writes the last name with no trailing newline.
+    # $(tail -c1) drops a newline, so -n means the file does not end with one.
+    if [[ -s "$SERIES_FILE" && -n $(tail -c1 "$SERIES_FILE") ]]; then
+        printf '\n' >>"$SERIES_FILE"
+    fi
+    for name in "$@"; do
+        [[ -n "${have[$name]:-}" ]] && continue
+        printf '%s\n' "$name" >>"$SERIES_FILE"
+        have["$name"]=1
+    done
+}
+
+# Same command as OPT debian/rules.real. --quiltrc - ignores a user quiltrc
+# that might raise the fuzz. --fuzz=0 is what makes a drifted hunk fail.
+quilt_push_all() {
+    info "quilt push --fuzz=0"
+    (
+        cd "$SRC_DIR"
+        QUILT_PATCHES="$PATCH_DIR" QUILT_PC=.pc \
+            quilt push --quiltrc - -a -q --fuzz=0
+    )
+}
+
 import_series() {
-    local series=$1
+    local series=$1 name
+    local -a names=()
+    if [[ "$APPLY_WITH_QUILT" -eq 1 ]]; then
+        if [[ "$series" != "$SERIES_FILE" ]]; then
+            while IFS= read -r name; do
+                [[ -n "$name" ]] && names+=("$name")
+            done < <(series_patch_names "$series")
+            [[ "${#names[@]}" -eq 0 ]] && die "no patches to append from $series"
+            quilt_append_names "${names[@]}"
+        fi
+        quilt_push_all
+        return 0
+    fi
     info "importing $(basename "$series")"
     (
         cd "$SRC_DIR"
@@ -813,6 +884,7 @@ third_party_stage_path() {
 
 import_third_party_patches() {
     local dir=$1 i name strip norm
+    local -a quilt_names=()
     info "importing ${#THIRD_PARTY_PATCHES[@]} third-party patches from $dir"
     for i in "${!THIRD_PARTY_PATCHES[@]}"; do
         name=${THIRD_PARTY_PATCHES[$i]}
@@ -821,6 +893,11 @@ import_third_party_patches() {
             || die "third-party patch rejected: $name"
         normalize_gnu_new_files "${THIRD_PARTY_SRCS[$i]}" "$norm"
         info "third-party: $name"
+        if [[ "$APPLY_WITH_QUILT" -eq 1 ]]; then
+            [[ "$strip" == "1" ]] || die "quilt apply supports -p1 only: $name"
+            quilt_names+=("third-party/$name")
+            continue
+        fi
         (
             cd "$SRC_DIR"
             if git apply --check -p"$strip" "$norm" >/dev/null 2>&1; then
@@ -841,6 +918,10 @@ import_third_party_patches() {
             stg refresh --index
         )
     done
+    if [[ "$APPLY_WITH_QUILT" -eq 1 && "${#quilt_names[@]}" -gt 0 ]]; then
+        quilt_append_names "${quilt_names[@]}"
+        quilt_push_all
+    fi
 }
 
 prepare_git_tree() {
@@ -859,8 +940,16 @@ prepare_git_tree() {
     # No -f: kernel .gitignore must keep defconfig output (include/config)
     # out of this commit. git add -A still honors .gitignore.
     git add -A
-    git commit -qm "Check in the kernel source tree"
-    stg init
+    if [[ "$APPLY_WITH_QUILT" -eq 1 ]]; then
+        git commit -qm "Patches applied with quilt --fuzz=0"
+    else
+        git commit -qm "Check in the kernel source tree"
+    fi
+    # Quilt mode commits the already-patched tree for deb-pkg. stg is the
+    # default apply path and must not be mixed with a quilt .pc directory.
+    if [[ "$APPLY_WITH_QUILT" -eq 0 ]]; then
+        stg init
+    fi
 }
 
 # Caller must disable errexit around this function. Toggling set -e inside a
@@ -963,6 +1052,7 @@ run_in_docker() {
     [[ "$NO_RETRY" -eq 1 ]] && args+=(--no-retry)
     [[ "$DRY_RUN" -eq 1 ]] && args+=(--dry-run)
     [[ "$DEBUG" -eq 1 ]] && args+=(--debug)
+    [[ "$APPLY_WITH_QUILT" -eq 1 ]] && args+=(--apply-with-quilt)
 
     MOUNT_PATHS=()
     MOUNT_MODES=()
@@ -1137,6 +1227,10 @@ while [[ $# -gt 0 ]]; do
             DEBUG=1
             shift
             ;;
+        --apply-with-quilt|--apply_with_quilt)
+            APPLY_WITH_QUILT=1
+            shift
+            ;;
         --)
             shift
             POSITIONAL+=("$@")
@@ -1287,7 +1381,11 @@ fi
 need_cmd tar
 need_cmd xz
 need_cmd git
-need_cmd stg
+if [[ "$APPLY_WITH_QUILT" -eq 1 ]]; then
+    need_cmd quilt
+else
+    need_cmd stg
+fi
 need_cmd python3
 need_cmd make
 if [[ -z "$TARBALL" ]] && ! local_tarball_exists; then
@@ -1334,6 +1432,11 @@ if [[ -n "$BMC_PATCH_TABLE" ]]; then
     info "bmc table:   $BMC_PATCH_TABLE"
 fi
 info "jobs:        $JOBS"
+if [[ "$APPLY_WITH_QUILT" -eq 1 ]]; then
+    info "apply:       quilt push --fuzz=0"
+else
+    info "apply:       stg import"
+fi
 if [[ -n "$TARBALL" ]]; then
     info "tarball:     $TARBALL"
 else
@@ -1385,10 +1488,15 @@ mkdir -p "$PATCH_DIR"
 
 info "generating ${MAKE_ARCH} defconfig"
 make -C "$SRC_DIR" ARCH="$MAKE_ARCH" defconfig >/dev/null
-(
-    cd "$SRC_DIR"
-    prepare_git_tree
-)
+# stg import needs the pristine tree committed and on a stack. Quilt applies
+# onto the extracted tree; the patched result is committed afterwards so
+# deb-pkg archives the patches.
+if [[ "$APPLY_WITH_QUILT" -eq 0 ]]; then
+    (
+        cd "$SRC_DIR"
+        prepare_git_tree
+    )
+fi
 
 if [[ -n "$CONFIG_FILE" ]]; then
     info "copying $CONFIG_FILE onto .config"
@@ -1415,8 +1523,15 @@ if [[ -n "$BMC_PATCH_TABLE" ]]; then
     import_series "$BMC_SERIES_FILE"
 fi
 
+if [[ "$APPLY_WITH_QUILT" -eq 1 && "$SKIP_BUILD" -eq 0 ]]; then
+    (
+        cd "$SRC_DIR"
+        prepare_git_tree
+    )
+fi
+
 if [[ "$SKIP_BUILD" -eq 1 ]]; then
-    info "patches imported; skipping build (--skip-build)"
+    info "patches applied; skipping build (--skip-build)"
     exit 0
 fi
 

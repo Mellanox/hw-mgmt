@@ -9,7 +9,8 @@
 # Uses the arm64 section of kconfig_7_<minor>.txt and aarch64-linux-gnu-
 # unless --cross-compile is passed.
 # Optional --third-party-patches and --bmc-patch-table follow the same
-# order as kernel_build_7_x.sh. A local conflict fix belongs in
+# order as kernel_build_7_x.sh. --apply-with-quilt applies them with
+# quilt push --fuzz=0. A local conflict fix belongs in
 # recipes-kernel/linux/linux-7.<minor>/third-party/<version>/.
 #
 

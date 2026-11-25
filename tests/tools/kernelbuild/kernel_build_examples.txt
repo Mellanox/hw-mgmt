@@ -122,7 +122,13 @@ Options:
                    at least 1.
   --force          Delete an existing linux-<version> tree and patches/
                    under build_path before starting. The tarball is kept.
-  --skip-build     Import patches, then stop before olddefconfig and deb-pkg.
+  --skip-build     Apply patches, then stop before olddefconfig and deb-pkg.
+  --apply-with-quilt, --apply_with_quilt
+                   Apply every patch layer with
+                   "quilt push --quiltrc - -a -q --fuzz=0"
+                   (the OPT packaging command) instead of stg import.
+                   Works on the 6.x and 7.x scripts, including arm64 and
+                   SONiC BMC. The default remains stg import.
   --no-retry       Do not start a second build after a failure.
                    Otherwise a failed build is repeated with -j2 and V=1.
   --dry-run        Check arguments, the patch table, and host tools, then exit.
@@ -177,6 +183,12 @@ tests/tools/kernelbuild/kernel_build_6_x.sh --dry-run <build> <hw-mgmt> 6.12.94 
 
 Apply patches and stop before the package build:
 tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 --os_type=nvos --skip-build
+
+Apply with quilt --fuzz=0, then build. Use this to test a NOS the way
+OPT packaging applies patches. The same flag works on the 7.x, arm64,
+and SONiC BMC scripts:
+tests/tools/kernelbuild/kernel_build_6_x.sh <build> <hw-mgmt> 6.12.94 \
+    --os_type=opt --apply-with-quilt
 
 Linux 7.x uses the same options. The version selects linux-7.<minor>/,
 kconfig_7_<minor>.txt, and the Kernel-7.<minor> status-table section.

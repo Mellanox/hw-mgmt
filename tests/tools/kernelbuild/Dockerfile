@@ -14,8 +14,9 @@
 # are bind-mounted by the script at the same absolute paths as on the host.
 #
 # Packages match:
-#   - the tools kernel_build_6_x.sh checks: tar, xz, git, stg, python3, make,
-#     wget/curl, gcc, dpkg-checkbuilddeps, dpkg-architecture;
+#   - the tools kernel_build_6_x.sh checks: tar, xz, git, stg, quilt, python3,
+#     make, wget/curl, gcc, dpkg-checkbuilddeps, dpkg-architecture;
+#     quilt is used only with --apply-with-quilt;
 #   - the Build-Depends of "make deb-pkg" (scripts/package/mkdebian):
 #     debhelper, bc, bison, cpio, flex, kmod, rsync, libelf-dev, libssl-dev,
 #     gcc for the package architecture;
@@ -70,6 +71,7 @@ RUN set -eux; \
         python3 \
         python3-pip \
         python3-yaml \
+        quilt \
         rsync \
         stgit \
         tar \
