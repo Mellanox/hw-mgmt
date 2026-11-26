@@ -42,6 +42,7 @@ CRC_READ[0]=0x0
 CRC_READ[1]=0x0
 CRC_EXP[0]=""
 CRC_EXP[1]=""
+FORCE_UPDATE=0
 
 # Error handling function.
 error_exit()
@@ -53,7 +54,7 @@ error_exit()
 # Help function.
 show_help()
 {
-	echo "Usage: $0 <i2c_bus> <device_name> <hid> [csv_file] [crc_file] [config_file]"
+	echo "Usage: $0 [--force] <i2c_bus> <device_name> <hid> [csv_file] [crc_file] [config_file]"
 	echo ""
 	echo "Voltage Regulator Device Flashing Utility"
 	echo ""
@@ -85,6 +86,7 @@ show_help()
 	echo ""
 	echo "OPTIONS:"
 	echo "  -h, --help     Display this help message and exit"
+	echo "  --force        Allow a package older than the device revision (downgrade)"
 	echo ""
 	echo "EXAMPLES:"
 	echo "  $0 1 mp2888 hid180"
@@ -478,28 +480,34 @@ validate_revisions()
 
 	local model
 	local revision
-	local rev_page
+	local rev_page model_page
+	local rev_id="${DPC_REVISION_ID,,}"
+	local model_id="${DPC_MODEL_ID,,}"
+	local pkg_rev="" pkg_model=""
 
 	model=$(get_model) || error_exit "Failed to get model"
 	revision=$(get_revision) || error_exit "Failed to get revision"
 	rev_page="$(cfg_to_int "$DPC_REVISION_ID_PAGE")" || error_exit "Invalid DPC_REVISION_ID_PAGE '$DPC_REVISION_ID_PAGE'"
+	model_page="$(cfg_to_int "$DPC_MODEL_ID_PAGE")" || error_exit "Invalid DPC_MODEL_ID_PAGE '$DPC_MODEL_ID_PAGE'"
 
 	log_info "Device model: $model, revision: $revision"
 
 	# Process substitution (not a pipe) so return exits this function, not a subshell.
-	# Vendor CSVs may carry columns past page 2 (e.g. MP29816 Page4); collect
-	# them in 'extra' so they do not end up appended to p2_val.
-	while IFS=, read -r dev_addr cmd_code wr \
+	# Vendor CSVs may carry columns past page 2 (e.g. MP29816 Page4); the last
+	# field takes them so they do not end up appended to p2_val.
+	# Own names for the CSV columns: dev_addr is the global device address.
+	while IFS=, read -r _ cmd_code _ \
 		p0_name p0_byte p0_val \
 		p1_name p1_byte p1_val \
-		p2_name p2_byte p2_val extra
+		p2_name p2_byte p2_val _
 	do
+		cmd_code="${cmd_code,,}"
+		[[ "$cmd_code" == "$rev_id" || "$cmd_code" == "$model_id" ]] || continue
+
 		for page in 0 1 2; do
 			local name_var="p${page}_name"
-			local byte_var="p${page}_byte"
 			local val_var="p${page}_val"
 			local name="${!name_var}"
-			local byte="${!byte_var}"
 			local val="${!val_var}"
 
 			# Skip if no command name (empty page).
@@ -507,28 +515,54 @@ validate_revisions()
 				continue
 			fi
 
-			cmd_code=$(echo "$cmd_code" | tr '[:upper:]' '[:lower:]')
-
-			if (( page == rev_page )) && [[ "$cmd_code" == "$DPC_REVISION_ID" ]]; then
-				local rev_n val_n
-				val="$(_csv_hex_val_normalize "$val")" || {
+			if (( page == rev_page )) && [[ "$cmd_code" == "$rev_id" ]]; then
+				pkg_rev="$(_csv_hex_val_normalize "$val")" || {
 					log_info "Invalid package revision CSV value (must be 0x + 1..4 hex digits): '$val'"
 					return 1
 				}
-				rev_n="$(hex_word_to_int "$revision")" || return 1
-				val_n="$(hex_word_to_int "$val")" || return 1
-				if (( rev_n < val_n )); then
-					log_info "Device revision $revision ($rev_n) is less than package revision $val ($val_n)"
+			fi
+			if (( page == model_page )) && [[ "$cmd_code" == "$model_id" ]]; then
+				pkg_model="$(_csv_hex_val_normalize "$val")" || {
+					log_info "Invalid package model CSV value (must be 0x + 1..4 hex digits): '$val'"
 					return 1
-				else
-					log_info "Device revision $revision ($rev_n), package revision $val ($val_n) - OK"
-					return 0
-				fi
+				}
 			fi
 		done
 	done < <(tail -n +2 "$CSV_FILE")
 
-	log_info "Revision validation completed"
+	if [[ -z "$pkg_rev" ]]; then
+		log_info "Revision validation completed"
+		return 0
+	fi
+
+	local rev_n val_n
+	rev_n="$(hex_word_to_int "$revision")" || return 1
+	val_n="$(hex_word_to_int "$pkg_rev")" || return 1
+
+	# The revision register carries the DPC revision of the model it was
+	# programmed with, so it is comparable only within the same model. A
+	# package for another model replaces the configuration as a whole.
+	if [[ -n "$pkg_model" ]]; then
+		local model_n pkg_model_n
+		model_n="$(hex_word_to_int "$model")" || return 1
+		pkg_model_n="$(hex_word_to_int "$pkg_model")" || return 1
+		if (( model_n != pkg_model_n )); then
+			log_info "Device model $model, package model $pkg_model - revision not compared"
+			return 0
+		fi
+	fi
+
+	if (( rev_n > val_n )); then
+		if [[ "$FORCE_UPDATE" -eq 1 ]]; then
+			log_info "Device revision $revision ($rev_n) is newer than package revision $pkg_rev ($val_n) - --force allows downgrade"
+			return 0
+		fi
+		log_info "Device revision $revision ($rev_n) is newer than package revision $pkg_rev ($val_n) - downgrade refused (use --force)"
+		return 1
+	fi
+
+	log_info "Device revision $revision ($rev_n), package revision $pkg_rev ($val_n) - OK"
+	return 0
 }
 
 validate_crc()
@@ -754,7 +788,12 @@ compare_and_flash_device()
 # Main execution.
 main()
 {
-	log_info "Starting voltage regulator flash script for device: $DEVICE_NAME"
+	while [ "${1:-}" = "--force" ]; do
+		FORCE_UPDATE=1
+		shift
+	done
+
+	log_info "Starting voltage regulator flash script for device: ${2:-unknown}"
 
 	# Validate inputs.
 	validate_inputs "$@"

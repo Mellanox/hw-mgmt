@@ -982,7 +982,10 @@ apply_cmd() {
         [[ -f "$device_config_file" ]] || { info "ERROR: Missing DeviceConfigFile for device[$i]: $device_config_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
         local mps_updater
         mps_updater="$(find_tool hw-management-vr-dpc-update.sh)" || die "MPS updater not found (searched /usr/bin and \$DPC_TOOLS_PATHS)"
-        cmd=(bash "$mps_updater" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
+        cmd=(bash "$mps_updater")
+        # --force also lets the per-device updater take a package older than the device.
+        [[ $skip_identical -eq 0 ]] && cmd+=(--force)
+        cmd+=("$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
       fi
 
       info "Updating device[$i]: Type=$device_type Bus=$bus Addr=${lookup_addr:-${addr:-}}"
