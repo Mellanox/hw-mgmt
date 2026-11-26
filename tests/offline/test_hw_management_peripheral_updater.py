@@ -884,19 +884,22 @@ class TestUpdatePeripheralAttr(unittest.TestCase):
         mock_fn = MagicMock()
         peripheral_module.test_error_fn = mock_fn
 
+        # Unique per-run file: a fixed /tmp path can belong to another user
+        fd, sensor_path = tempfile.mkstemp(prefix="test_sensor_")
+        self.addCleanup(os.unlink, sensor_path)
+        with os.fdopen(fd, 'w') as f:
+            f.write("100\n")
+
         attr_prop = {
             "fn": "test_error_fn",
             "arg": ["arg1"],
-            "fin": "/tmp/test_sensor",
+            "fin": sensor_path,
             "poll": 0,
             "ts": 0,
             "hwmon": ""
         }
 
-        # Create file then make it unreadable
-        with open("/tmp/test_sensor", 'w') as f:
-            f.write("100\n")
-
+        # File exists, but open() fails while the attribute is read
         with patch('builtins.open', side_effect=OSError()):
             peripheral_module.update_peripheral_attr(attr_prop)
 
