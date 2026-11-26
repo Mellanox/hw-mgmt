@@ -6956,7 +6956,8 @@ Hardware domain flags decoded from AST2700 SCU reset-event logs. Each file reads
 | `$bsp_path/bmc/domains/reset_power_on` | PWRST indication (SCU0/SCU1) |
 | `$bsp_path/bmc/domains/reset_external` | EXTRST# / SRST evidence |
 | `$bsp_path/bmc/domains/reset_watchdog` | Non-software WDT bits or SCU0 watchdog evidence |
-| `$bsp_path/bmc/domains/reset_software` | Software WDT bits in SCU1 0x080 |
+| `$bsp_path/bmc/domains/reset_software` | Software WDT bits in SCU1 0x080 (includes WDT7 SW, bit 31) |
+| `$bsp_path/bmc/domains/reset_wdt7_sw` | WDT7 SW (bit 31 of SCU0 0x070 and SCU1 0x080). Set on power-on and warm boots by the BootMCU. Not warm evidence for the primary cause |
 | `$bsp_path/bmc/domains/reset_cpu` | CPU domain reset |
 | `$bsp_path/bmc/domains/reset_soc` | SoC domain reset |
 | `$bsp_path/bmc/domains/reset_ahb` | AHB domain reset |
