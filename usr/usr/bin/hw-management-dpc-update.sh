@@ -529,8 +529,8 @@ apply_cmd() {
 
   [[ $# -eq 1 ]] || die "Expected exactly one package tar.gz path"
   local pkg_path
+  [[ -f "$1" ]] || die "Package not found: $1"
   pkg_path="$(realpath_fallback "$1")"
-  [[ -f "$pkg_path" ]] || die "Package not found: $pkg_path"
   debug "apply pkg_path=$pkg_path"
 
   need_cmd tar
