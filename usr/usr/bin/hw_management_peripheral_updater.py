@@ -864,7 +864,7 @@ def show_full_thread_report(pid=None):
 
     LOGGER.info("OS-level threads (from psutil):")
     for t in process.threads():
-        LOGGER.info("  TID {:<7} | user_time={:.3f}s | system_time={:.3f}s".format(
+        LOGGER.info("  TID {:<7} | utime={:.3f}s | stime={:.3f}s".format(
             t.id, t.user_time, t.system_time))
     LOGGER.info("-" * 90)
 
@@ -879,7 +879,7 @@ def show_full_thread_report(pid=None):
     LOGGER.info("Note: All Python threads share the same process memory space")
     cpu_time = process.cpu_times()
     LOGGER.info("Total process memory (RSS): {:.2f} MB".format(process.memory_info().rss / 1024 / 1024))
-    LOGGER.info("Total CPU time: user={:.2f}s, system={:.2f}s".format(cpu_time.user, cpu_time.system))
+    LOGGER.info("Total CPU time: utime={:.2f}s, stime={:.2f}s".format(cpu_time.user, cpu_time.system))
 
 
 def print_memory_info():

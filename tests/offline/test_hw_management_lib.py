@@ -1055,7 +1055,7 @@ class TestEdgeCasesAndErrors:
     def test_medium_very_long_message(self, log_file):
         """Medium: Very long message (10KB)"""
         logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
-        long_msg = "A" * 10000
+        long_msg = "X" * 10000  # not hex, so the sanitize filter keeps it
         logger.info(long_msg)
         logger.stop()
 
