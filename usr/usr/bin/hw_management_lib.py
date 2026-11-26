@@ -33,6 +33,7 @@
 
 import os
 import sys
+import re
 import logging
 from logging.handlers import RotatingFileHandler
 import syslog
@@ -285,6 +286,49 @@ class HW_Mgmt_Logger:
 
     # Logging error alerting interval (in seconds)
     LOGGING_ERROR_ALERT_INTERVAL = 300  # Re-alert every 5 minutes (300 seconds)
+
+    # Log message sanitizing: mask sensitive values with LOG_REDACTED
+    LOG_REDACTED = "***"
+
+    # Names of fields whose value must never reach the log.
+    # A name can have prefix/suffix parts separated by "_", "." or "-" (db_password, token_id).
+    _SENSITIVE_WORDS = (
+        r"pass(?:word|wd|phrase)?|pwd|secret|token|api[_.-]?key|access[_.-]?key|private[_.-]?key|"
+        r"auth(?:orization)?|credentials?|login|user(?:name)?|user[_.-]?id|uid|"
+        r"session(?:[_.-]?id)?|sid|cookie|hash|digest|serial(?:[_.-]?(?:number|num))?"
+    )
+    # The key starts at a sensitive word that is not glued to a preceding letter/digit
+    # (so "db_password" matches, "xpassword" does not). Optional suffix parts are
+    # separator + alnum, with the separator never part of the alnum class, so there is only
+    # one way to match them. The part count is capped to keep the cost linear on long text.
+    _SENSITIVE_KEY = r"(?<![A-Za-z0-9])(?:" + _SENSITIVE_WORDS + r")(?:[_.-][A-Za-z0-9]+){0,8}"
+    # Quoted value: may contain spaces and backslash-escaped characters (\", \\).
+    # An unterminated quote masks everything up to the end of the message.
+    _QUOTED_VALUE = r"\"(?:\\.?|[^\"\\])*(?:\"|$)|'(?:\\.?|[^'\\])*(?:'|$)"
+    _SENSITIVE_VALUE = r"(?:(?:Bearer|Basic)\s+)?(?:" + _QUOTED_VALUE + r"|[^\s,;&]+)"
+
+    _SANITIZE_RULES = (
+        # PEM private key blocks (may span lines)
+        (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)", re.DOTALL),
+         LOG_REDACTED),
+        # credentials inside URL: scheme://user:pass@host
+        # (scheme length is capped and must start at a token start to keep the cost linear)
+        (re.compile(r"((?<![A-Za-z0-9+.-])[a-zA-Z][a-zA-Z0-9+.-]{0,31}://)[^/\s@]+@"),
+         r"\1" + LOG_REDACTED + "@"),
+        # key=value, key: value, key="value"
+        (re.compile("(" + _SENSITIVE_KEY + r"[\"']?\s*[=:]\s*)" + _SENSITIVE_VALUE, re.IGNORECASE),
+         r"\1" + LOG_REDACTED),
+        # command line options: --password value
+        (re.compile(r"(\B--?(?:pass(?:word|wd|phrase)?|pwd|secret|token|api[_-]?key|user(?:name)?|login)\s+)(?!-)(?:" + _QUOTED_VALUE + r"|\S+)",
+                    re.IGNORECASE),
+         r"\1" + LOG_REDACTED),
+        # standalone "Bearer xxx" / "Basic xxx"
+        (re.compile(r"\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}"),
+         r"\1 " + LOG_REDACTED),
+        # long hex strings: md5/sha digests, keys
+        (re.compile(r"\b[0-9a-fA-F]{32,}\b"),
+         LOG_REDACTED),
+    )
 
     def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=LOG_REPEAT_UNLIMITED, syslog_repeat=LOG_REPEAT_UNLIMITED):
         """
@@ -658,6 +702,21 @@ class HW_Mgmt_Logger:
         self.syslog_hash.clear()
         self.log_hash.clear()
 
+    @classmethod
+    def sanitize_msg(cls, msg):
+        """
+        @summary:
+            Mask potentially sensitive data (passwords, logins, tokens, ids, hashes, keys)
+            in a log message.
+        @param msg: message text
+        @return: message with sensitive values replaced by LOG_REDACTED
+        """
+        if not msg:
+            return msg
+        for pattern, repl in cls._SANITIZE_RULES:
+            msg = pattern.sub(repl, msg)
+        return msg
+
     def log_handler(self, level, msg="", id=None, log_repeat=None, syslog_repeat=None):
         """
         @summary:
@@ -703,6 +762,9 @@ class HW_Mgmt_Logger:
             msg = ""
         elif not isinstance(msg, str):
             msg = str(msg)
+
+        # Filter sensitive data before the message reaches file, syslog or repeat hash
+        msg = self.sanitize_msg(msg)
 
         # Handle syslog logging (independent of file logging)
         syslog_emit = False
