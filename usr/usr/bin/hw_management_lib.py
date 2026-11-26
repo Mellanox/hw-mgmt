@@ -33,6 +33,7 @@
 
 import os
 import sys
+import re
 import logging
 from logging.handlers import RotatingFileHandler
 import syslog
@@ -285,6 +286,41 @@ class HW_Mgmt_Logger:
 
     # Logging error alerting interval (in seconds)
     LOGGING_ERROR_ALERT_INTERVAL = 300  # Re-alert every 5 minutes (300 seconds)
+
+    # Log message sanitizing: mask sensitive values with LOG_REDACTED
+    LOG_REDACTED = "***"
+
+    # Names of fields whose value must never reach the log.
+    # A name can have prefix/suffix parts separated by "_", "." or "-" (db_password, token_id).
+    _SENSITIVE_WORDS = (
+        r"pass(?:word|wd|phrase)?|pwd|secret|token|api[_.-]?key|access[_.-]?key|private[_.-]?key|"
+        r"auth(?:orization)?|credentials?|login|user(?:name)?|user[_.-]?id|uid|"
+        r"session(?:[_.-]?id)?|sid|cookie|hash|digest|serial(?:[_.-]?(?:number|num))?"
+    )
+    _SENSITIVE_KEY = r"\b(?:\w+[_.-])*(?:" + _SENSITIVE_WORDS + r")(?:[_.-]\w+)*"
+    _SENSITIVE_VALUE = r"(?:(?:Bearer|Basic)\s+)?(?:\"[^\"]*\"|'[^']*'|[^\s,;&]+)"
+
+    _SANITIZE_RULES = (
+        # PEM private key blocks (may span lines)
+        (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)", re.DOTALL),
+         LOG_REDACTED),
+        # credentials inside URL: scheme://user:pass@host
+        (re.compile(r"(\b[a-zA-Z][a-zA-Z0-9+.-]*://)[^/\s@]+@"),
+         r"\1" + LOG_REDACTED + "@"),
+        # key=value, key: value, key="value"
+        (re.compile("(" + _SENSITIVE_KEY + r"[\"']?\s*[=:]\s*)" + _SENSITIVE_VALUE, re.IGNORECASE),
+         r"\1" + LOG_REDACTED),
+        # command line options: --password value
+        (re.compile(r"(\B--?(?:pass(?:word|wd|phrase)?|pwd|secret|token|api[_-]?key|user(?:name)?|login)\s+)(?!-)\S+",
+                    re.IGNORECASE),
+         r"\1" + LOG_REDACTED),
+        # standalone "Bearer xxx" / "Basic xxx"
+        (re.compile(r"\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}"),
+         r"\1 " + LOG_REDACTED),
+        # long hex strings: md5/sha digests, keys
+        (re.compile(r"\b[0-9a-fA-F]{32,}\b"),
+         LOG_REDACTED),
+    )
 
     def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=LOG_REPEAT_UNLIMITED, syslog_repeat=LOG_REPEAT_UNLIMITED):
         """
@@ -658,6 +694,21 @@ class HW_Mgmt_Logger:
         self.syslog_hash.clear()
         self.log_hash.clear()
 
+    @classmethod
+    def sanitize_msg(cls, msg):
+        """
+        @summary:
+            Mask potentially sensitive data (passwords, logins, tokens, ids, hashes, keys)
+            in a log message.
+        @param msg: message text
+        @return: message with sensitive values replaced by LOG_REDACTED
+        """
+        if not msg:
+            return msg
+        for pattern, repl in cls._SANITIZE_RULES:
+            msg = pattern.sub(repl, msg)
+        return msg
+
     def log_handler(self, level, msg="", id=None, log_repeat=None, syslog_repeat=None):
         """
         @summary:
@@ -703,6 +754,9 @@ class HW_Mgmt_Logger:
             msg = ""
         elif not isinstance(msg, str):
             msg = str(msg)
+
+        # Filter sensitive data before the message reaches file, syslog or repeat hash
+        msg = self.sanitize_msg(msg)
 
         # Handle syslog logging (independent of file logging)
         syslog_emit = False

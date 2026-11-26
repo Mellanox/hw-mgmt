@@ -5055,7 +5055,7 @@ class ThermalManagement(hw_management_file_op):
         # --- OS-level threads ---
         self.log.info("OS-level threads (from psutil):")
         for t in process.threads():
-            self.log.info(f"  TID {t.id:<7} | user_time={t.user_time:.3f}s | system_time={t.system_time:.3f}s")
+            self.log.info(f"  TID {t.id:<7} | utime={t.user_time:.3f}s | stime={t.system_time:.3f}s")
         self.log.info("-" * 90)
 
         # --- Python-level threads ---
@@ -5069,7 +5069,7 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("Note: All Python threads share the same process memory space")
         cpu_time = process.cpu_times()
         self.log.info(f"Total process memory (RSS): {process.memory_info().rss / 1024 / 1024:.2f} MB")
-        self.log.info(f"Total CPU time: user={cpu_time.user:.2f}s, system={cpu_time.system:.2f}s")
+        self.log.info(f"Total CPU time: utime={cpu_time.user:.2f}s, stime={cpu_time.system:.2f}s")
 
     # ----------------------------------------------------------------------
     def print_memory_info(self):

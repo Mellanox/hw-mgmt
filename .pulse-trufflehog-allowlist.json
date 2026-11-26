@@ -8,6 +8,9 @@
     "usr/usr/bin/hw_management_redfish_client.py": {
         "Password": ["\"pa*****************\"", "******"]
     },
+    "tests/offline/test_hw_management_logger_sanitize.py": {
+        "URI": ["https://bob:********@example.com/path"]
+    },
     "recipes-kernel/linux/linux-6.1/0103-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch": {
         "Github": ["4b17e10a22771fcd2dbb4754c43200af2fc69425"]
     },
