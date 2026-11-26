@@ -48,6 +48,7 @@ try:
         HW_Mgmt_Logger as Logger,
         exit_wait,
         current_milli_time,
+        redirect_std_to_syslog
     )
     from collections import Counter
 
@@ -639,6 +640,7 @@ def main():
     @summary: Update attributes
     arg1: system type
     """
+    redirect_std_to_syslog()
 
     CMD_PARSER = argparse.ArgumentParser(description="HW Management Peripheral Updater")
     CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))

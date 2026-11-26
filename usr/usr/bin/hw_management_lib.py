@@ -139,6 +139,53 @@ def current_milli_time():
     return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
 
 
+class _SyslogStream:
+    """File-like wrapper: writes go to syslog only, one record per line."""
+
+    def __init__(self, orig, priority):
+        self._orig = orig
+        self._priority = priority
+        self._buf = ""
+
+    def write(self, data):
+        self._buf += data
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            if line:
+                syslog.syslog(self._priority, line)
+        return len(data)
+
+    def flush(self):
+        if self._buf:
+            syslog.syslog(self._priority, self._buf)
+            self._buf = ""
+
+    def isatty(self):
+        return False
+
+    def __getattr__(self, name):
+        return getattr(self._orig, name)
+
+
+def redirect_std_to_syslog(ident=None):
+    """
+    @summary:
+        Send stdout (INFO) and stderr (ERR) to syslog only, so each line is recorded once.
+        The journal gets the same records from syslog. Only under systemd (INVOCATION_ID set)
+        and only when the parent launcher has not already redirected (HW_MGMT_STD_REDIRECTED).
+    @param ident: syslog identifier, default is the script name
+    """
+    if not os.environ.get("INVOCATION_ID") or os.environ.get("HW_MGMT_STD_REDIRECTED"):
+        return
+    try:
+        syslog.openlog(ident=ident or os.path.basename(sys.argv[0]),
+                       logoption=syslog.LOG_PID, facility=syslog.LOG_DAEMON)
+    except Exception:
+        return
+    sys.stdout = _SyslogStream(sys.stdout, syslog.LOG_INFO)
+    sys.stderr = _SyslogStream(sys.stderr, syslog.LOG_ERR)
+
+
 @dataclass
 class _MsgState:
     first_seen: float

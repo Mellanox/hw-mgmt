@@ -187,6 +187,22 @@ log_info()
     logger -t hw-management -p daemon.info "$@"
 }
 
+# Send stdout/stderr of the calling script to syslog (tag hw-management) only, so each
+# line is recorded once. The journal gets the same lines through logger, under the same
+# tag. Applied only when running as a systemd unit (INVOCATION_ID is set); manual runs
+# keep the terminal output. Call from the main script body, as exec redirection applies
+# to the whole process. Only the first caller redirects: a child script started from a
+# redirected parent writes to the parent's pipe, which already reaches syslog. The flag
+# is exported so the children and the Python helpers skip the redirect as well.
+log_redirect_std_to_syslog()
+{
+    [ -n "$INVOCATION_ID" ] || return 0
+    [ -z "$HW_MGMT_STD_REDIRECTED" ] || return 0
+    export HW_MGMT_STD_REDIRECTED=1
+    exec > >(logger -t hw-management -p daemon.info) \
+         2> >(logger -t hw-management -p daemon.err)
+}
+
 trace_udev_events()
 {
 	log_size=$(stat -c %s "$udev_event_log" 2>/dev/null || echo 0)
