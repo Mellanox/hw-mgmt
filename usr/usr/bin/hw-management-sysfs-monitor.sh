@@ -3,6 +3,7 @@
 # Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 source hw-management-helpers.sh
+log_redirect_std_to_syslog
 
 log_info "hw-mngmt-sysfs-monitor started."
 

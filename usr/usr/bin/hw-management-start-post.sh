@@ -5,6 +5,7 @@
 
 # hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
+log_redirect_std_to_syslog
 
 # Read tc_version value from a tc_config.json path (grep-based). Prints 2.0 when missing or unreadable.
 get_tc_version()
@@ -131,7 +132,6 @@ else
 		# Check if SimX is supported for the current platform.
 		if ! check_if_simx_supported_platform; then
 			if [ $tc_is_enabled -eq 1 ]; then
-				echo "Stopping and disabling hw-management-tc on SimX"
 				logger -t hw-management -p daemon.notice "Stopping and disabling hw-management-tc on SimX"
 				# TC service should be stopped and disabled.
 				tc_should_disable=1

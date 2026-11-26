@@ -3,6 +3,15 @@
 # Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
 
+# Send stdout/stderr to syslog (tag hw-management) only, as log_redirect_std_to_syslog()
+# does in hw-management-helpers.sh. The helpers are not loaded this early in boot, so the
+# redirect is inline. Applied only under systemd (INVOCATION_ID is set).
+if [ -n "$INVOCATION_ID" ] && [ -z "$HW_MGMT_STD_REDIRECTED" ]; then
+	export HW_MGMT_STD_REDIRECTED=1
+	exec > >(logger -t hw-management -p daemon.info) \
+	     2> >(logger -t hw-management -p daemon.err)
+fi
+
 # Get system SKU
 SKU=$(cat /sys/devices/virtual/dmi/id/product_sku 2>/dev/null)
 BLACKLIST_FILE="/etc/modprobe.d/hw-management.conf"
