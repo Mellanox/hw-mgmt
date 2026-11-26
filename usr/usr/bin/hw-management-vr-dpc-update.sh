@@ -35,6 +35,7 @@ DPC_MODEL_ID_PAGE=1
 DPC_REVISION_ID_PAGE=1
 MFR_CRC_NORMAL_CODE=0xab
 MFR_CRC_MULTI_CONFIG=0xad
+MFR_CRC_PAGE=1
 PAGE2_MAX_REG=0x1e
 
 # Global variables.
@@ -42,6 +43,7 @@ CRC_READ[0]=0x0
 CRC_READ[1]=0x0
 CRC_EXP[0]=""
 CRC_EXP[1]=""
+CRC_EXP_COUNT=0
 FORCE_UPDATE=0
 
 # Error handling function.
@@ -71,7 +73,7 @@ show_help()
 	echo "  csv_file       CSV file containing register configuration data - OPTIONAL"
 	echo "                 Format: device_addr,cmd_code,wr,p0_name,p0_byte,p0_val,..."
 	echo "  crc_file       File containing expected CRC checksum values - OPTIONAL"
-	echo "                 Format: line with third word as CRC value"
+	echo "                 Format: third word of a line, or one bare value (0x2947)"
 	echo "  config_file    Configuration file with device-specific constants - OPTIONAL"
 	echo "                 If not provided, default values are used"
 	echo ""
@@ -196,10 +198,10 @@ load_config()
 	log_info "Loading configuration from: $config_file"
 	for key in STORE_OFFSET PAGE CLEAR_FAULT WRITE_PROTECT WP_VAL DPC_MODEL_ID \
 		DPC_REVISION_ID DPC_MODEL_ID_PAGE DPC_REVISION_ID_PAGE \
-		MFR_CRC_NORMAL_CODE MFR_CRC_MULTI_CONFIG PAGE2_MAX_REG; do
+		MFR_CRC_NORMAL_CODE MFR_CRC_MULTI_CONFIG MFR_CRC_PAGE PAGE2_MAX_REG; do
 		val=$(conf_parse_value "$key" "$config_file") || continue
 		case "$key" in
-			PAGE|DPC_MODEL_ID_PAGE|DPC_REVISION_ID_PAGE|PAGE2_MAX_REG)
+			PAGE|DPC_MODEL_ID_PAGE|DPC_REVISION_ID_PAGE|MFR_CRC_PAGE|PAGE2_MAX_REG)
 				if [[ ! "$val" =~ ^0x[0-9a-fA-F]+$ ]] && [[ ! "$val" =~ ^[0-9]+$ ]]; then
 					log_info "Warning: invalid $key in config ($val), using default"
 					continue
@@ -403,15 +405,22 @@ store_user()
 
 read_crc_from_device()
 {
+	local crc_page
+
 	log_info "Reading CRC from device..."
 
-	# Read CRC from 0xAB (MFR_CRC_NORMAL_CODE) and 0xAD (MFR_CRC_MULTI_CONFIG) from page 1.
-	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "0x01" || return 1
+	crc_page="$(cfg_to_int "$MFR_CRC_PAGE")" || crc_page=1
+	i2c_cmd i2cset -y -f "$I2C_BUS" "$dev_addr" "$PAGE" "$crc_page" || return 1
 
 	CRC_READ[0]=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$MFR_CRC_NORMAL_CODE" w 2>/dev/null)
-	CRC_READ[1]=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$MFR_CRC_MULTI_CONFIG" w 2>/dev/null)
+	if [[ -n "$MFR_CRC_MULTI_CONFIG" ]]; then
+		CRC_READ[1]=$(i2cget -y -f "$I2C_BUS" "$dev_addr" "$MFR_CRC_MULTI_CONFIG" w 2>/dev/null)
+	else
+		CRC_READ[1]=""
+	fi
 
-	log_info "CRC read - Normal: ${CRC_READ[0]}, Multi: ${CRC_READ[1]}"
+	log_info "CRC read - cmd=$MFR_CRC_NORMAL_CODE page=$crc_page Normal: ${CRC_READ[0]}, Multi: ${CRC_READ[1]:-n/a}"
+	[[ -n "${CRC_READ[0]}" ]]
 }
 
 get_model()
@@ -426,30 +435,98 @@ get_revision()
 	i2cget -y -f "$I2C_BUS" "$dev_addr" "$DPC_REVISION_ID" w
 }
 
+# Strip optional 0x and lowercase a CRC token. Prints hex digits or fails.
+crc_token_normalize()
+{
+	local v
+	v="$(echo "$1" | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+	v="${v#"${v%%[![:space:]]*}"}"
+	v="${v%"${v##*[![:space:]]}"}"
+	v="${v#0x}"
+	if [[ "$v" =~ ^[0-9a-f]{1,4}$ ]]; then
+		echo "$v"
+		return 0
+	fi
+	return 1
+}
+
+# MP29816 packages name the CRC register in the CSV (EXPECTED_USER_CRC) and
+# carry one CRC, not the normal/multi pair at 0xAB/0xAD.
+apply_crc_defaults_from_csv()
+{
+	local found_cmd="" found_page=""
+	local cmd_code page name_var name
+	local p0_name p0_byte p0_val p1_name p1_byte p1_val p2_name p2_byte p2_val
+
+	[[ -n "$CSV_FILE" && -f "$CSV_FILE" ]] || return 0
+
+	while IFS=, read -r _ cmd_code _ \
+		p0_name p0_byte p0_val \
+		p1_name p1_byte p1_val \
+		p2_name p2_byte p2_val _
+	do
+		for page in 0 1 2; do
+			name_var="p${page}_name"
+			name="${!name_var}"
+			if [[ "${name^^}" == "EXPECTED_USER_CRC" ]]; then
+				found_cmd="$cmd_code"
+				found_page="$page"
+				break 2
+			fi
+		done
+	done < <(tail -n +2 "$CSV_FILE")
+
+	if [[ -n "$found_cmd" ]]; then
+		MFR_CRC_NORMAL_CODE="$found_cmd"
+		MFR_CRC_PAGE="$found_page"
+		MFR_CRC_MULTI_CONFIG=""
+		log_info "CRC register from CSV EXPECTED_USER_CRC: cmd=$found_cmd page=$found_page"
+		return 0
+	fi
+
+	case "${DEVICE_NAME,,}" in
+		mp29816)
+			MFR_CRC_NORMAL_CODE=0xf0
+			MFR_CRC_PAGE=1
+			MFR_CRC_MULTI_CONFIG=""
+			log_info "mp29816 CRC defaults: cmd=0xf0 page=1 (no multi CRC)"
+			;;
+	esac
+}
+
 parse_crc_file()
 {
 	local file="$1"
 	local i=0
+	local line crc_val tok
+
+	CRC_EXP[0]=""
+	CRC_EXP[1]=""
+	CRC_EXP_COUNT=0
 
 	log_info "Parsing CRC file: $file"
 
-	while read -r line; do
-		# Skip empty lines.
+	while IFS= read -r line || [ -n "$line" ]; do
+		line="${line//$'\r'/}"
 		[[ -z "$line" ]] && continue
+		[[ "$line" =~ ^[[:space:]]*# ]] && continue
 
-		# Extract the third word (CRC value).
-		crc_val=$(echo "$line" | awk '{print $3}')
-
-		if [[ -z "$crc_val" ]]; then
-			log_info "Warning: Empty CRC value in line: $line"
+		# Legacy format: "crc normal 96CA" (3rd field). MP29816 packages
+		# ship one bare token "0x96CA".
+		tok=$(echo "$line" | awk '{print $3}')
+		[[ -z "$tok" ]] && tok=$(echo "$line" | awk '{print $1}')
+		crc_val="$(crc_token_normalize "$tok")" || {
+			log_info "Warning: skipping unparseable CRC line: $line"
 			continue
-		fi
+		}
 
 		CRC_EXP[$i]="$crc_val"
-		((i++))
+		i=$((i + 1))
+		[[ $i -ge 2 ]] && break
 	done < "$file"
 
-	log_info "Parsed CRC values - Normal: ${CRC_EXP[0]}, Multi: ${CRC_EXP[1]}"
+	CRC_EXP_COUNT=$i
+	log_info "Parsed CRC values - Normal: ${CRC_EXP[0]:-}, Multi: ${CRC_EXP[1]:-} (count=$CRC_EXP_COUNT)"
 }
 
 # Compare 0x-prefixed hex words numerically (not lexicographically).
@@ -567,44 +644,62 @@ validate_revisions()
 
 validate_crc()
 {
+	local i crc_names=("normal" "multi")
+	local mismatch_found=false
+	local compared=0
+	local exp_n read_n exp_hex
+
 	log_info "Validating CRC values..."
 
-	# Get CRC from input file.
 	parse_crc_file "$CRC_FILE"
+	if [[ "$CRC_EXP_COUNT" -eq 0 ]]; then
+		log_info "CRC file has no parseable values - skipping CRC validation"
+		return 1
+	fi
 
-	# Normalize CRC values.
-	CRC_EXP[0]=$(echo "0x${CRC_EXP[0]}" | tr '[:upper:]' '[:lower:]')
-	CRC_EXP[1]=$(echo "0x${CRC_EXP[1]}" | tr '[:upper:]' '[:lower:]')
-
-	# Remove carriage return (BusyBox compatible).
-	CRC_EXP[0]=$(echo "${CRC_EXP[0]}" | tr -d '\r')
-	CRC_EXP[1]=$(echo "${CRC_EXP[1]}" | tr -d '\r')
-
-	# Get CRC from device.
-	store_user || error_exit "Failed to store user settings"
+	# The normal/multi CRC pair is refreshed by a store; EXPECTED_USER_CRC
+	# is a plain register and needs none.
+	if [[ -n "$MFR_CRC_MULTI_CONFIG" ]]; then
+		store_user || error_exit "Failed to store user settings"
+	fi
 	read_crc_from_device || error_exit "Failed to read CRC from device"
 
 	sleep 0.1
 
-	local crc_names=("normal" "multi")
-	local mismatch_found=false
-
 	for i in 0 1; do
-		if [[ "${CRC_EXP[$i]}" != "${CRC_READ[$i]}" ]]; then
-			log_info "CRC mismatch - ${crc_names[$i]}: actual ${CRC_READ[$i]}, expected ${CRC_EXP[$i]}"
+		[[ -n "${CRC_EXP[$i]}" ]] || continue
+		[[ -n "${CRC_READ[$i]}" ]] || continue
+		compared=$((compared + 1))
+		exp_hex="0x${CRC_EXP[$i]}"
+		exp_n="$(hex_word_to_int "$exp_hex")" || {
+			log_info "CRC mismatch - ${crc_names[$i]}: invalid expected '${CRC_EXP[$i]}'"
+			mismatch_found=true
+			continue
+		}
+		read_n="$(hex_word_to_int "${CRC_READ[$i]}")" || {
+			log_info "CRC mismatch - ${crc_names[$i]}: invalid device value '${CRC_READ[$i]}'"
+			mismatch_found=true
+			continue
+		}
+		if [[ "$exp_n" -ne "$read_n" ]]; then
+			log_info "CRC mismatch - ${crc_names[$i]}: actual ${CRC_READ[$i]}, expected $exp_hex"
 			mismatch_found=true
 		else
 			log_info "CRC match - ${crc_names[$i]}: ${CRC_READ[$i]}"
 		fi
 	done
 
+	if [[ "$compared" -eq 0 ]]; then
+		log_info "CRC file has no parseable values - skipping CRC validation"
+		return 1
+	fi
+
 	if [[ "$mismatch_found" == "true" ]]; then
 		log_info "CRC validation failed"
 		return 1
-	else
-		log_info "CRC validation passed"
-		return 0
 	fi
+	log_info "CRC validation passed"
+	return 0
 }
 
 compare_and_flash_device()
@@ -800,6 +895,7 @@ main()
 
 	# Load configuration.
 	load_config "$CONFIG_FILE"
+	apply_crc_defaults_from_csv
 
 	# Get device address.
 	dev_addr=$(get_device_address)
