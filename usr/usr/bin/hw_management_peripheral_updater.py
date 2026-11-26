@@ -16,7 +16,8 @@ try:
     from hw_management_lib import (
         HW_Mgmt_Logger as Logger,
         current_milli_time,
-        run_shell_cmd
+        run_shell_cmd,
+        redirect_std_to_syslog
     )
     from hw_management_feature import feature_request
 
@@ -927,6 +928,7 @@ def main():
     @summary: Update attributes
     arg1: system type
     """
+    redirect_std_to_syslog()
 
     CMD_PARSER = argparse.ArgumentParser(description="HW Management Peripheral Updater")
     CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))

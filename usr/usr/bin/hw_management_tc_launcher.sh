@@ -55,5 +55,14 @@ if [ "$describe_only" -eq 1 ]; then
 	exit 0
 fi
 
+# Send stdout/stderr of the TC binary to syslog only, so each line is recorded once.
+# Export the flag so the Python helper does not redirect a second time.
+# Skip when a parent script already redirected (the flag is inherited).
+if [ -n "$INVOCATION_ID" ] && [ -z "$HW_MGMT_STD_REDIRECTED" ]; then
+	export HW_MGMT_STD_REDIRECTED=1
+	exec > >(logger -t hw-management-tc -p daemon.info) \
+	     2> >(logger -t hw-management-tc -p daemon.err)
+fi
+
 logger -t hw-management-tc "Starting $tc_bin"
 exec "$tc_bin"
