@@ -656,6 +656,11 @@ class TestRunner:
                 'cmd': [sys.executable, '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
+            {
+                'name': 'Pytest: Unit scripts send output to syslog',
+                'cmd': [sys.executable, '-m', 'pytest', 'offline/test_hw_management_unit_syslog.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
         ]
 
         # Add coverage options to all pytest tests if coverage is enabled
@@ -1495,19 +1500,22 @@ class TestRunner:
             print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} shellcheck not found - install with: ./tests/install-shell-test-tools.sh")
             return True
 
-        # Find all shell scripts in usr/usr/bin
+        # Find all shell scripts in usr/usr/bin and usr/usr/local/bin
         repo_root = self.tests_dir.parent
-        shell_scripts_dir = repo_root / "usr" / "usr" / "bin"
+        shell_scripts_dirs = [
+            repo_root / "usr" / "usr" / "bin",
+            repo_root / "usr" / "usr" / "local" / "bin",
+        ]
 
-        if not shell_scripts_dir.exists():
-            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell scripts directory not found: {shell_scripts_dir}")
+        if not any(d.exists() for d in shell_scripts_dirs):
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell scripts directories not found: {shell_scripts_dirs}")
             return True
 
         # Find all .sh files
-        shell_scripts = list(shell_scripts_dir.glob("*.sh"))
+        shell_scripts = [s for d in shell_scripts_dirs if d.exists() for s in d.glob("*.sh")]
 
         if not shell_scripts:
-            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} No shell scripts found in {shell_scripts_dir}")
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} No shell scripts found in {shell_scripts_dirs}")
             return True
 
         print(f"{Colors.CYAN}Analyzing {len(shell_scripts)} shell scripts...{Colors.RESET}")
