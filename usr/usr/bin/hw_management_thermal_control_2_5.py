@@ -27,6 +27,7 @@ from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
 from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
+from hw_management_lib import redirect_std_to_syslog
 import json
 import re
 import threading
@@ -5093,6 +5094,7 @@ class RawTextArgumentDefaultsHelpFormatter(
 
 
 if __name__ == '__main__':
+    redirect_std_to_syslog()
     CMD_PARSER = argparse.ArgumentParser(formatter_class=RawTextArgumentDefaultsHelpFormatter, description="hw-management thermal control")
     CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
     CMD_PARSER.add_argument("--system_config",
