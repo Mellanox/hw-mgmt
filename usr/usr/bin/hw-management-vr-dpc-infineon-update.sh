@@ -1703,7 +1703,8 @@ read_from_scratchpad() {
         log_error "Scratchpad readback failed"
         return 1
     fi
-    head -c "$file_size" "$tmp" > "$out_file" || { rm -f "$tmp"; return 1; }
+    # BusyBox head may be built without -c (FEATURE_FANCY_HEAD off).
+    dd if="$tmp" of="$out_file" bs=1 count="$file_size" 2>/dev/null || { rm -f "$tmp"; return 1; }
     rm -f "$tmp"
     log_info "Scratchpad readback saved ($file_size bytes)"
     return 0
@@ -2122,7 +2123,7 @@ parse_config_file() {
         if [[ -n "$out_dir" ]]; then
             mkdir -p "$out_dir" 2>/dev/null || true
             local sec_path="$out_dir/section_$(printf '%02d' $idx)_hc_$(printf '%02x' $hc).bin"
-            if tail -c +$((offset + 1)) "$config_file" 2>/dev/null | head -c "$size" > "$sec_path"; then
+            if dd if="$config_file" of="$sec_path" bs=1 skip="$offset" count="$size" 2>/dev/null; then
                 log_info "  -> $sec_path"
             fi
         fi
