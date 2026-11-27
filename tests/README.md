@@ -85,6 +85,50 @@ pytest offline/test_example_pytest.py -v
 pytest -m "offline and quick"
 ```
 
+### Running in Docker
+
+`tests/docker/` holds a ready-made test environment (Python, pytest, ShellSpec,
+kcov, ShellCheck, jq) so nothing has to be installed on the host:
+
+```bash
+# Default: python3 tests/test.py --offline --skip-ngci
+tests/run-tests.sh
+
+# Any test.py arguments are passed through
+tests/run-tests.sh --offline --skip-ngci --coverage-html
+tests/run-tests.sh --shell --shellcheck
+
+# Any command that does not start with "-" is run as is
+tests/run-tests.sh pytest offline/test_hw_management_lib.py -k logger
+
+# Interactive shell in the container
+tests/run-tests.sh --bash
+```
+
+The image is built on first use and rebuilt when `tests/docker/Dockerfile` or
+`tests/requirements.txt` changes (`--rebuild` forces it, `--build-only` only
+builds). The checkout is mounted read-write at its own host path and the container runs as your
+uid/gid, so `tests/logs` and coverage output appear in your tree with normal
+ownership. Proxy variables are forwarded to the build; see
+`tests/run-tests.sh --help` for `DOCKER`, `DOCKER_EXTRA_ARGS`, etc.
+
+`ngci_tool` is not part of the image. By default the wrapper adds `--skip-ngci`;
+pass `--ngci` to run the ngci checks too:
+
+```bash
+tests/run-tests.sh --ngci                    # --offline with ngci checks
+tests/run-tests.sh --ngci --all -o my-branch
+```
+
+`--ngci` mounts the ngci directory read-only and the host Docker socket,
+because `ngci_tool` starts its checkers (beautifier, spell check, ...) as Docker
+containers. Access to the socket is control of the host Docker, so use it only
+on your own workstation or lab host.
+
+The ngci directory is `/auto/sw_system_release/ci/ngci` on the host. Set
+`HW_MGMT_NGCI_DIR` to use another copy; it is mounted at the same fixed path
+inside the container, where `test.py` looks for `ngci_tool.sh`.
+
 ## Test Organization
 
 ```
