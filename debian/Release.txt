@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.2008
+- Fri, 27 Nov 2026
+--------------------------------------------------------------------------------
+
+- New features
+    - 
+
+- Bug fixes
+    - #5445084, hw-mgmt: scripts: Drop journal and dmesg from dump, copy logs to syslog, b7953c8
+    - #N/A, Update changelog and release notes for V.7.0070.2007, b8ed45d
+    - #5376410, hw-mgmt: scripts: Log expected mst removal in PWM write as info, a010da0
+    - #4966961, hw-mgmt: thermal: SPC1: Extend fallback in case if I2C ASIC driver failure (backport to V.7.0070.2000_BR) (#3184), 45f8d8f
+    - #N/A, hw-mgmt: tests: Fix fan validate_rpm harness and skip systemd BMC test without systemctl (#3051) (#3194), ca75810
+    - #5372351, hw-mgmt: patches: 6.1-6.12: Notify BMC on CPU power off completion, e088f3c
+    - #N/A, hw-mgmt: kernel 6.12 BMC: limit ftgmac100 SGMII hard reset to Marvell 88E151x (#3160), fdffe28
+    - #5411449, hw-mgmt: scripts: Do not fail usb0 bring up on a late NOS configuration, 5847aa0
+    - #5372351, hw-mgmt: scripts: Report graceful power off on SPC6 platforms, ed704e9
+    - #5376442, hw-mgmt: scripts: Drop the start limits of the BMC login and usb0 units, df20d74
+    - #5341619, hw-mgmt: patches: 6.1-6.12: Sync mp2975 vout fault limits fix with upstream, e07e613
+    - #5407904, hw-mgmt: patches: 6.1-6.12: Fix SPC6 host driver GPR and ASIC health attributes, e43d27c
+    - #5406984, hw-mgmt: scripts: Add ASIC PCI path mapping for SN6800_LD with Fire Range CPU, 394d968
+    - #5353778, hw-mgmt: scripts: Move the BMC Redfish login to its own service, 4d71f79
+    - #5358857, hw-mgmt: config: Preload drivers of devices instantiated from SMBIOS BOM, cbc4e35
+    - #N/A, Update changelog and release notes for V.7.0070.2006, a25447e
+    - #3554492, V.7.0070.2000 br sonic patch metadata fix (#3113), 1692379
+    - #N/A, Update changelog and release notes for V.7.0070.2005, 3f9a5a1
+    - #N/A, hw-mgmt: kernel 6.12 BMC: fix NULL deref in AST2700 i2c buffer-mode target IRQ (#2998) (#3105), d8a48a3
+    - #N/A, kernel patches integration with sonic bmc minor upgrade to 6.12.94 (#2943) (#3106), 1acd950
+
+- Kernel Patches for New Features:
+    - 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.2008/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    - Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    - Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    - Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+
+================================================================================
 - V.7.0070.2007
 - Tue, 24 Nov 2026
 --------------------------------------------------------------------------------
