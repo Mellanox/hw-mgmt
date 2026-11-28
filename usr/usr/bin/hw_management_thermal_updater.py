@@ -58,6 +58,7 @@ try:
         atomic_file_write,
         exit_wait,
         current_milli_time,
+        redirect_std_to_syslog,
     )
     from collections import Counter
     from hw_management_platform_config import (
@@ -551,6 +552,7 @@ def main():
     Monitors ASIC and optical module temperatures from SDK sysfs and
     updates hw-management thermal sysfs.
     """
+    redirect_std_to_syslog()
 
     CMD_PARSER = argparse.ArgumentParser(description="HW Management Thermal Updater")
     CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))

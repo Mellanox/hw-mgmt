@@ -32,6 +32,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 source hw-management-helpers.sh
+log_redirect_std_to_syslog
 
 log_info "hw-mngmt-fast-sysfs-monitor started."
 

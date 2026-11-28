@@ -41,11 +41,11 @@
 #              Report start of hw-management service to console and logger.
 
 source hw-management-helpers.sh
+log_redirect_std_to_syslog
 [ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 [ -f "$sku_file" ] && product_sku=$(< $sku_file) || product_sku="Unknown"
 
 if systemctl is-active --quiet hw-management; then
-        echo "Error: HW management service is already active."
         logger -t hw-management -p daemon.error "HW management service is already active."
         exit 1
 fi
@@ -108,5 +108,4 @@ VMOD0014)
 	fi
 	;;
 esac
-echo "Start Chassis HW management service."
 logger -t hw-management -p daemon.notice "Start Chassis HW management service."

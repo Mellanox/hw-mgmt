@@ -59,6 +59,7 @@
 #
 
 source hw-management-helpers.sh
+log_redirect_std_to_syslog
 [ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 [ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
 source hw-management-devtree.sh

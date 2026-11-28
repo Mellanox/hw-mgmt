@@ -43,8 +43,6 @@ REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
 CPLD_IOREG_RANGE=256
 dump_process_pid=$$
 
-MODE=$1
-
 dump_cmd () {
 	cmd=$1
 	output_fname=$2
@@ -82,10 +80,7 @@ if [ -d "$HW_MGMT_FOLDER" ]; then
 	timeout 80 find "$HW_MGMT_FOLDER/eeprom/" -type l -exec ls -la {} \; -exec hexdump -C {} \; > "$DUMP_FOLDER/hw-management_fru_dump" 2> /dev/null
 fi
 
-if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
-	dump_cmd "journalctl -o short-precise --no-pager" "journalctl" "45"
-	dump_cmd "sx_sdk --version" "sx_sdk_ver" "10"
-fi
+dump_cmd "sx_sdk --version" "sx_sdk_ver" "10"
 
 [ -f /var/log/tc_log ] && cp /var/log/tc_* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw_management_sync_log ] && cp /var/log/hw_management_sync_log* "$DUMP_FOLDER/" 2>/dev/null || true
@@ -124,7 +119,6 @@ VMOD0014)
 esac
 
 dump_cmd "iorw -b 0x2500 -r -l${CPLD_IOREG_RANGE}" "cpld_reg_direct_dump" "5"
-dump_cmd "dmesg" "dmesg" "10"
 dump_cmd "dmidecode" "dmidecode" "5"
 dump_cmd "lsmod" "lsmod" "3"
 dump_cmd "lspci -vvv" "lspci" "5"
