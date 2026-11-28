@@ -61,7 +61,6 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - N5110LD
 - N5112LD
 - N5200LD
-- N5240LD
 - N5300LD
 - N5500LD
 - N61XX_LD

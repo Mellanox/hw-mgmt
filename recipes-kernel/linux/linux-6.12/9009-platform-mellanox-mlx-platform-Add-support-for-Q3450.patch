@@ -441,7 +441,7 @@ index 1f7d945..b97f71e 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9700,6 +9986,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9696,6 +9982,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
  	{

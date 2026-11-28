@@ -194,7 +194,7 @@ index 32a51b0c3..217d7dd72 100644
  static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  {
  	switch (reg) {
-@@ -10072,8 +10189,8 @@ static int __init mlxplat_dmi_l1_scale_out_switch_matched(const struct dmi_syste
+@@ -10068,8 +10185,8 @@ static int __init mlxplat_dmi_l1_scale_out_switch_matched(const struct dmi_syste
  		mlxplat_fan = &mlxplat_l1_scale_out_fan_data;
  	}
  	mlxplat_regs_io = &mlxplat_l1_scale_out_regs_io_data;
@@ -205,7 +205,7 @@ index 32a51b0c3..217d7dd72 100644
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_l1_scale_out_switch;
  	adapter_def_nr = MLXPLAT_CPLD_L1_SCALE_OUT_PHYS_ADAPTER_NR;
-@@ -10141,8 +10258,8 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -10137,8 +10254,8 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
  	mlxplat_led = &mlxplat_xdr_led_data;
  	mlxplat_fan = &mlxplat_xdr_fan_data;

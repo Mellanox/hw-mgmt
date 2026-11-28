@@ -17,8 +17,8 @@ of the all required platform driver.
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 1154 ++++++++++++++++++++--
- 1 file changed, 1055 insertions(+), 99 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 1150 ++++++++++++++++++++--
+ 1 file changed, 1051 insertions(+), 99 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
 index 6e9062be49c2..6a112c07c9be 100644
@@ -1334,7 +1334,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  static int __init mlxplat_register_platform_device(void)
  {
  	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, -1,
-@@ -8658,6 +9553,39 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
+@@ -8658,6 +9553,35 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
  	return mlxplat_register_platform_device();
  }
  
@@ -1348,11 +1348,7 @@ index 6e9062be49c2..6a112c07c9be 100644
 +	mlxplat_mux_data = mlxplat_l1_scale_out_mux_data;
 +
 +	sku = dmi_get_system_info(DMI_PRODUCT_SKU);
-+	if (!strcmp(sku, "HI177")) {
-+		/* N5240_LD */
-+		mlxplat_led = &mlxplat_l1_liquid_coling_led_data;
-+		mlxplat_fan = NULL;
-+	} else if (!strcmp(sku, "HI176")) {
++	if (!strcmp(sku, "HI176")) {
 +		/* N5500_LD */
 +		mlxplat_led = &mlxplat_l1_liquid_coling_led_data;
 +		mlxplat_fan = NULL;
@@ -1374,7 +1370,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  static int __init mlxplat_dmi_ng400_hi171_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8812,6 +9740,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8812,6 +9736,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0019"),
  		},
  	},
@@ -1415,7 +1411,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  	{
  		.callback = mlxplat_dmi_ng400_hi171_matched,
  		.matches = {
-@@ -8914,8 +9876,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8914,8 +9872,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	int i, shift = 0;
  
  	/* Scan adapters from expected id to verify it is free. */
@@ -1426,7 +1422,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  	     mlxplat_max_adap_num; i++) {
  		search_adap = i2c_get_adapter(i);
  		if (search_adap) {
-@@ -8924,7 +9886,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8924,7 +9882,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  		}
  
  		/* Return if expected parent adapter is free. */
@@ -1435,7 +1431,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  			return 0;
  		break;
  	}
-@@ -8946,7 +9908,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8946,7 +9904,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	}
  
  	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */

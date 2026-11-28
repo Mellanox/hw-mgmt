@@ -30,25 +30,24 @@ Upstream-Status: Pending
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- .../devicetree/bindings/trivial-devices.yaml  |    9 +
+ .../devicetree/bindings/trivial-devices.yaml  |    8 +
  drivers/platform/mellanox/Kconfig             |   10 +
  drivers/platform/mellanox/Makefile            |    1 +
- drivers/platform/mellanox/nvsw-bmc-hid162.c   | 7304 +++++++++++++++++
- 4 files changed, 7324 insertions(+)
+ drivers/platform/mellanox/nvsw-bmc-hid162.c   | 7171 +++++++++++++++++
+ 4 files changed, 7190 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
 
 diff --git a/Documentation/devicetree/bindings/trivial-devices.yaml b/Documentation/devicetree/bindings/trivial-devices.yaml
-index a190c56761f8..69a22027b263 100644
+index a190c56761f8..5f0dc448b9f1 100644
 --- a/Documentation/devicetree/bindings/trivial-devices.yaml
 +++ b/Documentation/devicetree/bindings/trivial-devices.yaml
-@@ -309,6 +309,15 @@ properties:
+@@ -309,6 +309,14 @@ properties:
            - national,lm92
              # Nuvoton Temperature Sensor
            - nuvoton,w83773g
 +            # Nvidia BMC platform CPLD control
 +          - nvidia,hid162
 +          - nvidia,hid176
-+          - nvidia,hid177
 +          - nvidia,hid180
 +          - nvidia,hid181
 +          - nvidia,hid189
@@ -92,10 +91,10 @@ index 11070f26b468..e48fc07ec1c3 100644
  obj-$(CONFIG_NVSW_HOST_SPC6) += nvsw-host-spc6.o
 diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mellanox/nvsw-bmc-hid162.c
 new file mode 100644
-index 000000000000..d8ee66da5bd1
+index 000000000000..67c29276c003
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-@@ -0,0 +1,7304 @@
+@@ -0,0 +1,7171 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -438,15 +437,6 @@ index 000000000000..d8ee66da5bd1
 +	{
 +		.label = "asic2_health",
 +		.reg = NVSW_REG_ASIC2_HEALTH_OFFSET,
-+		.mask = NVSW_ASIC_MASK,
-+		.hpdev.nr = NVSW_NR_NONE,
-+	},
-+};
-+
-+static struct mlxreg_core_data nvsw_bmc_hid177_asic3_items_data[] = {
-+	{
-+		.label = "asic3_health",
-+		.reg = NVSW_REG_ASIC3_HEALTH_OFFSET,
 +		.mask = NVSW_ASIC_MASK,
 +		.hpdev.nr = NVSW_NR_NONE,
 +	},
@@ -837,99 +827,6 @@ index 000000000000..d8ee66da5bd1
 +	.cell_low = NVSW_REG_AGGRLO_OFFSET,
 +	.mask_low = NVSW_LOW_AGGR_MASK_LOW | NVSW_LOW_AGGR_MASK_ASIC2 |
 +		    NVSW_LOW_AGGR_MASK_ASIC1,
-+};
-+
-+static struct mlxreg_core_item nvsw_bmc_hid177_hotplug_items_data[] = {
-+	{
-+		.data = nvsw_bmc_hid162_events_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_PWRB_OFFSET,
-+		.mask = NVSW_PWR_BUTTON_MASK | NVSW_AMB_TEMP_SENSE_MASK |
-+			NVSW_GRACEFUL_POWER_OFF_MASK | NVSW_CPU_POWER_OFF_READY_MASK |
-+			NVSW_CPU_RESET_MASK | NVSW_APML_SMB_ALERT_MASK |
-+			NVSW_CPU_UNEXP_POWER_OFF_MASK | NVSW_UID_PUSH_BUTTON_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid162_events_items_data),
-+		.inversed = 1,
-+		.health = false,
-+		.non_sticky = true,
-+	},
-+	{
-+		.data = nvsw_bmc_hid162_asic1_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
-+		.mask = NVSW_ASIC_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid162_asic1_items_data),
-+		.inversed = 0,
-+		.health = true,
-+	},
-+	{
-+		.data = nvsw_bmc_hid162_asic2_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_ASIC2_HEALTH_OFFSET,
-+		.mask = NVSW_ASIC_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid162_asic2_items_data),
-+		.inversed = 0,
-+		.health = true,
-+	},
-+	{
-+		.data = nvsw_bmc_hid177_asic3_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_ASIC3_HEALTH_OFFSET,
-+		.mask = NVSW_ASIC_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid177_asic3_items_data),
-+		.inversed = 0,
-+		.health = true,
-+	},
-+	{
-+		.data = nvsw_bmc_hid162_leakage_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_LEAK_OFFSET,
-+		.mask = NVSW_LEAK_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid162_leakage_items_data),
-+		.inversed = 0,
-+		.health = false,
-+	},
-+	{
-+		.data = nvsw_bmc_hid162_pwr_good_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_BRD4_OFFSET,
-+		.mask = NVSW_RTC_MASK | NVSW_HOT_SWAP_ALERT_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid162_pwr_good_items_data),
-+		.inversed = 0,
-+		.health = false,
-+	},
-+	{
-+		.data = nvsw_bmc_hid162_alarms_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_BRD1_OFFSET,
-+		.mask = NVSW_SSD_I2C_ALERT_MASK | NVSW_WD_EXP_MASK |
-+			NVSW_5V_USB_MASK | NVSW_PCB_TEMP1_MASK |
-+			NVSW_PCB_TEMP2_MASK | NVSW_SGMII_MASK |
-+			NVSW_SDD_PG_MASK | NVSW_LEAK_AGGR_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid162_alarms_items_data),
-+		.inversed = 0,
-+		.health = false,
-+	},
-+	{
-+		.data = nvsw_bmc_hid176_erot_error_items_data,
-+		.aggr_mask = NVSW_AGGR_MASK,
-+		.reg = NVSW_REG_EROT_ERR_OFFSET,
-+		.mask = NVSW_EROT_MASK,
-+		.count = ARRAY_SIZE(nvsw_bmc_hid176_erot_error_items_data),
-+		.inversed = 1,
-+		.health = false,
-+	},
-+};
-+
-+static
-+struct mlxreg_core_hotplug_platform_data nvsw_bmc_hid177_hotplug = {
-+	.items = nvsw_bmc_hid177_hotplug_items_data,
-+	.count = ARRAY_SIZE(nvsw_bmc_hid177_hotplug_items_data),
-+	.cell = NVSW_REG_AGGR_OFFSET,
-+	.mask = NVSW_AGGR_MASK | NVSW_AGGR_MASK_COMEX,
-+	.cell_low = NVSW_REG_AGGRLO_OFFSET,
-+	.mask_low = NVSW_LOW_AGGR_MASK_LOW | NVSW_LOW_AGGR_MASK_ASIC3 |
-+		    NVSW_LOW_AGGR_MASK_ASIC2 | NVSW_LOW_AGGR_MASK_ASIC1,
 +};
 +
 +
@@ -6974,8 +6871,8 @@ index 000000000000..d8ee66da5bd1
 +	.counter = ARRAY_SIZE(nvsw_bmc_hid176_led_data),
 +};
 +
-+/* Platform led data for HI177 system type. */
-+static struct mlxreg_core_data nvsw_bmc_hid177_led_data[] = {
++/* Platform led data for HI180, HI181, HI189, HI191 and HI193 system types. */
++static struct mlxreg_core_data nvsw_bmc_hid180_led_data[] = {
 +	{
 +		.label = "status:green",
 +		.reg = NVSW_REG_LED1_OFFSET,
@@ -7003,9 +6900,9 @@ index 000000000000..d8ee66da5bd1
 +	},
 +};
 +
-+static struct mlxreg_core_platform_data nvsw_bmc_hid177_led = {
-+	.data = nvsw_bmc_hid177_led_data,
-+	.counter = ARRAY_SIZE(nvsw_bmc_hid177_led_data),
++static struct mlxreg_core_platform_data nvsw_bmc_hid180_led = {
++	.data = nvsw_bmc_hid180_led_data,
++	.counter = ARRAY_SIZE(nvsw_bmc_hid180_led_data),
 +};
 +
 +/* Mux init/exit callbacks. */
@@ -7133,31 +7030,6 @@ index 000000000000..d8ee66da5bd1
 +	return 0;
 +}
 +
-+static int nvsw_bmc_hid177_platform_data_init(struct nvsw_core *nvsw_core)
-+{
-+	int i;
-+
-+	/* Set system configuration. */
-+	nvsw_core->hid = HID177;
-+	nvsw_core->mux_num = ARRAY_SIZE(nvsw_bmc_hid176_mux_data);
-+	for (i = 0; i < nvsw_core->mux_num; i++) {
-+		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
-+		mux_data[i]->handle = nvsw_core;
-+		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
-+		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
-+		mux_brdinfo[i]->platform_data = mux_data[i];
-+	}
-+
-+	nvsw_core->regio_data = &nvsw_bmc_hid162_regio;
-+	nvsw_core->led_data = &nvsw_bmc_hid177_led;
-+	nvsw_core->hotplug_data = &nvsw_bmc_hid177_hotplug;
-+	nvsw_core->mux_init = nvsw_bmc_hid162_mux_topology_init;
-+	nvsw_core->mux_exit = nvsw_bmc_hid162_mux_topology_exit;
-+	nvsw_core->set_reg_default = nvsw_bmc_hid162_set_reg_default;
-+
-+	return 0;
-+}
-+
 +static int nvsw_bmc_hid180_platform_data_init(struct nvsw_core *nvsw_core)
 +{
 +	int i;
@@ -7174,7 +7046,7 @@ index 000000000000..d8ee66da5bd1
 +	}
 +
 +	nvsw_core->regio_data = &nvsw_bmc_hid180_regio;
-+	nvsw_core->led_data = &nvsw_bmc_hid177_led;
++	nvsw_core->led_data = &nvsw_bmc_hid180_led;
 +	nvsw_core->hotplug_data = &nvsw_bmc_hid180_hotplug;
 +	nvsw_core->mux_init = nvsw_bmc_hid162_mux_topology_init;
 +	nvsw_core->mux_exit = nvsw_bmc_hid162_mux_topology_exit;
@@ -7199,7 +7071,7 @@ index 000000000000..d8ee66da5bd1
 +	}
 +
 +	nvsw_core->regio_data = &nvsw_bmc_hid181_regio;
-+	nvsw_core->led_data = &nvsw_bmc_hid177_led;
++	nvsw_core->led_data = &nvsw_bmc_hid180_led;
 +	nvsw_core->hotplug_data = &nvsw_bmc_hid181_hotplug;
 +	nvsw_core->mux_init = nvsw_bmc_hid162_mux_topology_init;
 +	nvsw_core->mux_exit = nvsw_bmc_hid162_mux_topology_exit;
@@ -7224,7 +7096,7 @@ index 000000000000..d8ee66da5bd1
 +	}
 +
 +	nvsw_core->regio_data = &nvsw_bmc_hid193_regio; /* hid189 uses info from 193 */
-+	nvsw_core->led_data = &nvsw_bmc_hid177_led;
++	nvsw_core->led_data = &nvsw_bmc_hid180_led;
 +	nvsw_core->hotplug_data = &nvsw_bmc_hid193_hotplug;
 +	nvsw_core->mux_init = nvsw_bmc_hid162_mux_topology_init;
 +	nvsw_core->mux_exit = nvsw_bmc_hid162_mux_topology_exit;
@@ -7249,7 +7121,7 @@ index 000000000000..d8ee66da5bd1
 +	}
 +
 +	nvsw_core->regio_data = &nvsw_bmc_hid191_regio;
-+	nvsw_core->led_data = &nvsw_bmc_hid177_led;
++	nvsw_core->led_data = &nvsw_bmc_hid180_led;
 +	nvsw_core->hotplug_data = &nvsw_bmc_hid191_hotplug;
 +	nvsw_core->mux_init = nvsw_bmc_hid162_mux_topology_init;
 +	nvsw_core->mux_exit = nvsw_bmc_hid162_mux_topology_exit;
@@ -7274,7 +7146,7 @@ index 000000000000..d8ee66da5bd1
 +	}
 +
 +	nvsw_core->regio_data = &nvsw_bmc_hid193_regio;
-+	nvsw_core->led_data = &nvsw_bmc_hid177_led;
++	nvsw_core->led_data = &nvsw_bmc_hid180_led;
 +	nvsw_core->hotplug_data = &nvsw_bmc_hid193_hotplug;
 +	nvsw_core->mux_init = nvsw_bmc_hid162_mux_topology_init;
 +	nvsw_core->mux_exit = nvsw_bmc_hid162_mux_topology_exit;
@@ -7290,8 +7162,6 @@ index 000000000000..d8ee66da5bd1
 +		return nvsw_bmc_hid162_platform_data_init(nvsw_core);
 +	case HID176:
 +		return nvsw_bmc_hid176_platform_data_init(nvsw_core);
-+	case HID177:
-+		return nvsw_bmc_hid177_platform_data_init(nvsw_core);
 +	case HID180:
 +		return nvsw_bmc_hid180_platform_data_init(nvsw_core);
 +	case HID181:
@@ -7321,8 +7191,6 @@ index 000000000000..d8ee66da5bd1
 +		type = HID162;
 +	else if (of_device_is_compatible(np, "nvidia,hid176"))
 +		type = HID176;
-+	else if (of_device_is_compatible(np, "nvidia,hid177"))
-+		type = HID177;
 +	else if (of_device_is_compatible(np, "nvidia,hid180"))
 +		type = HID180;
 +	else if (of_device_is_compatible(np, "nvidia,hid181"))
@@ -7362,7 +7230,6 @@ index 000000000000..d8ee66da5bd1
 +static const struct i2c_device_id nvsw_bmc_hid162_id[] = {
 +	{ "hid162", HID162 },
 +	{ "hid176", HID176 },
-+	{ "hid177", HID177 },
 +	{ "hid180", HID180 },
 +	{ "hid181", HID181 },
 +	{ "hid189", HID189 },
@@ -7375,7 +7242,6 @@ index 000000000000..d8ee66da5bd1
 +static const struct of_device_id nvsw_bmc_hid162_dt_match[] = {
 +	{ .compatible = "nvidia,hid162" },
 +	{ .compatible = "nvidia,hid176" },
-+	{ .compatible = "nvidia,hid177" },
 +	{ .compatible = "nvidia,hid180" },
 +	{ .compatible = "nvidia,hid181" },
 +	{ .compatible = "nvidia,hid189" },

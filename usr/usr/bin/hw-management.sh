@@ -2628,9 +2628,6 @@ n51xxld_specific()
 			echo 4 > $config_path/cartridge_counter
 			echo 2 > $config_path/cpld_num
 			;;
-		HI177)	# Kyber
-			echo 0 > $config_path/cartridge_counter
-			;;
 		*)	# Default N5110_LD cartridge layout.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
@@ -2675,15 +2672,6 @@ n51xxld_specific()
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			lm_sensors_config="$lm_sensors_configs_path/n5500ld_sensors.conf"
 			leakage_count=2
-			cpld_num=3
-		;;
-		HI177)	# Kyber
-			max_tachos=0
-			echo 0 > $config_path/fan_drwr_num
-			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-			lm_sensors_config="$lm_sensors_configs_path/n5240ld_sensors.conf"
-			leakage_count=2
-			erot_count=4
 			cpld_num=3
 		;;
 		*)
@@ -3431,7 +3419,7 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# N51XX_LD
+		HI162|HI166|HI167|HI169|HI170|HI176)	# N51XX_LD
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
@@ -3740,7 +3728,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178|HI179)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI178|HI179)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -3788,15 +3776,6 @@ set_asic_pci_id()
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
-		;;
-	HI177)
-		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
-		asic3_pci_bus_id=`echo $asics | awk '{print $1}'`
-		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
-		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
-		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
-		echo 3 > "$config_path"/asic_num
 		;;
 	HI143)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
@@ -4090,7 +4069,7 @@ pre_devtr_init()
 		;;
 	VMOD0021)
 		case $sku in
-		HI162|HI166|HI167|HI169|HI170|HI176|HI177)
+		HI162|HI166|HI167|HI169|HI170|HI176)
 			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)

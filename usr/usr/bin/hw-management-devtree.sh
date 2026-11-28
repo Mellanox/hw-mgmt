@@ -455,9 +455,6 @@ declare -A n5110ld_swb_alternatives=( \
 	["mp2891_3"]="mp2891 0x66 21 voltmon4" \
 	["mp2891_4"]="mp2891 0x68 21 voltmon5" \
 	["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-	["mp2891_6"]="mp2891 0x66 37 voltmon7" \
-	["mp2891_7"]="mp2891 0x68 37 voltmon8" \
-	["mp2891_8"]="mp2891 0x6c 37 voltmon9" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
 	["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
@@ -492,34 +489,6 @@ declare -A gb300_swb_alternatives=( \
 	["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" \
 	["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
 	["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" \
-)
-
-declare -A gb200hd_swb_alternatives=( \
-	["mp2891_0"]="mp2891 0x66 5 voltmon1" \
-	["mp2891_1"]="mp2891 0x68 5 voltmon2" \
-	["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
-	["mp2891_3"]="mp2891 0x66 21 voltmon4" \
-	["mp2891_4"]="mp2891 0x68 21 voltmon5" \
-	["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-	["mp2891_6"]="mp2891 0x66 51 voltmon7" \
-	["mp2891_7"]="mp2891 0x68 51 voltmon8" \
-	["mp2891_8"]="mp2891 0x6c 51 voltmon9" \
-	["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
-	["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
-	["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
-	["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
-	["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
-	["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6" \
-	["xdpe1a2g7_6"]="xdpe1a2g7b 0x66 51 voltmon7" \
-	["xdpe1a2g7_7"]="xdpe1a2g7b 0x68 51 voltmon8" \
-	["xdpe1a2g7_8"]="xdpe1a2g7b 0x6c 51 voltmon9" \
-	["adt75_0"]="adt75 0x4a 7 swb_asic1" \
-	["adt75_1"]="adt75 0x4b 7 swb_asic2" \
-	["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
-	["tmp102_1"]="tmp102 0x4b 7 swb_asic2" \
-	["stts751_0"]="stts751 0x4a 7 swb_asic1" \
-	["stts751_1"]="stts751 0x4b 7 swb_asic2" \
-	["24c512_0"]="24c512 0x51 11 swb_info" \
 )
 
 declare -A n61xxld_swb_alternatives=( \
@@ -1345,19 +1314,6 @@ devtr_check_supported_system_init_alternatives()
 			HI176)
 				for key in "${!gb300_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${gb300_swb_alternatives["$key"]}"
-				done
-
-				for key in "${!gb300_pwr_type1_alternatives[@]}"; do
-					pwr_alternatives["$key"]="${gb300_pwr_type1_alternatives["$key"]}"
-				done
-
-				for key in "${!n5110ld_platform_alternatives[@]}"; do
-					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
-				done
-				;;
-			HI177)
-				for key in "${!gb200hd_swb_alternatives[@]}"; do
-					swb_alternatives["$key"]="${gb200hd_swb_alternatives["$key"]}"
 				done
 
 				for key in "${!gb300_pwr_type1_alternatives[@]}"; do
